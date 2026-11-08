@@ -1,10 +1,10 @@
 /**
- * 设置页「技能」：列技能库、从 GitHub 检查与安装、卸载（本工程的叫删除）、本工程的阶段绑定。
+ * 設定頁「技能」：列技能庫、從 GitHub 檢查與安裝、解除安裝（本工程的叫刪除）、本工程的階段繫結。
  *
- * 与 [settings.ts](settings.ts) 一样**不依赖 controller**：独立版没打开工程时由 WorkspaceHub
- * 直接调这几个函数（`scope` 是空的），技能库照样能看、能装、能卸；只有绑定要工程。
+ * 與 [settings.ts](settings.ts) 一樣**不依賴 controller**：獨立版沒開啟工程時由 WorkspaceHub
+ * 直接調這幾個函式（`scope` 是空的），技能庫照樣能看、能裝、能卸；只有繫結要工程。
  *
- * 装与卸在这里先弹确认框（`Host.confirm`）——外部 agent 那条路由 `skills install` 的 `always` 闸门问，两边都问
+ * 裝與卸在這裡先彈確認框（`Host.confirm`）——外部 agent 那條路由 `skills install` 的 `always` 閘門問，兩邊都問
  * 一次，不多不少。
  */
 import * as path from 'node:path';
@@ -41,7 +41,7 @@ export interface SkillsSink {
   toast(message: string, level?: 'info' | 'error'): void;
 }
 
-/** 有工程时两样都有；独立版空窗口时都没有。 */
+/** 有工程時兩樣都有；獨立版空視窗時都沒有。 */
 export interface SkillsScope {
   project?: NovelProject;
   workspace?: Workspace;
@@ -84,7 +84,7 @@ function rowOf(s: LoadedSkill, bindings: Partial<Record<SkillStage, string>>): S
   };
 }
 
-/** 检查：下载来看，不写任何文件。结果（或错误）单独回一条，前端拿它画检查卡。 */
+/** 檢查：下載來看，不寫任何檔案。結果（或錯誤）單獨回一條，前端拿它畫檢查卡。 */
 export async function inspectSkillFrom(sink: SkillsSink, url: string): Promise<void> {
   try {
     const r = await inspectGitHubSkill(url);
@@ -107,34 +107,34 @@ export async function inspectSkillFrom(sink: SkillsSink, url: string): Promise<v
       },
     });
   } catch (err) {
-    log.warn(`检查技能失败：${describeError(err)}`, url);
+    log.warn(`檢查技能失敗：${describeError(err)}`, url);
     sink.post({ type: 'skillInspection', url, error: describeError(err) });
   }
 }
 
 export async function installSkillFrom(sink: SkillsSink, scope: SkillsScope, url: string): Promise<void> {
-  const choice = await getHost().confirm('把这份技能装进我的技能库？', ['安装'], {
+  const choice = await getHost().confirm('把這份技能裝進我的技能庫？', ['安裝'], {
     modal: true,
     detail:
-      `${url}\n会重新下载一遍，与刚才检查的那一份核对一致才装。` +
-      '装进去之后所有工程都看得见它，但要在「本工程的阶段绑定」里绑上才会用上。',
+      `${url}\n會重新下載一遍，與剛才檢查的那一份核對一致才裝。` +
+      '裝進去之後所有工程都看得見它，但要在「本工程的階段繫結」裡綁上才會用上。',
   });
-  if (choice !== '安装') {
+  if (choice !== '安裝') {
     return;
   }
   try {
     const skill = await installGitHubSkill(url);
-    sink.toast(`已装进我的技能库：${skillLabel(skill.inspection)}。绑到某个阶段才会用上。`);
+    sink.toast(`已裝進我的技能庫：${skillLabel(skill.inspection)}。綁到某個階段才會用上。`);
     await pushSkillsTo(sink, scope, skill.id);
   } catch (err) {
-    log.error(`安装技能失败：${describeError(err)}`, url);
-    sink.toast(`安装失败：${describeError(err)}`, 'error');
+    log.error(`安裝技能失敗：${describeError(err)}`, url);
+    sink.toast(`安裝失敗：${describeError(err)}`, 'error');
   }
 }
 
 /**
- * 卸载我的技能库里的、删本工程的：整个目录挪进回收站（不真删）；本工程绑了它的阶段一起解绑。
- * 内置的删不掉。
+ * 解除安裝我的技能庫裡的、刪本工程的：整個目錄挪進回收站（不真刪）；本工程綁了它的階段一起解綁。
+ * 內建的刪不掉。
  */
 export async function uninstallSkillFrom(sink: SkillsSink, scope: SkillsScope, id: string): Promise<void> {
   const parsed = parseSkillId(id);
@@ -143,18 +143,18 @@ export async function uninstallSkillFrom(sink: SkillsSink, scope: SkillsScope, i
     return;
   }
   if (!parsed || parsed.source !== 'user') {
-    sink.toast('内置技能删不掉；不想用就在阶段绑定里换掉它。', 'error');
+    sink.toast('內建技能刪不掉；不想用就在階段繫結裡換掉它。', 'error');
     return;
   }
   const skill = await loadSkill(id);
   const label = skill ? skillLabel(skill.inspection) : parsed.name;
-  const choice = await getHost().confirm(`从我的技能库卸载「${label}」？`, ['卸载'], {
+  const choice = await getHost().confirm(`從我的技能庫解除安裝「${label}」？`, ['解除安裝'], {
     modal: true,
     detail:
-      '整个目录挪进技能库的 .trash/skills/，不真删。本工程绑了它的阶段会一起解绑；' +
-      '别的工程里绑了它的，下次生成会在明细里写明「找不到」，然后不带。',
+      '整個目錄挪進技能庫的 .trash/skills/，不真刪。本工程綁了它的階段會一起解綁；' +
+      '別的工程裡綁了它的，下次生成會在明細裡寫明「找不到」，然後不帶。',
   });
-  if (choice !== '卸载') {
+  if (choice !== '解除安裝') {
     return;
   }
   try {
@@ -163,35 +163,35 @@ export async function uninstallSkillFrom(sink: SkillsSink, scope: SkillsScope, i
       scope.project && scope.workspace ? await unbindSkillEverywhere(scope.project, scope.workspace, id) : [];
     sink.toast(
       unbound.length > 0
-        ? `已卸载「${label}」，本工程的${unbound.map((s) => `「${SKILL_STAGE_LABEL[s]}」`).join('')}不再带它。`
-        : `已卸载「${label}」。`
+        ? `已解除安裝「${label}」，本工程的${unbound.map((s) => `「${SKILL_STAGE_LABEL[s]}」`).join('')}不再帶它。`
+        : `已解除安裝「${label}」。`
     );
   } catch (err) {
-    log.error(`卸载技能失败：${describeError(err)}`, id);
-    sink.toast(`卸载失败：${describeError(err)}`, 'error');
+    log.error(`解除安裝技能失敗：${describeError(err)}`, id);
+    sink.toast(`解除安裝失敗：${describeError(err)}`, 'error');
   }
   await pushSkillsTo(sink, scope);
 }
 
-/** 删本工程的技能：`.novelwarden/skills/<名字>/` 整个目录经网关挪进回收站（旧工程是 `.novelforge/`）。 */
+/** 刪本工程的技能：`.novelwarden/skills/<名字>/` 整個目錄經閘道器挪進回收站（舊工程是 `.novelforge/`）。 */
 async function removeProjectSkill(sink: SkillsSink, scope: SkillsScope, id: string): Promise<void> {
   if (!scope.project || !scope.workspace) {
-    sink.toast('本工程的技能跟着工程走：先打开那个工程。', 'error');
+    sink.toast('本工程的技能跟著工程走：先開啟那個工程。', 'error');
     return;
   }
   const skill = await loadSkill(id, scope.project);
   if (!skill?.relPath) {
-    sink.toast(`本工程里找不到「${id}」。`, 'error');
+    sink.toast(`本工程裡找不到「${id}」。`, 'error');
     await pushSkillsTo(sink, scope);
     return;
   }
   const label = skillLabel(skill.inspection);
   const dir = path.posix.dirname(skill.relPath);
-  const choice = await getHost().confirm(`删掉本工程的技能「${label}」？`, ['删除'], {
+  const choice = await getHost().confirm(`刪掉本工程的技能「${label}」？`, ['刪除'], {
     modal: true,
-    detail: `整个 ${dir}/ 挪进 ${scope.project.relPath(scope.project.trashDir)}/，可手动找回。绑了它的阶段会一起解绑。`,
+    detail: `整個 ${dir}/ 挪進 ${scope.project.relPath(scope.project.trashDir)}/，可手動找回。綁了它的階段會一起解綁。`,
   });
-  if (choice !== '删除') {
+  if (choice !== '刪除') {
     return;
   }
   try {
@@ -199,12 +199,12 @@ async function removeProjectSkill(sink: SkillsSink, scope: SkillsScope, id: stri
     await scope.workspace.remove(dir);
     sink.toast(
       unbound.length > 0
-        ? `已删除「${label}」，${unbound.map((s) => `「${SKILL_STAGE_LABEL[s]}」`).join('')}不再带它。`
-        : `已删除「${label}」。`
+        ? `已刪除「${label}」，${unbound.map((s) => `「${SKILL_STAGE_LABEL[s]}」`).join('')}不再帶它。`
+        : `已刪除「${label}」。`
     );
   } catch (err) {
-    log.error(`删除技能失败：${describeError(err)}`, id);
-    sink.toast(`删除失败：${describeError(err)}`, 'error');
+    log.error(`刪除技能失敗：${describeError(err)}`, id);
+    sink.toast(`刪除失敗：${describeError(err)}`, 'error');
   }
   await pushSkillsTo(sink, scope);
 }
@@ -216,18 +216,18 @@ export async function bindSkillFrom(
   id: string | null
 ): Promise<void> {
   if (!scope.project || !scope.workspace) {
-    sink.toast('绑定跟着工程走：先打开一个工程。', 'error');
+    sink.toast('繫結跟著工程走：先開啟一個工程。', 'error');
     return;
   }
   if (!isSkillStage(stage)) {
-    sink.toast(`认不出的阶段「${String(stage)}」`, 'error');
+    sink.toast(`認不出的階段「${String(stage)}」`, 'error');
     return;
   }
   try {
     await saveSkillBinding(scope.project, scope.workspace, stage, id);
   } catch (err) {
-    log.error(`绑定技能失败：${describeError(err)}`, `${stage} → ${id ?? '（不带）'}`);
-    sink.toast(`绑定失败：${describeError(err)}`, 'error');
+    log.error(`繫結技能失敗：${describeError(err)}`, `${stage} → ${id ?? '（不帶）'}`);
+    sink.toast(`繫結失敗：${describeError(err)}`, 'error');
   }
   await pushSkillsTo(sink, scope);
 }

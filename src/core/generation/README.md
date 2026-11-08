@@ -1,111 +1,111 @@
-# core/generation — 装配 + 调模型 + 解析 + 落盘
+# core/generation — 裝配 + 調模型 + 解析 + 落盤
 
-创作的一次单步：**装配上下文 → 调模型 → 解析成产物 → 当场问一句，作者点头才落盘**。
+創作的一次單步：**裝配上下文 → 調模型 → 解析成產物 → 當場問一句，作者點頭才落盤**。
 
-从前这四件事挤在 `features/creation.ts` 的 `CreationSession` 一个类里，外加第五件——「当前有没有在生成」。落盘搬进 [`workspace/`](../workspace/README.md) 之后，剩下的应该是纯函数，所以这一层**没有类、没有字段、没有单例**。
+從前這四件事擠在 `features/creation.ts` 的 `CreationSession` 一個類裡，外加第五件——「當前有沒有在生成」。落盤搬進 [`workspace/`](../workspace/README.md) 之後，剩下的應該是純函式，所以這一層**沒有類、沒有欄位、沒有單例**。
 
-| 文件 | 职责 |
+| 檔案 | 職責 |
 |---|---|
-| [generate.ts](generate.ts) | ★ **无状态**：装配 → 调模型 → 解析成 `Draft`；另有 `previewContext`（只装配不调模型）与 `parseDraftArtifact`。 |
-| [structured.ts](structured.ts) | ★ **生成链**：小说配置、角色图谱、设定清单等结构化产物的「写 → 转写」与失败的走法。 |
-| [continuation.ts](continuation.ts) | ★ **正文的续写链**：截断或不到八成就续（最多 7 轮），最后查一遍重演。见下文「写一章正文」。 |
-| [review.ts](review.ts) | ★ **审稿链**：按小标题写、转写成 JSON，校验引文、逐项核对冻结的目标。 |
-| [trim.ts](trim.ts) | ★ **删修饰**：续写链最后一步，同一个模型、温度 0.3、只许删，逐段验收不合格的退回。 |
-| [revision.ts](revision.ts) | ★ **修稿链**（五期，移植自上游 `refine-from-review` + `refinement-completeness.ts`）：被截断就接着写，最多 3 轮；截断三轮仍没写完、或明显短于原稿，报错不出卡片。 |
-| [accept.ts](accept.ts) | ★ 落盘：按产物分派到八条落盘路径（架构文档 / 角色图谱 / 设定清单 / 设定条目 / 情节大纲 / 细纲 / 细纲批次 / 正文）。 |
-| [loreSettle.ts](loreSettle.ts) | 落定设定的落盘：按磁盘再认一遍；新的直接建，已有的合并、先对比，水位不动。 |
-| [drafts.ts](drafts.ts) | ★ `DraftStore`：还没落盘的产物，内存按会话分桶 + 随会话 JSON 落盘。 |
+| [generate.ts](generate.ts) | ★ **無狀態**：裝配 → 調模型 → 解析成 `Draft`；另有 `previewContext`（只裝配不調模型）與 `parseDraftArtifact`。 |
+| [structured.ts](structured.ts) | ★ **生成鏈**：小說配置、角色圖譜、設定清單等結構化產物的「寫 → 轉寫」與失敗的走法。 |
+| [continuation.ts](continuation.ts) | ★ **正文的續寫鏈**：截斷或不到八成就續（最多 7 輪），最後查一遍重演。見下文「寫一章正文」。 |
+| [review.ts](review.ts) | ★ **審稿鏈**：按小標題寫、轉寫成 JSON，校驗引文、逐項核對凍結的目標。 |
+| [trim.ts](trim.ts) | ★ **刪修飾**：續寫鏈最後一步，同一個模型、溫度 0.3、只許刪，逐段驗收不合格的退回。 |
+| [revision.ts](revision.ts) | ★ **修稿鏈**（五期，移植自上游 `refine-from-review` + `refinement-completeness.ts`）：被截斷就接著寫，最多 3 輪；截斷三輪仍沒寫完、或明顯短於原稿，報錯不出卡片。 |
+| [accept.ts](accept.ts) | ★ 落盤：按產物分派到八條落盤路徑（架構文件 / 角色圖譜 / 設定清單 / 設定條目 / 情節大綱 / 細綱 / 細綱批次 / 正文）。 |
+| [loreSettle.ts](loreSettle.ts) | 落定設定的落盤：按磁碟再認一遍；新的直接建，已有的合併、先對比，水位不動。 |
+| [drafts.ts](drafts.ts) | ★ `DraftStore`：還沒落盤的產物，記憶體按會話分桶 + 隨會話 JSON 落盤。 |
 
-## 三条硬约束
+## 三條硬約束
 
-### 1. 一个字都不写磁盘（生成那一半）
+### 1. 一個字都不寫磁碟（生成那一半）
 
-`generate` 只把文本交回界面，`accept` 才写，且只在用户在那张落盘卡片上点了「写入」之后（AGENTS 第 19 条）。中间那一步是用户看着产物决定要不要的机会——少了它，「不静默覆盖」无从谈起。
+`generate` 只把文字交回介面，`accept` 才寫，且只在使用者在那張落盤卡片上點了「寫入」之後（AGENTS 第 19 條）。中間那一步是使用者看著產物決定要不要的機會——少了它，「不靜默覆蓋」無從談起。
 
-**那一问在产出的当下**（`controller/chat.ts` 的 `askArtifact` → `controller/gate.ts`），不是气泡末尾一颗可以永远不点的按钮：拖着不点的话，「过一遍人」就成了一件可以无限拖延的事，而 agent 早接着往下做了。
+**那一問在產出的當下**（`controller/chat.ts` 的 `askArtifact` → `controller/gate.ts`），不是氣泡末尾一顆可以永遠不點的按鈕：拖著不點的話，「過一遍人」就成了一件可以無限拖延的事，而 agent 早接著往下做了。
 
-唯一的例外是失败记账（`recordFailure` / `clearFailures`），它写的是痕迹库不是内容（第 17 条）。
+唯一的例外是失敗記賬（`recordFailure` / `clearFailures`），它寫的是痕跡庫不是內容（第 17 條）。
 
-### 2. `cleanOutput` 只对正文层做
+### 2. `cleanOutput` 只對正文層做
 
-正文由续写链（`continuation.ts`）对每一轮的输出各跑一遍 `cleanOutput`，其余层 `full.trim()`。
+正文由續寫鏈（`continuation.ts`）對每一輪的輸出各跑一遍 `cleanOutput`，其餘層 `full.trim()`。
 
-那几条正则是为正文写的（剥开场白、剥章节标题、剥结尾字数统计）。跑在 JSON 产物上会切坏结构——产物里的 ``` 由 `features/parse.ts` 的 `stripCodeFence` 在**解析时**处理，不在这里剥。
+那幾條正則是為正文寫的（剝開場白、剝章節標題、剝結尾字數統計）。跑在 JSON 產物上會切壞結構——產物裡的 ``` 由 `features/parse.ts` 的 `stripCodeFence` 在**解析時**處理，不在這裡剝。
 
-### 3. 落盘时重新解析，不用 `draft.artifact`
+### 3. 落盤時重新解析，不用 `draft.artifact`
 
-`Draft` 出厂就带 `artifact` 与 `summary`（省掉了从前三次解析里多余的那次：生成时 → 后端画卡片时 → 落盘时）。但**落盘走的是气泡里当下那份文本**：
+`Draft` 出廠就帶 `artifact` 與 `summary`（省掉了從前三次解析裡多餘的那次：生成時 → 後端畫卡片時 → 落盤時）。但**落盤走的是氣泡裡當下那份文字**：
 
 ```
-draft.target → accept(project, target, parseArtifact(action, 气泡里的文本))
+draft.target → accept(project, target, parseArtifact(action, 氣泡裡的文字))
 ```
 
-用户可能在气泡里改过两个字再点「写入」（那份改动经 `editTurn` 已经落在 `turn.content` 上，所以那份文本**答完才取**——取早了拿到的是他改之前那版）。`draft.artifact` 只是生成那一刻的展示快照，`draft.raw` 只是兜底。
+使用者可能在氣泡裡改過兩個字再點「寫入」（那份改動經 `editTurn` 已經落在 `turn.content` 上，所以那份文字**答完才取**——取早了拿到的是他改之前那版）。`draft.artifact` 只是生成那一刻的展示快照，`draft.raw` 只是兜底。
 
-**`target` 从 draft 里取，不由前端传**——前端猜不出一段讨论该写到哪一层（第 19 条最后一句）。
+**`target` 從 draft 裡取，不由前端傳**——前端猜不出一段討論該寫到哪一層（第 19 條最後一句）。
 
-## 并发控制不在这里
+## 併發控制不在這裡
 
-「已有一个生成任务在进行中」是**调度**的责任：
+「已有一個生成任務在進行中」是**排程**的責任：
 
-- 对话页 → `controller/index.ts` 的 `beginGeneration()` / `stopGeneration()`，`busy` 就是 `currentAbort !== undefined`（两个独立状态迟早对不上，而对不上的表现是「停止按钮点了没反应」）
-- MCP 调用 → 同一把锁（`controller/mcp.ts`）
+- 對話頁 → `controller/index.ts` 的 `beginGeneration()` / `stopGeneration()`，`busy` 就是 `currentAbort !== undefined`（兩個獨立狀態遲早對不上，而對不上的表現是「停止按鈕點了沒反應」）
+- MCP 呼叫 → 同一把鎖（`controller/mcp.ts`）
 
-`generate` 只收一个 `signal` 往下透传。
+`generate` 只收一個 `signal` 往下透傳。
 
-## Draft 为什么要落盘
+## Draft 為什麼要落盤
 
-`generate` 产出的那份东西一个字都没写盘，而它至少要活到作者在落盘卡片上点头那一刻；外部 agent 手里的 `draftId` 还可能被它稍后用 `write draftId=…` 拿去写。
+`generate` 產出的那份東西一個字都沒寫盤，而它至少要活到作者在落盤卡片上點頭那一刻；外部 agent 手裡的 `draftId` 還可能被它稍後用 `write draftId=…` 拿去寫。
 
-- **存哪里**：内存为主（`Map`，按会话分桶），随会话 JSON 一起落盘（`.novelwarden/sessions/<id>.json`）
-- **不进 SQLite**：第 17 条，库只放可丢弃的痕迹。draft 是未落盘的内容，但它跟着会话走，会话本来就是 JSON
-- **留多少**：一个会话 20 份（`MAX_DRAFTS_PER_SESSION`）。`draft.raw` 与 `ChatTurn.content` 是同一段文字，全留着等于把会话文件写两遍
-- **谁装回内存**：`controller/session.ts` 的 `openSession`。换会话时 `dropBySession` 掉上一个，不然开一天面板会攒下几十份没人再看的正文
-- **容错**：认不出的草稿在 `model/session.ts` 的 `normalize()` 里丢掉。气泡上那份 `ChatTurn.artifact` 是**回放用的记录**（产出过什么、落到哪儿了 / 未采纳），与草稿在不在无关——它不再驱动任何按钮
+- **存哪裡**：記憶體為主（`Map`，按會話分桶），隨會話 JSON 一起落盤（`.novelwarden/sessions/<id>.json`）
+- **不進 SQLite**：第 17 條，庫只放可丟棄的痕跡。draft 是未落盤的內容，但它跟著會話走，會話本來就是 JSON
+- **留多少**：一個會話 20 份（`MAX_DRAFTS_PER_SESSION`）。`draft.raw` 與 `ChatTurn.content` 是同一段文字，全留著等於把會話檔案寫兩遍
+- **誰裝回記憶體**：`controller/session.ts` 的 `openSession`。換會話時 `dropBySession` 掉上一個，不然開一天面板會攢下幾十份沒人再看的正文
+- **容錯**：認不出的草稿在 `model/session.ts` 的 `normalize()` 裡丟掉。氣泡上那份 `ChatTurn.artifact` 是**回放用的記錄**（產出過什麼、落到哪兒了 / 未採納），與草稿在不在無關——它不再驅動任何按鈕
 
-## 一件产物可能要调几次
+## 一件產物可能要調幾次
 
-小说配置、角色图谱、设定清单、细纲批次由 `structured.ts` 的链拼出来。对话页第一次调用是流式的，后面几次照样流进同一个气泡（每步前面一行「——角色详情（林昭、沈青）——」；转写只加这一行、输出不流进来），链结束后气泡换成**规范化结果**——将要落盘的样子（配置是 `config.md` 全文，角色图谱与细纲批次是规范化 JSON），作者改完再点写入时按同一套解码读回来。
+小說配置、角色圖譜、設定清單、細綱批次由 `structured.ts` 的鏈拼出來。對話頁第一次呼叫是流式的，後面幾次照樣流進同一個氣泡（每步前面一行「——角色詳情（林昭、沈青）——」；轉寫只加這一行、輸出不流進來），鏈結束後氣泡換成**規範化結果**——將要落盤的樣子（配置是 `config.md` 全文，角色圖譜與細綱批次是規範化 JSON），作者改完再點寫入時按同一套解碼讀回來。
 
-链走不下去（清单不合格、漏章、转写不成……）抛 `ChainError`：已经收到的输出留在气泡里，报错，不出卡片，失败挂在那一章 / 那一件上。卡片上除了形状，还列出会新建的角色卡、这一轮调了几次模型、每一处降级（第 2 条）。
+鏈走不下去（清單不合格、漏章、轉寫不成……）拋 `ChainError`：已經收到的輸出留在氣泡裡，報錯，不出卡片，失敗掛在那一章 / 那一件上。卡片上除了形狀，還列出會新建的角色卡、這一輪調了幾次模型、每一處降級（第 2 條）。
 
-## 写一章正文
+## 寫一章正文
 
-写正文也是一条链（`continuation.ts` 的 `completeManuscript`），与上面三条共用 `ChainIO`。
+寫正文也是一條鏈（`continuation.ts` 的 `completeManuscript`），與上面三條共用 `ChainIO`。
 
-- **写法**（`model/pipeline.ts` 的 `WriteMode`）由 `generate.ts` 的 `planWriting` 按磁盘定：这一章还没有正文 → `write`；请求明说接着写 → `continue`（只写新增的那一段，装配器带本章已写末尾）；其余 → `rewrite`（整章，上一版正文经 `revision` 层作底稿）。从前已有正文时一律追加，对话里发「写正文」就会把一整章叠到已有的后面。
-- **目标字数**：请求给的 → 细纲的 `targetWords` → 配置的每章字数（D6）。都没有时不自动续写。
-- **续写**：被截断、或总字数（`continue` 含已有的）不到目标的八成就续；每一轮带最后 1600 字、本章细纲、执行卡、后 5 章边界、近几章的连续性事实（装配器的精简配方），并告诉它已经用了几次「仿佛 / 犹如 / 宛如」。轮与轮之间在气泡里只空一行；丢弃的那一轮经 `ChainIO.reset` 让气泡退回；流式期间约 300ms 报一次进度（`onProgress`，controller 转成 `writeProgress`）。
-- **收尾过早时先回退**（五期补遗 §1.1，上游没有）：正常收尾（`stop: 'end'`）又不够八成，说明这一章已经收了尾，往后接必然越过它、写进下一章。续写先切掉收尾那一场（`model/manuscriptCheck.ts` 的 `rewindPoint`：只按比例切最后约四分之一、最多 600 字，至少留一半），气泡退回切点，契约说「收尾拿掉了，写足后按本章细纲约定的结束状态重新收尾」。一次写一千字上下的模型一章要这样走两三轮，所以可以回退几次，但每次只在上一轮新写的那一段里切；回退那一轮净多不到 300 字、或者那一段短得没法切就停，不往收尾后面接；回退那一轮没写成就把原结尾放回去。被截断、网关不报收尾原因时照旧往后接。
-- **停在半句上算截断**：只信模型报的收尾原因不够（百章实验第 3 章停在「全身」两个字上，字数过了八成，照样定稿了）。每一次调用之后看结尾那个字（`model/manuscriptCheck.ts` 的 `endsMidSentence`），不是句末标点就按 `maxTokens` 处理：往后接、不回退，新写的那半截直接接上、不空行（磁盘上「接着写」的追加同理，见 `workspace/index.ts` 的 `appendText`）。写完仍停在半句上时 `truncated` 为真，说明里引出结尾，批量写章据此停下。
-- 「本章不出场」的名单由 `planWriting` 按磁盘给（`WritingPlan.notYet`）。
-- **写完查**（§1.2、§1.3、§1.5，外加百章实验复盘的禁用词）：用到的禁用词逐个计数记进说明（`planWriting` 给的 `banned`——取自 `views/checkTerms.ts` 的 `readBannedTerms`，内置编辑器的写作体检拿的是同一个函数、同一份输入，作者在编辑器里看到标出来的就是这里数的）；比喻词超上限、拉丁字母缩写、后面几章才登场的人写进了这一次新写的正文（`ManuscriptChainResult.early`）。只记说明、不改正文。
-- **比上游宽松：已写的不丢**。恢复那一轮仍没进展、最后仍被截断、最后仍不到八成、某一轮调用失败，都保留已写的并写进说明，卡片照样可以写入。只有「截断且正文不到 100 字」（思考把输出预算吃光）报错、不出卡片。作者自己点了停止照旧不出卡片。
-- **重演**：续写结束之后查一次（`continue` 不查），上一章结尾按磁盘现读。命中不拒收：Draft 带 `replay`，卡片标红、写入要点两下。
-- Draft 多带 `writeMode`、`length`（总字数、目标、新写多少、续写几轮、够不够八成）与 `replay`，随会话落盘——刷新之后再写入，「接着写」不会变成「覆盖」。
-- **批量写章也走这一条**（四期，`features/pipelineBatch.ts`）：同一个 `planWriting`（已导出）、同一个 `completeManuscript`，只是换一个走分档池的 `ChainIO`——第一次调用失败换同档其余，之后续写那几轮钉住第一次成功的那个模型（一章之内不换人）。批量没有卡片：重演命中、提前登场、没写够或结尾停在半句上的照样落盘、挂黄 ❗、批量停下。写完即审稿（五期补遗 §4）也用 `planReview` 与审稿链，调用走 `review` 档、转写走「转写」那一档。
+- **寫法**（`model/pipeline.ts` 的 `WriteMode`）由 `generate.ts` 的 `planWriting` 按磁碟定：這一章還沒有正文 → `write`；請求明說接著寫 → `continue`（只寫新增的那一段，裝配器帶本章已寫末尾）；其餘 → `rewrite`（整章，上一版正文經 `revision` 層作底稿）。從前已有正文時一律追加，對話裡發「寫正文」就會把一整章疊到已有的後面。
+- **目標字數**：請求給的 → 細綱的 `targetWords` → 配置的每章字數（D6）。都沒有時不自動續寫。
+- **續寫**：被截斷、或總字數（`continue` 含已有的）不到目標的八成就續；每一輪帶最後 1600 字、本章細綱、執行卡、後 5 章邊界、近幾章的連續性事實（裝配器的精簡配方），並告訴它已經用了幾次「彷彿 / 猶如 / 宛如」。輪與輪之間在氣泡裡只空一行；丟棄的那一輪經 `ChainIO.reset` 讓氣泡退回；流式期間約 300ms 報一次進度（`onProgress`，controller 轉成 `writeProgress`）。
+- **收尾過早時先回退**（五期補遺 §1.1，上游沒有）：正常收尾（`stop: 'end'`）又不夠八成，說明這一章已經收了尾，往後接必然越過它、寫進下一章。續寫先切掉收尾那一場（`model/manuscriptCheck.ts` 的 `rewindPoint`：只按比例切最後約四分之一、最多 600 字，至少留一半），氣泡退回切點，契約說「收尾拿掉了，寫足後按本章細綱約定的結束狀態重新收尾」。一次寫一千字上下的模型一章要這樣走兩三輪，所以可以回退幾次，但每次只在上一輪新寫的那一段裡切；回退那一輪淨多不到 300 字、或者那一段短得沒法切就停，不往收尾後面接；回退那一輪沒寫成就把原結尾放回去。被截斷、閘道器不報收尾原因時照舊往後接。
+- **停在半句上算截斷**：只信模型報的收尾原因不夠（百章實驗第 3 章停在「全身」兩個字上，字數過了八成，照樣定稿了）。每一次呼叫之後看結尾那個字（`model/manuscriptCheck.ts` 的 `endsMidSentence`），不是句末標點就按 `maxTokens` 處理：往後接、不回退，新寫的那半截直接接上、不空行（磁碟上「接著寫」的追加同理，見 `workspace/index.ts` 的 `appendText`）。寫完仍停在半句上時 `truncated` 為真，說明裡引出結尾，批次寫章據此停下。
+- 「本章不出場」的名單由 `planWriting` 按磁碟給（`WritingPlan.notYet`）。
+- **寫完查**（§1.2、§1.3、§1.5，外加百章實驗覆盤的禁用詞）：用到的禁用詞逐個計數記進說明（`planWriting` 給的 `banned`——取自 `views/checkTerms.ts` 的 `readBannedTerms`，內建編輯器的寫作體檢拿的是同一個函式、同一份輸入，作者在編輯器裡看到標出來的就是這裡數的）；比喻詞超上限、拉丁字母縮寫、後面幾章才登場的人寫進了這一次新寫的正文（`ManuscriptChainResult.early`）。只記說明、不改正文。
+- **比上游寬鬆：已寫的不丟**。恢復那一輪仍沒進展、最後仍被截斷、最後仍不到八成、某一輪呼叫失敗，都保留已寫的並寫進說明，卡片照樣可以寫入。只有「截斷且正文不到 100 字」（思考把輸出預算吃光）報錯、不出卡片。作者自己點了停止照舊不出卡片。
+- **重演**：續寫結束之後查一次（`continue` 不查），上一章結尾按磁碟現讀。命中不拒收：Draft 帶 `replay`，卡片標紅、寫入要點兩下。
+- Draft 多帶 `writeMode`、`length`（總字數、目標、新寫多少、續寫幾輪、夠不夠八成）與 `replay`，隨會話落盤——重新整理之後再寫入，「接著寫」不會變成「覆蓋」。
+- **批次寫章也走這一條**（四期，`features/pipelineBatch.ts`）：同一個 `planWriting`（已匯出）、同一個 `completeManuscript`，只是換一個走分檔池的 `ChainIO`——第一次呼叫失敗換同檔其餘，之後續寫那幾輪釘住第一次成功的那個模型（一章之內不換人）。批次沒有卡片：重演命中、提前登場、沒寫夠或結尾停在半句上的照樣落盤、掛黃 ❗、批次停下。寫完即審稿（五期補遺 §4）也用 `planReview` 與審稿鏈，呼叫走 `review` 檔、轉寫走「轉寫」那一檔。
 
-## 审稿与修稿
+## 審稿與修稿
 
-五期。两者都在正文层，所以最要紧的一条是**别让审稿掉进写正文的那几条路**：`chainOf` 先认 `review`（按旧判据「正文层不是讨论就走续写链」，一份审稿 JSON 会被当成正文去续写、去查重演），`parseDraftArtifact` 对 `report` 形态不解析——审稿那一轮的 Draft 带 `review`、**没有 `artifact`**，于是不会出落盘卡片。
+五期。兩者都在正文層，所以最要緊的一條是**別讓審稿掉進寫正文的那幾條路**：`chainOf` 先認 `review`（按舊判據「正文層不是討論就走續寫鏈」，一份審稿 JSON 會被當成正文去續寫、去查重演），`parseDraftArtifact` 對 `report` 形態不解析——審稿那一輪的 Draft 帶 `review`、**沒有 `artifact`**，於是不會出落盤卡片。
 
-- **审稿**：`planReview` 在装配之前按磁盘读好这一章的正文、指纹，并从细纲的关键事件冻结目标清单（`freezeGoals`），经 `BuildRequest.reviewGoals` 交给装配器——契约里给模型的与链上校验用的是同一份。这一章还没有正文就不调模型、报错。
-- **修稿**：写法 `revise`。`planWriting` 按磁盘读整章原文，与 controller 拼好的勾选清单（`BuildRequest.reviseBrief`）一起放进 `revision`；原稿的字数当进度条的目标（不据此续写）。续写只看截断：修稿没有「写够」这一说，原稿多长它就该多长。
-- **与写章相反：报错就不出卡片**。写章时那一版是新东西，半截也比没有强；修稿是拿它**覆盖**一章已经写好的正文，截断三轮仍没写完、或者不到原稿（封顶每章字数）的六成，覆盖上去就是把作者的后半章弄丢了。已经收到的文字留在气泡里。
+- **審稿**：`planReview` 在裝配之前按磁碟讀好這一章的正文、指紋，並從細綱的關鍵事件凍結目標清單（`freezeGoals`），經 `BuildRequest.reviewGoals` 交給裝配器——契約裡給模型的與鏈上校驗用的是同一份。這一章還沒有正文就不調模型、報錯。
+- **修稿**：寫法 `revise`。`planWriting` 按磁碟讀整章原文，與 controller 拼好的勾選清單（`BuildRequest.reviseBrief`）一起放進 `revision`；原稿的字數當進度條的目標（不據此續寫）。續寫只看截斷：修稿沒有「寫夠」這一說，原稿多長它就該多長。
+- **與寫章相反：報錯就不出卡片**。寫章時那一版是新東西，半截也比沒有強；修稿是拿它**覆蓋**一章已經寫好的正文，截斷三輪仍沒寫完、或者不到原稿（封頂每章字數）的六成，覆蓋上去就是把作者的後半章弄丟了。已經收到的文字留在氣泡裡。
 
-## 不在这里写装配
+## 不在這裡寫裝配
 
-`context/recipes.ts`、`context/prompts.ts`、`context/layers/`、`context/builder.ts`、`features/artifact.ts` 是装配与解析的唯一一份。生成链重新装配时也走 `buildContext`（换 `range` / `step` / `draftPlots`），不在这里手拼 prompt；只有语法修复与「全局要求」字段重写两条消息不经装配器——它们不需要上下文，给多了反而会让模型「顺手」补内容。
+`context/recipes.ts`、`context/prompts.ts`、`context/layers/`、`context/builder.ts`、`features/artifact.ts` 是裝配與解析的唯一一份。生成鏈重新裝配時也走 `buildContext`（換 `range` / `step` / `draftPlots`），不在這裡手拼 prompt；只有語法修復與「全域要求」欄位重寫兩條訊息不經裝配器——它們不需要上下文，給多了反而會讓模型「順手」補內容。
 
 ## 逐字保留的四件事
 
-从 `CreationSession` 搬过来时一个字都没改：
+從 `CreationSession` 搬過來時一個字都沒改：
 
-1. `logAssembly` 的日志格式（token 数、降级/丢弃明细）——**绝不记 prompt 全文**，那是十万字级的东西，一次就能把日志缓冲挤空
-2. `cleanOutput` 的调用位置（见上）
-3. `recordUsage` / `describeUsage` 的调用位置——实测用量是校准 tokenCounter 的唯一来源
-4. 失败时 `recordFailure` 挂在**细纲**上、成功时 `clearFailures`（第 16 条）。取消不算失败——那是用户自己点的
+1. `logAssembly` 的日誌格式（token 數、降級/丟棄明細）——**絕不記 prompt 全文**，那是十萬字級的東西，一次就能把日誌緩衝擠空
+2. `cleanOutput` 的呼叫位置（見上）
+3. `recordUsage` / `describeUsage` 的呼叫位置——實測用量是校準 tokenCounter 的唯一來源
+4. 失敗時 `recordFailure` 掛在**細綱**上、成功時 `clearFailures`（第 16 條）。取消不算失敗——那是使用者自己點的
 
-## 依赖关系
+## 依賴關係
 
-依赖 `context/`（装配）、`llm/`（provider）、`workspace/`（落盘）、`features/artifact.ts`（解析）、`model/`、`runtime/`。被 `controller/chat.ts`（对话页）、`tools/novel/generate.ts`（agent）与 `shells/vscode/quickContinue.ts`（命令面板的快速续写，落在下一可写章）调用。**不认识 `agent/`**——依赖方向严格自下而上。
+依賴 `context/`（裝配）、`llm/`（provider）、`workspace/`（落盤）、`features/artifact.ts`（解析）、`model/`、`runtime/`。被 `controller/chat.ts`（對話頁）、`tools/novel/generate.ts`（agent）與 `shells/vscode/quickContinue.ts`（命令面板的快速續寫，落在下一可寫章）呼叫。**不認識 `agent/`**——依賴方向嚴格自下而上。

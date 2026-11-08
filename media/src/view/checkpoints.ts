@@ -1,22 +1,22 @@
 /**
- * 工程页「存档点…」弹窗（2026-10-20，设计见 `docs/design/plans/2026-10-20-checkpoints.md`）：整本书存一版、看某个
- * 存档点之后改了哪几份、单份对比、整本或单份退回。后端一半在 `core/controller/checkpoints.ts`。
+ * 工程頁「存檔點…」彈窗（2026-10-20，設計見 `docs/design/plans/2026-10-20-checkpoints.md`）：整本書存一版、看某個
+ * 存檔點之後改了哪幾份、單份對比、整本或單份退回。後端一半在 `core/controller/checkpoints.ts`。
  *
- * 复用 `providerModal` 那一层遮罩（同 `form.ts`：插件与独立版都装配了它），里面两页：
+ * 複用 `providerModal` 那一層遮罩（同 `form.ts`：外掛與獨立版都裝配了它），裡面兩頁：
  *
- * - **列表**：打开就发 `listCheckpoints`，收 `checkpoints` 画（新的在前）。顶上一格备注 +「存一个存档点」（发
- *   `createCheckpoint`）；自动存的那几行多一颗「留住…」，摊开一格备注发 `noteCheckpoint`（写了备注就不会被自动裁掉）。
- * - **跟现在比**：一行的「跟现在比」发 `checkpointDiff`，收同一个 id 的 `checkpointDiff` 画三组（改过的 / 之后删掉的 /
- *   之后新建的）。「对比」关掉弹窗、经 `nf-version-diff-command` 在编辑区开「版本」的对比标签，只在内置编辑器回答了
- *   `nf-version-diff-query` 时给（插件形态没有 editor.js），能力探测、不判断是哪个壳。「退回这一份」「整本退回」点两下才发 `restoreCheckpoint`：乐观锁是这一次
- *   比较里每份的 `hashNow`（当时磁盘上没有的给 `null`），编辑器里没保存的那几份经 `nf-dirty-query` 问内置编辑器
- *   （插件形态没人回答，是空的）。退回之后后端重推 `checkpoints` 与这个存档点的 `checkpointDiff`，停在这一页重画。
+ * - **列表**：開啟就發 `listCheckpoints`，收 `checkpoints` 畫（新的在前）。頂上一格備註 +「存一個存檔點」（發
+ *   `createCheckpoint`）；自動存的那幾行多一顆「留住…」，攤開一格備註發 `noteCheckpoint`（寫了備註就不會被自動裁掉）。
+ * - **跟現在比**：一行的「跟現在比」發 `checkpointDiff`，收同一個 id 的 `checkpointDiff` 畫三組（改過的 / 之後刪掉的 /
+ *   之後新建的）。「對比」關掉彈窗、經 `nf-version-diff-command` 在編輯區開「版本」的對比標籤，只在內建編輯器回答了
+ *   `nf-version-diff-query` 時給（外掛形態沒有 editor.js），能力探測、不判斷是哪個殼。「退回這一份」「整本退回」點兩下才發 `restoreCheckpoint`：樂觀鎖是這一次
+ *   比較裡每份的 `hashNow`（當時磁碟上沒有的給 `null`），編輯器裡沒儲存的那幾份經 `nf-dirty-query` 問內建編輯器
+ *   （外掛形態沒人回答，是空的）。退回之後後端重推 `checkpoints` 與這個存檔點的 `checkpointDiff`，停在這一頁重畫。
  *
- * 前端只发消息、什么都不写；关掉（× / Esc）就丢掉面板上的一切，下次打开重新要。
+ * 前端只發訊息、什麼都不寫；關掉（× / Esc）就丟掉面板上的一切，下次開啟重新要。
  *
- * **谁占着这一层遮罩**：与表单、独立版 prompt、服务商弹窗一样各自判断「是不是我开的」——这里认的是面板的根节点还在
- * 不在 `providerModalBody` 里。别人中途占了这一层（比如后端推来一条 prompt），根节点就被换掉了，面板当自己已经关了：
- * 之后到的 `checkpoints` / `checkpointDiff` 不再往这一层上画，× / Esc 也不去藏别人的弹窗。
+ * **誰佔著這一層遮罩**：與表單、獨立版 prompt、服務商彈窗一樣各自判斷「是不是我開的」——這裡認的是面板的根節點還在
+ * 不在 `providerModalBody` 裡。別人中途佔了這一層（比如後端推來一條 prompt），根節點就被換掉了，面板當自己已經關了：
+ * 之後到的 `checkpoints` / `checkpointDiff` 不再往這一層上畫，× / Esc 也不去藏別人的彈窗。
  */
 import { clear, el as mk, maybeById, setHidden } from '../dom';
 import { commandVersionDiff, queryDirtyPaths, queryVersionDiff } from '../globals';
@@ -38,14 +38,14 @@ import { vscode } from './store';
 type CheckpointsMessage = Extract<OutMessage, { type: 'checkpoints' }>;
 type CheckpointDiffMessage = Extract<OutMessage, { type: 'checkpointDiff' }>;
 
-const EMPTY_TEXT = '还没有存档点。批量写章、全书替换这类批量动作之前会自动存一个；也可以现在存一个。';
-const RESTORE_HINT = '退回之前会先自动存一个存档点，退回也能撤回；编辑器里没保存的文件会跳过。';
+const EMPTY_TEXT = '還沒有存檔點。批次寫章、全書替換這類批次動作之前會自動存一個；也可以現在存一個。';
+const RESTORE_HINT = '退回之前會先自動存一個存檔點，退回也能撤回；編輯器裡沒儲存的檔案會跳過。';
 
-/** 三组的先后与叫法。 */
+/** 三組的先後與叫法。 */
 const GROUPS: ReadonlyArray<[CheckpointFileStatus, string]> = [
-  ['changed', '改过的'],
-  ['deleted', '之后删掉的'],
-  ['added', '之后新建的'],
+  ['changed', '改過的'],
+  ['deleted', '之後刪掉的'],
+  ['added', '之後新建的'],
 ];
 
 interface Panel {
@@ -56,43 +56,43 @@ interface Panel {
   save: HTMLButtonElement;
   status: HTMLElement;
   list: HTMLElement;
-  /** 列表；null 是还在读。 */
+  /** 列表；null 是還在讀。 */
   entries: CheckpointView[] | null;
   unavailable?: string;
-  /** 发了 `createCheckpoint`、列表还没回来。 */
+  /** 發了 `createCheckpoint`、列表還沒回來。 */
   saving: boolean;
-  /** 哪一个自动存档点的「留住」那一格摊开着，与里面写到一半的字（列表重画时放回去）。 */
+  /** 哪一個自動存檔點的「留住」那一格攤開著，與裡面寫到一半的字（列表重畫時放回去）。 */
   keeping: { id: string; text: string } | null;
-  /** 正在看的那一个存档点（跟现在比）；null 是在列表上。 */
+  /** 正在看的那一個存檔點（跟現在比）；null 是在列表上。 */
   diffId: string | null;
-  /** 比较结果；null 且没有 `diffError` 是还在比。 */
+  /** 比較結果；null 且沒有 `diffError` 是還在比。 */
   diff: CheckpointDiffView | null;
   diffError?: string;
-  /** 发了 `restoreCheckpoint`、比较还没重推回来。 */
+  /** 發了 `restoreCheckpoint`、比較還沒重推回來。 */
   restoring: boolean;
-  /** 「也把存档点之后新建的 N 份搬进回收站」勾着没有（缺省不勾）。 */
+  /** 「也把存檔點之後新建的 N 份搬進回收站」勾著沒有（預設不勾）。 */
   trashAdded: boolean;
 }
 
 let panel: Panel | null = null;
 
-/** 点了一下、等第二下的那颗按钮（两段式，同全书替换）。点别处、重画都退回第一段。 */
+/** 點了一下、等第二下的那顆按鈕（兩段式，同全書替換）。點別處、重畫都退回第一段。 */
 let armed: { key: string; btn: HTMLButtonElement; label: string } | null = null;
 
-// ---------------------------------------------------------------- 开、关
+// ---------------------------------------------------------------- 開、關
 
-/** 工程页工具栏「存档点…」。 */
+/** 工程頁工具欄「存檔點…」。 */
 export function openCheckpoints(): void {
   if (owns()) {
     panel!.note.focus();
     return;
   }
-  // 表单开着（不该有：遮罩盖着工具栏）就先关，不叠两份。
+  // 表單開著（不該有：遮罩蓋著工具欄）就先關，不疊兩份。
   closeForm();
   panel = null;
   armed = null;
   const p = buildPanel();
-  el.providerModalTitle.textContent = '存档点';
+  el.providerModalTitle.textContent = '存檔點';
   clear(el.providerModalBody);
   el.providerModalBody.appendChild(p.root);
   panel = p;
@@ -102,7 +102,7 @@ export function openCheckpoints(): void {
   vscode.postMessage({ type: 'listCheckpoints' });
 }
 
-/** × / Esc：丢掉面板上的一切。这一层已经被别人占了的话只丢自己的状态，不去藏别人的弹窗。 */
+/** × / Esc：丟掉面板上的一切。這一層已經被別人佔了的話只丟自己的狀態，不去藏別人的彈窗。 */
 export function closeCheckpoints(): void {
   if (!panel) {
     return;
@@ -116,7 +116,7 @@ export function closeCheckpoints(): void {
   }
 }
 
-/** 遮罩还是不是这块面板的（见文件头「谁占着这一层遮罩」）。 */
+/** 遮罩還是不是這塊面板的（見檔案頭「誰佔著這一層遮罩」）。 */
 function owns(): boolean {
   return (
     !!panel &&
@@ -127,8 +127,8 @@ function owns(): boolean {
 }
 
 /**
- * 遮罩上的 × 与 Esc（点空白不关，同表单）。合并视图（`#mergeModal`，后端推来的覆盖审阅）盖在上面时 Esc 不归这里——那一层自己没有 Esc，
- * 这一下关掉的会是底下的面板。输入法组字时的 Esc 是输入法的。
+ * 遮罩上的 × 與 Esc（點空白不關，同表單）。合併檢視（`#mergeModal`，後端推來的覆蓋審閱）蓋在上面時 Esc 不歸這裡——那一層自己沒有 Esc，
+ * 這一下關掉的會是底下的面板。輸入法組字時的 Esc 是輸入法的。
  */
 export function installCheckpoints(): void {
   el.providerModalClose.addEventListener('click', () => closeCheckpoints());
@@ -142,7 +142,7 @@ export function installCheckpoints(): void {
     }
     closeCheckpoints();
   });
-  // 两段式按钮：点在别处（哪儿都算）就退回第一段。捕获阶段，半路被 stopPropagation 的点击也算。
+  // 兩段式按鈕：點在別處（哪兒都算）就退回第一段。捕獲階段，半路被 stopPropagation 的點選也算。
   document.addEventListener(
     'click',
     (e) => {
@@ -154,9 +154,9 @@ export function installCheckpoints(): void {
   );
 }
 
-// ---------------------------------------------------------------- 收消息
+// ---------------------------------------------------------------- 收訊息
 
-/** 收 `checkpoints`：列表（存一个、写备注、退回之后后端都重推它）。 */
+/** 收 `checkpoints`：列表（存一個、寫備註、退回之後後端都重推它）。 */
 export function renderCheckpoints(msg: CheckpointsMessage): void {
   if (!owns()) {
     panel = null;
@@ -171,7 +171,7 @@ export function renderCheckpoints(msg: CheckpointsMessage): void {
   }
   renderList();
   if (p.diffId) {
-    // 停在「跟现在比」那一页：只换标题上的备注（写备注之后它变了），比较结果等 `checkpointDiff`。
+    // 停在「跟現在比」那一頁：只換標題上的備註（寫備註之後它變了），比較結果等 `checkpointDiff`。
     const title = p.diffView.querySelector<HTMLElement>('.cp-diff-title');
     if (title) {
       title.textContent = diffTitle(p);
@@ -180,7 +180,7 @@ export function renderCheckpoints(msg: CheckpointsMessage): void {
   }
 }
 
-/** 收 `checkpointDiff`：只认正在看的那一个（返回列表之后才到的、另一个窗口要的都不认）。 */
+/** 收 `checkpointDiff`：只認正在看的那一個（返回列表之後才到的、另一個視窗要的都不認）。 */
 export function renderCheckpointDiff(msg: CheckpointDiffMessage): void {
   if (!owns()) {
     panel = null;
@@ -191,8 +191,8 @@ export function renderCheckpointDiff(msg: CheckpointDiffMessage): void {
     return;
   }
   p.diff = msg.diff ?? null;
-  p.diffError = msg.diff ? undefined : (msg.error ?? '没比出来。');
-  // 退回之后重推回来的：勾选框回到缺省（不勾）——搬进回收站的那一下不该留到下一次。
+  p.diffError = msg.diff ? undefined : (msg.error ?? '沒比出來。');
+  // 退回之後重推回來的：勾選框回到預設（不勾）——搬進回收站的那一下不該留到下一次。
   if (p.restoring) {
     p.trashAdded = false;
   }
@@ -208,10 +208,10 @@ function buildPanel(): Panel {
   const newRow = mk('div', 'cp-new');
   const note = mk('input', 'cp-note-input');
   note.type = 'text';
-  note.placeholder = '备注（可以空着），比如：第一卷写完';
-  const save = primaryBtn('存一个存档点', () => createOne());
+  note.placeholder = '備註（可以空著），比如：第一卷寫完';
+  const save = primaryBtn('存一個存檔點', () => createOne());
   save.classList.add('cp-save');
-  save.title = '把整本书现在的样子存一份（章节、细纲、角色卡、设定、架构、草稿……）；同样的内容只存一份，不占多少地方';
+  save.title = '把整本書現在的樣子存一份（章節、細綱、角色卡、設定、架構、草稿……）；同樣的內容只存一份，不佔多少地方';
   note.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
       e.preventDefault();
@@ -258,11 +258,11 @@ function renderList(): void {
   disarm();
   p.note.disabled = !!p.unavailable;
   p.save.disabled = !!p.unavailable || p.saving;
-  const status = p.entries === null ? '正在读…' : p.unavailable ? p.unavailable : p.saving ? '正在存…' : '';
+  const status = p.entries === null ? '正在讀…' : p.unavailable ? p.unavailable : p.saving ? '正在存…' : '';
   p.status.textContent = status;
   setHidden(p.status, !status);
 
-  // 推来的列表可能正赶上作者在「留住」那一格里打字：重画之后焦点放回去。
+  // 推來的列表可能正趕上作者在「留住」那一格里打字：重畫之後焦點放回去。
   const active = document.activeElement;
   const keepFocused = active instanceof HTMLInputElement && active.classList.contains('cp-keep-input') && p.list.contains(active);
   clear(p.list);
@@ -289,29 +289,29 @@ function buildRow(p: Panel, cp: CheckpointView): HTMLElement {
 
   const main = mk('div', 'cp-row-main');
   const head = mk('div', 'cp-row-head');
-  const note = mk('span', `cp-note${cp.note ? '' : ' is-empty'}`, cp.note || '（没写备注）');
+  const note = mk('span', `cp-note${cp.note ? '' : ' is-empty'}`, cp.note || '（沒寫備註）');
   note.title = cp.note;
   head.append(
     mk('span', 'cp-time', whenText(cp.time)),
-    mk('span', `cp-badge ${cp.auto ? 'is-auto' : 'is-manual'}`, cp.auto ? '自动' : '手动'),
+    mk('span', `cp-badge ${cp.auto ? 'is-auto' : 'is-manual'}`, cp.auto ? '自動' : '手動'),
     note
   );
-  const meta = mk('div', 'hint cp-row-meta', `正文 ${cp.chapters} 章 · ${formatWords(cp.chapterWords)} · ${cp.files} 份文件`);
+  const meta = mk('div', 'hint cp-row-meta', `正文 ${cp.chapters} 章 · ${formatWords(cp.chapterWords)} · ${cp.files} 份檔案`);
   if (cp.skipped.length > 0) {
-    // 第 2 条：没存进去的说出来。路径挂在提示上。
-    const skipped = mk('span', 'cp-skipped', `${cp.skipped.length} 份超过 2 MB 没存`);
+    // 第 2 條：沒存進去的說出來。路徑掛在提示上。
+    const skipped = mk('span', 'cp-skipped', `${cp.skipped.length} 份超過 2 MB 沒存`);
     skipped.title = cp.skipped.join('\n');
     meta.append(' · ', skipped);
   }
   main.append(head, meta);
 
   const actions = mk('div', 'cp-row-actions');
-  const compare = secondaryBtn('跟现在比', () => openDiff(cp.id));
-  compare.title = '看这个存档点之后改了哪几份、字数差多少；可以单份对比、退回';
+  const compare = secondaryBtn('跟現在比', () => openDiff(cp.id));
+  compare.title = '看這個存檔點之後改了哪幾份、字數差多少；可以單份對比、退回';
   actions.appendChild(compare);
   if (cp.auto) {
     const keep = secondaryBtn('留住…', () => toggleKeep(cp));
-    keep.title = '写一句备注把它留住：写了备注就不会被自动裁掉（自动存的只留最近 30 个）';
+    keep.title = '寫一句備註把它留住：寫了備註就不會被自動裁掉（自動存的只留最近 30 個）';
     actions.appendChild(keep);
   }
   row.append(main, actions);
@@ -321,7 +321,7 @@ function buildRow(p: Panel, cp: CheckpointView): HTMLElement {
   return row;
 }
 
-/** 「留住…」：摊开 / 收起那一格。缺省填着原来那句备注（自动存的都有一句「批量写章之前（第 12–20 章）」）。 */
+/** 「留住…」：攤開 / 收起那一格。預設填著原來那句備註（自動存的都有一句「批次寫章之前（第 12–20 章）」）。 */
 function toggleKeep(cp: CheckpointView): void {
   const p = panel;
   if (!p) {
@@ -338,7 +338,7 @@ function buildKeep(p: Panel, id: string): HTMLElement {
   const box = mk('div', 'cp-keep');
   const input = mk('input', 'cp-keep-input');
   input.type = 'text';
-  input.placeholder = '写一句备注（空着就留原来那句）';
+  input.placeholder = '寫一句備註（空著就留原來那句）';
   input.value = p.keeping?.text ?? '';
   input.addEventListener('input', () => {
     if (p.keeping?.id === id) {
@@ -360,12 +360,12 @@ function buildKeep(p: Panel, id: string): HTMLElement {
     }
   });
   const ok = primaryBtn('留住', submit);
-  ok.title = '写了备注就不会被自动裁掉';
+  ok.title = '寫了備註就不會被自動裁掉';
   box.append(input, ok);
   return box;
 }
 
-// ---------------------------------------------------------------- 跟现在比
+// ---------------------------------------------------------------- 跟現在比
 
 function openDiff(id: string): void {
   const p = panel;
@@ -398,11 +398,11 @@ function backToList(): void {
   setHidden(p.listView, false);
 }
 
-/** 「10-20 22:30「第一卷写完」 ↔ 现在」：说法同后端的 `describeCheckpoint`（toast 里也这么写）。 */
+/** 「10-20 22:30「第一卷寫完」 ↔ 現在」：說法同後端的 `describeCheckpoint`（toast 裡也這麼寫）。 */
 function diffTitle(p: Panel): string {
   const cp = p.entries?.find((x) => x.id === p.diffId);
   const label = cp ? `${whenText(cp.time)}${cp.note ? `「${cp.note}」` : ''}` : (p.diffId ?? '');
-  return `${label} ↔ 现在`;
+  return `${label} ↔ 現在`;
 }
 
 function renderDiff(): void {
@@ -428,7 +428,7 @@ function renderDiff(): void {
     return;
   }
   if (d.entries.length === 0) {
-    view.appendChild(mk('p', 'hint cp-same', `跟现在一模一样（${d.unchanged} 份），没有可退回的。`));
+    view.appendChild(mk('p', 'hint cp-same', `跟現在一模一樣（${d.unchanged} 份），沒有可退回的。`));
     return;
   }
   if (p.restoring) {
@@ -436,7 +436,7 @@ function renderDiff(): void {
   }
 
   const byStatus = (s: CheckpointFileStatus) => d.entries.filter((e) => e.status === s);
-  // 宿主有没有合并视图：只有独立版的页面放 `#mergeModal`（插件用不上它，后端也没有 `mergeTexts`）。
+  // 宿主有沒有合併檢視：只有獨立版的頁面放 `#mergeModal`（外掛用不上它，後端也沒有 `mergeTexts`）。
   const canCompare = queryVersionDiff();
   for (const [status, label] of GROUPS) {
     const files = byStatus(status);
@@ -452,7 +452,7 @@ function renderDiff(): void {
     view.appendChild(group);
   }
   if (d.unchanged > 0) {
-    view.appendChild(mk('p', 'hint cp-unchanged', `另有 ${d.unchanged} 份跟现在一模一样，不列。`));
+    view.appendChild(mk('p', 'hint cp-unchanged', `另有 ${d.unchanged} 份跟現在一模一樣，不列。`));
   }
   view.appendChild(buildFoot(p, d));
 }
@@ -465,30 +465,30 @@ function buildFile(p: Panel, id: string, entry: CheckpointDiffEntry, canCompare:
   const actions = mk('span', 'cp-file-actions');
   if (entry.status !== 'added') {
     if (canCompare) {
-      const compare = secondaryBtn('对比', () => {
+      const compare = secondaryBtn('對比', () => {
         const cp = p.entries?.find((c) => c.id === id);
         if (owns() && cp) {
-          // 关掉弹窗、在编辑区开对比标签：用回一处、恢复整份都只进编辑区，存不存由作者。
+          // 關掉彈窗、在編輯區開對比標籤：用回一處、恢復整份都只進編輯區，存不存由作者。
           closeCheckpoints();
           commandVersionDiff({ path: entry.path, status: entry.status, checkpoint: { id, time: cp.time, note: cp.note, auto: cp.auto } });
         }
       });
       compare.classList.add('cp-compare');
-      compare.title = '关掉这里，在编辑区开对比标签：存档点里的那一份 ↔ 现在这份；可以一处一处用回（只进编辑区，不写盘）';
+      compare.title = '關掉這裡，在編輯區開對比標籤：存檔點裡的那一份 ↔ 現在這份；可以一處一處用回（只進編輯區，不寫盤）';
       compare.disabled = p.restoring;
       actions.appendChild(compare);
     }
     const restore = armable(
       `file:${entry.path}`,
-      '退回这一份',
-      () => '确定退回这一份？',
+      '退回這一份',
+      () => '確定退回這一份？',
       () => restoreFiles([entry.path], []),
       'secondary cp-restore'
     );
     restore.title =
       entry.status === 'deleted'
-        ? '点两下：照存档点里的样子把这一份建回来'
-        : '点两下：把这一份换回存档点里的样子（被盖掉的这一份先存一版历史）';
+        ? '點兩下：照存檔點裡的樣子把這一份建回來'
+        : '點兩下：把這一份換回存檔點裡的樣子（被蓋掉的這一份先存一版歷史）';
     restore.disabled = p.restoring;
     actions.appendChild(restore);
   }
@@ -512,18 +512,18 @@ function buildFoot(p: Panel, d: CheckpointDiffView): HTMLElement {
       p.trashAdded = box.checked;
       sync();
     });
-    label.title = '缺省不动它们；勾上才搬（搬进工程回收站，不真删）';
-    label.append(box, `也把存档点之后新建的 ${added.length} 份搬进回收站`);
+    label.title = '預設不動它們；勾上才搬（搬進工程回收站，不真刪）';
+    label.append(box, `也把存檔點之後新建的 ${added.length} 份搬進回收站`);
     row.appendChild(label);
   }
   const whole = armable(
     'all',
     '整本退回',
-    () => `确定整本退回（${count()} 份）`,
+    () => `確定整本退回（${count()} 份）`,
     () => restoreFiles(back, p.trashAdded ? added : []),
     'primary cp-restore-all'
   );
-  whole.title = '点两下：改过的、之后删掉的都换回存档点里的样子';
+  whole.title = '點兩下：改過的、之後刪掉的都換回存檔點裡的樣子';
   const sync = () => {
     whole.disabled = p.restoring || count() === 0;
   };
@@ -533,7 +533,7 @@ function buildFoot(p: Panel, d: CheckpointDiffView): HTMLElement {
   return foot;
 }
 
-/** 退回：乐观锁是这一次比较里每份的 `hashNow`，当时磁盘上没有的给 `null`。 */
+/** 退回：樂觀鎖是這一次比較裡每份的 `hashNow`，當時磁碟上沒有的給 `null`。 */
 function restoreFiles(paths: string[], trash: string[]): void {
   const p = panel;
   if (!p || !owns() || !p.diff || !p.diffId || p.restoring || paths.length + trash.length === 0) {
@@ -550,9 +550,9 @@ function restoreFiles(paths: string[], trash: string[]): void {
   vscode.postMessage({ type: 'restoreCheckpoint', request });
 }
 
-// ---------------------------------------------------------------- 两段式按钮
+// ---------------------------------------------------------------- 兩段式按鈕
 
-/** 第一下只换字（`is-armed`，同表单的两段式提交），第二下才 `run`。 */
+/** 第一下只換字（`is-armed`，同表單的兩段式提交），第二下才 `run`。 */
 function armable(
   key: string,
   label: string,
@@ -583,18 +583,18 @@ function disarm(): void {
   }
 }
 
-// ---------------------------------------------------------------- 说法
+// ---------------------------------------------------------------- 說法
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** 存档点的时刻：「10-20 22:30」，不是今年的带上年份。 */
+/** 存檔點的時刻：「10-20 22:30」，不是今年的帶上年份。 */
 function whenText(time: number): string {
   const d = new Date(time);
   const md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   return d.getFullYear() === new Date().getFullYear() ? md : `${d.getFullYear()}-${md}`;
 }
 
-/** 「3,011」：一份文件的字数，千位加逗号（不折成万字——两个数要对得出差了多少）。 */
+/** 「3,011」：一份檔案的字數，千位加逗號（不折成萬字——兩個數要對得出差了多少）。 */
 function digits(n: number | undefined): string {
   return String(Math.round(n ?? 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
@@ -603,5 +603,5 @@ function wordsText(entry: CheckpointDiffEntry): string {
   if (entry.status === 'changed') {
     return `${digits(entry.wordsThen)} → ${digits(entry.wordsNow)} 字`;
   }
-  return entry.status === 'deleted' ? `当时 ${digits(entry.wordsThen)} 字` : `现在 ${digits(entry.wordsNow)} 字`;
+  return entry.status === 'deleted' ? `當時 ${digits(entry.wordsThen)} 字` : `現在 ${digits(entry.wordsNow)} 字`;
 }

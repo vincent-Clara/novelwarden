@@ -1,11 +1,11 @@
 /**
- * 远程风目录选择器：hostDir 列出名字、点目录再列举、确定发 openFolder。
+ * 遠端風目錄選擇器：hostDir 列出名字、點目錄再列舉、確定發 openFolder。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, JSDOM_SKIP } = require('../../helpers/dom');
 
-describe('独立版目录选择器', { skip: JSDOM_SKIP }, () => {
+describe('獨立版目錄選擇器', { skip: JSDOM_SKIP }, () => {
   let ui;
   let prompted;
 
@@ -23,7 +23,7 @@ describe('独立版目录选择器', { skip: JSDOM_SKIP }, () => {
     };
   });
 
-  test('点打开文件夹出现选择器，不走 prompt', () => {
+  test('點開啟資料夾出現選擇器，不走 prompt', () => {
     ui.clickEl(ui.doc.querySelector('[data-welcome="openFolder"]'));
     assert.equal(prompted, false);
     const picker = ui.doc.querySelector('.nf-picker');
@@ -49,7 +49,7 @@ describe('独立版目录选择器', { skip: JSDOM_SKIP }, () => {
     assert.ok(labels.some((t) => t.includes('note.txt')));
   });
 
-  test('点目录发出新的 listHostDir', () => {
+  test('點目錄發出新的 listHostDir', () => {
     ui.sent.length = 0;
     const row = [...ui.doc.querySelectorAll('.nf-picker-row')].find((r) =>
       r.textContent.includes('books')
@@ -59,7 +59,7 @@ describe('独立版目录选择器', { skip: JSDOM_SKIP }, () => {
     assert.equal(req.path, '/home/me/books');
   });
 
-  test('确定发出 openFolder 当前路径', () => {
+  test('確定發出 openFolder 當前路徑', () => {
     ui.post({
       type: 'hostDir',
       path: '/home/me/books',
@@ -69,7 +69,7 @@ describe('独立版目录选择器', { skip: JSDOM_SKIP }, () => {
     });
     ui.sent.length = 0;
     const ok = [...ui.doc.querySelectorAll('.nf-picker-actions button')].find(
-      (b) => b.textContent === '确定'
+      (b) => b.textContent === '確定'
     );
     ui.clickEl(ok);
     const msg = ui.last('openFolder');
@@ -78,7 +78,7 @@ describe('独立版目录选择器', { skip: JSDOM_SKIP }, () => {
     assert.equal(msg.mode, 'replace');
   });
 
-  test('开着工程时，选择器从这个工程的目录起', () => {
+  test('開著工程時，選擇器從這個工程的目錄起', () => {
     ui.post({
       type: 'workspaces',
       currentId: 'D:\\books\\雪夜',

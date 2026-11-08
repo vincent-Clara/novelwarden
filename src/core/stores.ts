@@ -5,19 +5,19 @@ import * as path from 'node:path';
 import { ConfigStore, PersistedSettings } from './config';
 
 /**
- * 文件后端的配置与密钥存储，双壳共用（独立版直接用；VS Code 壳在
- * 迁移完成后切过来）。落点统一在配置目录（默认 ~/.novelwarden/）。
+ * 檔案後端的配置與金鑰儲存，雙殼共用（獨立版直接用；VS Code 殼在
+ * 遷移完成後切過來）。落點統一在配置目錄（預設 ~/.novelwarden/）。
  */
 
 /**
- * 配置目录 —— 配置与密钥的用户主目录存储。
+ * 配置目錄 —— 配置與金鑰的使用者主目錄儲存。
  *
- * 解析顺序：`NOVELWARDEN_HOME` > `NOVELFORGE_HOME` > 已存在的 ~/.novelwarden >
- * 已存在的 ~/.novelforge > ~/.novelwarden。改名不能丢旧配置与密钥：旧目录还在、
- * 新目录还没建时继续用旧的（作者确认迁移之前不碰它）。
+ * 解析順序：`NOVELWARDEN_HOME` > `NOVELFORGE_HOME` > 已存在的 ~/.novelwarden >
+ * 已存在的 ~/.novelforge > ~/.novelwarden。改名不能丟舊配置與金鑰：舊目錄還在、
+ * 新目錄還沒建時繼續用舊的（作者確認遷移之前不碰它）。
  *
- * 环境变量可以把它挪到别处：Android 壳把家目录设成放书的公共目录
- * （新建一本书、打开文件夹都从家目录起），密钥却不能跟着落到别的 app 也读得到的地方，就指回 app 私有目录。
+ * 環境變數可以把它挪到別處：Android 殼把家目錄設成放書的公共目錄
+ * （新建一本書、開啟資料夾都從家目錄起），金鑰卻不能跟著落到別的 app 也讀得到的地方，就指回 app 私有目錄。
  */
 export function homeDir(): string {
   const explicit = process.env.NOVELWARDEN_HOME?.trim() || process.env.NOVELFORGE_HOME?.trim();
@@ -39,7 +39,7 @@ export class FileConfigStore implements ConfigStore {
   readonly filePath = path.join(homeDir(), 'config.json');
 
   read(): PersistedSettings | undefined {
-    // read() 是同步接口（readConfig 到处同步调用）；文件极小，同步读可接受。
+    // read() 是同步介面（readConfig 到處同步呼叫）；檔案極小，同步讀可接受。
     try {
       return JSON.parse(fsSync.readFileSync(this.filePath, 'utf8')) as PersistedSettings;
     } catch {
@@ -60,9 +60,9 @@ export interface SecretStore {
 }
 
 /**
- * 配置目录下的 secrets.json（旧装可能是 ~/.novelforge/secrets.json）。JSON 无法写文件头注释，首次创建时
- * 同目录放一个 README.txt 说明「不要提交 secrets.json」。
- * Windows 无 POSIX 权限位，仅依赖用户主目录隔离。
+ * 配置目錄下的 secrets.json（舊裝可能是 ~/.novelforge/secrets.json）。JSON 無法寫檔案頭註釋，首次建立時
+ * 同目錄放一個 README.txt 說明「不要提交 secrets.json」。
+ * Windows 無 POSIX 許可權位，僅依賴使用者主目錄隔離。
  */
 export class FileSecretStore implements SecretStore {
   private readonly filePath = path.join(homeDir(), 'secrets.json');
@@ -85,7 +85,7 @@ export class FileSecretStore implements SecretStore {
     try {
       await fs.stat(readme);
     } catch {
-      await fs.writeFile(readme, 'secrets.json 存放各服务商的 API Key，请勿提交到版本库。\n', 'utf8');
+      await fs.writeFile(readme, 'secrets.json 存放各服務商的 API Key，請勿提交到版本庫。\n', 'utf8');
     }
   }
 

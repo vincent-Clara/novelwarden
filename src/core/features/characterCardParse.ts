@@ -15,7 +15,7 @@ export interface ParsedCard {
 
 /**
  * 解析模型返回的角色卡 JSON。
- * 解析失败返回 undefined 由调用方跳过这一批——角色卡写错比没写更麻烦。
+ * 解析失敗返回 undefined 由呼叫方跳過這一批——角色卡寫錯比沒寫更麻煩。
  */
 export function parseCardResponse(raw: string): ParsedCard | undefined {
   const text = stripCodeFence(raw);
@@ -62,9 +62,9 @@ export function parseCardResponse(raw: string): ParsedCard | undefined {
 }
 
 /**
- * 更新角色卡与建卡转写那一步（2026-10-25 起改成转写）：合同是 {@link CARD_JSON_CONTRACT}，解码就是上面的
- * {@link parseCardResponse}。性别按对应关系填（「男性」也认），不比原文；原文连「身份」「性格」这几节都没有
- * （「我不太确定」）的不转，按解析失败走——跳过这一批。
+ * 更新角色卡與建卡轉寫那一步（2026-10-25 起改成轉寫）：合同是 {@link CARD_JSON_CONTRACT}，解碼就是上面的
+ * {@link parseCardResponse}。性別按對應關係填（「男性」也認），不比原文；原文連「身份」「性格」這幾節都沒有
+ * （「我不太確定」）的不轉，按解析失敗走——跳過這一批。
  */
 export function cardTranscribeSpec(label: string): TranscribeSpec<ParsedCard> {
   return {
@@ -74,9 +74,9 @@ export function cardTranscribeSpec(label: string): TranscribeSpec<ParsedCard> {
       const card = parseCardResponse(json);
       return card
         ? { ok: true, value: card }
-        : { ok: false, message: '整理不出角色卡：身份到暗设七节全是空的，或者不是一个 JSON 对象' };
+        : { ok: false, message: '整理不出角色卡：身份到暗設七節全是空的，或者不是一個 JSON 物件' };
     },
     mapped: ['性别', 'gender'],
-    looksLike: (source) => /身份|性格|语言习惯|当前状态/.test(source),
+    looksLike: (source) => /身份|性格|(?:语|語)言(?:习|習)(?:惯|慣)|(?:当|當)前(?:状|狀)(?:态|態)/.test(source),
   };
 }

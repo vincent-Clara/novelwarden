@@ -1,11 +1,11 @@
 /**
- * 工具条那一行的几条约束（外部 agent 经 MCP 调工具时，对话页上只看得见这些）：
+ * 工具條那一行的幾條約束（外部 agent 經 MCP 調工具時，對話頁上只看得見這些）：
  *
- * 1. **认得出是谁做的**——MCP 留下的那一轮头上写「外部 Agent」并挂一个 `MCP` 标签，
- *    不冒充模型的回复。
- * 2. **停止按钮全程可用**——忙的时候就是它顶在发送位上。
- * 3. **失败的步骤标红并保留**——不因为后面成功了就把失败那步藏掉。
- * 4. **详情查得到**——那一行仍只画摘要，参数与返回收在折叠里，点开才有。
+ * 1. **認得出是誰做的**——MCP 留下的那一輪頭上寫「外部 Agent」並掛一個 `MCP` 標籤，
+ *    不冒充模型的回覆。
+ * 2. **停止按鈕全程可用**——忙的時候就是它頂在傳送位上。
+ * 3. **失敗的步驟標紅並保留**——不因為後面成功了就把失敗那步藏掉。
+ * 4. **詳情查得到**——那一行仍只畫摘要，引數與返回收在摺疊裡，點開才有。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,7 +13,7 @@ const { mount, JSDOM_SKIP, turn, textSeg, toolSeg, emptySession } = require('../
 
 const rows = (ui, id) => [...ui.bubble(id).querySelectorAll('.tool-row')];
 
-describe('MCP 留下的那一轮（重开面板时回放）', { skip: JSDOM_SKIP }, () => {
+describe('MCP 留下的那一輪（重開面板時回放）', { skip: JSDOM_SKIP }, () => {
   let ui;
   const head = (id) => ui.bubble(id).querySelector('.msg-head');
 
@@ -27,7 +27,7 @@ describe('MCP 留下的那一轮（重开面板时回放）', { skip: JSDOM_SKIP
             mcp: true,
             segments: [
               toolSeg({ callId: 'c1', name: 'read', title: 'read .novelwarden/summaries/012.md', ok: true, summary: '20 行', elapsedMs: 30 }),
-              toolSeg({ callId: 'c2', name: 'write', title: 'write .novelwarden/summaries/012.md', ok: false, summary: '作者跳过了这一步', elapsedMs: 0 }),
+              toolSeg({ callId: 'c2', name: 'write', title: 'write .novelwarden/summaries/012.md', ok: false, summary: '作者跳過了這一步', elapsedMs: 0 }),
             ],
           }),
           turn('a2', 'assistant', '普通回答'),
@@ -43,38 +43,38 @@ describe('MCP 留下的那一轮（重开面板时回放）', { skip: JSDOM_SKIP
     });
   });
 
-  test('头上写的是「外部 Agent」', () => {
+  test('頭上寫的是「外部 Agent」', () => {
     assert.equal(head('a1').querySelector('.msg-role').textContent, '外部 Agent');
   });
 
-  test('挂着一个 MCP 标签', () => {
+  test('掛著一個 MCP 標籤', () => {
     const tag = head('a1').querySelector('.msg-tag');
     assert.ok(tag, head('a1').innerHTML);
     assert.equal(tag.textContent, 'MCP');
   });
 
-  // 不因为后面成功了就把失败那步藏掉。
-  test('失败的那一步保留并标红', () => {
+  // 不因為後面成功了就把失敗那步藏掉。
+  test('失敗的那一步保留並標紅', () => {
     assert.equal(rows(ui, 'a1').length, 2);
     const failed = ui.bubble('a1').querySelector('.tool-row[data-call="c2"]');
     assert.ok(failed.classList.contains('tool-failed'), failed.className);
-    assert.ok(failed.textContent.includes('跳过'), failed.textContent);
+    assert.ok(failed.textContent.includes('跳過'), failed.textContent);
   });
 
-  test('普通回复还是「模型」，没有 MCP 标签', () => {
+  test('普通回覆還是「模型」，沒有 MCP 標籤', () => {
     assert.equal(head('a2').querySelector('.msg-role').textContent, '模型');
     assert.equal(head('a2').querySelector('.msg-tag'), null);
   });
 
-  // 删掉的内置 agent 留下的旧轮次：不冒充模型，也不冒充 MCP。
-  test('内置 agent 的旧轮次写「内置 Agent」并挂「已移除」', () => {
-    assert.equal(head('a3').querySelector('.msg-role').textContent, '内置 Agent');
+  // 刪掉的內建 agent 留下的舊輪次：不冒充模型，也不冒充 MCP。
+  test('內建 agent 的舊輪次寫「內建 Agent」並掛「已移除」', () => {
+    assert.equal(head('a3').querySelector('.msg-role').textContent, '內建 Agent');
     assert.equal(head('a3').querySelector('.msg-tag').textContent, '已移除');
     assert.equal(rows(ui, 'a3').length, 1);
   });
 });
 
-describe('停止按钮全程可用', { skip: JSDOM_SKIP }, () => {
+describe('停止按鈕全程可用', { skip: JSDOM_SKIP }, () => {
   let ui;
   const stop = () => ui.doc.getElementById('stopBtn');
 
@@ -83,22 +83,22 @@ describe('停止按钮全程可用', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'session', session: emptySession() });
   });
 
-  test('页面上有这颗按钮', () => {
+  test('頁面上有這顆按鈕', () => {
     assert.ok(stop(), '缺少 #stopBtn');
   });
 
-  test('忙起来之后点得到', () => {
+  test('忙起來之後點得到', () => {
     ui.post({ type: 'busy', value: true });
     assert.equal(stop().hidden, false, stop().outerHTML);
   });
 
-  test('点它发的是 stop', () => {
+  test('點它發的是 stop', () => {
     ui.clickEl(stop());
     assert.ok(ui.sent.some((m) => m.type === 'stop'), JSON.stringify(ui.sent.map((m) => m.type)));
   });
 });
 
-describe('工具调用详情（点开那一条）', { skip: JSDOM_SKIP }, () => {
+describe('工具呼叫詳情（點開那一條）', { skip: JSDOM_SKIP }, () => {
   let ui;
   const rowOf = (id, call) => ui.bubble(id).querySelector(`.tool-row[data-call="${call}"]`);
 
@@ -108,7 +108,7 @@ describe('工具调用详情（点开那一条）', { skip: JSDOM_SKIP }, () => 
       type: 'session',
       session: emptySession({
         turns: [
-          turn('a1', 'assistant', '第 9 章里没提过北境。', {
+          turn('a1', 'assistant', '第 9 章裡沒提過北境。', {
             segments: [
               toolSeg({
                 callId: 'c1',
@@ -117,12 +117,12 @@ describe('工具调用详情（点开那一条）', { skip: JSDOM_SKIP }, () => 
                 ok: true,
                 summary: '19 行',
                 elapsedMs: 1,
-                argsText: '{\n  "path": "chapters/009-北风.md"\n}',
-                resultText: '第九章 北风\n他从没去过那边。',
+                argsText: '{\n  "path": "chapters/009-北風.md"\n}',
+                resultText: '第九章 北風\n他從沒去過那邊。',
               }),
-              // 老会话里存的那些：只有摘要，没有明细。
-              toolSeg({ callId: 'c2', name: 'list', title: 'list', ok: true, summary: '2 项', elapsedMs: 4 }),
-              textSeg('第 9 章里没提过北境。'),
+              // 老會話裡存的那些：只有摘要，沒有明細。
+              toolSeg({ callId: 'c2', name: 'list', title: 'list', ok: true, summary: '2 項', elapsedMs: 4 }),
+              textSeg('第 9 章裡沒提過北境。'),
             ],
           }),
         ],
@@ -130,35 +130,35 @@ describe('工具调用详情（点开那一条）', { skip: JSDOM_SKIP }, () => 
     });
   });
 
-  test('那一行上仍然只有摘要（正文不摊在气泡里）', () => {
+  test('那一行上仍然只有摘要（正文不攤在氣泡裡）', () => {
     const line = rowOf('a1', 'c1').querySelector('.tool-line');
     assert.ok(line.textContent.includes('19 行'), line.textContent);
-    assert.ok(!line.textContent.includes('北风'), line.textContent);
+    assert.ok(!line.textContent.includes('北風'), line.textContent);
   });
 
-  test('默认是收起的', () => {
+  test('預設是收起的', () => {
     assert.equal(rowOf('a1', 'c1').open, false);
   });
 
-  test('点开看得到参数与返回', () => {
+  test('點開看得到引數與返回', () => {
     const row = rowOf('a1', 'c1');
     row.open = true;
     const parts = [...row.querySelectorAll('.tool-detail-text')].map((n) => n.textContent);
     assert.equal(parts.length, 2);
-    assert.ok(parts[0].includes('chapters/009-北风.md'), parts[0]);
-    assert.ok(parts[1].includes('他从没去过那边'), parts[1]);
+    assert.ok(parts[0].includes('chapters/009-北風.md'), parts[0]);
+    assert.ok(parts[1].includes('他從沒去過那邊'), parts[1]);
   });
 
-  // 点开之后空空如也比不给展开更让人火大。
-  test('没有明细的老记录不长出折叠三角', () => {
+  // 點開之後空空如也比不給展開更讓人火大。
+  test('沒有明細的老記錄不長出摺疊三角', () => {
     const row = rowOf('a1', 'c2');
     assert.equal(row.tagName, 'DIV');
     assert.equal(row.querySelector('.tool-detail'), null);
-    assert.ok(row.textContent.includes('2 项'), row.textContent);
+    assert.ok(row.textContent.includes('2 項'), row.textContent);
   });
 });
 
-describe('详情在实时那条路上（进行中 → 有结果）', { skip: JSDOM_SKIP }, () => {
+describe('詳情在實時那條路上（進行中 → 有結果）', { skip: JSDOM_SKIP }, () => {
   let ui;
   const row = () => ui.bubble('a1').querySelector('.tool-row[data-call="c1"]');
 
@@ -172,19 +172,19 @@ describe('详情在实时那条路上（进行中 → 有结果）', { skip: JSD
       callId: 'c1',
       name: 'read',
       title: 'read',
-      argsText: '{ "path": "chapters/009-北风.md" }',
+      argsText: '{ "path": "chapters/009-北風.md" }',
     });
   });
 
-  // 「它现在卡在哪一步」最先要看的就是这一步动的是哪个路径。
-  test('还没有结果时参数就查得到', () => {
+  // 「它現在卡在哪一步」最先要看的就是這一步動的是哪個路徑。
+  test('還沒有結果時引數就查得到', () => {
     row().open = true;
     const parts = [...row().querySelectorAll('.tool-detail-text')].map((n) => n.textContent);
     assert.equal(parts.length, 1);
-    assert.ok(parts[0].includes('009-北风'), parts[0]);
+    assert.ok(parts[0].includes('009-北風'), parts[0]);
   });
 
-  test('结果到了：展开状态跟着过去，返回文本补上', () => {
+  test('結果到了：展開狀態跟著過去，返回文字補上', () => {
     ui.post({
       type: 'toolResult',
       turnId: 'a1',
@@ -193,13 +193,13 @@ describe('详情在实时那条路上（进行中 → 有结果）', { skip: JSD
       ok: true,
       summary: '19 行',
       elapsedMs: 1,
-      argsText: '{ "path": "chapters/009-北风.md" }',
-      resultText: '第九章 北风',
+      argsText: '{ "path": "chapters/009-北風.md" }',
+      resultText: '第九章 北風',
     });
     assert.equal(row().open, true, row().outerHTML);
     const parts = [...row().querySelectorAll('.tool-detail-text')].map((n) => n.textContent);
     assert.equal(parts.length, 2);
-    assert.ok(parts[1].includes('第九章 北风'), parts[1]);
+    assert.ok(parts[1].includes('第九章 北風'), parts[1]);
     assert.ok(row().querySelector('.tool-elapsed').textContent.includes('1ms'));
   });
 });

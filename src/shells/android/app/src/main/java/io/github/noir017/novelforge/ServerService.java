@@ -12,9 +12,9 @@ import android.os.Build;
 import android.os.IBinder;
 
 /**
- * 本机模式的前台服务：只为挂一条常驻通知。写一章要跑几分钟，切到别的 app 时系统会把后台 app 连同它起的 node
- * 一起冻住（Android 11+ 的 cached apps freezer），模型的流断在半路；有前台服务的 app 不算后台，node 接着跑。
- * node 进程本身归 {@link LocalServer} 管，这里不碰它，只在作者把 app 从最近任务里划掉时一起收掉。
+ * 本機模式的前臺服務：只為掛一條常駐通知。寫一章要跑幾分鐘，切到別的 app 時系統會把後臺 app 連同它起的 node
+ * 一起凍住（Android 11+ 的 cached apps freezer），模型的流斷在半路；有前臺服務的 app 不算後臺，node 接著跑。
+ * node 程序本身歸 {@link LocalServer} 管，這裡不碰它，只在作者把 app 從最近任務裡劃掉時一起收掉。
  */
 public class ServerService extends Service {
     private static final String CHANNEL = "server";
@@ -31,19 +31,19 @@ public class ServerService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         NotificationManager nm = getSystemService(NotificationManager.class);
-        nm.createNotificationChannel(new NotificationChannel(CHANNEL, "本机服务", NotificationManager.IMPORTANCE_LOW));
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL, "本機服務", NotificationManager.IMPORTANCE_LOW));
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification n = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_edit)
-                .setContentTitle("Novelwarden 本机服务在运行")
-                .setContentText("切到别的 app 时，正在写的章节不会断")
+                .setContentTitle("Novelwarden 本機服務在執行")
+                .setContentText("切到別的 app 時，正在寫的章節不會斷")
                 .setContentIntent(open)
                 .setOngoing(true)
                 .build();
         if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         else startForeground(NOTIFICATION_ID, n);
-        // 被系统杀了不自己重启：服务端由 Activity 起，重启的服务手里没有它
+        // 被系統殺了不自己重啟：服務端由 Activity 起，重啟的服務手裡沒有它
         return START_NOT_STICKY;
     }
 

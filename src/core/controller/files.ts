@@ -22,20 +22,20 @@ import { basename } from 'node:path';
 
 const log = scoped('面板');
 
-/** 文件页与草稿。字段只给 controller/ 同包用。 */
+/** 檔案頁與草稿。欄位只給 controller/ 同包用。 */
 
 /**
- * 列举资源管理器要的目录并广播。
+ * 列舉資源管理器要的目錄並廣播。
  *
- * 顺带把 `dirs` 记成新的关注集合——工程有变动时 `pushTabData` 会照着
- * 再推一遍。空数组是合法输入（前端把树全折叠了），此时只更新集合。
+ * 順帶把 `dirs` 記成新的關注集合——工程有變動時 `pushTabData` 會照著
+ * 再推一遍。空陣列是合法輸入（前端把樹全摺疊了），此時只更新集合。
  */
 export async function pushDirListings(
   c: ChatController,
   dirs: string[],
   ephemeral?: boolean
 ): Promise<void> {
-  // 选择器一次性列举不能改掉资源管理器的关注集合，否则展开着的树会被冲掉。
+  // 選擇器一次性列舉不能改掉資源管理器的關注集合，否則展開著的樹會被沖掉。
   if (!ephemeral) {
     c.watchedDirs = dirs;
   }
@@ -46,11 +46,11 @@ export async function pushDirListings(
 }
 
 /**
- * 打开某章的草稿。首次点击按需创建，已存在原样打开（绝不覆盖）。之后点开一章，旁边并排开的换成草稿（`companion`）。
+ * 開啟某章的草稿。首次點選按需建立，已存在原樣開啟（絕不覆蓋）。之後點開一章，旁邊並排開的換成草稿（`companion`）。
  *
- * **必须先在真实章节列表里查到这一章**：这条路径会写盘，拿前端传上来的
- * 任意相对路径去拼 `drafts/<任意>` 就等于开了一个绕过区守卫的写入口子。
- * 别为了省一次扫描把这一步优化掉。
+ * **必須先在真實章節列表裡查到這一章**：這條路徑會寫盤，拿前端傳上來的
+ * 任意相對路徑去拼 `drafts/<任意>` 就等於開了一個繞過區守衛的寫入口子。
+ * 別為了省一次掃描把這一步最佳化掉。
  */
 export async function openDraft(c: ChatController, chapterRelPath: string): Promise<void> {
   const chapter = await knownChapter(c, chapterRelPath);
@@ -58,16 +58,16 @@ export async function openDraft(c: ChatController, chapterRelPath: string): Prom
     return;
   }
   const rel = await new Workspace(c.project).ensureDraft(chapter);
-  log.info(`打开第 ${chapter.order} 章的草稿`, rel);
+  log.info(`開啟第 ${chapter.order} 章的草稿`, rel);
   c.companion = 'draft';
   await openCompanion(rel);
-  // 刚建出来的草稿要让 hasDraft 立刻翻过来，菜单文案跟着变。
+  // 剛建出來的草稿要讓 hasDraft 立刻翻過來，選單文案跟著變。
   await c.pushState();
 }
 
 /**
- * 内置编辑器工具栏的「细纲」（2026-10-23）：并排打开这一章的细纲，还没有就按模板建一份（`ensureChapterPlot`）。
- * 之后点开一章，旁边并排开的换回细纲（`companion`）。与 {@link openDraft} 同一个守法：先在真实章节列表里查到这一章。
+ * 內建編輯器工具欄的「細綱」（2026-10-23）：並排開啟這一章的細綱，還沒有就按模板建一份（`ensureChapterPlot`）。
+ * 之後點開一章，旁邊並排開的換回細綱（`companion`）。與 {@link openDraft} 同一個守法：先在真實章節列表裡查到這一章。
  */
 export async function openPlot(c: ChatController, chapterRelPath: string): Promise<void> {
   const chapter = await knownChapter(c, chapterRelPath);
@@ -76,30 +76,30 @@ export async function openPlot(c: ChatController, chapterRelPath: string): Promi
   }
   const plot = await ensureChapterPlot(c.project, new Workspace(c.project), chapter);
   if (!plot) {
-    c.toast('这一章不在章节目录下，推不出细纲该放在哪。', 'error');
+    c.toast('這一章不在章節目錄下，推不出細綱該放在哪。', 'error');
     return;
   }
-  log.info(`打开第 ${chapter.order} 章的细纲`, plot.rel);
+  log.info(`開啟第 ${chapter.order} 章的細綱`, plot.rel);
   c.companion = 'plot';
   await openCompanion(plot.rel);
   if (plot.created) {
-    // 工程页那一行的「打开细纲」、浮窗都认 plotExists，刚建的要立刻翻过来。
+    // 工程頁那一行的「開啟細綱」、浮窗都認 plotExists，剛建的要立刻翻過來。
     await c.pushState();
   }
 }
 
-/** 前端给的章节路径 → 真实章节列表里的那一章。找不到就说一句、重推一次（多半刚被改名或删除）。 */
+/** 前端給的章節路徑 → 真實章節列表裡的那一章。找不到就說一句、重推一次（多半剛被改名或刪除）。 */
 async function knownChapter(c: ChatController, chapterRelPath: string): Promise<Chapter | undefined> {
   const chapter = (await c.project.listChapters()).find((ch) => ch.relPath === chapterRelPath);
   if (!chapter) {
-    log.warn(`找不到章节 ${chapterRelPath}，可能刚被改名或删除`);
-    c.toast('找不到这一章，可能刚被改名或删除。', 'error');
+    log.warn(`找不到章節 ${chapterRelPath}，可能剛被改名或刪除`);
+    c.toast('找不到這一章，可能剛被改名或刪除。', 'error');
     await c.pushState();
   }
   return chapter;
 }
 
-/** 草稿、细纲这类伴生文件：宿主能并排就开在旁边，不能就照常打开。 */
+/** 草稿、細綱這類伴生檔案：宿主能並排就開在旁邊，不能就照常開啟。 */
 async function openCompanion(rel: string): Promise<void> {
   const host = getHost();
   if (host.openBeside) {
@@ -110,21 +110,21 @@ async function openCompanion(rel: string): Promise<void> {
 }
 
 /**
- * 打开一章：正文在主区，这一章的细纲并排在旁边（W6 章节工作台）。
+ * 開啟一章：正文在主區，這一章的細綱並排在旁邊（W6 章節工作臺）。
  *
- * 从前点工程页的行名只开一份（有正文开正文，否则开细纲），对照着看要再去右键开另一份。
- * **并排是宿主的能力，不是壳的名字**：有 `openBeside` 的（独立版落在第二块编辑区，VS Code
- * 落在 `ViewColumn.Beside`）两份都开，没有的只开正文——与 `openDraft` 同一个判法。
- * 还没写正文的章只开细纲；两样都没有才说找不到。
+ * 從前點工程頁的行名只開一份（有正文開正文，否則開細綱），對照著看要再去右鍵開另一份。
+ * **並排是宿主的能力，不是殼的名字**：有 `openBeside` 的（獨立版落在第二塊編輯區，VS Code
+ * 落在 `ViewColumn.Beside`）兩份都開，沒有的只開正文——與 `openDraft` 同一個判法。
+ * 還沒寫正文的章只開細綱；兩樣都沒有才說找不到。
  *
- * 细纲是**正文镜像的那一份**（`summaries/` 下与正文相同的相对路径）；给的是章节路径时就认那个文件，
- * 同号的正文有两份也开得准。**有正文却还没有细纲**时按模板建一份再开（2026-10-23 作者定，`ensureChapterPlot`）。
+ * 細綱是**正文映象的那一份**（`summaries/` 下與正文相同的相對路徑）；給的是章節路徑時就認那個檔案，
+ * 同號的正文有兩份也開得準。**有正文卻還沒有細綱**時按模板建一份再開（2026-10-23 作者定，`ensureChapterPlot`）。
  *
- * **旁边开哪一份跟上一次走**（2026-10-23）：上一次并排开的是草稿（`c.companion`），就开这一章的草稿（没有就建），
- * 不开细纲。
+ * **旁邊開哪一份跟上一次走**（2026-10-23）：上一次並排開的是草稿（`c.companion`），就開這一章的草稿（沒有就建），
+ * 不開細綱。
  *
- * `intent.preview`：工程页单击那一行的名字，两份都开成临时标签（内置编辑器认，原样带回 `editorOpen`）。
- * `beside: false`：前端眼下没有第二块编辑区（窄屏），与宿主没有 `openBeside` 一样只开正文——并排的那份开进同一块会顶掉正文的临时标签。
+ * `intent.preview`：工程頁單擊那一行的名字，兩份都開成臨時標籤（內建編輯器認，原樣帶回 `editorOpen`）。
+ * `beside: false`：前端眼下沒有第二塊編輯區（窄屏），與宿主沒有 `openBeside` 一樣只開正文——並排的那份開進同一塊會頂掉正文的臨時標籤。
  */
 export async function openChapter(c: ChatController, plotRelPath: string, intent?: EditorOpenIntent, beside = true): Promise<void> {
   const chapters = await c.project.listChapters();
@@ -134,7 +134,7 @@ export async function openChapter(c: ChatController, plotRelPath: string, intent
   const plot = chapter ? await c.project.plotOfChapter(chapter) : no !== undefined ? await c.project.getPlot(no) : undefined;
   const host = getHost();
   if (!plot && !chapter) {
-    c.toast('这一章还没有细纲也没有正文。', 'error');
+    c.toast('這一章還沒有細綱也沒有正文。', 'error');
     return;
   }
   const open = intent?.preview ? { preview: true } : undefined;
@@ -144,16 +144,16 @@ export async function openChapter(c: ChatController, plotRelPath: string, intent
   }
   await host.openFile(chapter.relPath, open);
   if (!host.openBeside || !beside) {
-    log.info(`打开第 ${chapter.order} 章`, chapter.relPath);
+    log.info(`開啟第 ${chapter.order} 章`, chapter.relPath);
     return;
   }
   const ws = new Workspace(c.project);
   let companion = plot?.relPath;
-  // 刚建了东西就重推：工程页那一行的 hasDraft / plotExists 要立刻翻过来。
+  // 剛建了東西就重推：工程頁那一行的 hasDraft / plotExists 要立刻翻過來。
   let refresh = false;
   if (c.companion === 'draft') {
     companion = await ws.ensureDraft(chapter);
-    // 草稿可能是刚建的——与 openDraft 一样每次都推。
+    // 草稿可能是剛建的——與 openDraft 一樣每次都推。
     refresh = true;
   } else if (!companion) {
     const made = await ensureChapterPlot(c.project, ws, chapter);
@@ -163,17 +163,17 @@ export async function openChapter(c: ChatController, plotRelPath: string, intent
   if (companion) {
     await host.openBeside(companion, open);
   }
-  log.info(`打开第 ${chapter.order} 章`, `${chapter.relPath}${companion ? ` ｜ 并排 ${companion}` : ''}`);
+  log.info(`開啟第 ${chapter.order} 章`, `${chapter.relPath}${companion ? ` ｜ 並排 ${companion}` : ''}`);
   if (refresh) {
     await c.pushState();
   }
 }
 
 /**
- * 点审稿报告上的引文（五期 W10）：在编辑器里打开那一章、选中那一句。
+ * 點審稿報告上的引文（五期 W10）：在編輯器裡開啟那一章、選中那一句。
  *
- * 宿主有 `revealText` 就交给它（独立版选中内置编辑器里那一段，插件用 `revealRange`）；没有就
- * 只打开文件，并把那一句写进提示——作者自己 Ctrl+F 也找得到。能力探测，不判断是哪个壳。
+ * 宿主有 `revealText` 就交給它（獨立版選中內建編輯器裡那一段，外掛用 `revealRange`）；沒有就
+ * 只開啟檔案，並把那一句寫進提示——作者自己 Ctrl+F 也找得到。能力探測，不判斷是哪個殼。
  */
 export async function revealQuote(c: ChatController, relPath: string, quote: string): Promise<void> {
   const host = getHost();
@@ -181,28 +181,28 @@ export async function revealQuote(c: ChatController, relPath: string, quote: str
   if (host.revealText) {
     const found = await host.revealText(relPath, quote);
     if (!found) {
-      c.toast(`这一句在现在的正文里找不到了（正文可能改过）：「${clip}」`, 'error');
+      c.toast(`這一句在現在的正文裡找不到了（正文可能改過）：「${clip}」`, 'error');
     }
     return;
   }
   await host.openFile(relPath);
-  c.toast(`在编辑器里找这一句：「${clip}」`);
+  c.toast(`在編輯器裡找這一句：「${clip}」`);
 }
 
-/** 细纲路径或章节路径 → 章号（细纲号 = 章号）。 */
+/** 細綱路徑或章節路徑 → 章號（細綱號 = 章號）。 */
 function chapterNoOf(relPath: string): number | undefined {
   const name = basename(relPath);
   return parsePlotFileName(name)?.no ?? parseChapterFileName(name)?.order;
 }
 
 /**
- * 类文件操作。工程页的 rename/move/delete 走 core/files/fileOps（三区锁定），
- * 文件页的 renameAny/paste 走 core/files/projectFiles（根范围）。
- * 有逐项结果的动作额外推 filesOpDone，前端据此 remap 编辑器标签。
+ * 類檔案操作。工程頁的 rename/move/delete 走 core/files/fileOps（三區鎖定），
+ * 檔案頁的 renameAny/paste 走 core/files/projectFiles（根範圍）。
+ * 有逐項結果的動作額外推 filesOpDone，前端據此 remap 編輯器標籤。
  *
- * **细纲单独分流**：它镜像正文的路径，改名只改标题（有正文时文件名跟着正文不动，没有时由章号与
- * 标题共同决定），而 `summaries/` 根本不是三个可管理区之一，照走 fileOps 会被
- * 区守卫直接拒掉（新建出来的细纲是纯序号名，第一次命名走的正是这条路）。
+ * **細綱單獨分流**：它映象正文的路徑，改名只改標題（有正文時檔名跟著正文不動，沒有時由章號與
+ * 標題共同決定），而 `summaries/` 根本不是三個可管理區之一，照走 fileOps 會被
+ * 區守衛直接拒掉（新建出來的細綱是純序號名，第一次命名走的正是這條路）。
  */
 export async function fileAction(
   c: ChatController,
@@ -210,20 +210,20 @@ export async function fileAction(
 ): Promise<void> {
   const { action, relPath, relPaths, op, targetDir } = msg;
   log.info(
-    `文件动作：${action}`,
-    [relPath ?? '', relPaths ? relPaths.join('、') : '', targetDir !== undefined ? `目标目录 ${targetDir || '（根）'}` : '']
+    `檔案動作：${action}`,
+    [relPath ?? '', relPaths ? relPaths.join('、') : '', targetDir !== undefined ? `目標目錄 ${targetDir || '（根）'}` : '']
       .filter(Boolean)
       .join('｜') || undefined
   );
   let results: FileOpResult[] | undefined;
-  // 改名/移动过的路径。当前创作目标正指着其中某一条时要跟着走，否则创作页
-  // 会拿到一份「这一章找不到」的空壳。
+  // 改名/移動過的路徑。當前創作目標正指著其中某一條時要跟著走，否則創作頁
+  // 會拿到一份「這一章找不到」的空殼。
   const moved: { from: string; to: string }[] = [];
   const isPlot = !!relPath && isPlotPath(c.project, relPath);
   switch (action) {
     case 'rename':
       if (relPath) {
-        // 两条路：细纲的文件名由章号与标题决定，其余是普通文件。
+        // 兩條路：細綱的檔名由章號與標題決定，其餘是普通檔案。
         const to = isPlot ? await renamePlot(c.project, relPath) : await renameEntry(c.project, relPath);
         if (to) {
           moved.push({ from: relPath, to });
@@ -236,8 +236,8 @@ export async function fileAction(
       }
       break;
     case 'move':
-      // 细纲没有「移动到…」：它镜像正文的路径，单挪它就与正文对不上了（搬正文时它自己跟着走）。
-      // 前端不给这一项，这里兜一层。
+      // 細綱沒有「移動到…」：它映象正文的路徑，單挪它就與正文對不上了（搬正文時它自己跟著走）。
+      // 前端不給這一項，這裡兜一層。
       if (relPath && !isPlot) {
         const to = await moveEntry(c.project, relPath, targetDir);
         if (to) {
@@ -257,7 +257,7 @@ export async function fileAction(
           : await moveInto(c.project, relPaths ?? [], targetDir ?? '');
       break;
   }
-  // 复制不动原路径，目标照旧指着原来那一章，不必跟。
+  // 複製不動原路徑，目標照舊指著原來那一章，不必跟。
   if (results && op !== 'copy') {
     for (const r of results) {
       if (r.ok && r.to) {
@@ -267,7 +267,7 @@ export async function fileAction(
   }
   for (const m of moved) {
     await retargetPlot(c, m.from, m.to);
-    // 搬的是正文时细纲跟着搬了（handlers/chapter.ts 的 carryPlot）：目标指着那份细纲的也跟上。
+    // 搬的是正文時細綱跟著搬了（handlers/chapter.ts 的 carryPlot）：目標指著那份細綱的也跟上。
     const fromPlot = c.project.plotMirrorOf(m.from);
     const toPlot = c.project.plotMirrorOf(m.to);
     if (fromPlot && toPlot) {

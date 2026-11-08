@@ -1,7 +1,7 @@
-/* VS Code 自定义标题栏式菜单：点开、悬停切隔壁、Esc / 点外面关闭。 */
+/* VS Code 自定義標題欄式選單：點開、懸停切隔壁、Esc / 點外面關閉。 */
 
-/* 菜单不缩、字不折：标题栏挤不下时让的是工程名那一段（`.wb-title-text`，带省略号）。
-   从前这里会跟着缩，360px 宽的手机上「文件」被挤成「文 / 件」两行。 */
+/* 選單不縮、字不折：標題欄擠不下時讓的是工程名那一段（`.wb-title-text`，帶省略號）。
+   從前這裡會跟著縮，360px 寬的手機上「檔案」被擠成「文 / 件」兩行。 */
 .wb-menubar {
   display: flex;
   flex: 0 0 auto;
@@ -39,12 +39,12 @@
   font-size: 13px;
 }
 
-/* 标题栏写两份（view/welcome.ts 的 updateTitle）：宽屏露完整目录，窄屏（narrow.css）露书名。 */
+/* 標題欄寫兩份（view/welcome.ts 的 updateTitle）：寬屏露完整目錄，窄屏（narrow.css）露書名。 */
 .wb-title-short {
   display: none;
 }
 
-/* 比可视区还高时 menubar.ts 压一个 max-height（menuPlace.ts），菜单里滚；窄屏上不比可视区宽。 */
+/* 比可視區還高時 menubar.ts 壓一個 max-height（menuPlace.ts），選單裡滾；窄屏上不比可視區寬。 */
 .wb-menu-drop {
   position: fixed;
   z-index: 40;
@@ -121,7 +121,7 @@
   min-width: 260px;
 }
 
-/* 可勾选的项（段落格式、成对符号自动补全）：✓ 画在左边距里，不挤动标签，与不可勾选的项对齐。 */
+/* 可勾選的項（段落格式、成對符號自動補全）：✓ 畫在左邊距裡，不擠動標籤，與不可勾選的項對齊。 */
 .wb-menu-item.checkable {
   position: relative;
 }

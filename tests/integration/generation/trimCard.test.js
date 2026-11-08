@@ -1,13 +1,13 @@
 /**
- * 删修饰的写入（controller/chat.ts 的 `askArtifact`）：点了「写入」之后，宿主实现了 `mergeTexts` 就逐段
- * 对照删之前 ↔ 删之后，落盘的是作者挑过的那一份。
+ * 刪修飾的寫入（controller/chat.ts 的 `askArtifact`）：點了「寫入」之後，宿主實現了 `mergeTexts` 就逐段
+ * 對照刪之前 ↔ 刪之後，落盤的是作者挑過的那一份。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 合并视图拿到删之前、删之后两版 | 作者要看得出删了什么 |
- * | 挑过的那一份落盘 | 删错的段退回原文 |
- * | 放弃就不写 | 与覆盖审阅的「放弃」同一个意思 |
- * | 宿主不实现就直接写删后的 | VS Code 的 diff 编辑器左边认磁盘文件，比不了两份内存里的文字 |
+ * | 合併檢視拿到刪之前、刪之後兩版 | 作者要看得出刪了什麼 |
+ * | 挑過的那一份落盤 | 刪錯的段退回原文 |
+ * | 放棄就不寫 | 與覆蓋審閱的「放棄」同一個意思 |
+ * | 宿主不實現就直接寫刪後的 | VS Code 的 diff 編輯器左邊認磁碟檔案，比不了兩份記憶體裡的文字 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -24,7 +24,7 @@ let h;
 let t;
 let controller;
 let script = [];
-/** 每一次 `mergeTexts` 的参数；`answer` 是下一次要交回的结论。 */
+/** 每一次 `mergeTexts` 的引數；`answer` 是下一次要交回的結論。 */
 const merges = [];
 let answer;
 
@@ -88,7 +88,7 @@ before(async () => {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  t = await makeTempProject(bundle.project, { prefix: 'trim-card', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'trim-card', title: '青雲劍錄' });
   const ws = new bundle.ws.Workspace(t.project);
   for (const no of [1, 2, 3, 4]) {
     await ws.writePlot({
@@ -115,8 +115,8 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('写入时逐段对照', () => {
-  test('合并视图拿到删之前、删之后两版；原样采用就写删后的', async () => {
+describe('寫入時逐段對照', () => {
+  test('合併檢視拿到刪之前、刪之後兩版；原樣採用就寫刪後的', async () => {
     merges.length = 0;
     answer = 'apply';
     const text = await write(1);
@@ -126,7 +126,7 @@ describe('写入时逐段对照', () => {
     assert.ok(text.includes(TRIMMED));
   });
 
-  test('挑过的那一份落盘', async () => {
+  test('挑過的那一份落盤', async () => {
     const merged = [A, B.replace('狠狠', '')].join('\n\n');
     answer = { merged };
     const text = await write(2);
@@ -134,12 +134,12 @@ describe('写入时逐段对照', () => {
     assert.ok(text.includes('格外'));
   });
 
-  test('放弃就不写', async () => {
+  test('放棄就不寫', async () => {
     answer = 'discard';
     assert.equal(await write(3), undefined);
   });
 
-  test('宿主不实现 mergeTexts：直接写删后的', async () => {
+  test('宿主不實現 mergeTexts：直接寫刪後的', async () => {
     const saved = h.host.mergeTexts;
     h.host.mergeTexts = undefined;
     merges.length = 0;

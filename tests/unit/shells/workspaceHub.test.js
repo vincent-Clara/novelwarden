@@ -1,8 +1,8 @@
 /**
- * WorkspaceHub：一个进程同时开几个工程，每个窗口（连接）各绑一个或者空着。
- * 测试写进临时目录，设置存内存，不碰 ~/.novelwarden。
+ * WorkspaceHub：一個程序同時開幾個工程，每個視窗（連線）各綁一個或者空著。
+ * 測試寫進臨時目錄，設定存記憶體，不碰 ~/.novelwarden。
  *
- * FileHost / ChatController / initHost 共享模块级单例，必须 loadBundle。
+ * FileHost / ChatController / initHost 共享模組級單例，必須 loadBundle。
  */
 const { describe, test, before, beforeEach, after, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
@@ -33,26 +33,26 @@ const { ScopedHost, currentScope, runInScope } = bundle.scopedHost;
 let windowDir;
 let projA;
 let projB;
-/** 不在任何窗口上下文里的广播（启动期的 getHost()）。 */
+/** 不在任何視窗上下文裡的廣播（啟動期的 getHost()）。 */
 let stray;
-/** 设置存内存，不碰 ~/.novelwarden/config.json。 */
+/** 設定存記憶體，不碰 ~/.novelwarden/config.json。 */
 let config;
 /** @type {InstanceType<typeof WorkspaceHub>} */
 let hub;
 let windows;
 
-// 必须与生产代码同源：workspaceHub.ts 用的是 **异步** fsp.realpath，而
-// Node 在 Windows 上两者对 8.3 短名的处理相反——fs.realpathSync 原样保留
-// `RUNNER~1`，fsp.realpath 会展开成 `runneradmin`。CI 的 runner 用户名超过
-// 8 字符，os.tmpdir() 就返回短名，用 sync 版对期望值会与实现差一截路径。
-// 本机用户名短，短名不出现，所以这个坑只在 CI 上炸。
+// 必須與生產程式碼同源：workspaceHub.ts 用的是 **非同步** fsp.realpath，而
+// Node 在 Windows 上兩者對 8.3 短名的處理相反——fs.realpathSync 原樣保留
+// `RUNNER~1`，fsp.realpath 會展開成 `runneradmin`。CI 的 runner 使用者名稱超過
+// 8 字元，os.tmpdir() 就返回短名，用 sync 版對期望值會與實現差一截路徑。
+// 本機使用者名稱短，短名不出現，所以這個坑只在 CI 上炸。
 function real(p) {
   return fs.realpathSync.native(p);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** 开一个窗口。`project` 是它网址上的 `?project=`。 */
+/** 開一個視窗。`project` 是它網址上的 `?project=`。 */
 async function openWindow(project) {
   const messages = [];
   const conn = hub.connect((m) => messages.push(m), project);
@@ -122,8 +122,8 @@ after(() => {
   fs.rmSync(projB, { recursive: true, force: true });
 });
 
-describe('WorkspaceHub：一个窗口', () => {
-  test('打开目录后这个窗口的 snapshot 只有一项，id 是 realpath', async () => {
+describe('WorkspaceHub：一個視窗', () => {
+  test('開啟目錄後這個視窗的 snapshot 只有一項，id 是 realpath', async () => {
     const w = await openWindow();
     await w.send({ type: 'openFolder', path: projA });
     const snap = hub.snapshot(w.conn);
@@ -146,7 +146,7 @@ describe('WorkspaceHub：一个窗口', () => {
     assert.equal(w.ofType('init').length, inits);
   });
 
-  test('replace 换成另一目录：这个窗口只留新的，旧的没有窗口了按空闲回收', async () => {
+  test('replace 換成另一目錄：這個視窗只留新的，舊的沒有視窗了按空閒回收', async () => {
     const w = await openWindow();
     await w.send({ type: 'openFolder', path: projA });
     await w.send({ type: 'openFolder', path: projB });
@@ -155,15 +155,15 @@ describe('WorkspaceHub：一个窗口', () => {
     assert.deepEqual(hub.openRoots(), [real(projB)]);
   });
 
-  test('mode add 在已有工程时不改当前 id', async () => {
+  test('mode add 在已有工程時不改當前 id', async () => {
     const w = await openWindow();
     await w.send({ type: 'openFolder', path: projA });
     await w.send({ type: 'openFolder', path: projB, mode: 'add' });
     assert.equal(hub.snapshot(w.conn).currentId, real(projA));
-    assert.ok(w.ofType('toast').some((m) => m.message.includes('一个工程')));
+    assert.ok(w.ofType('toast').some((m) => m.message.includes('一個工程')));
   });
 
-  test('close 后窗口为空、工程当场关掉；lastOpen 清掉、recents 保留', async () => {
+  test('close 後視窗為空、工程當場關掉；lastOpen 清掉、recents 保留', async () => {
     const w = await openWindow();
     await w.send({ type: 'openFolder', path: projA });
     await w.send({ type: 'closeFolder' });
@@ -176,16 +176,16 @@ describe('WorkspaceHub：一个窗口', () => {
     assert.ok(win.recents.some((r) => r.root === real(projA)));
   });
 
-  test('不是目录则 toast，窗口不变', async () => {
+  test('不是目錄則 toast，視窗不變', async () => {
     const w = await openWindow();
     const file = path.join(windowDir, 'not-a-dir.txt');
     fs.writeFileSync(file, 'x', 'utf8');
     await w.send({ type: 'openFolder', path: file });
     assert.equal(hub.snapshot(w.conn).currentId, null);
-    assert.ok(w.ofType('toast').some((m) => m.message.includes('不是目录')));
+    assert.ok(w.ofType('toast').some((m) => m.message.includes('不是目錄')));
   });
 
-  test('目录不存在则 toast；已开着的工程不受影响', async () => {
+  test('目錄不存在則 toast；已開著的工程不受影響', async () => {
     const w = await openWindow();
     await w.send({ type: 'openFolder', path: projA });
     await w.send({ type: 'openFolder', path: path.join(windowDir, 'no-such-book') });
@@ -193,7 +193,7 @@ describe('WorkspaceHub：一个窗口', () => {
     assert.ok(w.ofType('toast').some((m) => m.message.includes('不存在')));
   });
 
-  test('listHostDir 只回发起的窗口，条目没有正文', async () => {
+  test('listHostDir 只回發起的視窗，條目沒有正文', async () => {
     const w = await openWindow();
     const other = await openWindow();
     await w.send({ type: 'listHostDir', path: projA });
@@ -204,7 +204,7 @@ describe('WorkspaceHub：一个窗口', () => {
     assert.equal(other.ofType('hostDir').length, 0);
   });
 
-  test('空窗口里「文件」页要根目录、编辑器核对磁盘：静静吃掉，不弹「请先打开文件夹」', async () => {
+  test('空視窗裡「檔案」頁要根目錄、編輯器核對磁碟：靜靜吃掉，不彈「請先開啟資料夾」', async () => {
     const w = await openWindow();
     w.clear();
     await w.send({ type: 'listDir', dirs: [''] });
@@ -212,7 +212,7 @@ describe('WorkspaceHub：一个窗口', () => {
     assert.equal(w.ofType('toast').length, 0);
   });
 
-  test('空窗口 ready 不发 init', async () => {
+  test('空視窗 ready 不發 init', async () => {
     const w = await openWindow();
     w.clear();
     await w.send({ type: 'ready' });
@@ -221,13 +221,13 @@ describe('WorkspaceHub：一个窗口', () => {
     assert.equal(w.ofType('init').length, 0);
   });
 
-  test('空窗口发创作消息：提示先打开文件夹', async () => {
+  test('空視窗發創作訊息：提示先開啟資料夾', async () => {
     const w = await openWindow();
     await w.send({ type: 'stop' });
-    assert.ok(w.ofType('toast').some((m) => /打开文件夹/.test(m.message)));
+    assert.ok(w.ofType('toast').some((m) => /開啟資料夾/.test(m.message)));
   });
 
-  test('createFile 写空文件，已存在则拒绝', async () => {
+  test('createFile 寫空檔案，已存在則拒絕', async () => {
     const w = await openWindow();
     await w.send({ type: 'openFolder', path: projA });
     w.clear();
@@ -239,13 +239,13 @@ describe('WorkspaceHub：一个窗口', () => {
     assert.ok(w.ofType('toast').some((m) => /已存在/.test(m.message)));
   });
 
-  test('createFile 无工程则 toast', async () => {
+  test('createFile 無工程則 toast', async () => {
     const w = await openWindow();
     await w.send({ type: 'createFile', relPath: 'x.md' });
-    assert.ok(w.ofType('toast').some((m) => /打开文件夹/.test(m.message)));
+    assert.ok(w.ofType('toast').some((m) => /開啟資料夾/.test(m.message)));
   });
 
-  test('openReadme 打开工程根 README', async () => {
+  test('openReadme 開啟工程根 README', async () => {
     fs.writeFileSync(path.join(projA, 'README.md'), '# hi', 'utf8');
     const w = await openWindow();
     await w.send({ type: 'openFolder', path: projA });
@@ -255,8 +255,8 @@ describe('WorkspaceHub：一个窗口', () => {
   });
 });
 
-describe('WorkspaceHub：几个窗口', () => {
-  test('两个窗口各开一个工程，互不干扰', async () => {
+describe('WorkspaceHub：幾個視窗', () => {
+  test('兩個視窗各開一個工程，互不幹擾', async () => {
     const a = await openWindow();
     const b = await openWindow();
     await a.send({ type: 'openFolder', path: projA });
@@ -267,7 +267,7 @@ describe('WorkspaceHub：几个窗口', () => {
     assert.notEqual(hub.controllerOf(projA), hub.controllerOf(projB));
   });
 
-  test('工程的消息只发给开着它的窗口', async () => {
+  test('工程的訊息只發給開著它的視窗', async () => {
     const a = await openWindow();
     const b = await openWindow();
     await a.send({ type: 'openFolder', path: projA });
@@ -280,21 +280,21 @@ describe('WorkspaceHub：几个窗口', () => {
     fs.rmSync(path.join(projA, 'only-a.md'));
   });
 
-  test('getHost() 落到所在窗口的上下文，不广播给别的窗口', async () => {
+  test('getHost() 落到所在視窗的上下文，不廣播給別的視窗', async () => {
     const a = await openWindow(projA);
     const b = await openWindow(projB);
     a.clear();
     b.clear();
     await runInScope(a.conn.runtime.scope, async () => {
       await Promise.resolve();
-      bundle.host.getHost().toast('只给 A');
+      bundle.host.getHost().toast('只給 A');
     });
-    assert.ok(a.ofType('toast').some((m) => m.message === '只给 A'));
+    assert.ok(a.ofType('toast').some((m) => m.message === '只給 A'));
     assert.equal(b.ofType('toast').length, 0);
     assert.equal(stray.length, 0);
   });
 
-  test('长任务只出现在它那个工程的窗口里', async () => {
+  test('長任務只出現在它那個工程的視窗裡', async () => {
     const a = await openWindow(projA);
     const b = await openWindow(projB);
     let release;
@@ -304,16 +304,16 @@ describe('WorkspaceHub：几个窗口', () => {
     a.clear();
     b.clear();
     const running = runInScope(a.conn.runtime.scope, () =>
-      bundle.progress.runTask('测试任务', () => gate)
+      bundle.progress.runTask('測試任務', () => gate)
     );
     await sleep(10);
-    assert.ok(a.last('tasks').tasks.some((t) => t.title === '测试任务'));
+    assert.ok(a.last('tasks').tasks.some((t) => t.title === '測試任務'));
     assert.ok(b.ofType('tasks').every((m) => m.tasks.length === 0));
     release();
     await running;
   });
 
-  test('两个窗口开同一个工程共用一份 controller；一个窗口关掉不影响另一个', async () => {
+  test('兩個視窗開同一個工程共用一份 controller；一個視窗關掉不影響另一個', async () => {
     const a = await openWindow();
     const b = await openWindow();
     await a.send({ type: 'openFolder', path: projA });
@@ -325,7 +325,7 @@ describe('WorkspaceHub：几个窗口', () => {
     assert.ok(hub.controllerOf(projA));
   });
 
-  test('新窗口带 ?project= 就开那个工程，不带落到最近操作的那个', async () => {
+  test('新視窗帶 ?project= 就開那個工程，不帶落到最近操作的那個', async () => {
     const a = await openWindow(projA);
     assert.equal(hub.snapshot(a.conn).currentId, real(projA));
     const b = await openWindow(projB);
@@ -338,13 +338,13 @@ describe('WorkspaceHub：几个窗口', () => {
     assert.equal(readWindowState(windowDir).lastOpen, real(projA));
   });
 
-  test('?project= 指向不存在的目录：空窗口 + toast', async () => {
+  test('?project= 指向不存在的目錄：空視窗 + toast', async () => {
     const w = await openWindow(path.join(windowDir, 'gone-book'));
     assert.equal(hub.snapshot(w.conn).currentId, null);
     assert.ok(w.ofType('toast').some((m) => m.message.includes('不存在')));
   });
 
-  test('MCP：带 project 落到那个工程，不带落到最近操作的；没开着的回 undefined', async () => {
+  test('MCP：帶 project 落到那個工程，不帶落到最近操作的；沒開著的回 undefined', async () => {
     const a = await openWindow(projA);
     await openWindow(projB);
     await a.send({ type: 'windowFocus' });
@@ -355,7 +355,7 @@ describe('WorkspaceHub：几个窗口', () => {
     assert.equal(hub.mcpBackend(path.join(windowDir, 'not-open')), undefined);
   });
 
-  test('窗口全关了：最近操作的工程留着（MCP 还要用），别的空闲回收', async () => {
+  test('視窗全關了：最近操作的工程留著（MCP 還要用），別的空閒回收', async () => {
     const a = await openWindow(projA);
     const b = await openWindow(projB);
     hub.disconnect(a.conn);
@@ -364,7 +364,7 @@ describe('WorkspaceHub：几个窗口', () => {
     assert.deepEqual(hub.openRoots(), [real(projB)]);
   });
 
-  test('窗口在空闲期内回来（刷新）就接着用同一份', async () => {
+  test('視窗在空閒期內回來（重新整理）就接著用同一份', async () => {
     const a = await openWindow(projA);
     await openWindow(projB);
     const ctrl = hub.controllerOf(projA);
@@ -375,7 +375,7 @@ describe('WorkspaceHub：几个窗口', () => {
     assert.equal(hub.snapshot(again.conn).currentId, real(projA));
   });
 
-  test('改设置：所有窗口都收到新设置与新的 openInNewWindow；不带这一项保持原值', async () => {
+  test('改設定：所有視窗都收到新設定與新的 openInNewWindow；不帶這一項保持原值', async () => {
     const a = await openWindow(projA);
     const b = await openWindow();
     await a.send({ type: 'switchTab', tab: 'settings' });
@@ -390,22 +390,22 @@ describe('WorkspaceHub：几个窗口', () => {
   });
 });
 
-// 欢迎页「新建一本书」「导入写好的书」（2026-10-24）。
-describe('WorkspaceHub：欢迎页新建一本书', () => {
-  test('createProject：在「放在」下建好、初始化，只回 projectCreated（打开由前端照常发 openFolder）', async () => {
+// 歡迎頁「新建一本書」「匯入寫好的書」（2026-10-24）。
+describe('WorkspaceHub：歡迎頁新建一本書', () => {
+  test('createProject：在「放在」下建好、初始化，只回 projectCreated（開啟由前端照常發 openFolder）', async () => {
     const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-hub-new-'));
     try {
       const w = await openWindow();
       const other = await openWindow();
       await w.send({ type: 'createProject', parent, title: '雪夜', author: '某某', importFrom: '/tmp/原稿.txt' });
       const made = w.last('projectCreated');
-      // 真实路径：与打开之后的 currentId 同一个口径。
+      // 真實路徑：與開啟之後的 currentId 同一個口徑。
       assert.equal(made.root, real(path.join(parent, '雪夜')));
       assert.equal(made.importFrom, '/tmp/原稿.txt');
       const manifest = JSON.parse(fs.readFileSync(path.join(parent, '雪夜', '.novelwarden', 'project.json'), 'utf8'));
       assert.equal(manifest.title, '雪夜');
       assert.equal(manifest.author, '某某');
-      // 还没打开：开在这个窗口还是新窗口是前端的事。
+      // 還沒開啟：開在這個視窗還是新視窗是前端的事。
       assert.equal(hub.snapshot(w.conn).currentId, null);
       assert.equal(other.ofType('projectCreated').length, 0);
     } finally {
@@ -413,39 +413,39 @@ describe('WorkspaceHub：欢迎页新建一本书', () => {
     }
   });
 
-  test('createProject 没建成：只回这个窗口一条 toast，不回 projectCreated', async () => {
+  test('createProject 沒建成：只回這個視窗一條 toast，不回 projectCreated', async () => {
     const w = await openWindow(projA);
-    // projA 里已经有 note-a.txt：拿它的上一层当「放在」、它的名字当书名，撞上一个有东西的同名文件夹。
+    // projA 裡已經有 note-a.txt：拿它的上一層當「放在」、它的名字當書名，撞上一個有東西的同名資料夾。
     await w.send({ type: 'createProject', parent: path.dirname(projA), title: path.basename(projA), author: '' });
     assert.equal(w.ofType('projectCreated').length, 0);
-    assert.ok(w.ofType('toast').some((m) => m.level === 'error' && m.message.includes('里面还有别的东西')));
+    assert.ok(w.ofType('toast').some((m) => m.level === 'error' && m.message.includes('裡面還有別的東西')));
     assert.equal(hub.snapshot(w.conn).currentId, real(projA));
   });
 
-  test('inspectBook：回切得出几章，不写任何文件', async () => {
+  test('inspectBook：回切得出幾章，不寫任何檔案', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-hub-book-'));
     try {
-      const book = path.join(dir, '青云剑录.txt');
-      fs.writeFileSync(book, '第一章 入宗\n林昭站在山门前。\n第二章 雪夜\n雪下了一夜。', 'utf8');
+      const book = path.join(dir, '青雲劍錄.txt');
+      fs.writeFileSync(book, '第一章 入宗\n林昭站在山門前。\n第二章 雪夜\n雪下了一夜。', 'utf8');
       const w = await openWindow();
       await w.send({ type: 'inspectBook', path: book });
       const r = w.last('bookInspected');
       assert.equal(r.path, book);
-      assert.equal(r.title, '青云剑录');
+      assert.equal(r.title, '青雲劍錄');
       assert.equal(r.chapters, 2);
-      assert.match(r.headline, /认出 2 章/);
-      assert.deepEqual(fs.readdirSync(dir), ['青云剑录.txt']);
+      assert.match(r.headline, /認出 2 章/);
+      assert.deepEqual(fs.readdirSync(dir), ['青雲劍錄.txt']);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test('workspaces 带「放在」的缺省值：最近打开的那本书所在的目录', async () => {
+  test('workspaces 帶「放在」的預設值：最近開啟的那本書所在的目錄', async () => {
     const w = await openWindow(projA);
     assert.equal(w.last('workspaces').newProjectParent, path.dirname(real(projA)));
   });
 
-  test('一本都没打开过：缺省是家目录', async () => {
+  test('一本都沒開啟過：預設是家目錄', async () => {
     const fresh = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-hub-win2-'));
     try {
       const other = new WorkspaceHub({ config, windowDir: fresh, idleMs: 20 });
@@ -457,8 +457,8 @@ describe('WorkspaceHub：欢迎页新建一本书', () => {
   });
 });
 
-describe('WorkspaceHub：启动', () => {
-  test('bootstrap 恢复 lastOpen，不带 ?project= 的窗口落到它上面', async () => {
+describe('WorkspaceHub：啟動', () => {
+  test('bootstrap 恢復 lastOpen，不帶 ?project= 的視窗落到它上面', async () => {
     rememberOpen(projA, windowDir);
     await hub.bootstrap();
     assert.equal(hub.defaultRoot(), real(projA));

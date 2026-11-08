@@ -1,12 +1,12 @@
 /**
- * Bun 运行时的最小类型声明。不引 bun-types 全量包——独立壳只用
- * Bun.serve 的一小块表面；真装上 bun-types 后可删除本文件。
+ * Bun 執行時的最小型別宣告。不引 bun-types 全量包——獨立殼只用
+ * Bun.serve 的一小塊表面；真裝上 bun-types 後可刪除本檔案。
  */
 
 interface BunServerWebSocket {
   send(text: string): void;
   close(): void;
-  /** upgrade 时给的 `data`。 */
+  /** upgrade 時給的 `data`。 */
   readonly data: unknown;
 }
 
@@ -18,7 +18,7 @@ interface BunServeOptions {
     server: {
       port: number;
       upgrade(req: Request, options?: { data?: unknown }): boolean;
-      /** 这一个请求的空闲超时（秒），0 = 不限。 */
+      /** 這一個請求的空閒超時（秒），0 = 不限。 */
       timeout(req: Request, seconds: number): void;
     }
   ): Response | undefined | Promise<Response | undefined>;

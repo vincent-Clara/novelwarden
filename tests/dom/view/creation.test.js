@@ -1,16 +1,16 @@
 /**
- * 创作页：流水线条与下一步、当前产物浮窗、/ 命令面板、进入某一章、独立版壳。
+ * 創作頁：流水線條與下一步、當前產物浮窗、/ 命令面板、進入某一章、獨立版殼。
  *
- * 迁自 scripts/smoke-view.js 的这几节：
- *   == 创作流水线条与下一步 ==（389） == 工作区卡 ==（544）
- *   == / 命令面板 ==（617）          == 选中章节进入当前阶段 ==（720）
- *   == 独立版壳上的创作页 ==（770）
+ * 遷自 scripts/smoke-view.js 的這幾節：
+ *   == 創作流水線條與下一步 ==（389） == 工作區卡 ==（544）
+ *   == / 命令面板 ==（617）          == 選中章節進入當前階段 ==（720）
+ *   == 獨立版殼上的創作頁 ==（770）
  *
- * 一章一纲之后（commit 4e0d289）：阶段是「架构 / 大纲 / 细纲 / 正文」，流水线条上
- * 一章只剩「细纲 / 正文」两格加一个定稿状态；卷纲那一格、目标字数输入框都没了。2026-10-24 前面
- * 又挂了一格「大纲」（这一章排进大纲没有，点了回到全书那一层）。
- * 主按钮发的是**状态机给的 target 与 range**——从前发的是会话当下的 target，
- * 按钮上写着一件事、落盘时写到了另一处（§3.1-1）。
+ * 一章一綱之後（commit 4e0d289）：階段是「架構 / 大綱 / 細綱 / 正文」，流水線條上
+ * 一章只剩「細綱 / 正文」兩格加一個定稿狀態；卷綱那一格、目標字數輸入框都沒了。2026-10-24 前面
+ * 又掛了一格「大綱」（這一章排進大綱沒有，點了回到全書那一層）。
+ * 主按鈕發的是**狀態機給的 target 與 range**——從前發的是會話當下的 target，
+ * 按鈕上寫著一件事、落盤時寫到了另一處（§3.1-1）。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -19,9 +19,9 @@ const {
   emptySession, pipelineView, workbenchView, viewState, sampleTree,
 } = require('../../helpers/dom');
 
-const PLOT_12 = '.novelwarden/summaries/012-夜入青云.md';
+const PLOT_12 = '.novelwarden/summaries/012-夜入青雲.md';
 
-describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
+describe('創作流水線條與下一步', { skip: JSDOM_SKIP }, () => {
   let ui;
   let sentStep;
   let act;
@@ -36,7 +36,7 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
   const goBtn = () => ui.doc.getElementById('nextStepBtn');
   const hint = () => ui.doc.getElementById('nextStepHint').textContent;
   const renameBtn = () => ui.doc.getElementById('renamePlotBtn');
-  /** 点主按钮，取它发出的那一条 send，然后把 busy 放回去（点了就会置 busy）。 */
+  /** 點主按鈕，取它發出的那一條 send，然後把 busy 放回去（點了就會置 busy）。 */
   const runStep = () => {
     ui.doc.getElementById('input').value = '';
     ui.clickEl(goBtn());
@@ -54,80 +54,80 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
 
   before(() => {
     ui = mount();
-    // ---- 情节大纲那一层（emptySession 的缺省）----
+    // ---- 情節大綱那一層（emptySession 的預設）----
     ui.post({ type: 'session', session: emptySession() });
   });
 
-  // 从前全书那一层没有具体落点可报，整条收起。现在架构与大纲各有名字，
-  // 面包屑照样报「在哪」——只是下面那两格没有意义了。
-  test('大纲层显示面包屑「情节大纲」', () => {
+  // 從前全書那一層沒有具體落點可報，整條收起。現在架構與大綱各有名字，
+  // 麵包屑照樣報「在哪」——只是下面那兩格沒有意義了。
+  test('大綱層顯示麵包屑「情節大綱」', () => {
     assert.ok(!crumbBox().classList.contains('hidden'));
-    assert.deepEqual(crumbs(), ['情节大纲']);
+    assert.deepEqual(crumbs(), ['情節大綱']);
   });
 
-  test('大纲层收起细纲 / 正文两格', () => {
+  test('大綱層收起細綱 / 正文兩格', () => {
     assert.ok(stagesBox().classList.contains('hidden'));
   });
 
-  // 大纲那一层没有章可改名，留一个点了会报错的按钮比没有更糟。
-  test('大纲层收起重命名按钮', () => {
+  // 大綱那一層沒有章可改名，留一個點了會報錯的按鈕比沒有更糟。
+  test('大綱層收起重新命名按鈕', () => {
     assert.ok(renameBtn().classList.contains('hidden'));
   });
 
-  // 全书那一层同样有下一步（生成 / 续写大纲、拆细纲），而且带章号区间。
-  test('大纲层也给下一步', () => {
+  // 全書那一層同樣有下一步（生成 / 續寫大綱、拆細綱），而且帶章號區間。
+  test('大綱層也給下一步', () => {
     ui.post({
       type: 'pipeline',
-      workbench: workbenchView({ stage: 'outline', title: '情节大纲', sections: [], empty: '这部书还没有情节大纲。' }),
+      workbench: workbenchView({ stage: 'outline', title: '情節大綱', sections: [], empty: '這部書還沒有情節大綱。' }),
       next: {
         stage: 'outline',
         capability: 'generate',
-        label: '生成情节大纲（第 1–20 章）',
-        hint: '按故事结构把全书的走向排出来，按章号区间分节。',
+        label: '生成情節大綱（第 1–20 章）',
+        hint: '按故事結構把全書的走向排出來，按章號區間分節。',
         target: { kind: 'outline' },
         range: { from: 1, to: 20 },
       },
     });
-    assert.equal(goBtn().textContent, '生成情节大纲（第 1–20 章）', goBtn().textContent);
+    assert.equal(goBtn().textContent, '生成情節大綱（第 1–20 章）', goBtn().textContent);
   });
 
-  test('下一步给出理由', () => {
-    assert.ok(hint().includes('按故事结构'), hint());
+  test('下一步給出理由', () => {
+    assert.ok(hint().includes('按故事結構'), hint());
   });
 
-  // 区间本期只透传、不影响生成（二期才按区间一次出多章），但必须原样到后端。
-  test('主按钮透传状态机给的区间', () => {
+  // 區間本期只透傳、不影響生成（二期才按區間一次出多章），但必須原樣到後端。
+  test('主按鈕透傳狀態機給的區間', () => {
     sentStep = runStep();
-    assert.ok(sentStep, '没发出 send');
+    assert.ok(sentStep, '沒發出 send');
     assert.equal(sentStep.payload.range?.from, 1, JSON.stringify(sentStep.payload));
     assert.equal(sentStep.payload.range?.to, 20, JSON.stringify(sentStep.payload));
   });
 
-  // 没有 step.no 时 targetNo 取区间起点——那是这一步开工的那一章。
-  test('没有章号时 targetNo 取区间起点', () => {
+  // 沒有 step.no 時 targetNo 取區間起點——那是這一步開工的那一章。
+  test('沒有章號時 targetNo 取區間起點', () => {
     assert.equal(sentStep.payload.targetNo, 1, JSON.stringify(sentStep.payload));
   });
 
-  // W1：目标字数只认细纲（或 config.md 的每章字数）。输入框下面那个默认 2000 的
-  // 数字框删了，payload 里也不该再捎一个——两处都能写，作者分不清哪个生效。
-  test('主按钮的 payload 不再带 targetWords', () => {
+  // W1：目標字數只認細綱（或 config.md 的每章字數）。輸入框下面那個預設 2000 的
+  // 數字框刪了，payload 裡也不該再捎一個——兩處都能寫，作者分不清哪個生效。
+  test('主按鈕的 payload 不再帶 targetWords', () => {
     assert.ok(!('targetWords' in sentStep.payload), JSON.stringify(sentStep.payload));
   });
 
-  // ---- ★ 本期修的那个 bug（§3.1-1）：主按钮发的是 step.target，不是会话的 target
+  // ---- ★ 本期修的那個 bug（§3.1-1）：主按鈕發的是 step.target，不是會話的 target
   //
-  // 会话停在大纲，全书状态机说下一步是「拆细纲（第 1–5 章）」、落点是第 1 章的细纲。
-  // 从前 payload 只覆盖了 stage 与 capability，target 仍是会话那份（大纲），
-  // 于是产出的细纲被当成大纲写回了 outline.md。
-  test('主按钮发的是状态机给的 target，不是会话当前的', () => {
+  // 會話停在大綱，全書狀態機說下一步是「拆細綱（第 1–5 章）」、落點是第 1 章的細綱。
+  // 從前 payload 只覆蓋了 stage 與 capability，target 仍是會話那份（大綱），
+  // 於是產出的細綱被當成大綱寫回了 outline.md。
+  test('主按鈕發的是狀態機給的 target，不是會話當前的', () => {
     ui.post({
       type: 'pipeline',
-      workbench: workbenchView({ stage: 'outline', title: '情节大纲' }),
+      workbench: workbenchView({ stage: 'outline', title: '情節大綱' }),
       next: {
         stage: 'plot',
         capability: 'generate',
-        label: '拆细纲（第 1–5 章）',
-        hint: '从情节大纲里把接下来几章拆成一章一份的细纲。',
+        label: '拆細綱（第 1–5 章）',
+        hint: '從情節大綱裡把接下來幾章拆成一章一份的細綱。',
         target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/001-楔子.md' },
         range: { from: 1, to: 5 },
       },
@@ -137,51 +137,51 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
     assert.equal(sentStep.payload.target.plotRelPath, '.novelwarden/summaries/001-楔子.md', JSON.stringify(sentStep.payload));
   });
 
-  test('阶段与能力也跟着 step 走', () => {
+  test('階段與能力也跟著 step 走', () => {
     assert.equal(sentStep.payload.stage, 'plot', JSON.stringify(sentStep.payload));
     assert.equal(sentStep.payload.capability, 'generate', JSON.stringify(sentStep.payload));
   });
 
-  test('拆细纲那一步的区间原样透传', () => {
+  test('拆細綱那一步的區間原樣透傳', () => {
     assert.equal(sentStep.payload.range?.from, 1, JSON.stringify(sentStep.payload));
     assert.equal(sentStep.payload.range?.to, 5, JSON.stringify(sentStep.payload));
   });
 
-  // ---- 架构那一层 ----
-  // 阶段叫「架构」，避免和设定条目（lore，界面上叫「设定」）撞名。
-  test('架构层面包屑写「故事架构 · 故事前提」', () => {
+  // ---- 架構那一層 ----
+  // 階段叫「架構」，避免和設定條目（lore，介面上叫「設定」）撞名。
+  test('架構層麵包屑寫「故事架構 · 故事前提」', () => {
     ui.post({
       type: 'session',
       session: emptySession({ target: { kind: 'setting', doc: 'premise' }, stage: 'setting', capability: 'discuss' }),
     });
     assert.ok(!crumbBox().classList.contains('hidden'));
-    assert.deepEqual(crumbs(), ['故事架构 · 故事前提']);
+    assert.deepEqual(crumbs(), ['故事架構 · 故事前提']);
   });
 
-  test('架构层同样收起两格', () => {
+  test('架構層同樣收起兩格', () => {
     assert.ok(stagesBox().classList.contains('hidden'));
   });
 
-  test('架构层收起重命名按钮', () => {
+  test('架構層收起重新命名按鈕', () => {
     assert.ok(renameBtn().classList.contains('hidden'));
   });
 
-  // 没有下一步、也不在某一章上：全书写完了。不造一个假的下一步。
-  test('全书层没有下一步时收起主按钮并说明', () => {
-    ui.post({ type: 'pipeline', workbench: workbenchView({ stage: 'setting', title: '架构 · 故事前提' }) });
+  // 沒有下一步、也不在某一章上：全書寫完了。不造一個假的下一步。
+  test('全書層沒有下一步時收起主按鈕並說明', () => {
+    ui.post({ type: 'pipeline', workbench: workbenchView({ stage: 'setting', title: '架構 · 故事前提' }) });
     assert.ok(goBtn().classList.contains('hidden'));
-    assert.ok(hint().includes('全书都写完了'), hint());
+    assert.ok(hint().includes('全書都寫完了'), hint());
   });
 
   // ---- 切到某一章的正文 ----
-  test('面包屑只报这一章', () => {
+  test('麵包屑只報這一章', () => {
     ui.post({ type: 'session', session: chapterSession() });
     ui.post({
       type: 'pipeline',
       pipeline: pipelineView({
         chapter: {
           exists: true,
-          relPath: 'chapters/012-夜入青云.md',
+          relPath: 'chapters/012-夜入青雲.md',
           words: 1200,
           targetWords: 3000,
           upstreamStale: true,
@@ -189,155 +189,155 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
         stage: 'manuscript',
         progress: { plot: 1, manuscript: 0.5, summary: 0 },
       }),
-      workbench: workbenchView({ stage: 'manuscript', title: '正文 · 第 12 章《夜入青云》' }),
+      workbench: workbenchView({ stage: 'manuscript', title: '正文 · 第 12 章《夜入青雲》' }),
       next: {
         stage: 'manuscript',
         capability: 'generate',
-        label: '重写第 12 章',
-        hint: '细纲改过，现有正文可能已经与它对不上。',
+        label: '重寫第 12 章',
+        hint: '細綱改過，現有正文可能已經與它對不上。',
         target: { kind: 'manuscript', plotRelPath: PLOT_12 },
       },
     });
-    assert.deepEqual(crumbs(), ['第 12 章《夜入青云》']);
+    assert.deepEqual(crumbs(), ['第 12 章《夜入青雲》']);
   });
 
-  test('信息条不是按钮', () => {
+  test('資訊條不是按鈕', () => {
     assert.ok([...ui.doc.querySelectorAll('#pipelineCrumb .crumb')].every((n) => n.tagName === 'SPAN'));
   });
 
-  // 一章一纲之后这一章的上游链：它的细纲 → 它的正文，前面再挂一格「大纲」（2026-10-24：停在一章上
-  // 找不到回全书的路）。定稿不是一个创作阶段（它是写完之后的一步工程动作），只给状态不给按钮。
-  test('展开三格：大纲 / 细纲 / 正文', () => {
+  // 一章一綱之後這一章的上游鏈：它的細綱 → 它的正文，前面再掛一格「大綱」（2026-10-24：停在一章上
+  // 找不到回全書的路）。定稿不是一個創作階段（它是寫完之後的一步工程動作），只給狀態不給按鈕。
+  test('展開三格：大綱 / 細綱 / 正文', () => {
     assert.ok(!stagesBox().classList.contains('hidden'));
-    assert.deepEqual(stages().map((n) => n.querySelector('.pstage-label').textContent), ['大纲', '细纲', '正文']);
+    assert.deepEqual(stages().map((n) => n.querySelector('.pstage-label').textContent), ['大綱', '細綱', '正文']);
   });
 
-  // 大纲那一格报的是这一章在情节大纲里有没有那一条，不是这一章的一层：排进去了实心、不挂 ⚠、从不高亮。
-  test('大纲那一格：这一章排进了大纲', () => {
-    assert.ok(stage('大纲').querySelector('.pstage-mark.done'), stage('大纲').outerHTML);
-    assert.ok(!stage('大纲').querySelector('.pstage-stale'), stage('大纲').outerHTML);
-    assert.ok(!stage('大纲').classList.contains('active'));
-    assert.match(stage('大纲').title, /情节大纲里有这一章（大纲排到第 20 章）/);
-    assert.match(stage('大纲').title, /\/续写大纲/);
+  // 大綱那一格報的是這一章在情節大綱裡有沒有那一條，不是這一章的一層：排進去了實心、不掛 ⚠、從不高亮。
+  test('大綱那一格：這一章排進了大綱', () => {
+    assert.ok(stage('大綱').querySelector('.pstage-mark.done'), stage('大綱').outerHTML);
+    assert.ok(!stage('大綱').querySelector('.pstage-stale'), stage('大綱').outerHTML);
+    assert.ok(!stage('大綱').classList.contains('active'));
+    assert.match(stage('大綱').title, /情節大綱裡有這一章（大綱排到第 20 章）/);
+    assert.match(stage('大綱').title, /\/續寫大綱/);
   });
 
-  test('点大纲那一格回到全书那一层', () => {
-    ui.clickEl(stage('大纲'));
+  test('點大綱那一格回到全書那一層', () => {
+    ui.clickEl(stage('大綱'));
     assert.equal(lastSetTarget()?.target.kind, 'outline', JSON.stringify(lastSetTarget()));
     assert.equal(lastSetTarget()?.target.plotRelPath, undefined);
   });
 
-  // 章名后面不再挂状态徽章：这一章走到哪，下一行的两格加定稿状态已经说了，同一件事不说两遍。
-  test('信息条只有章名，没有状态徽章', () => {
+  // 章名後面不再掛狀態徽章：這一章走到哪，下一行的兩格加定稿狀態已經說了，同一件事不說兩遍。
+  test('資訊條只有章名，沒有狀態徽章', () => {
     const crumb = ui.doc.getElementById('pipelineCrumb');
     assert.equal(crumb.querySelector('.cstage'), null, crumb.outerHTML);
-    assert.ok(!crumb.textContent.includes('待写正文'), crumb.textContent);
+    assert.ok(!crumb.textContent.includes('待寫正文'), crumb.textContent);
   });
 
-  // 三态圆点：细纲完成、正文进行中——不是百分比条。
-  test('细纲标成已完成', () => {
-    assert.ok(stage('细纲').querySelector('.pstage-mark.done'), stage('细纲').outerHTML);
+  // 三態圓點：細綱完成、正文進行中——不是百分比條。
+  test('細綱標成已完成', () => {
+    assert.ok(stage('細綱').querySelector('.pstage-mark.done'), stage('細綱').outerHTML);
   });
 
-  test('正文标成进行中', () => {
+  test('正文標成進行中', () => {
     assert.ok(stage('正文').querySelector('.pstage-mark.partial'), stage('正文').outerHTML);
   });
 
-  test('不再画百分比条', () => {
+  test('不再畫百分比條', () => {
     assert.ok(!ui.doc.querySelector('.pstage-bar'));
   });
 
-  // 会话停在哪一层，哪一格就亮着。
-  test('当前所在那一层高亮', () => {
+  // 會話停在哪一層，哪一格就亮著。
+  test('當前所在那一層高亮', () => {
     assert.ok(stage('正文').classList.contains('active'));
-    assert.ok(!stage('细纲').classList.contains('active'));
+    assert.ok(!stage('細綱').classList.contains('active'));
   });
 
-  // ⟳ 是整条流水线最有价值的一格信息：细纲在正文写完之后改过。
-  test('正文那一格标出上游已变更', () => {
+  // ⟳ 是整條流水線最有價值的一格資訊：細綱在正文寫完之後改過。
+  test('正文那一格標出上遊已變更', () => {
     assert.ok(stage('正文').querySelector('.pstage-stale'), stage('正文').outerHTML);
   });
 
-  test('细纲那一格没有变更标记', () => {
-    assert.ok(!stage('细纲').querySelector('.pstage-stale'));
+  test('細綱那一格沒有變更標記', () => {
+    assert.ok(!stage('細綱').querySelector('.pstage-stale'));
   });
 
-  // 定稿：写了正文、细纲还没照正文更新过 → 待定稿，并标成待办。
-  test('写了没定稿报「待定稿」', () => {
+  // 定稿：寫了正文、細綱還沒照正文更新過 → 待定稿，並標成待辦。
+  test('寫了沒定稿報「待定稿」', () => {
     assert.equal(summaryState()?.textContent, '待同步');
     assert.ok(summaryState().classList.contains('stale'), summaryState().className);
   });
 
-  // ---- 主按钮：点了就跑，不必先输入 ----
-  test('主按钮空输入也能发', () => {
+  // ---- 主按鈕：點了就跑，不必先輸入 ----
+  test('主按鈕空輸入也能發', () => {
     const beforeSend = ui.sent.filter((m) => m.type === 'send').length;
     sentStep = runStep();
     assert.equal(ui.sent.filter((m) => m.type === 'send').length, beforeSend + 1);
   });
 
-  test('主按钮带上状态机给的阶段与能力', () => {
+  test('主按鈕帶上狀態機給的階段與能力', () => {
     assert.equal(sentStep.payload.stage, 'manuscript', JSON.stringify(sentStep.payload));
     assert.equal(sentStep.payload.capability, 'generate', JSON.stringify(sentStep.payload));
   });
 
-  test('主按钮带上状态机给的 target', () => {
+  test('主按鈕帶上狀態機給的 target', () => {
     assert.equal(sentStep.payload.target.kind, 'manuscript', JSON.stringify(sentStep.payload));
     assert.equal(sentStep.payload.target.plotRelPath, PLOT_12, JSON.stringify(sentStep.payload));
   });
 
-  // 单章那一步没有区间，别把上一步的区间捎过去。
-  test('没有区间的那一步不带 range', () => {
+  // 單章那一步沒有區間，別把上一步的區間捎過去。
+  test('沒有區間的那一步不帶 range', () => {
     assert.equal(sentStep.payload.range, undefined, JSON.stringify(sentStep.payload));
   });
 
-  // 输入框里有字就当补充要求一起带上。
-  test('输入框里的字作为补充要求带上', () => {
-    ui.doc.getElementById('input').value = '多写点雨里的细节';
+  // 輸入框裡有字就當補充要求一起帶上。
+  test('輸入框裡的字作為補充要求帶上', () => {
+    ui.doc.getElementById('input').value = '多寫點雨裡的細節';
     ui.clickEl(goBtn());
-    assert.equal(lastSend().payload.text, '多写点雨里的细节', JSON.stringify(lastSend().payload));
-    assert.equal(ui.doc.getElementById('input').value, '', '发完没清空输入框');
+    assert.equal(lastSend().payload.text, '多寫點雨裡的細節', JSON.stringify(lastSend().payload));
+    assert.equal(ui.doc.getElementById('input').value, '', '發完沒清空輸入框');
     ui.post({ type: 'busy', value: false });
   });
 
-  // ---- 生成中：主按钮会发起新的一轮，必须点不动 ----
-  test('生成中禁用主按钮', () => {
+  // ---- 生成中：主按鈕會發起新的一輪，必須點不動 ----
+  test('生成中禁用主按鈕', () => {
     ui.post({ type: 'busy', value: true });
     assert.ok(goBtn().disabled);
   });
 
-  test('生成中点主按钮不发送', () => {
+  test('生成中點主按鈕不傳送', () => {
     const before = ui.sent.filter((m) => m.type === 'send').length;
     ui.clickEl(goBtn());
     assert.equal(ui.sent.filter((m) => m.type === 'send').length, before);
   });
 
-  test('生成结束后主按钮恢复', () => {
+  test('生成結束後主按鈕恢復', () => {
     ui.post({ type: 'busy', value: false });
     assert.ok(!goBtn().disabled);
   });
 
-  // ---- 点击切目标（信息条本身不可点，靠下面的两格切）----
-  test('点信息条不发 setTarget', () => {
+  // ---- 點選切目標（資訊條本身不可點，靠下面的兩格切）----
+  test('點資訊條不發 setTarget', () => {
     const before = ui.sent.filter((m) => m.type === 'setTarget').length;
     ui.clickEl(ui.doc.querySelector('#pipelineCrumb .crumb'));
     assert.equal(ui.sent.filter((m) => m.type === 'setTarget').length, before);
   });
 
-  // ---- 「开始新对话」按钮：面包屑右侧那个 ＋ ----
-  test('开始新对话按钮在面包屑右侧', () => {
+  // ---- 「開始新對話」按鈕：麵包屑右側那個 ＋ ----
+  test('開始新對話按鈕在麵包屑右側', () => {
     const btn = ui.doc.getElementById('newSessionBtn');
-    assert.ok(btn, '没有 newSessionBtn');
+    assert.ok(btn, '沒有 newSessionBtn');
     assert.equal(btn.parentElement?.id, 'pipelineTop');
     assert.ok(btn.textContent.includes('＋'), btn.textContent);
   });
 
-  test('点开始新对话发出 newSession', () => {
+  test('點開始新對話發出 newSession', () => {
     ui.clickEl(ui.doc.getElementById('newSessionBtn'));
     const msg = [...ui.sent].reverse().find((m) => m.type === 'newSession');
     assert.ok(msg, JSON.stringify(ui.sent));
   });
 
-  test('生成中点开始新对话不发 newSession', () => {
+  test('生成中點開始新對話不發 newSession', () => {
     ui.post({ type: 'busy', value: true });
     const before = ui.sent.filter((m) => m.type === 'newSession').length;
     ui.clickEl(ui.doc.getElementById('newSessionBtn'));
@@ -345,30 +345,30 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'busy', value: false });
   });
 
-  test('生成中禁用开始新对话按钮', () => {
+  test('生成中禁用開始新對話按鈕', () => {
     ui.post({ type: 'busy', value: true });
     assert.ok(ui.doc.getElementById('newSessionBtn').disabled);
     ui.post({ type: 'busy', value: false });
     assert.ok(!ui.doc.getElementById('newSessionBtn').disabled);
   });
 
-  // ---- 「重命名当前这一章」按钮：面包屑右侧那支笔 ----
-  // 手工新建的细纲是纯序号名（标题要等细纲排完才定得下来），所以得有个常驻入口。
-  test('重命名按钮在面包屑右侧', () => {
-    assert.ok(renameBtn(), '没有 renamePlotBtn');
+  // ---- 「重新命名當前這一章」按鈕：麵包屑右側那支筆 ----
+  // 手工新建的細綱是純序號名（標題要等細綱排完才定得下來），所以得有個常駐入口。
+  test('重新命名按鈕在麵包屑右側', () => {
+    assert.ok(renameBtn(), '沒有 renamePlotBtn');
     assert.equal(renameBtn().parentElement?.id, 'pipelineTop');
   });
 
-  test('目标是某一章时按钮可见', () => {
+  test('目標是某一章時按鈕可見', () => {
     assert.ok(!renameBtn().classList.contains('hidden'));
   });
 
-  test('tooltip 带上章名', () => {
-    assert.ok(renameBtn().title.includes('夜入青云'), renameBtn().title);
+  test('tooltip 帶上章名', () => {
+    assert.ok(renameBtn().title.includes('夜入青雲'), renameBtn().title);
   });
 
-  // 复用工程页右键那条 fileAction，不新增协议。改的是细纲（章号前缀保留）。
-  test('点重命名发出 fileAction', () => {
+  // 複用工程頁右鍵那條 fileAction，不新增協議。改的是細綱（章號字首保留）。
+  test('點重新命名發出 fileAction', () => {
     ui.clickEl(renameBtn());
     const msg = [...ui.sent].reverse().find((m) => m.type === 'fileAction');
     assert.ok(msg, JSON.stringify(ui.sent));
@@ -376,14 +376,14 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
     assert.equal(msg.relPath, PLOT_12, JSON.stringify(msg));
   });
 
-  test('生成中禁用重命名按钮', () => {
+  test('生成中禁用重新命名按鈕', () => {
     ui.post({ type: 'busy', value: true });
     assert.ok(renameBtn().disabled);
     ui.post({ type: 'busy', value: false });
     assert.ok(!renameBtn().disabled);
   });
 
-  test('生成中点重命名不发 fileAction', () => {
+  test('生成中點重新命名不發 fileAction', () => {
     ui.post({ type: 'busy', value: true });
     const before = ui.sent.filter((m) => m.type === 'fileAction').length;
     ui.clickEl(renameBtn());
@@ -391,58 +391,58 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'busy', value: false });
   });
 
-  test('点细纲那一格发出 setTarget', () => {
-    ui.clickEl(stage('细纲'));
+  test('點細綱那一格發出 setTarget', () => {
+    ui.clickEl(stage('細綱'));
     assert.equal(lastSetTarget()?.target.kind, 'plot', JSON.stringify(lastSetTarget()));
   });
 
-  test('切层保留当前这一章', () => {
+  test('切層保留當前這一章', () => {
     assert.equal(lastSetTarget()?.target.plotRelPath, PLOT_12);
   });
 
-  test('点正文那一格切到正文层', () => {
+  test('點正文那一格切到正文層', () => {
     ui.clickEl(stage('正文'));
     assert.equal(lastSetTarget()?.target.kind, 'manuscript', JSON.stringify(lastSetTarget()));
     assert.equal(lastSetTarget()?.target.plotRelPath, PLOT_12);
   });
 
-  // 细纲改过（大纲那一节在细纲之后动过）时，⟳ 挂在细纲那一格上。
-  test('细纲的上游变过时细纲那一格挂 ⟳', () => {
+  // 細綱改過（大綱那一節在細綱之後動過）時，⟳ 掛在細綱那一格上。
+  test('細綱的上游變過時細綱那一格掛 ⟳', () => {
     ui.post({
       type: 'pipeline',
       pipeline: pipelineView({ plot: { relPath: PLOT_12, exists: true, filled: true, upstreamStale: true } }),
       workbench: workbenchView(),
     });
-    assert.ok(stage('细纲').querySelector('.pstage-stale'), stage('细纲').outerHTML);
+    assert.ok(stage('細綱').querySelector('.pstage-stale'), stage('細綱').outerHTML);
   });
 
-  // 还没有正文时别把一格空的说成「待定稿」。
-  test('还没写正文报「未写正文」', () => {
+  // 還沒有正文時別把一格空的說成「待定稿」。
+  test('還沒寫正文報「未寫正文」', () => {
     ui.post({ type: 'pipeline', pipeline: pipelineView(), workbench: workbenchView() });
-    assert.equal(summaryState()?.textContent, '未写正文');
+    assert.equal(summaryState()?.textContent, '未寫正文');
     assert.ok(!summaryState().classList.contains('stale'), summaryState().className);
   });
 
-  // 图上那一种：新建的第 83 章，大纲只排到第 82 章——大纲那一格空心挂 ⚠，悬停说排到第几章。
-  test('这一章还没排进大纲：大纲那一格空心挂 ⚠', () => {
+  // 圖上那一種：新建的第 83 章，大綱只排到第 82 章——大綱那一格空心掛 ⚠，懸停說排到第幾章。
+  test('這一章還沒排進大綱：大綱那一格空心掛 ⚠', () => {
     ui.post({ type: 'pipeline', pipeline: pipelineView({ outline: { covered: false, coverage: 11 } }), workbench: workbenchView() });
-    assert.ok(stage('大纲').querySelector('.pstage-mark.todo'), stage('大纲').outerHTML);
-    assert.equal(stage('大纲').querySelector('.pstage-stale')?.textContent, '⚠', stage('大纲').outerHTML);
-    assert.match(stage('大纲').title, /情节大纲里还没有这一章（大纲排到第 11 章）/);
+    assert.ok(stage('大綱').querySelector('.pstage-mark.todo'), stage('大綱').outerHTML);
+    assert.equal(stage('大綱').querySelector('.pstage-stale')?.textContent, '⚠', stage('大綱').outerHTML);
+    assert.match(stage('大綱').title, /情節大綱裡還沒有這一章（大綱排到第 11 章）/);
   });
 
-  test('一章大纲都没有时说还没有情节大纲', () => {
+  test('一章大綱都沒有時說還沒有情節大綱', () => {
     ui.post({ type: 'pipeline', pipeline: pipelineView({ outline: { covered: false, coverage: 0 } }), workbench: workbenchView() });
-    assert.match(stage('大纲').title, /情节大纲里还没有这一章（还没有情节大纲）/);
+    assert.match(stage('大綱').title, /情節大綱裡還沒有這一章（還沒有情節大綱）/);
     ui.post({ type: 'pipeline', pipeline: pipelineView(), workbench: workbenchView() });
   });
 
   // ---- 全做完的章不催 ----
-  test('定稿过的章报「已定稿」', () => {
+  test('定稿過的章報「已定稿」', () => {
     ui.post({
       type: 'pipeline',
       pipeline: pipelineView({
-        chapter: { exists: true, relPath: 'chapters/012-夜入青云.md', words: 3000, targetWords: 3000, upstreamStale: false },
+        chapter: { exists: true, relPath: 'chapters/012-夜入青雲.md', words: 3000, targetWords: 3000, upstreamStale: false },
         summary: { exists: true, stale: false },
         stage: 'done',
         progress: { plot: 1, manuscript: 1, summary: 1 },
@@ -453,17 +453,17 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
     assert.equal(summaryState()?.textContent, '已同步');
   });
 
-  test('没有下一步时收起主按钮', () => {
+  test('沒有下一步時收起主按鈕', () => {
     assert.ok(goBtn().classList.contains('hidden'));
   });
 
-  test('没有下一步时说明为什么', () => {
-    assert.ok(hint().includes('这一章都齐了'), hint());
+  test('沒有下一步時說明為什麼', () => {
+    assert.ok(hint().includes('這一章都齊了'), hint());
   });
 
-  // 单章做完之后主按钮转去问全书，落到下一个该写的章——这时 step.target 与
-  // 会话的 target 指的是两章。发出去的必须是下一章。
-  test('这一章做完后，主按钮落到下一章', () => {
+  // 單章做完之後主按鈕轉去問全書，落到下一個該寫的章——這時 step.target 與
+  // 會話的 target 指的是兩章。發出去的必須是下一章。
+  test('這一章做完後，主按鈕落到下一章', () => {
     ui.post({
       type: 'pipeline',
       pipeline: pipelineView({ stage: 'done', progress: { plot: 1, manuscript: 1, summary: 1 } }),
@@ -471,8 +471,8 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
       next: {
         stage: 'plot',
         capability: 'generate',
-        label: '写第 13 章细纲',
-        hint: '先把这一章要发生什么定下来。',
+        label: '寫第 13 章細綱',
+        hint: '先把這一章要發生什麼定下來。',
         target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/013.md' },
       },
     });
@@ -481,13 +481,13 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
     assert.equal(sentStep.payload.target.kind, 'plot', JSON.stringify(sentStep.payload));
   });
 
-  // ---- 定稿那一步是工程动作，不是一轮对话 ----
+  // ---- 定稿那一步是工程動作，不是一輪對話 ----
   let beforeAct;
-  test('定稿走工程动作', () => {
+  test('定稿走工程動作', () => {
     ui.post({
       type: 'pipeline',
       pipeline: pipelineView({
-        chapter: { exists: true, relPath: 'chapters/012-夜入青云.md', words: 2980, targetWords: 3000, upstreamStale: false },
+        chapter: { exists: true, relPath: 'chapters/012-夜入青雲.md', words: 2980, targetWords: 3000, upstreamStale: false },
         stage: 'finalize',
         progress: { plot: 1, manuscript: 1, summary: 0 },
       }),
@@ -497,7 +497,7 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
         capability: 'generate',
         projectAction: 'finalizeChapter',
         label: '同步第 12 章',
-        hint: '正文写够了。',
+        hint: '正文寫夠了。',
         target: { kind: 'manuscript', plotRelPath: PLOT_12 },
       },
     });
@@ -507,23 +507,23 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
     assert.equal(act?.action, 'finalizeChapter', JSON.stringify(act));
   });
 
-  // 路径必须来自 next.target 而不是会话里的目标——后者可能还没同步，
-  // 而工程动作拿不到对象会静默什么都不做。后端按章号把细纲路径认到同号正文上。
-  test('工程动作带上这一章的路径', () => {
+  // 路徑必須來自 next.target 而不是會話裡的目標——後者可能還沒同步，
+  // 而工程動作拿不到物件會靜默什麼都不做。後端按章號把細綱路徑認到同號正文上。
+  test('工程動作帶上這一章的路徑', () => {
     assert.equal(act?.relPath, PLOT_12, JSON.stringify(act));
   });
 
-  test('工程动作不占对话', () => {
+  test('工程動作不佔對話', () => {
     assert.equal(ui.sent.filter((m) => m.type === 'send').length, beforeAct);
   });
 
-  test('工程动作不把界面锁进生成中', () => {
+  test('工程動作不把介面鎖進生成中', () => {
     assert.ok(!goBtn().disabled);
   });
 
-  // ---- 目标换章时，上一章的进度不能留着显示 ----
-  // 拿上一章的状态配这一章的名字，比什么都不显示更糟。
-  test('换章后不再显示上一章的章名', () => {
+  // ---- 目標換章時，上一章的進度不能留著顯示 ----
+  // 拿上一章的狀態配這一章的名字，比什麼都不顯示更糟。
+  test('換章後不再顯示上一章的章名', () => {
     ui.post({ type: 'pipeline', pipeline: pipelineView(), workbench: workbenchView() });
     ui.post({
       type: 'session',
@@ -533,18 +533,18 @@ describe('创作流水线条与下一步', { skip: JSDOM_SKIP }, () => {
         capability: 'discuss',
       }),
     });
-    assert.ok(!crumbs().some((c) => c.includes('夜入青云')), crumbs().join('|'));
+    assert.ok(!crumbs().some((c) => c.includes('夜入青雲')), crumbs().join('|'));
   });
 });
 
 /*
- * 「当前产物」：流水线条上的入口 + 悬停浮窗。
+ * 「當前產物」：流水線條上的入口 + 懸停浮窗。
  *
- * 从前它是消息流顶部一张 sticky 卡片，关不掉也藏不起来。现在与工程页那三只
- * 浮窗同一套路子，所以要验的东西也换了：入口只占一行、悬停/点击才浮出来、
- * 移开或 Esc 收得掉。
+ * 從前它是訊息流頂部一張 sticky 卡片，關不掉也藏不起來。現在與工程頁那三隻
+ * 浮窗同一套路子，所以要驗的東西也換了：入口只佔一行、懸停/點選才浮出來、
+ * 移開或 Esc 收得掉。
  */
-describe('当前产物浮窗', { skip: JSDOM_SKIP }, () => {
+describe('當前產物浮窗', { skip: JSDOM_SKIP }, () => {
   let ui;
   const entry = () => ui.doc.getElementById('workbench');
   const tip = () => ui.doc.querySelector('.workbench-tip');
@@ -554,9 +554,9 @@ describe('当前产物浮窗', { skip: JSDOM_SKIP }, () => {
   const esc = () =>
     ui.doc.dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  /** 等过悬停延迟（HOVER_DELAY_MS 是 300ms）。 */
+  /** 等過懸停延遲（HOVER_DELAY_MS 是 300ms）。 */
   const settle = () => wait(450);
-  /** 等过收起的宽限期（CLOSE_DELAY_MS 是 200ms）。 */
+  /** 等過收起的寬限期（CLOSE_DELAY_MS 是 200ms）。 */
   const grace = () => wait(320);
 
   const postPlot = () =>
@@ -565,8 +565,8 @@ describe('当前产物浮窗', { skip: JSDOM_SKIP }, () => {
       pipeline: pipelineView(),
       workbench: workbenchView({
         sections: [
-          { key: '梗概', text: '林昭混进青云宗，拿到入门的腰牌' },
-          { key: '关键事件', text: '林昭把外衣搭在墙头\n数到第三盏灯才翻过去' },
+          { key: '梗概', text: '林昭混進青雲宗，拿到入門的腰牌' },
+          { key: '關鍵事件', text: '林昭把外衣搭在牆頭\n數到第三盞燈才翻過去' },
         ],
       }),
     });
@@ -584,81 +584,81 @@ describe('当前产物浮窗', { skip: JSDOM_SKIP }, () => {
     postPlot();
   });
 
-  // ---- 入口：一行，长在流水线条上（不在消息流里，不占版面）
-  test('入口显示出来', () => {
+  // ---- 入口：一行，長在流水線條上（不在訊息流裡，不佔版面）
+  test('入口顯示出來', () => {
     assert.ok(!entry().classList.contains('hidden'));
   });
 
-  test('入口长在流水线条里，不在消息流里', () => {
+  test('入口長在流水線條裡，不在訊息流裡', () => {
     assert.equal(entry().parentElement?.id, 'pipeline', entry().parentElement?.id);
   });
 
-  // 入口只写这一层叫什么：章名在上面的面包屑上，入口再写一遍就是同一句话说两次。完整标题在浮窗头上。
-  test('入口上写着在改哪一层，不重复章名', () => {
+  // 入口只寫這一層叫什麼：章名在上面的麵包屑上，入口再寫一遍就是同一句話說兩次。完整標題在浮窗頭上。
+  test('入口上寫著在改哪一層，不重複章名', () => {
     const title = entry().querySelector('.wbt-entry-title');
-    assert.equal(title?.textContent, '当前产物 · 细纲', title?.textContent);
+    assert.equal(title?.textContent, '當前產物 · 細綱', title?.textContent);
   });
 
-  test('入口不再挂 ▤（与标题栏「显示 / 隐藏编辑器」撞图标）', () => {
+  test('入口不再掛 ▤（與標題欄「顯示 / 隱藏編輯器」撞圖示）', () => {
     assert.ok(!entry().textContent.includes('▤'), entry().textContent);
   });
 
-  test('默认不显示浮窗', () => {
+  test('預設不顯示浮窗', () => {
     assert.ok(!tip());
   });
 
-  // ---- 悬停：延迟后浮出来（免得划过时闪）
-  test('悬停后不立刻弹出', () => {
+  // ---- 懸停：延遲後浮出來（免得劃過時閃）
+  test('懸停後不立刻彈出', () => {
     hoverEntry();
     assert.ok(!tip());
   });
 
-  test('悬停延迟到了浮出来', async () => {
+  test('懸停延遲到了浮出來', async () => {
     await settle();
     assert.ok(tip());
   });
 
-  test('浮窗挂在 body 上（消息流有内部滚动，挂在里面会被裁掉）', () => {
+  test('浮窗掛在 body 上（訊息流有內部滾動，掛在裡面會被裁掉）', () => {
     assert.equal(tip().parentElement, ui.doc.body);
   });
 
-  test('浮窗标题说清在改哪一层', () => {
-    assert.ok(tip().querySelector('.wbt-title').textContent.includes('细纲'),
+  test('浮窗標題說清在改哪一層', () => {
+    assert.ok(tip().querySelector('.wbt-title').textContent.includes('細綱'),
       tip().querySelector('.wbt-title')?.textContent);
   });
 
-  test('摊开产物的小节', () => {
+  test('攤開產物的小節', () => {
     assert.equal(rows().length, 2, rows().join('|'));
   });
 
-  test('关键事件逐行可见', () => {
-    assert.ok(rows()[1].includes('搭在墙头') && rows()[1].includes('第三盏灯'), rows()[1]);
+  test('關鍵事件逐行可見', () => {
+    assert.ok(rows()[1].includes('搭在牆頭') && rows()[1].includes('第三盞燈'), rows()[1]);
   });
 
-  // 写正文时要对着细纲抄事件，鼠标得进得来——所以收起有宽限期。
-  test('移开后有宽限期，浮窗还在', () => {
+  // 寫正文時要對著細綱抄事件，滑鼠得進得來——所以收起有寬限期。
+  test('移開後有寬限期，浮窗還在', () => {
     leaveEntry();
     assert.ok(tip());
   });
 
-  test('宽限期过后收起', async () => {
+  test('寬限期過後收起', async () => {
     await grace();
     assert.ok(!tip());
   });
 
-  // ---- 点一下钉住：照着细纲写正文时鼠标要回输入框
-  test('点击立刻浮出来，不等延迟', () => {
+  // ---- 點一下釘住：照著細綱寫正文時滑鼠要回輸入框
+  test('點選立刻浮出來，不等延遲', () => {
     ui.clickEl(entry());
     assert.ok(tip());
   });
 
-  test('钉住后移开鼠标也不收', async () => {
+  test('釘住後移開滑鼠也不收', async () => {
     leaveEntry();
     await grace();
     assert.ok(tip());
   });
 
-  test('再点一次收起', () => {
+  test('再點一次收起', () => {
     ui.clickEl(entry());
     assert.ok(!tip());
   });
@@ -669,53 +669,53 @@ describe('当前产物浮窗', { skip: JSDOM_SKIP }, () => {
     assert.ok(!tip());
   });
 
-  // 「打开」走的是既有的开文件通道（插件里是 openFile）。
-  test('点打开发出开文件消息', () => {
+  // 「開啟」走的是既有的開檔案通道（外掛裡是 openFile）。
+  test('點開啟發出開檔案訊息', () => {
     ui.clickEl(entry());
     ui.clickEl(tip().querySelector('.wbt-open'));
     const opened = [...ui.sent].reverse().find((m) => m.type === 'openFile' || m.type === 'openEditor');
     assert.equal(opened?.path, PLOT_12, JSON.stringify(opened));
   });
 
-  // 上游变更在浮窗里是一句人话，不只是流水线条上那个 ⟳。
-  test('上游变更给一句人话', () => {
+  // 上游變更在浮窗裡是一句人話，不只是流水線條上那個 ⟳。
+  test('上游變更給一句人話', () => {
     ui.clickEl(entry());
     ui.post({
       type: 'pipeline',
       pipeline: pipelineView(),
-      workbench: workbenchView({ warning: '情节大纲里覆盖这一章的那一节在细纲之后改过，两者可能已经对不上。' }),
+      workbench: workbenchView({ warning: '情節大綱裡覆蓋這一章的那一節在細綱之後改過，兩者可能已經對不上。' }),
     });
-    assert.ok(tip()?.querySelector('.wbt-warning')?.textContent.includes('在细纲之后改过'),
+    assert.ok(tip()?.querySelector('.wbt-warning')?.textContent.includes('在細綱之後改過'),
       tip()?.querySelector('.wbt-warning')?.textContent);
   });
 
-  // 开着的浮窗就地换内容，不重建——重建会让它闪一下。
-  test('重推产物时浮窗不关掉', () => {
+  // 開著的浮窗就地換內容，不重建——重建會讓它閃一下。
+  test('重推產物時浮窗不關掉', () => {
     assert.ok(tip());
   });
 
-  // 入口上也要看得见，否则用户没有理由把它打开。
-  test('上游变更在入口上挂标记', () => {
+  // 入口上也要看得見，否則使用者沒有理由把它開啟。
+  test('上游變更在入口上掛標記', () => {
     assert.equal(entry().querySelector('.wbt-entry-mark')?.textContent, '⟳');
   });
 
-  // 这一层还没有产物时说清缺什么，不要留一只空浮窗。
-  test('没有产物时说明缺什么', () => {
+  // 這一層還沒有產物時說清缺什麼，不要留一隻空浮窗。
+  test('沒有產物時說明缺什麼', () => {
     ui.post({
       type: 'pipeline',
       pipeline: pipelineView(),
       workbench: workbenchView({
         stage: 'manuscript',
-        title: '正文 · 第 12 章《夜入青云》',
+        title: '正文 · 第 12 章《夜入青雲》',
         sections: [],
-        empty: '这一章没有细纲，写正文时模型只能照着前文往下编。',
+        empty: '這一章沒有細綱，寫正文時模型只能照著前文往下編。',
       }),
     });
-    assert.equal(tip()?.querySelector('.wbt-empty')?.textContent, '这一章没有细纲，写正文时模型只能照着前文往下编。',
+    assert.equal(tip()?.querySelector('.wbt-empty')?.textContent, '這一章沒有細綱，寫正文時模型只能照著前文往下編。',
       tip()?.querySelector('.wbt-empty')?.textContent);
   });
 
-  test('没有产物时不画小节', () => {
+  test('沒有產物時不畫小節', () => {
     assert.equal(rows().length, 0);
     esc();
   });
@@ -724,15 +724,15 @@ describe('当前产物浮窗', { skip: JSDOM_SKIP }, () => {
 describe('/ 命令面板', { skip: JSDOM_SKIP }, () => {
   let ui;
   let input;
-  /** 键盘事件。导航键（↑↓/Enter/Esc）走这条，可打印字符走 type()。 */
+  /** 鍵盤事件。導航鍵（↑↓/Enter/Esc）走這條，可列印字元走 type()。 */
   const key = (k) =>
     input.dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
   /**
-   * 打字：改输入框的值再发 input 事件。
+   * 打字：改輸入框的值再發 input 事件。
    *
-   * 面板是**输入框内容的函数**（真实浏览器里 keydown 之后浏览器自己落值、
-   * 再发 input），所以测试也必须照这个顺序模拟——从前面板自己攒过滤串，
-   * 于是测试只发 keydown 就够，那也正是输入法打的中文一个都收不到的原因。
+   * 面板是**輸入框內容的函式**（真實瀏覽器裡 keydown 之後瀏覽器自己落值、
+   * 再發 input），所以測試也必須照這個順序模擬——從前面板自己攢過濾串，
+   * 於是測試只發 keydown 就夠，那也正是輸入法打的中文一個都收不到的原因。
    */
   const type = (text) => {
     input.value += text;
@@ -762,176 +762,176 @@ describe('/ 命令面板', { skip: JSDOM_SKIP }, () => {
     });
   });
 
-  test('默认不显示命令面板', () => {
+  test('預設不顯示命令面板', () => {
     assert.ok(!panel());
   });
 
-  // 打 / 唤出。
-  test('打 / 唤出面板', () => {
+  // 打 / 喚出。
+  test('打 / 喚出面板', () => {
     type('/');
     assert.ok(panel());
   });
 
-  // Cursor 那一套：命令的字**留在输入框里**，面板只是浮在上方的候选列表。
-  // 从前 `/` 被 keydown 拦下来不落进输入框，过滤串自己攒在模块变量里。
-  test('斜杠留在输入框里', () => {
+  // Cursor 那一套：命令的字**留在輸入框裡**，面板只是浮在上方的候選列表。
+  // 從前 `/` 被 keydown 攔下來不落進輸入框，過濾串自己攢在模組變數裡。
+  test('斜槓留在輸入框裡', () => {
     assert.equal(input.value, '/');
   });
 
-  // 面板浮在输入框那一格上（bottom: 100%），不再挂在下一步条里。
-  test('面板挂在输入框那一格上', () => {
+  // 面板浮在輸入框那一格上（bottom: 100%），不再掛在下一步條裡。
+  test('面板掛在輸入框那一格上', () => {
     assert.ok(ui.doc.querySelector('#composerInput .cmd-panel'));
   });
 
-  // 讨论不进面板（打字就是在讨论）。细纲层有 `/落定细纲` 与 `/写细纲` 两条——细纲是「先跟人聊、聊出结论
-  // 再落文件」的东西；末尾再挂两条哪一层都有的：`/续写大纲`（2026-10-24：停在一章上也能往后排大纲）与
-  // `/落定设定`（完善设定二期：聊定了的设定当场落成条目）。
-  test('细纲层四个命令：两条自己的，加上哪一层都有的续写大纲与落定设定', () => {
-    assert.deepEqual(items(), ['/落定细纲', '/写细纲', '/续写大纲', '/落定设定']);
+  // 討論不進面板（打字就是在討論）。細綱層有 `/落定細綱` 與 `/寫細綱` 兩條——細綱是「先跟人聊、聊出結論
+  // 再落檔案」的東西；末尾再掛兩條哪一層都有的：`/續寫大綱`（2026-10-24：停在一章上也能往後排大綱）與
+  // `/落定設定`（完善設定二期：聊定了的設定當場落成條目）。
+  test('細綱層四個命令：兩條自己的，加上哪一層都有的續寫大綱與落定設定', () => {
+    assert.deepEqual(items(), ['/落定細綱', '/寫細綱', '/續寫大綱', '/落定設定']);
   });
 
-  test('面板里没有讨论', () => {
-    assert.ok(!items().some((s) => s.includes('讨论')), items().join('|'));
+  test('面板裡沒有討論', () => {
+    assert.ok(!items().some((s) => s.includes('討論')), items().join('|'));
   });
 
-  test('细纲层有「落定细纲」与「写细纲」', () => {
-    assert.ok(items().includes('/落定细纲') && items().includes('/写细纲'), items().join('|'));
+  test('細綱層有「落定細綱」與「寫細綱」', () => {
+    assert.ok(items().includes('/落定細綱') && items().includes('/寫細綱'), items().join('|'));
   });
 
-  // 面板里的名字带斜杠：挑的和打的是同一样东西。
-  test('命令名带斜杠', () => {
+  // 面板裡的名字帶斜槓：挑的和打的是同一樣東西。
+  test('命令名帶斜槓', () => {
     assert.ok(items().every((s) => s.startsWith('/')), items().join('|'));
   });
 
-  // 拆卷 / 拆段随卷与剧情段一起删了：忘记删的话面板里会多一条点了什么都不发生的命令。
-  test('细纲层没有拆分命令', () => {
+  // 拆卷 / 拆段隨卷與劇情段一起刪了：忘記刪的話面板裡會多一條點了什麼都不發生的命令。
+  test('細綱層沒有拆分命令', () => {
     assert.ok(!items().some((s) => s.includes('拆')), items().join('|'));
   });
 
-  // 面板里剩下的每一条都会写文件（讨论不是命令），每条都标出来。
-  test('每条命令都标记写文件', () => {
+  // 面板裡剩下的每一條都會寫檔案（討論不是命令），每條都標出來。
+  test('每條命令都標記寫檔案', () => {
     const writes = [...ui.doc.querySelectorAll('.cmd-item')].filter((n) => n.classList.contains('cmd-writes'));
     assert.equal(writes.length, 4, String(writes.length));
   });
 
-  test('每条命令都挂「写文件」标签', () => {
+  test('每條命令都掛「寫檔案」標籤', () => {
     assert.equal(ui.doc.querySelectorAll('.cmd-item .cmd-tag').length, 4);
   });
 
-  // 键入过滤：ascii 别名与中文标签都认。`ld` 是「落定」，两条落定都在；`ldsd` 只剩落定设定。
-  test('按拼音首字母过滤', () => {
+  // 鍵入過濾：ascii 別名與中文標籤都認。`ld` 是「落定」，兩條落定都在；`ldsd` 只剩落定設定。
+  test('按拼音首字母過濾', () => {
     type('ld');
-    assert.deepEqual(items(), ['/落定细纲', '/落定设定']);
+    assert.deepEqual(items(), ['/落定細綱', '/落定設定']);
   });
 
-  test('过滤串跟着输入框走', () => {
+  test('過濾串跟著輸入框走', () => {
     assert.equal(input.value, '/ld');
   });
 
-  test('退格恢复全部', () => {
+  test('退格恢復全部', () => {
     backspace();
     backspace();
     assert.equal(items().length, 4, items().join('|'));
   });
 
-  // 退到 `/` 之前就不是在下命令了，面板该收。
-  test('删掉斜杠收起面板', () => {
+  // 退到 `/` 之前就不是在下命令了，面板該收。
+  test('刪掉斜槓收起面板', () => {
     backspace();
     assert.ok(!panel());
     assert.equal(input.value, '');
   });
 
-  // 选中 → 变成待执行 chip，不立刻发送。
+  // 選中 → 變成待執行 chip，不立刻傳送。
   let beforePick;
-  test('选中后收起面板', () => {
+  test('選中後收起面板', () => {
     type('/');
     beforePick = ui.sent.length;
-    ui.clickEl([...ui.doc.querySelectorAll('.cmd-item')].find((n) => n.textContent.includes('落定细纲')));
+    ui.clickEl([...ui.doc.querySelectorAll('.cmd-item')].find((n) => n.textContent.includes('落定細綱')));
     assert.ok(!panel());
   });
 
-  test('选中不立刻发送', () => {
+  test('選中不立刻傳送', () => {
     assert.equal(ui.sent.length, beforePick);
   });
 
-  test('选中变成待执行 chip', () => {
+  test('選中變成待執行 chip', () => {
     const chip = ui.doc.querySelector('#pendingCmd .cmd-chip');
-    assert.ok(chip, '没有 chip');
-    assert.ok(chip.textContent.includes('落定细纲'), chip?.textContent);
+    assert.ok(chip, '沒有 chip');
+    assert.ok(chip.textContent.includes('落定細綱'), chip?.textContent);
   });
 
-  // chip 长在输入框**里面**：发送时用的是它的能力，它就是输入内容的一部分。
-  test('chip 在输入框那一格里', () => {
+  // chip 長在輸入框**裡面**：傳送時用的是它的能力，它就是輸入內容的一部分。
+  test('chip 在輸入框那一格里', () => {
     assert.ok(ui.doc.querySelector('#composerInput #pendingCmd .cmd-chip'));
   });
 
-  // 挑中之后那几个字是用来挑命令的，不该跟着发给模型。
-  test('挑中后清掉输入框里的命令文字', () => {
+  // 挑中之後那幾個字是用來挑命令的，不該跟著發給模型。
+  test('挑中後清掉輸入框裡的命令文字', () => {
     assert.equal(input.value, '');
   });
 
-  // chip 在时发送用它，而不是会话当前的能力。
-  test('发送用挑中的命令', () => {
-    input.value = '按刚才聊的来';
+  // chip 在時傳送用它，而不是會話當前的能力。
+  test('傳送用挑中的命令', () => {
+    input.value = '按剛才聊的來';
     ui.clickEl(ui.doc.getElementById('sendBtn'));
     const sent = [...ui.sent].reverse().find((m) => m.type === 'send');
     assert.equal(sent.payload.capability, 'settle', JSON.stringify(sent.payload));
   });
 
-  // 挑命令那条路的落点是会话当前那一章（作者就是在这一章上挑的命令）。
-  test('挑命令发送时 target 是会话那一章', () => {
+  // 挑命令那條路的落點是會話當前那一章（作者就是在這一章上挑的命令）。
+  test('挑命令傳送時 target 是會話那一章', () => {
     const sent = [...ui.sent].reverse().find((m) => m.type === 'send');
     assert.equal(sent.payload.target.plotRelPath, PLOT_12, JSON.stringify(sent.payload));
   });
 
-  test('发完清掉 chip', () => {
+  test('發完清掉 chip', () => {
     assert.ok(ui.doc.getElementById('pendingCmd').classList.contains('hidden'));
     ui.post({ type: 'busy', value: false });
   });
 
-  // `/落定设定` 带着自己的阶段与目标：发出去的是架构那一层、设定目录上的 settle，不是这一章的落定细纲；
-  // 回到哪一章由后端管（会话那份目标没动）。
-  test('挑落定设定：发的是设定目录上的 settle', () => {
+  // `/落定設定` 帶著自己的階段與目標：發出去的是架構那一層、設定目錄上的 settle，不是這一章的落定細綱；
+  // 回到哪一章由後端管（會話那份目標沒動）。
+  test('挑落定設定：發的是設定目錄上的 settle', () => {
     setValue('');
     type('/ldsd');
-    assert.deepEqual(items(), ['/落定设定']);
+    assert.deepEqual(items(), ['/落定設定']);
     key('Enter');
-    assert.ok(ui.doc.querySelector('#pendingCmd .cmd-chip').textContent.includes('落定设定'));
+    assert.ok(ui.doc.querySelector('#pendingCmd .cmd-chip').textContent.includes('落定設定'));
     ui.clickEl(ui.doc.getElementById('sendBtn'));
     const sent = [...ui.sent].reverse().find((m) => m.type === 'send');
     assert.equal(sent.payload.stage, 'setting', JSON.stringify(sent.payload));
     assert.equal(sent.payload.capability, 'settle');
-    // 跨 realm（jsdom 那边的对象），按 JSON 比。
+    // 跨 realm（jsdom 那邊的物件），按 JSON 比。
     assert.equal(JSON.stringify(sent.payload.target), JSON.stringify({ kind: 'setting', doc: 'lore' }));
     ui.post({ type: 'busy', value: false });
   });
 
-  // `/` 在中文正文里是普通字符（日期、比值、网址），只有「整个输入框就是一个
-  // /词」才算在下命令。
-  test('正文里的 / 不唤出面板', () => {
-    setValue('子时 3/4 刻');
+  // `/` 在中文正文裡是普通字元（日期、比值、網址），只有「整個輸入框就是一個
+  // /詞」才算在下命令。
+  test('正文裡的 / 不喚出面板', () => {
+    setValue('子時 3/4 刻');
     assert.ok(!panel());
   });
 
-  test('斜杠后带空格不算命令', () => {
-    setValue('/ 这是一句话');
+  test('斜槓後帶空格不算命令', () => {
+    setValue('/ 這是一句話');
     assert.ok(!panel());
   });
 
-  // 「/ 命令」按钮：与键盘走同一条路——输入框为空时顺手把 / 打进去。
-  test('按钮唤出面板', () => {
+  // 「/ 命令」按鈕：與鍵盤走同一條路——輸入框為空時順手把 / 打進去。
+  test('按鈕喚出面板', () => {
     setValue('');
     ui.clickEl(ui.doc.getElementById('cmdBtn'));
     assert.ok(panel());
     assert.equal(input.value, '/');
   });
 
-  test('按钮再点一次收起', () => {
+  test('按鈕再點一次收起', () => {
     ui.clickEl(ui.doc.getElementById('cmdBtn'));
     assert.ok(!panel());
   });
 
-  // Esc 收起，且不会因为输入框里那个 / 还在就立刻弹回来。
+  // Esc 收起，且不會因為輸入框裡那個 / 還在就立刻彈回來。
   test('Esc 收起面板', () => {
     setValue('');
     type('/');
@@ -940,13 +940,13 @@ describe('/ 命令面板', { skip: JSDOM_SKIP }, () => {
     assert.ok(!panel());
   });
 
-  test('Esc 之后继续打字不再弹回来', () => {
+  test('Esc 之後繼續打字不再彈回來', () => {
     type('c');
     assert.ok(!panel());
   });
 
-  // 生成中面板该收起：一个点不动的候选列表挂在那儿只会挡住消息流。
-  test('生成中收起面板并禁用按钮', () => {
+  // 生成中面板該收起：一個點不動的候選列表掛在那兒只會擋住訊息流。
+  test('生成中收起面板並禁用按鈕', () => {
     setValue('');
     type('/');
     assert.ok(panel());
@@ -956,21 +956,21 @@ describe('/ 命令面板', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'busy', value: false });
   });
 
-  // 命令表按会话那一层取（`commandsFor(session.stage)`），前端不自己维护一份。
-  test('换到架构层后面板跟着换', () => {
+  // 命令表按會話那一層取（`commandsFor(session.stage)`），前端不自己維護一份。
+  test('換到架構層後面板跟著換', () => {
     setValue('');
     ui.post({
       type: 'session',
       session: emptySession({ target: { kind: 'setting', doc: 'config' }, stage: 'setting', capability: 'discuss' }),
     });
     type('/');
-    assert.deepEqual(items(), ['/生成这份架构文档', '/续写大纲', '/落定设定']);
+    assert.deepEqual(items(), ['/生成這份架構檔案', '/續寫大綱', '/落定設定']);
     key('Escape');
     setValue('');
   });
 });
 
-describe('/ 命令面板 · 正文层', { skip: JSDOM_SKIP }, () => {
+describe('/ 命令面板 · 正文層', { skip: JSDOM_SKIP }, () => {
   let ui;
   const rowOf = (label) =>
     [...ui.doc.querySelectorAll('.cmd-item')].find((n) => n.querySelector('.cmd-label').textContent === label);
@@ -990,23 +990,23 @@ describe('/ 命令面板 · 正文层', { skip: JSDOM_SKIP }, () => {
     input.dispatchEvent(new ui.window.Event('input', { bubbles: true }));
   });
 
-  test('有「写正文」与「审稿」', () => {
-    assert.ok(rowOf('/写正文') && rowOf('/审稿'));
+  test('有「寫正文」與「審稿」', () => {
+    assert.ok(rowOf('/寫正文') && rowOf('/審稿'));
   });
 
-  test('写正文挂「写文件」', () => {
-    assert.equal(rowOf('/写正文').querySelector('.cmd-tag').textContent, '写文件');
-    assert.ok(rowOf('/写正文').classList.contains('cmd-writes'));
+  test('寫正文掛「寫檔案」', () => {
+    assert.equal(rowOf('/寫正文').querySelector('.cmd-tag').textContent, '寫檔案');
+    assert.ok(rowOf('/寫正文').classList.contains('cmd-writes'));
   });
 
-  // 审稿只出报告、不写文件（D22）：挂「写文件」会让作者以为点了它正文就被改了。
-  test('审稿挂「只出报告」，不算写文件的命令', () => {
-    assert.equal(rowOf('/审稿').querySelector('.cmd-tag').textContent, '只出报告');
-    assert.ok(!rowOf('/审稿').classList.contains('cmd-writes'));
+  // 審稿只出報告、不寫檔案（D22）：掛「寫檔案」會讓作者以為點了它正文就被改了。
+  test('審稿掛「只出報告」，不算寫檔案的命令', () => {
+    assert.equal(rowOf('/審稿').querySelector('.cmd-tag').textContent, '只出報告');
+    assert.ok(!rowOf('/審稿').classList.contains('cmd-writes'));
   });
 });
 
-describe('选中一章进入当前阶段', { skip: JSDOM_SKIP }, () => {
+describe('選中一章進入當前階段', { skip: JSDOM_SKIP }, () => {
   let ui;
   let select;
   const options = () => [...select.options];
@@ -1017,10 +1017,10 @@ describe('选中一章进入当前阶段', { skip: JSDOM_SKIP }, () => {
     ui.post({
       type: 'state',
       state: viewState({
-        // 后端按章号升序给；每个章号一行，说法由后端给。
+        // 後端按章號升序給；每個章號一行，說法由後端給。
         plots: [
           { no: 11, label: '第 11 章《青崖》', title: '青崖', wordCount: 3000, relPath: 'chapters/011-青崖.md' },
-          { no: 12, label: '第 12 章《夜入青云》', title: '夜入青云', wordCount: 0, relPath: PLOT_12 },
+          { no: 12, label: '第 12 章《夜入青雲》', title: '夜入青雲', wordCount: 0, relPath: PLOT_12 },
         ],
         nextNo: 13,
       }),
@@ -1028,27 +1028,27 @@ describe('选中一章进入当前阶段', { skip: JSDOM_SKIP }, () => {
     select = ui.doc.getElementById('targetSelect');
   });
 
-  // 第一项是回到全书那一层的入口：主按钮就是全书的下一步。
-  test('第一项是「全书（架构 · 大纲）」', () => {
-    assert.equal(options()[0].textContent, '全书（架构 · 大纲）');
+  // 第一項是回到全書那一層的入口：主按鈕就是全書的下一步。
+  test('第一項是「全書（架構 · 大綱）」', () => {
+    assert.equal(options()[0].textContent, '全書（架構 · 大綱）');
     assert.equal(options()[0].value, '0');
   });
 
-  // 不隔开的话「全书」看着就像列表里的又一章（2026-10-24）。分隔线选不中。
-  test('「全书」与章之间隔一条选不中的分隔线', () => {
+  // 不隔開的話「全書」看著就像列表裡的又一章（2026-10-24）。分隔線選不中。
+  test('「全書」與章之間隔一條選不中的分隔線', () => {
     assert.ok(options()[1].disabled);
     assert.equal(options()[1].dataset.rel, undefined);
   });
 
-  test('每个章号一行，最近的在上面', () => {
-    assert.deepEqual(options().slice(2).map((o) => o.textContent), ['第 12 章《夜入青云》', '第 11 章《青崖》']);
+  test('每個章號一行，最近的在上面', () => {
+    assert.deepEqual(options().slice(2).map((o) => o.textContent), ['第 12 章《夜入青雲》', '第 11 章《青崖》']);
   });
 
-  test('会话停在大纲时下拉停在「全书」', () => {
+  test('會話停在大綱時下拉停在「全書」', () => {
     assert.equal(select.value, '0');
   });
 
-  test('会话停在某一章时下拉停在那一章', () => {
+  test('會話停在某一章時下拉停在那一章', () => {
     ui.post({
       type: 'session',
       session: emptySession({ target: { kind: 'plot', plotRelPath: PLOT_12 }, stage: 'plot', capability: 'discuss' }),
@@ -1056,7 +1056,7 @@ describe('选中一章进入当前阶段', { skip: JSDOM_SKIP }, () => {
     assert.equal(select.value, '12');
   });
 
-  test('会话停在架构文档时下拉回到「全书」', () => {
+  test('會話停在架構檔案時下拉回到「全書」', () => {
     ui.post({
       type: 'session',
       session: emptySession({ target: { kind: 'setting', doc: 'world' }, stage: 'setting', capability: 'discuss' }),
@@ -1064,34 +1064,34 @@ describe('选中一章进入当前阶段', { skip: JSDOM_SKIP }, () => {
     assert.equal(select.value, '0');
   });
 
-  // 下拉框选一章 = 进入那一章当前该做的那一步，由后端的状态机判定。
-  // 旧版一律发 setTarget({kind:'manuscript'})，于是选中一个连细纲都没排的
-  // 章，界面直接把作者丢进正文层。
-  test('选一章发 selectPlot', () => {
+  // 下拉框選一章 = 進入那一章當前該做的那一步，由後端的狀態機判定。
+  // 舊版一律發 setTarget({kind:'manuscript'})，於是選中一個連細綱都沒排的
+  // 章，介面直接把作者丟進正文層。
+  test('選一章發 selectPlot', () => {
     select.value = '12';
     select.dispatchEvent(new ui.window.Event('change', { bubbles: true }));
     const picked = [...ui.sent].reverse().find((m) => m.type === 'selectPlot');
     assert.equal(picked?.plotRelPath, PLOT_12, JSON.stringify(picked));
   });
 
-  test('不再直接发 setTarget 到正文', () => {
+  test('不再直接發 setTarget 到正文', () => {
     assert.ok(![...ui.sent].some((m) => m.type === 'setTarget' && m.target.kind === 'manuscript'));
   });
 
-  // 「全书」那一项没有 relPath：回到大纲那一层，主按钮会是全书的下一步。
-  test('选「全书」回到大纲那一层', () => {
+  // 「全書」那一項沒有 relPath：回到大綱那一層，主按鈕會是全書的下一步。
+  test('選「全書」回到大綱那一層', () => {
     select.value = '0';
     select.dispatchEvent(new ui.window.Event('change', { bubbles: true }));
     const toOutline = [...ui.sent].reverse().find((m) => m.type === 'setTarget');
     assert.equal(toOutline?.target.kind, 'outline', JSON.stringify(toOutline));
   });
 
-  // 工程页点章名是**打开这一章**（正文与细纲并排，W6），不切页——「进入这一章」在右键
-  // 菜单与「去写这一章」里。在工程页上扫章节列表时，要看的多半就是这一章写成了什么样。
-  test('工程页点章名打开这一章，不发 selectPlot', () => {
+  // 工程頁點章名是**開啟這一章**（正文與細綱並排，W6），不切頁——「進入這一章」在右鍵
+  // 選單與「去寫這一章」裡。在工程頁上掃章節列表時，要看的多半就是這一章寫成了什麼樣。
+  test('工程頁點章名開啟這一章，不發 selectPlot', () => {
     ui.post({ type: 'project', tree: sampleTree() });
     ui.sent.length = 0;
-    // 排掉「故事架构」那一组的行：它们刻意复用同一套样式类（`.row-plot`）。
+    // 排掉「故事架構」那一組的行：它們刻意複用同一套樣式類（`.row-plot`）。
     const row = ui.doc.querySelector('#projectBody .row-plot:not(.row-architecture) .row-label');
     ui.clickEl(row);
     assert.ok(![...ui.sent].some((m) => m.type === 'selectPlot'), JSON.stringify(ui.sent));
@@ -1099,16 +1099,16 @@ describe('选中一章进入当前阶段', { skip: JSDOM_SKIP }, () => {
     assert.equal(open?.plotRelPath, 'chapters/001-楔子.md', JSON.stringify(open));
   });
 
-  test('工程页右键「进入这一章」带主路径', () => {
+  test('工程頁右鍵「進入這一章」帶主路徑', () => {
     ui.sent.length = 0;
     const rows = [...ui.doc.querySelectorAll('#projectBody .row-plot:not(.row-architecture)')];
-    ui.pick(ui.rightClick(rows.find((n) => n.textContent.includes('北行'))), '进入这一章');
+    ui.pick(ui.rightClick(rows.find((n) => n.textContent.includes('北行'))), '進入這一章');
     const fromTree = [...ui.sent].reverse().find((m) => m.type === 'selectPlot');
     assert.equal(fromTree?.plotRelPath, '.novelwarden/summaries/004-北行.md', JSON.stringify(fromTree));
   });
 
-  // 「去写这一章」与右键「进入这一章」是同一件事，发的是同一条消息。
-  test('「去写这一章」与「进入这一章」发的是同一条', () => {
+  // 「去寫這一章」與右鍵「進入這一章」是同一件事，發的是同一條訊息。
+  test('「去寫這一章」與「進入這一章」發的是同一條', () => {
     const viaMenu = [...ui.sent].reverse().find((m) => m.type === 'selectPlot');
     ui.sent.length = 0;
     ui.clickEl(ui.doc.querySelector('#projectBody .row-plot:not(.row-architecture) .row-go'));
@@ -1118,17 +1118,17 @@ describe('选中一章进入当前阶段', { skip: JSDOM_SKIP }, () => {
 });
 
 /*
- * 创作页的三块新东西在**独立版**的 DOM 上也要能跑。
+ * 創作頁的三塊新東西在**獨立版**的 DOM 上也要能跑。
  *
- * 上面所有用例走的都是 webviewHtml.ts 的 body；独立版是另一份模板
- * （工作台结构、活动栏、内置编辑器），两份各写一遍 id 就有漏掉一个的机会，
- * 而那种漏法只有真的把独立版开起来才看得见。
+ * 上面所有用例走的都是 webviewHtml.ts 的 body；獨立版是另一份模板
+ * （工作臺結構、活動欄、內建編輯器），兩份各寫一遍 id 就有漏掉一個的機會，
+ * 而那種漏法只有真的把獨立版開起來才看得見。
  */
-describe('独立版壳上的创作页', { skip: JSDOM_SKIP }, () => {
+describe('獨立版殼上的創作頁', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
-    // 原脚本在 772 行就地又抄了一份 mount()，只把 body 换成独立版模板。
+    // 原指令碼在 772 行就地又抄了一份 mount()，只把 body 換成獨立版模板。
     ui = mount({ body: 'standalone' });
     ui.post({
       type: 'session',
@@ -1145,44 +1145,44 @@ describe('独立版壳上的创作页', { skip: JSDOM_SKIP }, () => {
       next: {
         stage: 'plot',
         capability: 'generate',
-        label: '写第 12 章细纲',
-        hint: '先把这一章要发生什么定下来：梗概、出场人物、关键事件、看点。',
+        label: '寫第 12 章細綱',
+        hint: '先把這一章要發生什麼定下來：梗概、出場人物、關鍵事件、看點。',
         target: { kind: 'plot', plotRelPath: PLOT_12 },
       },
     });
   });
 
-  test('独立版渲染当前产物入口', () => {
+  test('獨立版渲染當前產物入口', () => {
     const entry = ui.doc.getElementById('workbench');
     assert.ok(!entry.classList.contains('hidden'));
-    assert.ok(entry.querySelector('.wbt-entry-title')?.textContent.includes('细纲'),
+    assert.ok(entry.querySelector('.wbt-entry-title')?.textContent.includes('細綱'),
       entry.querySelector('.wbt-entry-title')?.textContent);
   });
 
-  test('独立版能浮出产物浮窗', () => {
+  test('獨立版能浮出產物浮窗', () => {
     ui.clickEl(ui.doc.getElementById('workbench'));
     assert.equal(ui.doc.querySelectorAll('.workbench-tip .wbt-row').length, 1);
     ui.doc.dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   });
 
-  test('独立版渲染三格', () => {
+  test('獨立版渲染三格', () => {
     const labels = [...ui.doc.querySelectorAll('#pipelineStages .pstage-label')].map((n) => n.textContent);
-    assert.deepEqual(labels, ['大纲', '细纲', '正文']);
+    assert.deepEqual(labels, ['大綱', '細綱', '正文']);
   });
 
-  test('独立版渲染主按钮', () => {
-    assert.equal(ui.doc.getElementById('nextStepBtn').textContent, '写第 12 章细纲',
+  test('獨立版渲染主按鈕', () => {
+    assert.equal(ui.doc.getElementById('nextStepBtn').textContent, '寫第 12 章細綱',
       ui.doc.getElementById('nextStepBtn').textContent);
   });
 
-  test('独立版能唤出命令面板', () => {
+  test('獨立版能喚出命令面板', () => {
     const input = ui.doc.getElementById('input');
     input.value = '/';
     input.dispatchEvent(new ui.window.Event('input', { bubbles: true }));
     assert.ok(ui.doc.querySelector('#composerInput .cmd-panel'));
   });
 
-  test('独立版主按钮可发', () => {
+  test('獨立版主按鈕可發', () => {
     ui.doc.getElementById('input').value = '';
     ui.clickEl(ui.doc.getElementById('nextStepBtn'));
     const sentStep = [...ui.sent].reverse().find((m) => m.type === 'send');

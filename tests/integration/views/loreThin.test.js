@@ -1,16 +1,16 @@
 /**
- * 设定名录的「待完善」（views/lore.ts 的 `thin`，完善设定 · 2026-10-19）：接下来几章要用、却还是空的设定。
+ * 設定名錄的「待完善」（views/lore.ts 的 `thin`，完善設定 · 2026-10-19）：接下來幾章要用、卻還是空的設定。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 只认没定稿、也还没写正文（没有章节文件或 0 字）的细纲「设定」一节 | 往前看：定稿过的是往回记那一半；写了正文的章已经写过去了 |
- * | 没有条目的、条目是薄的（空的 / 占位 / 三节全是未交代 / 只有暗设）都算，写得有内容的不算 | 作者写了两行就是作者认为够了（不按字数猜） |
- * | 人名不算 | 同名录别处 |
- * | 关键词认得出条目就算那一条，名字给条目标题、分类给条目所在目录 | 与名录别处同一个认法 |
- * | 没有条目的分类取「设定」一节多数票，名字取出现最多的写法 | 「展开」时后端按它建空条目 |
- * | 要用到的章升序，按最早那一章升序，同一章按名字 | 最先要写到的排在最前面 |
- * | 缺省不算（`opts.thin` 才算），只要出现章的调用方不付这份钱；不改动定稿那一半 | 按需算 |
- * | 工程树快照带上它，一行的说明是「第 N 章起要用 · 种类」 | 工程页「待完善」那一组照抄 |
+ * | 只認沒定稿、也還沒寫正文（沒有章節檔案或 0 字）的細綱「設定」一節 | 往前看：定稿過的是往回記那一半；寫了正文的章已經寫過去了 |
+ * | 沒有條目的、條目是薄的（空的 / 佔位 / 三節全是未交代 / 只有暗設）都算，寫得有內容的不算 | 作者寫了兩行就是作者認為夠了（不按字數猜） |
+ * | 人名不算 | 同名錄別處 |
+ * | 關鍵詞認得出條目就算那一條，名字給條目標題、分類給條目所在目錄 | 與名錄別處同一個認法 |
+ * | 沒有條目的分類取「設定」一節多數票，名字取出現最多的寫法 | 「展開」時後端按它建空條目 |
+ * | 要用到的章升序，按最早那一章升序，同一章按名字 | 最先要寫到的排在最前面 |
+ * | 預設不算（`opts.thin` 才算），只要出現章的呼叫方不付這份錢；不改動定稿那一半 | 按需算 |
+ * | 工程樹快照帶上它，一行的說明是「第 N 章起要用 · 種類」 | 工程頁「待完善」那一組照抄 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -33,10 +33,10 @@ function plot(no, title, { finalized = false, lore } = {}) {
     '',
     `# 第${no}章 ${title}`,
     '',
-    '## 关键事件',
+    '## 關鍵事件',
     '',
-    '- 有事发生',
-    ...(lore === undefined ? [] : ['', '## 设定', '', lore]),
+    '- 有事發生',
+    ...(lore === undefined ? [] : ['', '## 設定', '', lore]),
     '',
   ].join('\n');
 }
@@ -55,32 +55,32 @@ before(async () => {
   });
   bundle.host.initHost(makeFakeHost({ settings: () => ({}) }).host);
   t = await makeTempProject(bundle.project, { prefix: 'lorethin' });
-  // 条目：天机阁是空的（关键词「天机」），镇魂钟是新建设定的占位，阁规三节全是未交代，旧事只有暗设，青崖镇写得有内容。
-  t.write('.novelwarden/lore/宗门/天机阁.md', entry('天机阁', '', ['天机']));
-  t.write('.novelwarden/lore/法宝/镇魂钟.md', entry('镇魂钟', '（在这里写这条设定：它是什么、有什么规矩……）'));
+  // 條目：天機閣是空的（關鍵詞「天機」），鎮魂鍾是新建設定的佔位，閣規三節全是未交代，舊事只有暗設，青崖鎮寫得有內容。
+  t.write('.novelwarden/lore/宗門/天機閣.md', entry('天機閣', '', ['天機']));
+  t.write('.novelwarden/lore/法寶/鎮魂鍾.md', entry('鎮魂鍾', '（在這裡寫這條設定：它是什麼、有什麼規矩……）'));
   t.write(
-    '.novelwarden/lore/规矩/阁规.md',
-    entry('阁规', '## 概要\n\n（未交代）\n\n## 规则与边界\n\n- （未交代）\n\n## 现状\n\n（未交代）')
+    '.novelwarden/lore/規矩/閣規.md',
+    entry('閣規', '## 概要\n\n（未交代）\n\n## 規則與邊界\n\n- （未交代）\n\n## 現狀\n\n（未交代）')
   );
-  t.write('.novelwarden/lore/秘闻/旧事.md', entry('旧事', '## 暗设\n\n二十年前的大火是阁主放的。'));
-  t.write('.novelwarden/lore/地域/青崖镇.md', entry('青崖镇', '偏僻小镇，镇口设卡。'));
+  t.write('.novelwarden/lore/秘聞/舊事.md', entry('舊事', '## 暗設\n\n二十年前的大火是閣主放的。'));
+  t.write('.novelwarden/lore/地域/青崖镇.md', entry('青崖鎮', '偏僻小鎮，鎮口設卡。'));
   t.write('.novelwarden/characters/林昭.md', '---\nname: 林昭\naliases: [阿昭]\n---\n\n# 林昭\n');
 
-  // 第 1 章定稿过；第 2 章写了正文没定稿；第 3 章有章节文件但 0 字；第 4、5 章还没有章节文件。
+  // 第 1 章定稿過；第 2 章寫了正文沒定稿；第 3 章有章節檔案但 0 字；第 4、5 章還沒有章節檔案。
   t.write('chapters/001-雨夜.md', '# 雨夜\n\n第一章的正文。\n');
-  t.write('chapters/002-客栈.md', '# 客栈\n\n第二章的正文。\n');
+  t.write('chapters/002-客棧.md', '# 客棧\n\n第二章的正文。\n');
   t.write('chapters/003-空章.md', '');
-  t.write('.novelwarden/summaries/001-雨夜.md', plot(1, '雨夜', { finalized: true, lore: '- 天机阁〔宗门〕\n- 断魂香〔物品〕' }));
-  t.write('.novelwarden/summaries/002-客栈.md', plot(2, '客栈', { lore: '- 黑市〔地域〕\n- 天机阁' }));
+  t.write('.novelwarden/summaries/001-雨夜.md', plot(1, '雨夜', { finalized: true, lore: '- 天機閣〔宗門〕\n- 斷魂香〔物品〕' }));
+  t.write('.novelwarden/summaries/002-客棧.md', plot(2, '客棧', { lore: '- 黑市〔地域〕\n- 天機閣' }));
   t.write(
     '.novelwarden/summaries/003-空章.md',
-    plot(3, '空章', { lore: '- 天机阁〔宗门〕\n- 九层楼〔建筑〕\n- 林昭〔人物〕' })
+    plot(3, '空章', { lore: '- 天機閣〔宗門〕\n- 九層樓〔建築〕\n- 林昭〔人物〕' })
   );
   t.write(
-    '.novelwarden/summaries/004-登楼.md',
-    plot(4, '登楼', { lore: '- 九层楼〔地标〕\n- 青崖镇〔地域〕\n- 镇魂钟〔法宝〕\n- 阁规' })
+    '.novelwarden/summaries/004-登樓.md',
+    plot(4, '登樓', { lore: '- 九層樓〔地標〕\n- 青崖鎮〔地域〕\n- 鎮魂鍾〔法寶〕\n- 閣規' })
   );
-  t.write('.novelwarden/summaries/005-旧案.md', plot(5, '旧案', { lore: '- 九层楼〔建筑〕\n- 旧事〔秘闻〕\n- 天机〔宗门〕' }));
+  t.write('.novelwarden/summaries/005-舊案.md', plot(5, '舊案', { lore: '- 九層樓〔建築〕\n- 舊事〔秘聞〕\n- 天機〔宗門〕' }));
   t.project.invalidate();
 
   index = await bundle.lore.buildLoreIndex(t.project, {}, { thin: true });
@@ -92,90 +92,90 @@ after(() => {
 
 const item = (name) => index.thin.find((x) => x.name === name);
 
-describe('待完善：认哪些', () => {
-  test('按最早要用到的章升序，同一章按名字；写得有内容的、人名、定稿过的与已经写了正文的章都不算', () => {
+describe('待完善：認哪些', () => {
+  test('按最早要用到的章升序，同一章按名字；寫得有內容的、人名、定稿過的與已經寫了正文的章都不算', () => {
     assert.deepEqual(
       index.thin.map((x) => [x.name, x.first]),
       [
-        ['九层楼', 3],
-        ['天机阁', 3],
-        ['阁规', 4],
-        ['镇魂钟', 4],
-        ['旧事', 5],
+        ['九層樓', 3],
+        ['天機閣', 3],
+        ['閣規', 4],
+        ['鎮魂鍾', 4],
+        ['舊事', 5],
       ]
     );
   });
 
-  test('四种：还没有条目 / 空的 / 占位 / 三节全是未交代；只有暗设的明面是空的，算空的', () => {
+  test('四種：還沒有條目 / 空的 / 佔位 / 三節全是未交代；只有暗設的明面是空的，算空的', () => {
     assert.deepEqual(
       Object.fromEntries(index.thin.map((x) => [x.name, x.kind])),
-      { 九层楼: 'missing', 天机阁: 'empty', 阁规: 'untold', 镇魂钟: 'placeholder', 旧事: 'empty' }
+      { 九層樓: 'missing', 天機閣: 'empty', 閣規: 'untold', 鎮魂鍾: 'placeholder', 舊事: 'empty' }
     );
   });
 });
 
-describe('待完善：每一条给什么', () => {
-  test('有条目的：名字是条目标题、分类是条目所在目录、带路径；关键词认出来的章也算它的', () => {
-    const x = item('天机阁');
-    assert.equal(x.category, '宗门');
-    assert.equal(x.relPath, '.novelwarden/lore/宗门/天机阁.md');
-    // 第 2 章已经写了正文、第 1 章定稿过：都不算；第 5 章写的是关键词「天机」。
+describe('待完善：每一條給什麼', () => {
+  test('有條目的：名字是條目標題、分類是條目所在目錄、帶路徑；關鍵詞認出來的章也算它的', () => {
+    const x = item('天機閣');
+    assert.equal(x.category, '宗門');
+    assert.equal(x.relPath, '.novelwarden/lore/宗門/天機閣.md');
+    // 第 2 章已經寫了正文、第 1 章定稿過：都不算；第 5 章寫的是關鍵詞「天機」。
     assert.deepEqual(x.chapters, [3, 5]);
     assert.equal(x.first, 3);
   });
 
-  test('没有条目的：分类取「设定」一节的多数票，不带路径', () => {
-    const x = item('九层楼');
-    assert.equal(x.category, '建筑');
+  test('沒有條目的：分類取「設定」一節的多數票，不帶路徑', () => {
+    const x = item('九層樓');
+    assert.equal(x.category, '建築');
     assert.equal(x.relPath, undefined);
     assert.deepEqual(x.chapters, [3, 4, 5]);
   });
 
-  test('「设定」一节没写分类、又有条目的，分类照样是条目所在目录', () => {
-    assert.equal(item('阁规').category, '规矩');
+  test('「設定」一節沒寫分類、又有條目的，分類照樣是條目所在目錄', () => {
+    assert.equal(item('閣規').category, '規矩');
   });
 });
 
 describe('按需算', () => {
-  test('缺省不算：thin 是空的', async () => {
+  test('預設不算：thin 是空的', async () => {
     const plain = await bundle.lore.buildLoreIndex(t.project);
     assert.deepEqual(plain.thin, []);
   });
 
-  test('定稿那一半不受影响：未建条目只认定稿过的「设定」一节', () => {
+  test('定稿那一半不受影響：未建條目只認定稿過的「設定」一節', () => {
     assert.deepEqual(
       index.unknown.map((u) => u.name),
-      ['断魂香']
+      ['斷魂香']
     );
     assert.equal(index.finalizedCount, 1);
   });
 
-  test('种类的文案', () => {
+  test('種類的文案', () => {
     assert.deepEqual(bundle.lore.THIN_LORE_LABEL, {
-      missing: '还没有条目',
-      empty: '只有一句话',
-      placeholder: '只有占位',
-      untold: '三节全是未交代',
+      missing: '還沒有條目',
+      empty: '只有一句話',
+      placeholder: '只有佔位',
+      untold: '三節全是未交代',
     });
   });
 });
 
-describe('工程树快照', () => {
-  test('loreThin 照名录的顺序，一行的说明是「第 N 章起要用 · 种类」，有条目的带路径', async () => {
+describe('工程樹快照', () => {
+  test('loreThin 照名錄的順序，一行的說明是「第 N 章起要用 · 種類」，有條目的帶路徑', async () => {
     t.project.invalidate();
     const tree = await bundle.projectView.buildProjectTree(t.project);
     assert.deepEqual(
       tree.loreThin.map((x) => [x.name, x.category, x.detail]),
       [
-        ['九层楼', '建筑', '第 3 章起要用 · 还没有条目'],
-        ['天机阁', '宗门', '第 3 章起要用 · 只有一句话'],
-        ['阁规', '规矩', '第 4 章起要用 · 三节全是未交代'],
-        ['镇魂钟', '法宝', '第 4 章起要用 · 只有占位'],
-        ['旧事', '秘闻', '第 5 章起要用 · 只有一句话'],
+        ['九層樓', '建築', '第 3 章起要用 · 還沒有條目'],
+        ['天機閣', '宗門', '第 3 章起要用 · 只有一句話'],
+        ['閣規', '規矩', '第 4 章起要用 · 三節全是未交代'],
+        ['鎮魂鍾', '法寶', '第 4 章起要用 · 只有佔位'],
+        ['舊事', '秘聞', '第 5 章起要用 · 只有一句話'],
       ]
     );
-    const tianji = tree.loreThin.find((x) => x.name === '天机阁');
-    assert.equal(tianji.relPath, '.novelwarden/lore/宗门/天机阁.md');
+    const tianji = tree.loreThin.find((x) => x.name === '天機閣');
+    assert.equal(tianji.relPath, '.novelwarden/lore/宗門/天機閣.md');
     assert.equal(tianji.kind, 'empty');
     assert.deepEqual(tianji.chapters, [3, 5]);
     assert.equal('relPath' in tree.loreThin[0], false);

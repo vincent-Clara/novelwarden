@@ -1,29 +1,29 @@
 /**
- * 工程页：目录树的展开/缩进、「故事架构」组、一个章号一行的章节组、
- * 行与分组的右键菜单、菜单引擎的通用行为。
+ * 工程頁：目錄樹的展開/縮排、「故事架構」組、一個章號一行的章節組、
+ * 行與分組的右鍵選單、選單引擎的通用行為。
  *
- * 迁自 scripts/smoke-view.js 的这几节：
- *   == 工程页目录树 ==（1014） == 工程页的右键菜单 ==（1059）
- *   == 右键菜单的通用行为 ==（1324）
+ * 遷自 scripts/smoke-view.js 的這幾節：
+ *   == 工程頁目錄樹 ==（1014） == 工程頁的右鍵選單 ==（1059）
+ *   == 右鍵選單的通用行為 ==（1324）
  *
- * 一章一纲之后（commit 4e0d289）章节组不再分「已发布的章 / 还没交付的剧情段」
- * 两种行，也没有卷那一组：细纲号 = 章号，一行就是一章的细纲与正文两面。
- * 夹具见 helpers/dom.js 的 `sampleTree()`——五行各是单章状态机的一档。
+ * 一章一綱之後（commit 4e0d289）章節組不再分「已釋出的章 / 還沒交付的劇情段」
+ * 兩種行，也沒有卷那一組：細綱號 = 章號，一行就是一章的細綱與正文兩面。
+ * 夾具見 helpers/dom.js 的 `sampleTree()`——五行各是單章狀態機的一檔。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, JSDOM_SKIP, turn, emptySession, sampleTree } = require('../../helpers/dom');
 
 /**
- * 章节组的行。「故事架构」那几行刻意复用了 `.row-plot` 的样式与骨架，
- * 按 `.row-plot` 取时要排掉 `.row-architecture`，否则「章节有几行」会连它们一起数。
+ * 章節組的行。「故事架構」那幾行刻意複用了 `.row-plot` 的樣式與骨架，
+ * 按 `.row-plot` 取時要排掉 `.row-architecture`，否則「章節有幾行」會連它們一起數。
  */
 const chapterRowsOf = (ui) => [...ui.doc.querySelectorAll('#projectBody .row-plot:not(.row-architecture)')];
 
-describe('工程页目录树', { skip: JSDOM_SKIP }, () => {
+describe('工程頁目錄樹', { skip: JSDOM_SKIP }, () => {
   let ui;
-  // 目录树只有**角色 / 设定**两个区有——章节列表是扁平的（细纲与正文合成
-  // 一行，顺序即章号，折进目录反而看不出来）。
+  // 目錄樹只有**角色 / 設定**兩個區有——章節列表是扁平的（細綱與正文合成
+  // 一行，順序即章號，折進目錄反而看不出來）。
   const charactersGroup = () =>
     [...ui.doc.querySelectorAll('#projectBody .group')]
       .find((g) => g.querySelector('.group-name')?.textContent === '角色');
@@ -36,46 +36,46 @@ describe('工程页目录树', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'project', tree: sampleTree() });
   });
 
-  test('顶层节点都在', () => {
+  test('頂層節點都在', () => {
     assert.ok(
       labels().some((l) => l.includes('配角')) && labels().some((l) => l.includes('林昭')),
       labels().join(' | ')
     );
   });
 
-  test('文件夹默认折叠，不渲染子节点', () => {
+  test('資料夾預設摺疊，不渲染子節點', () => {
     assert.ok(!labels().some((l) => l.includes('李叔')), labels().join(' | '));
   });
 
-  test('折叠时用闭合文件夹图标', () => {
+  test('摺疊時用閉合資料夾圖示', () => {
     assert.ok(labels().some((l) => l.startsWith('📁 配角')));
   });
 
-  test('展开后出现子节点', () => {
+  test('展開後出現子節點', () => {
     ui.clickEl(dirLabel('配角'));
     assert.ok(labels().some((l) => l.includes('李叔')), labels().join(' | '));
   });
 
-  test('展开时用打开文件夹图标', () => {
+  test('展開時用開啟資料夾圖示', () => {
     assert.ok(labels().some((l) => l.startsWith('📂 配角')));
   });
 
-  // 层级靠 paddingLeft 表达（DOM 是扁平的），每层 14px。
+  // 層級靠 paddingLeft 表達（DOM 是扁平的），每層 14px。
   const padOf = (text) => {
     const row = [...charactersGroup().querySelectorAll('.row')].find((n) => n.textContent.includes(text));
     return row ? parseInt(row.style.paddingLeft, 10) : -1;
   };
 
-  test('第 0 层缩进 16px', () => {
+  test('第 0 層縮排 16px', () => {
     assert.equal(padOf('林昭'), 16, String(padOf('林昭')));
   });
 
-  test('第 1 层缩进 30px', () => {
+  test('第 1 層縮排 30px', () => {
     assert.equal(padOf('李叔'), 30, String(padOf('李叔')));
   });
 
-  // 章节列表不折目录：五行（一个章号一行）一律 16px，与正文在 chapters/ 下的层级无关。
-  test('章节行一律是第 0 层缩进', () => {
+  // 章節列表不折目錄：五行（一個章號一行）一律 16px，與正文在 chapters/ 下的層級無關。
+  test('章節行一律是第 0 層縮排', () => {
     const rows = chapterRowsOf(ui);
     assert.ok(
       rows.length === 5 && rows.every((r) => parseInt(r.style.paddingLeft, 10) === 16),
@@ -83,24 +83,24 @@ describe('工程页目录树', { skip: JSDOM_SKIP }, () => {
     );
   });
 
-  // 折叠状态是前端自己的，全量推送不该把它重置掉。
-  test('重推数据后保持展开状态', () => {
+  // 摺疊狀態是前端自己的，全量推送不該把它重置掉。
+  test('重推資料後保持展開狀態', () => {
     ui.post({ type: 'project', tree: sampleTree() });
     assert.ok(labels().some((l) => l.includes('李叔')), labels().join(' | '));
   });
 });
 
 /*
- * 「故事架构」组：小说配置 / 故事前提 / 角色图谱 / 世界观 / 设定清单 / 情节大纲。
+ * 「故事架構」組：小說配置 / 故事前提 / 角色圖譜 / 世界觀 / 設定清單 / 情節大綱。
  *
- * 它是后面一切的上游（写正文要读前提、角色与世界观），所以排在章节组之前，
- * 组标题直接报「填了几件」——缺哪件，全书状态机的主按钮就推哪件。
+ * 它是後面一切的上游（寫正文要讀前提、角色與世界觀），所以排在章節組之前，
+ * 組標題直接報「填了幾件」——缺哪件，全書狀態機的主按鈕就推哪件。
  */
-describe('「故事架构」组', { skip: JSDOM_SKIP }, () => {
+describe('「故事架構」組', { skip: JSDOM_SKIP }, () => {
   let ui;
   const group = () =>
     [...ui.doc.querySelectorAll('#projectBody .group')]
-      .find((g) => g.querySelector('.group-name')?.textContent === '故事架构');
+      .find((g) => g.querySelector('.group-name')?.textContent === '故事架構');
   const rows = () => [...group().querySelectorAll('.row-architecture')];
   const row = (label) => rows().find((r) => r.querySelector('.row-label')?.textContent === label);
   const groupMeta = () => group().querySelector('.group-head .meta').textContent;
@@ -110,146 +110,146 @@ describe('「故事架构」组', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'project', tree: sampleTree() });
   });
 
-  test('有「故事架构」这一组', () => {
+  test('有「故事架構」這一組', () => {
     assert.ok(group(), [...ui.doc.querySelectorAll('#projectBody .group-name')].map((n) => n.textContent).join('|'));
   });
 
-  // 它是章节的上游：「概览」页签的第一组；章节在自己的页签里。
-  test('在「概览」页签，排第一', () => {
+  // 它是章節的上游：「概覽」頁籤的第一組；章節在自己的頁籤裡。
+  test('在「概覽」頁籤，排第一', () => {
     const panel = group().closest('[data-project-panel]');
     assert.equal(panel?.dataset.projectPanel, 'overview');
     assert.equal(panel.querySelector('.group'), group());
   });
 
-  // 顺序即生成顺序：每一件都吃前面几件的产出。设定清单排在世界观之后、情节大纲之前。
-  test('六行，顺序即生成顺序', () => {
+  // 順序即生成順序：每一件都吃前面幾件的產出。設定清單排在世界觀之後、情節大綱之前。
+  test('六行，順序即生成順序', () => {
     assert.deepEqual(
       rows().map((r) => r.querySelector('.row-label').textContent),
-      ['小说配置', '故事前提', '角色图谱', '世界观', '设定清单', '情节大纲']
+      ['小說配置', '故事前提', '角色圖譜', '世界觀', '設定清單', '情節大綱']
     );
   });
 
-  // 夹具里世界观还没写，其余五件都填过。
-  test('组标题报填了几件（x/6）', () => {
+  // 夾具裡世界觀還沒寫，其餘五件都填過。
+  test('組標題報填了幾件（x/6）', () => {
     assert.equal(groupMeta(), '5/6', groupMeta());
   });
 
-  test('填过的那一件打实心点', () => {
-    const dot = row('小说配置').querySelector('.dot');
+  test('填過的那一件打實心點', () => {
+    const dot = row('小說配置').querySelector('.dot');
     assert.equal(dot.textContent, '●', dot.outerHTML);
     assert.ok(!dot.classList.contains('stale'), dot.className);
   });
 
-  test('没填的那一件打空心点', () => {
-    const dot = row('世界观').querySelector('.dot');
+  test('沒填的那一件打空心點', () => {
+    const dot = row('世界觀').querySelector('.dot');
     assert.equal(dot.textContent, '○', dot.outerHTML);
     assert.ok(dot.classList.contains('stale'), dot.className);
   });
 
-  // 副标题由后端给（「2 人」「覆盖到第 20 章」「待生成」），前端只渲染。
-  test('情节大纲的副标题报覆盖到第几章', () => {
-    assert.equal(row('情节大纲').querySelector('.row-detail')?.textContent, '覆盖到第 20 章',
-      row('情节大纲').outerHTML);
+  // 副標題由後端給（「2 人」「覆蓋到第 20 章」「待生成」），前端只渲染。
+  test('情節大綱的副標題報覆蓋到第幾章', () => {
+    assert.equal(row('情節大綱').querySelector('.row-detail')?.textContent, '覆蓋到第 20 章',
+      row('情節大綱').outerHTML);
   });
 
-  test('角色图谱的副标题报人数', () => {
-    assert.equal(row('角色图谱').querySelector('.row-detail')?.textContent, '2 人', row('角色图谱').outerHTML);
+  test('角色圖譜的副標題報人數', () => {
+    assert.equal(row('角色圖譜').querySelector('.row-detail')?.textContent, '2 人', row('角色圖譜').outerHTML);
   });
 
-  test('没填的那一件说「待生成」', () => {
-    assert.equal(row('世界观').querySelector('.row-detail')?.textContent, '待生成', row('世界观').outerHTML);
+  test('沒填的那一件說「待生成」', () => {
+    assert.equal(row('世界觀').querySelector('.row-detail')?.textContent, '待生成', row('世界觀').outerHTML);
   });
 
-  // 架构行复用章节行的样式，但它们不是一章：不带 data-plot（细纲浮窗认的就是它）。
-  test('架构行不带章节行的抓手', () => {
+  // 架構行復用章節行的樣式，但它們不是一章：不帶 data-plot（細綱浮窗認的就是它）。
+  test('架構行不帶章節行的抓手', () => {
     assert.ok(rows().every((r) => r.dataset.plot === undefined), rows().map((r) => r.outerHTML).join('\n'));
   });
 
-  // 与「去写这一章」同一个道理：第一件还没填的那一行给「去生成」，全组只有这一颗。
-  test('只有第一件没填的那一行有「去生成」', () => {
+  // 與「去寫這一章」同一個道理：第一件還沒填的那一行給「去生成」，全組只有這一顆。
+  test('只有第一件沒填的那一行有「去生成」', () => {
     const go = rows().filter((r) => r.querySelector('.row-go'));
     assert.equal(go.length, 1, String(go.length));
-    assert.equal(go[0], row('世界观'));
+    assert.equal(go[0], row('世界觀'));
     assert.equal(go[0].querySelector('.row-go').textContent, '去生成');
   });
 
-  // 它只是「进入这一层」：真正花钱的那一下仍是对话页的主按钮。
-  test('点「去生成」进入那一层，不直接开写', () => {
+  // 它只是「進入這一層」：真正花錢的那一下仍是對話頁的主按鈕。
+  test('點「去生成」進入那一層，不直接開寫', () => {
     ui.sent.length = 0;
-    ui.clickEl(row('世界观').querySelector('.row-go'));
+    ui.clickEl(row('世界觀').querySelector('.row-go'));
     assert.equal(JSON.stringify(ui.last('setTarget')?.target), JSON.stringify({ kind: 'setting', doc: 'world' }), JSON.stringify(ui.sent));
     assert.ok(!ui.sent.some((m) => m.type === 'send'), JSON.stringify(ui.sent));
   });
 
-  // 点名字 = 打开那份文件，与章节行同一个习惯。
-  test('点文档名打开那份文件', () => {
+  // 點名字 = 開啟那份檔案，與章節行同一個習慣。
+  test('點檔名開啟那份檔案', () => {
     ui.sent.length = 0;
     ui.clickEl(row('故事前提').querySelector('.row-label'));
     assert.equal(ui.last('openFile')?.path, '.novelwarden/premise.md', JSON.stringify(ui.sent));
   });
 
-  // 角色图谱没有自己的文件（它就是 characters/ 下那一组卡）：已有卡时点它切到「角色」页签、展开那一组，
-  // 不切到对话页；打开一个目录在编辑器里什么都看不到。
-  test('已有角色卡：点「角色图谱」切到「角色」页签、展开「角色」组，不进入那一层、不打开文件', () => {
+  // 角色圖譜沒有自己的檔案（它就是 characters/ 下那一組卡）：已有卡時點它切到「角色」頁籤、展開那一組，
+  // 不切到對話頁；開啟一個目錄在編輯器裡什麼都看不到。
+  test('已有角色卡：點「角色圖譜」切到「角色」頁籤、展開「角色」組，不進入那一層、不開啟檔案', () => {
     const chars = () =>
       [...ui.doc.querySelectorAll('#projectBody .group')].find((g) => g.querySelector('.group-name')?.textContent === '角色');
     ui.clickEl(chars().querySelector('.group-toggle'));
-    assert.equal(chars().querySelector('.group-body').children.length, 0, '先折起来');
+    assert.equal(chars().querySelector('.group-body').children.length, 0, '先折起來');
     ui.sent.length = 0;
-    ui.clickEl(row('角色图谱').querySelector('.row-label'));
+    ui.clickEl(row('角色圖譜').querySelector('.row-label'));
     assert.ok(chars().querySelector('.group-body').children.length > 0, chars().outerHTML);
-    assert.equal(chars().closest('[data-project-panel]').hidden, false, '「角色」页露出来');
-    assert.equal(group().closest('[data-project-panel]').hidden, true, '「概览」页藏起来');
+    assert.equal(chars().closest('[data-project-panel]').hidden, false, '「角色」頁露出來');
+    assert.equal(group().closest('[data-project-panel]').hidden, true, '「概覽」頁藏起來');
     assert.equal(ui.doc.querySelector('#projectTabs .project-tab.active')?.textContent, '角色');
     assert.ok(!ui.last('setTarget'), JSON.stringify(ui.sent));
     assert.ok(!ui.last('openFile'), JSON.stringify(ui.sent));
   });
 
-  test('还没有角色卡：点「角色图谱」进入那一层', () => {
+  test('還沒有角色卡：點「角色圖譜」進入那一層', () => {
     const ui2 = mount();
     const tree = sampleTree();
     tree.architecture = tree.architecture.map((a) => (a.key === 'characters' ? { ...a, filled: false } : a));
     ui2.post({ type: 'project', tree });
     const r = [...ui2.doc.querySelectorAll('#projectBody .row-architecture')].find(
-      (n) => n.querySelector('.row-label')?.textContent === '角色图谱'
+      (n) => n.querySelector('.row-label')?.textContent === '角色圖譜'
     );
     ui2.sent.length = 0;
     ui2.clickEl(r.querySelector('.row-label'));
     const t = ui2.last('setTarget');
     assert.ok(t, JSON.stringify(ui2.sent));
-    // 逐字段比：target 是在 jsdom 那个 realm 里造的，原型不同，deepStrictEqual 会判不等。
+    // 逐欄位比：target 是在 jsdom 那個 realm 裡造的，原型不同，deepStrictEqual 會判不等。
     assert.equal(t.target.kind, 'setting', JSON.stringify(t));
     assert.equal(t.target.doc, 'characters', JSON.stringify(t));
   });
 
-  // 设定清单同角色图谱：没有自己的文件（它就是 lore/ 下那一组条目），填过时点它切到「设定」页签。
-  test('设定清单的副标题报条数', () => {
-    assert.equal(row('设定清单').querySelector('.row-detail')?.textContent, '0 条', row('设定清单').outerHTML);
+  // 設定清單同角色圖譜：沒有自己的檔案（它就是 lore/ 下那一組條目），填過時點它切到「設定」頁籤。
+  test('設定清單的副標題報條數', () => {
+    assert.equal(row('設定清單').querySelector('.row-detail')?.textContent, '0 條', row('設定清單').outerHTML);
   });
 
-  test('设定清单填过：点它切到「设定」页签、展开「设定」组，不进入那一层、不打开文件', () => {
+  test('設定清單填過：點它切到「設定」頁籤、展開「設定」組，不進入那一層、不開啟檔案', () => {
     const lore = () =>
-      [...ui.doc.querySelectorAll('#projectBody .group')].find((g) => g.querySelector('.group-name')?.textContent === '设定');
+      [...ui.doc.querySelectorAll('#projectBody .group')].find((g) => g.querySelector('.group-name')?.textContent === '設定');
     ui.clickEl(lore().querySelector('.group-toggle'));
-    assert.equal(lore().querySelector('.group-body').children.length, 0, '先折起来');
+    assert.equal(lore().querySelector('.group-body').children.length, 0, '先折起來');
     ui.sent.length = 0;
-    ui.clickEl(row('设定清单').querySelector('.row-label'));
+    ui.clickEl(row('設定清單').querySelector('.row-label'));
     assert.ok(lore().querySelector('.group-body').children.length > 0, lore().outerHTML);
-    assert.equal(lore().closest('[data-project-panel]').hidden, false, '「设定」页露出来');
+    assert.equal(lore().closest('[data-project-panel]').hidden, false, '「設定」頁露出來');
     assert.ok(!ui.last('setTarget'), JSON.stringify(ui.sent));
     assert.ok(!ui.last('openFile'), JSON.stringify(ui.sent));
-    assert.match(row('设定清单').querySelector('.row-label').title, /切到「设定」页签/);
+    assert.match(row('設定清單').querySelector('.row-label').title, /切到「設定」頁籤/);
   });
 
-  test('设定清单的菜单没有「打开」', () => {
-    const items = ui.itemsOf(ui.rightClick(row('设定清单')));
-    assert.ok(!items.includes('打开'), JSON.stringify(items));
-    assert.ok(items.includes('讨论') && items.includes('重写…'), JSON.stringify(items));
+  test('設定清單的選單沒有「開啟」', () => {
+    const items = ui.itemsOf(ui.rightClick(row('設定清單')));
+    assert.ok(!items.includes('開啟'), JSON.stringify(items));
+    assert.ok(items.includes('討論') && items.includes('重寫…'), JSON.stringify(items));
     ui.closeMenu();
   });
 
-  // 新书走到世界观之后：设定清单是第一件没填的，「去生成」挂在它上面，点了进入那一层（与别的几件一样）。
-  test('设定清单还没填、是第一件没填的：「去生成」进入那一层；点名字也进入那一层', () => {
+  // 新書走到世界觀之後：設定清單是第一件沒填的，「去生成」掛在它上面，點了進入那一層（與別的幾件一樣）。
+  test('設定清單還沒填、是第一件沒填的：「去生成」進入那一層；點名字也進入那一層', () => {
     const ui2 = mount();
     const tree = sampleTree();
     tree.architecture = tree.architecture.map((a) =>
@@ -257,7 +257,7 @@ describe('「故事架构」组', { skip: JSDOM_SKIP }, () => {
     );
     ui2.post({ type: 'project', tree });
     const r = [...ui2.doc.querySelectorAll('#projectBody .row-architecture')].find(
-      (n) => n.querySelector('.row-label')?.textContent === '设定清单'
+      (n) => n.querySelector('.row-label')?.textContent === '設定清單'
     );
     const go = [...ui2.doc.querySelectorAll('#projectBody .row-architecture .row-go')];
     assert.equal(go.length, 1);
@@ -275,60 +275,60 @@ describe('「故事架构」组', { skip: JSDOM_SKIP }, () => {
   });
 
   let worldItems;
-  test('没填的那一件右键给「进入这一层（去生成）」', () => {
-    worldItems = ui.itemsOf(ui.rightClick(row('世界观')));
-    assert.ok(worldItems.includes('进入这一层（去生成）'), JSON.stringify(worldItems));
+  test('沒填的那一件右鍵給「進入這一層（去生成）」', () => {
+    worldItems = ui.itemsOf(ui.rightClick(row('世界觀')));
+    assert.ok(worldItems.includes('進入這一層（去生成）'), JSON.stringify(worldItems));
   });
 
-  test('有文件的那一件右键也给「打开」', () => {
-    assert.ok(worldItems.includes('打开'), JSON.stringify(worldItems));
+  test('有檔案的那一件右鍵也給「開啟」', () => {
+    assert.ok(worldItems.includes('開啟'), JSON.stringify(worldItems));
   });
 
-  // 四件文档与大纲是工程的固定文件：改名或删掉，状态机就认不出它们了。
-  test('架构行不给重命名 / 删除 / 移动', () => {
+  // 四件文件與大綱是工程的固定檔案：改名或刪掉，狀態機就認不出它們了。
+  test('架構行不給重新命名 / 刪除 / 移動', () => {
     assert.ok(
-      !['重命名', '删除（移到回收站）', '移动到…'].some((l) => worldItems.includes(l)),
+      !['重新命名', '刪除（移到回收站）', '移動到…'].some((l) => worldItems.includes(l)),
       JSON.stringify(worldItems)
     );
     ui.closeMenu();
   });
 
-  test('「进入这一层」发 setTarget，带的是那一件文档', () => {
-    ui.pick(ui.rightClick(row('世界观')), '进入这一层（去生成）');
+  test('「進入這一層」發 setTarget，帶的是那一件檔案', () => {
+    ui.pick(ui.rightClick(row('世界觀')), '進入這一層（去生成）');
     const t = ui.last('setTarget');
     assert.equal(t?.target.kind, 'setting', JSON.stringify(t));
     assert.equal(t?.target.doc, 'world', JSON.stringify(t));
   });
 
-  // 填过的那一件：「讨论」只进入那一层，「重写…」直接发一轮生成（后端先问要求）。
-  test('情节大纲右键「讨论」进入大纲层，不发生成', () => {
+  // 填過的那一件：「討論」只進入那一層，「重寫…」直接發一輪生成（後端先問要求）。
+  test('情節大綱右鍵「討論」進入大綱層，不發生成', () => {
     ui.sent.length = 0;
-    ui.pick(ui.rightClick(row('情节大纲')), '讨论');
+    ui.pick(ui.rightClick(row('情節大綱')), '討論');
     const t = ui.last('setTarget');
     assert.equal(t?.target.kind, 'outline', JSON.stringify(t));
     assert.ok(!ui.last('rewriteArchitecture'), JSON.stringify(ui.sent));
   });
 
-  test('情节大纲右键「重写…」发 rewriteArchitecture，不只是切过去', () => {
+  test('情節大綱右鍵「重寫…」發 rewriteArchitecture，不只是切過去', () => {
     ui.sent.length = 0;
-    ui.pick(ui.rightClick(row('情节大纲')), '重写…');
+    ui.pick(ui.rightClick(row('情節大綱')), '重寫…');
     const r = ui.last('rewriteArchitecture');
     assert.equal(r?.target.kind, 'outline', JSON.stringify(ui.sent));
     assert.ok(!ui.last('setTarget'), JSON.stringify(ui.sent));
   });
 
-  test('没填的那一件不给「重写…」', () => {
-    assert.ok(!worldItems.includes('重写…'), JSON.stringify(worldItems));
+  test('沒填的那一件不給「重寫…」', () => {
+    assert.ok(!worldItems.includes('重寫…'), JSON.stringify(worldItems));
   });
 
-  test('角色图谱的菜单没有「打开」', () => {
-    const items = ui.itemsOf(ui.rightClick(row('角色图谱')));
-    assert.ok(!items.includes('打开'), JSON.stringify(items));
-    assert.ok(items.includes('讨论') && items.includes('重写…'), JSON.stringify(items));
+  test('角色圖譜的選單沒有「開啟」', () => {
+    const items = ui.itemsOf(ui.rightClick(row('角色圖譜')));
+    assert.ok(!items.includes('開啟'), JSON.stringify(items));
+    assert.ok(items.includes('討論') && items.includes('重寫…'), JSON.stringify(items));
     ui.closeMenu();
   });
 
-  test('全部填满后组标题是 6/6', () => {
+  test('全部填滿後組標題是 6/6', () => {
     const full = sampleTree();
     full.architecture = full.architecture.map((a) => ({ ...a, filled: true }));
     ui.post({ type: 'project', tree: full });
@@ -337,19 +337,19 @@ describe('「故事架构」组', { skip: JSDOM_SKIP }, () => {
 });
 
 /*
- * 章节组：**一个章号一行**。细纲号 = 章号，所以一行同时报细纲与正文两面：
- * 徽章说这一章该做哪一步，字数写着「写了多少 / 目标多少」，⟳ 说上游变过，
- * 行首圆点说定稿没有。
+ * 章節組：**一個章號一行**。細綱號 = 章號，所以一行同時報細綱與正文兩面：
+ * 徽章說這一章該做哪一步，字數寫著「寫了多少 / 目標多少」，⟳ 說上游變過，
+ * 行首圓點說定稿沒有。
  */
-describe('章节组：一个章号一行', { skip: JSDOM_SKIP }, () => {
+describe('章節組：一個章號一行', { skip: JSDOM_SKIP }, () => {
   let ui;
   const plotRow = (text) => chapterRowsOf(ui).find((n) => n.textContent.includes(text));
-  // 只数章节行上的：故事架构那一组有自己的「去生成」。
+  // 只數章節行上的：故事架構那一組有自己的「去生成」。
   const goBtns = () => [...ui.doc.querySelectorAll('#projectBody .row-plot:not(.row-architecture) .row-go')];
   const metaOf = (text) => plotRow(text).querySelector('.meta').textContent;
   const plotGroupMeta = () =>
     [...ui.doc.querySelectorAll('#projectBody .group-head')]
-      .find((n) => n.querySelector('.group-name').textContent === '章节')
+      .find((n) => n.querySelector('.group-name').textContent === '章節')
       .querySelector('.meta').textContent;
 
   before(() => {
@@ -357,41 +357,41 @@ describe('章节组：一个章号一行', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'project', tree: sampleTree() });
   });
 
-  test('每个章号一行，按章号升序', () => {
+  test('每個章號一行，按章號升序', () => {
     assert.deepEqual(
       chapterRowsOf(ui).map((r) => r.querySelector('.row-label').textContent),
-      ['第 1 章《楔子》', '第 2 章《入镇》', '第 3 章《夜访》', '第 4 章《北行》', '第 5 章《赤星》']
+      ['第 1 章《楔子》', '第 2 章《入鎮》', '第 3 章《夜訪》', '第 4 章《北行》', '第 5 章《赤星》']
     );
   });
 
-  // data-plot 是这一章在协议上的身份（悬停要细纲、selectPlot 都拿它）：
-  // 有正文就是正文，否则是细纲。
-  test('有正文的章，行的身份是正文路径', () => {
+  // data-plot 是這一章在協議上的身份（懸停要細綱、selectPlot 都拿它）：
+  // 有正文就是正文，否則是細綱。
+  test('有正文的章，行的身份是正文路徑', () => {
     assert.equal(plotRow('楔子').dataset.plot, 'chapters/001-楔子.md');
   });
 
-  test('还没写正文的章，行的身份是细纲路径', () => {
+  test('還沒寫正文的章，行的身份是細綱路徑', () => {
     assert.equal(plotRow('北行').dataset.plot, '.novelwarden/summaries/004-北行.md');
   });
 
-  // 从前这里还带「· 待写 N 段」——剧情段没了，只剩章数与字数。
-  test('组标题报章数与字数', () => {
+  // 從前這裡還帶「· 待寫 N 段」——劇情段沒了，只剩章數與字數。
+  test('組標題報章數與字數', () => {
     assert.equal(plotGroupMeta(), '3 章 · 3580 字', plotGroupMeta());
   });
 
-  // ---- 「去写这一章」：树行一律不挂行内按钮，这是唯一的例外（W2）
-  test('只有下一个该写的章有「去写这一章」', () => {
+  // ---- 「去寫這一章」：樹行一律不掛行內按鈕，這是唯一的例外（W2）
+  test('只有下一個該寫的章有「去寫這一章」', () => {
     assert.equal(goBtns().length, 1, String(goBtns().length));
     assert.equal(goBtns()[0].closest('.row-plot'), plotRow('北行'), goBtns()[0].closest('.row-plot')?.outerHTML);
   });
 
-  test('那一行带 row-next 标记', () => {
+  test('那一行帶 row-next 標記', () => {
     assert.ok(plotRow('北行').classList.contains('row-next'));
     assert.equal(chapterRowsOf(ui).filter((r) => r.classList.contains('row-next')).length, 1);
   });
 
-  // 它只是「进入这一章」：真正花钱的那一下仍是对话页的主按钮（第 20 条：只推一个）。
-  test('点「去写这一章」发 selectPlot，带的是这一章的主路径', () => {
+  // 它只是「進入這一章」：真正花錢的那一下仍是對話頁的主按鈕（第 20 條：只推一個）。
+  test('點「去寫這一章」發 selectPlot，帶的是這一章的主路徑', () => {
     ui.sent.length = 0;
     ui.clickEl(goBtns()[0]);
     const sel = ui.last('selectPlot');
@@ -399,106 +399,106 @@ describe('章节组：一个章号一行', { skip: JSDOM_SKIP }, () => {
     assert.equal(sel.plotRelPath, '.novelwarden/summaries/004-北行.md', JSON.stringify(sel));
   });
 
-  test('点「去写这一章」不顺手打开文件，也不直接开写', () => {
+  test('點「去寫這一章」不順手開啟檔案，也不直接開寫', () => {
     assert.ok(!ui.sent.some((m) => m.type === 'openFile' || m.type === 'send'),
       JSON.stringify(ui.sent));
   });
 
-  // 按钮落在哪一行完全听后端的 nextChapterNo，前端不自己数「第一个没写的」。
-  test('按钮跟着 nextChapterNo 走', () => {
+  // 按鈕落在哪一行完全聽後端的 nextChapterNo，前端不自己數「第一個沒寫的」。
+  test('按鈕跟著 nextChapterNo 走', () => {
     ui.post({ type: 'project', tree: { ...sampleTree(), nextChapterNo: 5 } });
     assert.equal(goBtns().length, 1, String(goBtns().length));
     assert.equal(goBtns()[0].closest('.row-plot'), plotRow('赤星'));
   });
 
-  // 下一个该写的章还没有细纲也没有正文时，列表里没有那一行——也就没有按钮，不补空行。
-  test('那一章不在列表里时一颗都不挂', () => {
+  // 下一個該寫的章還沒有細綱也沒有正文時，列表裡沒有那一行——也就沒有按鈕，不補空行。
+  test('那一章不在列表裡時一顆都不掛', () => {
     ui.post({ type: 'project', tree: { ...sampleTree(), nextChapterNo: 6 } });
     assert.equal(goBtns().length, 0, String(goBtns().length));
     ui.post({ type: 'project', tree: sampleTree() });
   });
 
-  // ---- 徽章：这一章现在该做哪一步
-  test('待写正文的章挂「待写正文」', () => {
-    assert.equal(plotRow('北行').querySelector('.row-stage')?.textContent, '待写正文');
+  // ---- 徽章：這一章現在該做哪一步
+  test('待寫正文的章掛「待寫正文」', () => {
+    assert.equal(plotRow('北行').querySelector('.row-stage')?.textContent, '待寫正文');
   });
 
-  test('细纲只有骨架的章挂「待写细纲」', () => {
-    assert.equal(plotRow('赤星').querySelector('.row-stage')?.textContent, '待写细纲');
+  test('細綱只有骨架的章掛「待寫細綱」', () => {
+    assert.equal(plotRow('赤星').querySelector('.row-stage')?.textContent, '待寫細綱');
   });
 
-  test('写够了没定稿的章挂「待定稿」', () => {
-    assert.equal(plotRow('入镇').querySelector('.row-stage')?.textContent, '待同步');
+  test('寫夠了沒定稿的章掛「待定稿」', () => {
+    assert.equal(plotRow('入鎮').querySelector('.row-stage')?.textContent, '待同步');
   });
 
-  // 一列「已完成」只是噪声。
-  test('已完成的章不挂徽章', () => {
+  // 一列「已完成」只是噪聲。
+  test('已完成的章不掛徽章', () => {
     assert.equal(plotRow('楔子').querySelector('.row-stage'), null, plotRow('楔子').outerHTML);
   });
 
-  test('徽章的 tooltip 报三段完成度', () => {
+  test('徽章的 tooltip 報三段完成度', () => {
     const title = plotRow('北行').querySelector('.row-stage').title;
-    assert.ok(title.includes('细纲 100%') && title.includes('正文 0%') && title.includes('同步 0%'), title);
+    assert.ok(title.includes('細綱 100%') && title.includes('正文 0%') && title.includes('同步 0%'), title);
   });
 
-  // ⟳ 不是错误，是「回头看一眼」：大纲里覆盖这一章的那一节改过。
-  test('上游变过的章挂 ⟳', () => {
+  // ⟳ 不是錯誤，是「回頭看一眼」：大綱裡覆蓋這一章的那一節改過。
+  test('上游變過的章掛 ⟳', () => {
     assert.ok(plotRow('北行').querySelector('.row-upstream'), plotRow('北行').outerHTML);
   });
 
-  test('上游没变的章不挂 ⟳', () => {
+  test('上游沒變的章不掛 ⟳', () => {
     assert.equal(plotRow('楔子').querySelector('.row-upstream'), null);
   });
 
-  // ---- 字数：「2980 / 3000」比单报字数多说一件事——写够没有
-  test('有目标字数时报「写了多少 / 目标多少」', () => {
-    assert.ok(metaOf('入镇').includes('2980 / 3000'), metaOf('入镇'));
+  // ---- 字數：「2980 / 3000」比單報字數多說一件事——寫夠沒有
+  test('有目標字數時報「寫了多少 / 目標多少」', () => {
+    assert.ok(metaOf('入鎮').includes('2980 / 3000'), metaOf('入鎮'));
   });
 
-  test('没有目标字数时只报字数', () => {
-    assert.ok(metaOf('夜访').startsWith('300 字'), metaOf('夜访'));
+  test('沒有目標字數時只報字數', () => {
+    assert.ok(metaOf('夜訪').startsWith('300 字'), metaOf('夜訪'));
   });
 
-  test('还没写正文报「未写」', () => {
-    assert.ok(metaOf('北行').startsWith('未写'), metaOf('北行'));
+  test('還沒寫正文報「未寫」', () => {
+    assert.ok(metaOf('北行').startsWith('未寫'), metaOf('北行'));
   });
 
-  test('已有草稿的章行带标记', () => {
+  test('已有草稿的章行帶標記', () => {
     assert.ok(metaOf('楔子').includes('· 草稿'), metaOf('楔子'));
   });
 
-  test('没写正文的章不带草稿标记', () => {
+  test('沒寫正文的章不帶草稿標記', () => {
     assert.ok(!metaOf('北行').includes('· 草稿'), metaOf('北行'));
   });
 
-  // ---- 行首圆点：定稿过、细纲与正文对得上没有
-  test('定稿过的章打实心点', () => {
+  // ---- 行首圓點：定稿過、細綱與正文對得上沒有
+  test('定稿過的章打實心點', () => {
     assert.equal(plotRow('楔子').querySelector('.dot').textContent, '●');
   });
 
-  test('写了没定稿的章打空心点', () => {
-    const dot = plotRow('入镇').querySelector('.dot');
+  test('寫了沒定稿的章打空心點', () => {
+    const dot = plotRow('入鎮').querySelector('.dot');
     assert.ok(dot.textContent === '○' && dot.classList.contains('stale'), dot.outerHTML);
   });
 
-  // 还没写正文的章无从定稿——那不是「过期」，是还没到那一步。
-  test('还没写正文的章不算过期', () => {
+  // 還沒寫正文的章無從定稿——那不是「過期」，是還沒到那一步。
+  test('還沒寫正文的章不算過期', () => {
     const dot = plotRow('北行').querySelector('.dot');
     assert.ok(dot.textContent === '·' && !dot.classList.contains('stale'), dot.outerHTML);
   });
 
-  // 新手上手（2026-10-24）：空书最常见的开头是自己写第 1 章或者把写好的书导进来，那一行先说这两样。
-  test('没有章节时说清先做什么', () => {
+  // 新手上手（2026-10-24）：空書最常見的開頭是自己寫第 1 章或者把寫好的書導進來，那一行先說這兩樣。
+  test('沒有章節時說清先做什麼', () => {
     ui.post({ type: 'project', tree: { ...sampleTree(), plots: [], plotCount: 0, chapterCount: 0, totalWords: 0 } });
     const hint = [...ui.doc.querySelectorAll('#projectBody .group')]
-      .find((g) => g.querySelector('.group-name')?.textContent === '章节')
+      .find((g) => g.querySelector('.group-name')?.textContent === '章節')
       .querySelector('.row-empty');
-    assert.ok(hint && hint.textContent.includes('新建一章') && hint.textContent.includes('导入'), hint && hint.textContent);
+    assert.ok(hint && hint.textContent.includes('新建一章') && hint.textContent.includes('匯入'), hint && hint.textContent);
     ui.post({ type: 'project', tree: sampleTree() });
   });
 });
 
-describe('工程页的右键菜单', { skip: JSDOM_SKIP }, () => {
+describe('工程頁的右鍵選單', { skip: JSDOM_SKIP }, () => {
   let ui;
   let doneItems;
   let legacyItems;
@@ -519,291 +519,291 @@ describe('工程页的右键菜单', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'project', tree: sampleTree() });
   });
 
-  // 页面整洁：故事架构 / 章节 / 角色三个区的行不挂行内操作按钮。例外只有两颗：
-  // 下一个该写的章那颗「去写这一章」与第一件没填的架构文档那颗「去生成」（W2）
-  // ——各自全组只有一颗，不会变成一排按钮。
-  // （「文风与摘要」不是文件管理区，它的「重建」「从正文提取」链接照旧留在行内。）
-  test('树上的行没有行内操作区', () => {
+  // 頁面整潔：故事架構 / 章節 / 角色三個區的行不掛行內操作按鈕。例外只有兩顆：
+  // 下一個該寫的章那顆「去寫這一章」與第一件沒填的架構文件那顆「去生成」（W2）
+  // ——各自全組只有一顆，不會變成一排按鈕。
+  // （「文風與摘要」不是檔案管理區，它的「重建」「從正文提取」連結照舊留在行內。）
+  test('樹上的行沒有行內操作區', () => {
     const treeRows = treeGroups()
       .flatMap((g) => [...g.querySelectorAll('.row')]);
     assert.ok(treeRows.length > 0 && treeRows.every((r) => !r.querySelector('.row-actions')),
       `${treeRows.length} 行`);
   });
 
-  test('树上的行里只有「去生成」与「去写这一章」两颗按钮', () => {
+  test('樹上的行裡只有「去生成」與「去寫這一章」兩顆按鈕', () => {
     const buttons = treeGroups()
       .flatMap((g) => [...g.querySelectorAll('.row button')]);
-    assert.deepEqual(buttons.map((b) => b.textContent), ['去生成', '去写这一章']);
+    assert.deepEqual(buttons.map((b) => b.textContent), ['去生成', '去寫這一章']);
   });
 
-  test('分组标题栏不再有「＋」按钮', () => {
+  test('分組標題欄不再有「＋」按鈕', () => {
     assert.ok(!ui.doc.querySelector('#projectBody .group-head .row-actions'));
   });
 
-  // ---- 写完且定稿过的章（第 1 章）：细纲、正文、草稿都在，菜单最全。
-  test('右键章节行弹出菜单', () => {
+  // ---- 寫完且定稿過的章（第 1 章）：細綱、正文、草稿都在，選單最全。
+  test('右鍵章節行彈出選單', () => {
     doneItems = ui.itemsOf(ui.rightClick(plotRow('楔子')));
     assert.ok(doneItems.length > 0);
   });
 
-  // 「进入这一章」与「打开正文」是两件事：前者把创作页切到这一章当前该做
-  // 的那一层，后者只是读文件。
-  for (const label of ['进入这一章', '打开正文', '打开细纲', '重写正文', '重新同步',
-    '打开草稿', '重命名', '删除（移到回收站）']) {
-    test(`定稿过的章菜单含「${label}」`, () => {
+  // 「進入這一章」與「開啟正文」是兩件事：前者把創作頁切到這一章當前該做
+  // 的那一層，後者只是讀檔案。
+  for (const label of ['進入這一章', '開啟正文', '開啟細綱', '重寫正文', '重新同步',
+    '開啟草稿', '重新命名', '刪除（移到回收站）']) {
+    test(`定稿過的章選單含「${label}」`, () => {
       assert.ok(doneItems.includes(label), JSON.stringify(doneItems));
     });
   }
 
-  // 定稿改的就是细纲本身，没有另一份「摘要」可看——「打开细纲」就是它。
-  test('定稿过的章菜单没有「看摘要」', () => {
+  // 定稿改的就是細綱本身，沒有另一份「摘要」可看——「開啟細綱」就是它。
+  test('定稿過的章選單沒有「看摘要」', () => {
     assert.ok(!doneItems.includes('看摘要'), JSON.stringify(doneItems));
   });
 
-  // 打开哪一份与点名字同序（正文 → 细纲）：点行做的那件事在菜单里排第一。
-  test('「打开正文」排在「打开细纲」前面', () => {
-    assert.ok(doneItems.indexOf('打开正文') < doneItems.indexOf('打开细纲'), JSON.stringify(doneItems));
+  // 開啟哪一份與點名字同序（正文 → 細綱）：點行做的那件事在選單裡排第一。
+  test('「開啟正文」排在「開啟細綱」前面', () => {
+    assert.ok(doneItems.indexOf('開啟正文') < doneItems.indexOf('開啟細綱'), JSON.stringify(doneItems));
   });
 
-  // 顺序由章号决定——把一章挪进子目录只会让它从列表上消失，所以不给这一项。
-  test('章节菜单没有「移动到…」', () => {
-    assert.ok(!doneItems.includes('移动到…'), JSON.stringify(doneItems));
+  // 順序由章號決定——把一章挪進子目錄只會讓它從列表上消失，所以不給這一項。
+  test('章節選單沒有「移動到…」', () => {
+    assert.ok(!doneItems.includes('移動到…'), JSON.stringify(doneItems));
   });
 
-  // 两层入口：状态机只给「该做的下一步」，而作者常要回头改上一层。
-  for (const label of ['细纲（100%）', '正文（100%）']) {
-    test(`章节菜单含两层入口「${label}」`, () => {
+  // 兩層入口：狀態機只給「該做的下一步」，而作者常要回頭改上一層。
+  for (const label of ['細綱（100%）', '正文（100%）']) {
+    test(`章節選單含兩層入口「${label}」`, () => {
       assert.ok(doneItems.includes(label), JSON.stringify(doneItems));
     });
   }
 
-  test('章节菜单不再有场景入口', () => {
-    assert.ok(!doneItems.some((x) => x.includes('场景')), JSON.stringify(doneItems));
+  test('章節選單不再有場景入口', () => {
+    assert.ok(!doneItems.some((x) => x.includes('場景')), JSON.stringify(doneItems));
   });
 
-  // 点章名 = 打开这一章（W6 章节工作台）：正文在主区、细纲并排在旁边。开几份、开在哪
-  // 由后端按宿主的能力定（有没有「并排打开」），前端只说是哪一章——两个壳发的是同一条。
-  test('点章节名发 openChapter，带这一行的主路径', () => {
+  // 點章名 = 開啟這一章（W6 章節工作臺）：正文在主區、細綱並排在旁邊。開幾份、開在哪
+  // 由後端按宿主的能力定（有沒有「並排開啟」），前端只說是哪一章——兩個殼發的是同一條。
+  test('點章節名發 openChapter，帶這一行的主路徑', () => {
     ui.closeMenu();
     ui.clickEl(plotRow('楔子').querySelector('.row-label'));
     const open = ui.last('openChapter');
-    assert.ok(open, '没发出 openChapter');
+    assert.ok(open, '沒發出 openChapter');
     assert.equal(open.plotRelPath, 'chapters/001-楔子.md', JSON.stringify(open));
   });
 
-  test('还没写正文的章也发 openChapter（后端只开细纲）', () => {
+  test('還沒寫正文的章也發 openChapter（後端只開細綱）', () => {
     ui.clickEl(plotRow('北行').querySelector('.row-label'));
     assert.equal(ui.last('openChapter').plotRelPath, '.novelwarden/summaries/004-北行.md');
   });
 
-  test('点章节名不再切到对话页', () => {
+  test('點章節名不再切到對話頁', () => {
     ui.sent.length = 0;
     ui.clickEl(plotRow('楔子').querySelector('.row-label'));
     assert.ok(!ui.sent.some((m) => m.type === 'selectPlot'), JSON.stringify(ui.sent));
   });
 
-  // selectPlot 带的是主路径：后端按章号认，正文路径与细纲路径认到的是同一章。
-  test('「进入这一章」发 selectPlot，带的是主路径', () => {
-    ui.pick(ui.rightClick(plotRow('楔子')), '进入这一章');
+  // selectPlot 帶的是主路徑：後端按章號認，正文路徑與細綱路徑認到的是同一章。
+  test('「進入這一章」發 selectPlot，帶的是主路徑', () => {
+    ui.pick(ui.rightClick(plotRow('楔子')), '進入這一章');
     const sel = ui.last('selectPlot');
     assert.equal(sel?.plotRelPath, 'chapters/001-楔子.md', JSON.stringify(sel));
   });
 
-  // 两层入口的 target 一律是**细纲路径**（CreationTarget 按细纲认章），
-  // 哪怕这一行的主路径是正文。
-  test('两层入口发 setTarget，带的是细纲路径', () => {
+  // 兩層入口的 target 一律是**細綱路徑**（CreationTarget 按細綱認章），
+  // 哪怕這一行的主路徑是正文。
+  test('兩層入口發 setTarget，帶的是細綱路徑', () => {
     ui.pick(ui.rightClick(plotRow('楔子')), '正文（100%）');
     const t = ui.last('setTarget');
-    assert.ok(t, '没发出 setTarget');
-    // 逐字段比：target 是在 jsdom 那个 realm 里造的，原型不是本 realm 的
-    // Object.prototype，deepStrictEqual 会因此判不等。
+    assert.ok(t, '沒發出 setTarget');
+    // 逐欄位比：target 是在 jsdom 那個 realm 裡造的，原型不是本 realm 的
+    // Object.prototype，deepStrictEqual 會因此判不等。
     assert.equal(t.target.kind, 'manuscript', JSON.stringify(t));
     assert.equal(t.target.plotRelPath, '.novelwarden/summaries/001-楔子.md', JSON.stringify(t));
   });
 
-  // 定稿是照正文更新细纲，读的是正文，所以带的必须是 chapters/ 那条路径。
-  // 右键发的是 askFinalizeChapter：后端先弹确认框挑这一次的模型。
-  test('「重新定稿」发 askFinalizeChapter，带的是章节路径', () => {
+  // 定稿是照正文更新細綱，讀的是正文，所以帶的必須是 chapters/ 那條路徑。
+  // 右鍵發的是 askFinalizeChapter：後端先彈確認框挑這一次的模型。
+  test('「重新定稿」發 askFinalizeChapter，帶的是章節路徑', () => {
     ui.pick(ui.rightClick(plotRow('楔子')), '重新同步');
     const msg = ui.last('projectAction');
-    assert.ok(msg, '没发出 projectAction');
+    assert.ok(msg, '沒發出 projectAction');
     assert.equal(msg.action, 'askFinalizeChapter', JSON.stringify(msg));
     assert.equal(msg.relPath, 'chapters/001-楔子.md', JSON.stringify(msg));
   });
 
-  // 重写正文不自己开写：切到这一章的正文层，输入框上方挂一枚「/重写正文」，等作者写下要求再发送。
-  test('「重写正文」切到这一章的正文层、挂上「/重写正文」，不发送', () => {
+  // 重寫正文不自己開寫：切到這一章的正文層，輸入框上方掛一枚「/重寫正文」，等作者寫下要求再傳送。
+  test('「重寫正文」切到這一章的正文層、掛上「/重寫正文」，不傳送', () => {
     const before = ui.sent.filter((m) => m.type === 'send').length;
-    ui.pick(ui.rightClick(plotRow('楔子')), '重写正文');
+    ui.pick(ui.rightClick(plotRow('楔子')), '重寫正文');
     const t = ui.last('setTarget');
     assert.equal(t?.target.kind, 'manuscript', JSON.stringify(t));
     assert.equal(t?.target.plotRelPath, '.novelwarden/summaries/001-楔子.md', JSON.stringify(t));
     const chip = ui.doc.querySelector('#pendingCmd .cmd-chip');
-    assert.ok(chip?.textContent.includes('重写正文'), chip?.textContent);
+    assert.ok(chip?.textContent.includes('重寫正文'), chip?.textContent);
     assert.equal(ui.sent.filter((m) => m.type === 'send').length, before);
   });
 
-  test('写下要求点发送：写的是这一章的正文（后端按重写走），带着要求', () => {
-    ui.doc.getElementById('input').value = '节奏再快一点';
+  test('寫下要求點傳送：寫的是這一章的正文（後端按重寫走），帶著要求', () => {
+    ui.doc.getElementById('input').value = '節奏再快一點';
     ui.clickEl(ui.doc.getElementById('sendBtn'));
     const sent = [...ui.sent].reverse().find((m) => m.type === 'send');
     assert.equal(sent?.payload.stage, 'manuscript', JSON.stringify(sent?.payload));
     assert.equal(sent.payload.capability, 'generate');
     assert.equal(sent.payload.target.plotRelPath, '.novelwarden/summaries/001-楔子.md', JSON.stringify(sent.payload));
-    assert.equal(sent.payload.text, '节奏再快一点');
+    assert.equal(sent.payload.text, '節奏再快一點');
     ui.post({ type: 'busy', value: false });
   });
 
-  // 设定名录：定稿过、正文没再改过的章可以单独记一次设定（只换细纲「设定」一节），带的也是章节路径。
-  test('定稿过的章：「记设定」发 recordLore，带章节路径', () => {
-    ui.pick(ui.rightClick(plotRow('楔子')), '记设定（预计 2 次调用，最多 3 次）');
+  // 設定名錄：定稿過、正文沒再改過的章可以單獨記一次設定（只換細綱「設定」一節），帶的也是章節路徑。
+  test('定稿過的章：「記設定」發 recordLore，帶章節路徑', () => {
+    ui.pick(ui.rightClick(plotRow('楔子')), '記設定（預計 2 次呼叫，最多 3 次）');
     const msg = ui.last('projectAction');
     assert.equal(msg?.action, 'recordLore', JSON.stringify(msg));
     assert.equal(msg.relPath, 'chapters/001-楔子.md', JSON.stringify(msg));
   });
 
-  test('点「打开草稿」发 openDraft，带的是章节路径', () => {
-    ui.pick(ui.rightClick(plotRow('楔子')), '打开草稿');
+  test('點「開啟草稿」發 openDraft，帶的是章節路徑', () => {
+    ui.pick(ui.rightClick(plotRow('楔子')), '開啟草稿');
     const draftMsg = ui.last('openDraft');
-    assert.ok(draftMsg, '没发出 openDraft');
+    assert.ok(draftMsg, '沒發出 openDraft');
     assert.equal(draftMsg.path, 'chapters/001-楔子.md', JSON.stringify(draftMsg));
   });
 
-  test('点删除发 fileAction，带的是主路径', () => {
-    ui.pick(ui.rightClick(plotRow('楔子')), '删除（移到回收站）');
+  test('點刪除發 fileAction，帶的是主路徑', () => {
+    ui.pick(ui.rightClick(plotRow('楔子')), '刪除（移到回收站）');
     const del = ui.last('fileAction');
-    assert.ok(del, '没发出 fileAction');
+    assert.ok(del, '沒發出 fileAction');
     assert.equal(del.action, 'delete', JSON.stringify(del));
     assert.equal(del.relPath, 'chapters/001-楔子.md', JSON.stringify(del));
   });
 
-  test('点完菜单关闭', () => {
+  test('點完選單關閉', () => {
     assert.ok(!ui.doc.querySelector('.ctx-menu'));
   });
 
-  test('「重命名」发 fileAction', () => {
-    ui.pick(ui.rightClick(plotRow('楔子')), '重命名');
+  test('「重新命名」發 fileAction', () => {
+    ui.pick(ui.rightClick(plotRow('楔子')), '重新命名');
     assert.equal(ui.last('fileAction').action, 'rename');
   });
 
-  // ---- 作者手写、只有正文没有细纲的章（第 2 章）：写够了，等着定稿（定稿时照正文整理一份细纲）。
-  test('没有细纲的章不给「打开细纲」', () => {
-    legacyItems = ui.itemsOf(ui.rightClick(plotRow('入镇')));
-    assert.ok(!legacyItems.includes('打开细纲'), JSON.stringify(legacyItems));
-    assert.ok(legacyItems.includes('打开正文'), JSON.stringify(legacyItems));
+  // ---- 作者手寫、只有正文沒有細綱的章（第 2 章）：寫夠了，等著定稿（定稿時照正文整理一份細綱）。
+  test('沒有細綱的章不給「開啟細綱」', () => {
+    legacyItems = ui.itemsOf(ui.rightClick(plotRow('入鎮')));
+    assert.ok(!legacyItems.includes('開啟細綱'), JSON.stringify(legacyItems));
+    assert.ok(legacyItems.includes('開啟正文'), JSON.stringify(legacyItems));
   });
 
-  // 定稿 = 照正文更新细纲（带连续性事实）+ 出场角色的当前状态（四期）+ 叙事线（七期），
-  // 菜单上写着调用次数（D17）。
-  test('没定稿的章给「定稿（细纲 + 角色状态 + 叙事线）」并写着调用次数', () => {
-    assert.ok(legacyItems.includes('同步（细纲 + 角色状态 + 叙事线 + 故事时间，预计 6–12 次调用，最多 18 次）'), JSON.stringify(legacyItems));
+  // 定稿 = 照正文更新細綱（帶連續性事實）+ 出場角色的當前狀態（四期）+ 敘事線（七期），
+  // 選單上寫著呼叫次數（D17）。
+  test('沒定稿的章給「定稿（細綱 + 角色狀態 + 敘事線）」並寫著呼叫次數', () => {
+    assert.ok(legacyItems.includes('同步（細綱 + 角色狀態 + 敘事線 + 故事時間，預計 6–12 次呼叫，最多 18 次）'), JSON.stringify(legacyItems));
     assert.ok(!legacyItems.includes('重新同步'), JSON.stringify(legacyItems));
-    // 没定稿的章「设定」一节是计划，记了也会被定稿冲掉：不给单独记设定。
-    assert.ok(!legacyItems.includes('记设定（预计 2 次调用，最多 3 次）'), JSON.stringify(legacyItems));
+    // 沒定稿的章「設定」一節是計劃，記了也會被定稿沖掉：不給單獨記設定。
+    assert.ok(!legacyItems.includes('記設定（預計 2 次呼叫，最多 3 次）'), JSON.stringify(legacyItems));
   });
 
-  test('没有草稿时给「新建草稿」', () => {
+  test('沒有草稿時給「新建草稿」', () => {
     assert.ok(legacyItems.includes('新建草稿'), JSON.stringify(legacyItems));
     ui.closeMenu();
   });
 
-  test('「定稿」发 askFinalizeChapter，带的是章节路径', () => {
-    ui.pick(ui.rightClick(plotRow('入镇')), '同步（细纲 + 角色状态 + 叙事线 + 故事时间，预计 6–12 次调用，最多 18 次）');
+  test('「定稿」發 askFinalizeChapter，帶的是章節路徑', () => {
+    ui.pick(ui.rightClick(plotRow('入鎮')), '同步（細綱 + 角色狀態 + 敘事線 + 故事時間，預計 6–12 次呼叫，最多 18 次）');
     const msg = ui.last('projectAction');
     assert.equal(msg?.action, 'askFinalizeChapter', JSON.stringify(msg));
-    assert.equal(msg?.relPath, 'chapters/002-入镇.md', JSON.stringify(msg));
+    assert.equal(msg?.relPath, 'chapters/002-入鎮.md', JSON.stringify(msg));
   });
 
-  // 没有细纲时「细纲」那一层仍然进得去：落点是它**应在**的位置，进去就是补细纲。
-  test('没有细纲的章点「细纲」切到它应在的位置', () => {
-    ui.pick(ui.rightClick(plotRow('入镇')), '细纲（0%）');
+  // 沒有細綱時「細綱」那一層仍然進得去：落點是它**應在**的位置，進去就是補細綱。
+  test('沒有細綱的章點「細綱」切到它應在的位置', () => {
+    ui.pick(ui.rightClick(plotRow('入鎮')), '細綱（0%）');
     const t = ui.last('setTarget');
     assert.equal(t?.target.kind, 'plot', JSON.stringify(t));
-    assert.equal(t?.target.plotRelPath, '.novelwarden/summaries/002-入镇.md', JSON.stringify(t));
+    assert.equal(t?.target.plotRelPath, '.novelwarden/summaries/002-入鎮.md', JSON.stringify(t));
   });
 
-  // ---- 细纲排好、还没写正文的章（第 4 章）：正文那几项都没有。
-  test('没写正文的章菜单只给「打开细纲」', () => {
+  // ---- 細綱排好、還沒寫正文的章（第 4 章）：正文那幾項都沒有。
+  test('沒寫正文的章選單隻給「開啟細綱」', () => {
     planningItems = ui.itemsOf(ui.rightClick(plotRow('北行')));
-    assert.ok(planningItems.includes('打开细纲'), JSON.stringify(planningItems));
-    assert.ok(!planningItems.includes('打开正文'), JSON.stringify(planningItems));
+    assert.ok(planningItems.includes('開啟細綱'), JSON.stringify(planningItems));
+    assert.ok(!planningItems.includes('開啟正文'), JSON.stringify(planningItems));
   });
 
-  // 定稿、草稿读的都是正文——没有正文就无从谈起。
-  for (const label of ['重写正文', '重新同步', '同步（细纲 + 角色状态 + 叙事线 + 故事时间，预计 6–12 次调用，最多 18 次）', '打开草稿', '新建草稿']) {
-    test(`没写正文的章菜单不含「${label}」`, () => {
+  // 定稿、草稿讀的都是正文——沒有正文就無從談起。
+  for (const label of ['重寫正文', '重新同步', '同步（細綱 + 角色狀態 + 敘事線 + 故事時間，預計 6–12 次呼叫，最多 18 次）', '開啟草稿', '新建草稿']) {
+    test(`沒寫正文的章選單不含「${label}」`, () => {
       assert.ok(!planningItems.includes(label), JSON.stringify(planningItems));
     });
   }
 
-  test('没写正文的章菜单仍有「进入这一章」与两层入口', () => {
-    for (const label of ['进入这一章', '细纲（100%）', '正文（0%）']) {
+  test('沒寫正文的章選單仍有「進入這一章」與兩層入口', () => {
+    for (const label of ['進入這一章', '細綱（100%）', '正文（0%）']) {
       assert.ok(planningItems.includes(label), JSON.stringify(planningItems));
     }
     ui.closeMenu();
   });
 
-  test('没写正文的章「进入这一章」带的是细纲路径', () => {
-    ui.pick(ui.rightClick(plotRow('北行')), '进入这一章');
+  test('沒寫正文的章「進入這一章」帶的是細綱路徑', () => {
+    ui.pick(ui.rightClick(plotRow('北行')), '進入這一章');
     assert.equal(ui.last('selectPlot')?.plotRelPath, '.novelwarden/summaries/004-北行.md');
   });
 
-  test('没写正文的章删除落在细纲上', () => {
-    ui.pick(ui.rightClick(plotRow('北行')), '删除（移到回收站）');
+  test('沒寫正文的章刪除落在細綱上', () => {
+    ui.pick(ui.rightClick(plotRow('北行')), '刪除（移到回收站）');
     assert.equal(ui.last('fileAction')?.relPath, '.novelwarden/summaries/004-北行.md');
   });
 
-  // ---- 文件夹行：「在此新建」的落点必须是这个文件夹，不是区根目录。
-  test('文件夹菜单含「在此新建角色卡」', () => {
+  // ---- 資料夾行：「在此新建」的落點必須是這個資料夾，不是區根目錄。
+  test('資料夾選單含「在此新建角色卡」', () => {
     folderItems = ui.itemsOf(ui.rightClick(rowWith('配角')));
     assert.ok(folderItems.includes('在此新建角色卡'), JSON.stringify(folderItems));
   });
 
-  test('文件夹菜单含折叠项', () => {
-    assert.ok(folderItems.includes('展开') || folderItems.includes('折叠'), JSON.stringify(folderItems));
+  test('資料夾選單含摺疊項', () => {
+    assert.ok(folderItems.includes('展開') || folderItems.includes('摺疊'), JSON.stringify(folderItems));
   });
 
-  test('文件夹的「在此新建角色卡」带 dir', () => {
+  test('資料夾的「在此新建角色卡」帶 dir', () => {
     ui.pick(ui.doc.querySelector('.ctx-menu'), '在此新建角色卡');
     const add = ui.last('projectAction');
-    assert.ok(add, '没发出 projectAction');
+    assert.ok(add, '沒發出 projectAction');
     assert.equal(add.action, 'newCharacter', JSON.stringify(add));
     assert.equal(add.dir, '.novelwarden/characters/配角', JSON.stringify(add));
   });
 
-  test('「在此新建文件夹」带 dir', () => {
-    ui.pick(ui.rightClick(rowWith('配角')), '在此新建文件夹');
+  test('「在此新建資料夾」帶 dir', () => {
+    ui.pick(ui.rightClick(rowWith('配角')), '在此新建資料夾');
     const mk = ui.last('projectAction');
-    assert.ok(mk, '没发出 projectAction');
+    assert.ok(mk, '沒發出 projectAction');
     assert.equal(mk.action, 'newFolder', JSON.stringify(mk));
     assert.equal(mk.dir, '.novelwarden/characters/配角', JSON.stringify(mk));
   });
 
-  // ---- 角色文件行
-  test('角色行菜单含打开与三个类文件操作', () => {
+  // ---- 角色檔案行
+  test('角色行選單含開啟與三個類檔案操作', () => {
     ui.clickEl(dirLabel('配角'));
     fileItems = ui.itemsOf(ui.rightClick(rowWith('林昭')));
-    assert.ok(['打开', '重命名', '移动到…', '删除（移到回收站）'].every((l) => fileItems.includes(l)),
+    assert.ok(['開啟', '重新命名', '移動到…', '刪除（移到回收站）'].every((l) => fileItems.includes(l)),
       JSON.stringify(fileItems));
   });
 
-  test('角色行菜单没有「在此新建」', () => {
+  test('角色行選單沒有「在此新建」', () => {
     assert.ok(!fileItems.some((l) => l.startsWith('在此新建')));
     ui.closeMenu();
   });
 
-  // 点文件名仍走 openPath：插件的 body 没有 #wbEditor，应当发 openFile。
-  test('点角色名发 openFile（插件壳无内置编辑器）', () => {
+  // 點檔名仍走 openPath：外掛的 body 沒有 #wbEditor，應當發 openFile。
+  test('點角色名發 openFile（外掛殼無內建編輯器）', () => {
     ui.clickEl([...ui.doc.querySelectorAll('#projectBody .row-label')].find((n) => n.textContent === '林昭'));
     const open = ui.last('openFile');
-    assert.ok(open, '没发出 openFile');
+    assert.ok(open, '沒發出 openFile');
     assert.equal(open.path, '.novelwarden/characters/林昭.md', JSON.stringify(open));
   });
 
-  // ---- 分组标题栏：落点是该区根目录。
-  // 注意用精确匹配取分组名：「出场人物 · 未建卡」也含「角色」二字之外的字样，
-  // 而角色区标题就是「角色」，includes 在两组都在时会撞上第一个。
-  test('分组标题栏的新建落点为区根目录', () => {
+  // ---- 分組標題欄：落點是該區根目錄。
+  // 注意用精確匹配取分組名：「出場人物 · 未建卡」也含「角色」二字之外的字樣，
+  // 而角色區標題就是「角色」，includes 在兩組都在時會撞上第一個。
+  test('分組標題欄的新建落點為區根目錄', () => {
     groupHead = [...ui.doc.querySelectorAll('#projectBody .group-head')]
       .find((n) => n.querySelector('.group-name').textContent === '角色');
     ui.pick(ui.rightClick(groupHead), '在此新建角色卡');
@@ -812,142 +812,142 @@ describe('工程页的右键菜单', { skip: JSDOM_SKIP }, () => {
     assert.equal(rootAdd.dir, '.novelwarden/characters', JSON.stringify(rootAdd));
   });
 
-  // ---- 「文风与摘要」是工程固定文件，不能重命名/删除。情节大纲已经挪进「故事架构」
-  // 那一组，这里拿文风指南那一行验。
+  // ---- 「文風與摘要」是工程固定檔案，不能重新命名/刪除。情節大綱已經挪進「故事架構」
+  // 那一組，這裡拿文風指南那一行驗。
   let metaItems;
-  test('固定元数据行的菜单没有重命名/删除', () => {
-    metaItems = ui.itemsOf(ui.rightClick(rowWith('文风指南')));
-    assert.ok(!metaItems.includes('重命名') && !metaItems.includes('删除（移到回收站）'),
+  test('固定後設資料行的選單沒有重新命名/刪除', () => {
+    metaItems = ui.itemsOf(ui.rightClick(rowWith('文風指南')));
+    assert.ok(!metaItems.includes('重新命名') && !metaItems.includes('刪除（移到回收站）'),
       JSON.stringify(metaItems));
   });
 
-  test('固定元数据行的菜单有打开与刷新', () => {
-    assert.ok(metaItems.includes('打开') && metaItems.includes('刷新'), JSON.stringify(metaItems));
+  test('固定後設資料行的選單有開啟與重新整理', () => {
+    assert.ok(metaItems.includes('開啟') && metaItems.includes('重新整理'), JSON.stringify(metaItems));
   });
 
-  // 从前这一组底下还挂着一行「同步过期细纲 / 提取/更新角色卡」（单章摘要时代的遗留），
-  // 那四件事在别处都有入口：同步在页顶黄条，提取在「角色」组右键，两个批量在工具栏与「章节」组右键。
-  // 叙事线那一行计数也不在这里了：叙事线单占一个页签（叙事线重做第 8 个提交）。
-  test('「文风与摘要」只有全文大纲、文风指南两行，没有工具行', () => {
+  // 從前這一組底下還掛著一行「同步過期細綱 / 提取/更新角色卡」（單章摘要時代的遺留），
+  // 那四件事在別處都有入口：同步在頁頂黃條，提取在「角色」組右鍵，兩個批次在工具欄與「章節」組右鍵。
+  // 敘事線那一行計數也不在這裡了：敘事線單佔一個頁籤（敘事線重做第 8 個提交）。
+  test('「文風與摘要」只有全文大綱、文風指南兩行，沒有工具行', () => {
     const group = [...ui.doc.querySelectorAll('#projectBody .group')]
-      .find((g) => g.querySelector('.group-name')?.textContent === '文风与摘要');
+      .find((g) => g.querySelector('.group-name')?.textContent === '文風與摘要');
     const labels = [...group.querySelectorAll('.group-body > .row .row-label')].map((n) => n.textContent);
-    assert.deepEqual(labels, ['全文大纲', '文风指南'], group.outerHTML);
-    assert.ok(!group.textContent.includes('同步过期细纲') && !group.textContent.includes('提取/更新角色卡'), group.textContent);
+    assert.deepEqual(labels, ['全文大綱', '文風指南'], group.outerHTML);
+    assert.ok(!group.textContent.includes('同步過期細綱') && !group.textContent.includes('提取/更新角色卡'), group.textContent);
   });
 
-  // ---- 角色分组：批量更新/重建。
+  // ---- 角色分組：批次更新/重建。
   let charItems;
-  test('角色分组菜单含批量项', () => {
+  test('角色分組選單含批次項', () => {
     charItems = ui.itemsOf(ui.rightClick(groupHead));
-    assert.ok(charItems.includes('更新所有角色卡') && charItems.includes('从头重建所有角色卡'),
+    assert.ok(charItems.includes('更新所有角色卡') && charItems.includes('從頭重建所有角色卡'),
       JSON.stringify(charItems));
   });
 
-  test('角色分组菜单仍含新建项', () => {
+  test('角色分組選單仍含新建項', () => {
     assert.ok(charItems.includes('在此新建角色卡'), JSON.stringify(charItems));
   });
 
-  test('「更新所有角色卡」发 updateAllCards', () => {
+  test('「更新所有角色卡」發 updateAllCards', () => {
     ui.pick(ui.rightClick(groupHead), '更新所有角色卡');
     const upAll = ui.last('characterAction');
-    assert.ok(upAll, '没发出 characterAction');
+    assert.ok(upAll, '沒發出 characterAction');
     assert.equal(upAll.action, 'updateAllCards', JSON.stringify(upAll));
   });
 
-  test('「从头重建」发 rebuildAllCards', () => {
-    ui.pick(ui.rightClick(groupHead), '从头重建所有角色卡');
+  test('「從頭重建」發 rebuildAllCards', () => {
+    ui.pick(ui.rightClick(groupHead), '從頭重建所有角色卡');
     const reAll = ui.last('characterAction');
-    assert.ok(reAll, '没发出 characterAction');
+    assert.ok(reAll, '沒發出 characterAction');
     assert.equal(reAll.action, 'rebuildAllCards', JSON.stringify(reAll));
     ui.closeMenu();
   });
 
-  // ---- 设定分组：名录的三件维护（有待办才出现，见 loreCatalog.test.js）与手动新建并存。
-  // 整本重扫的「从已写正文生成/更新设定」删了。
+  // ---- 設定分組：名錄的三件維護（有待辦才出現，見 loreCatalog.test.js）與手動新建並存。
+  // 整本重掃的「從已寫正文生成/更新設定」刪了。
   let loreHead;
   let loreItems;
-  test('设定分组菜单：没有整本重扫', () => {
+  test('設定分組選單：沒有整本重掃', () => {
     loreHead = [...ui.doc.querySelectorAll('#projectBody .group-head')]
-      .find((n) => n.querySelector('.group-name').textContent === '设定');
+      .find((n) => n.querySelector('.group-name').textContent === '設定');
     loreItems = ui.itemsOf(ui.rightClick(loreHead));
-    assert.ok(!loreItems.some((i) => i.includes('从已写正文生成')), JSON.stringify(loreItems));
+    assert.ok(!loreItems.some((i) => i.includes('從已寫正文生成')), JSON.stringify(loreItems));
     ui.closeMenu();
   });
 
-  test('设定分组菜单仍含手动新建', () => {
-    assert.ok(loreItems.includes('在此新建设定'), JSON.stringify(loreItems));
+  test('設定分組選單仍含手動新建', () => {
+    assert.ok(loreItems.includes('在此新建設定'), JSON.stringify(loreItems));
   });
 
-  // ---- 章节分组：三个新建项 + 两个批量动作。
-  // 章节组没有 section（这一组按章号排、卷是一级目录，不给「在此新建章节」那一套），
-  // 所以它的菜单全部来自 extraItems，分隔线要自己写。
+  // ---- 章節分組：三個新建項 + 兩個批次動作。
+  // 章節組沒有 section（這一組按章號排、卷是一級目錄，不給「在此新建章節」那一套），
+  // 所以它的選單全部來自 extraItems，分隔線要自己寫。
   let plotHead;
   let plotGroupItems;
-  test('章节分组菜单含三个新建项与两个批量动作', () => {
+  test('章節分組選單含三個新建項與兩個批次動作', () => {
     plotHead = [...ui.doc.querySelectorAll('#projectBody .group-head')]
-      .find((n) => n.querySelector('.group-name').textContent === '章节');
+      .find((n) => n.querySelector('.group-name').textContent === '章節');
     plotGroupItems = ui.itemsOf(ui.rightClick(plotHead));
-    for (const label of ['新建细纲（接在最后一章之后）', '新建章节文件（直接粘正文用）', '新建卷…',
-      '批量拆细纲…', '批量写章…']) {
+    for (const label of ['新建細綱（接在最後一章之後）', '新建章節檔案（直接粘正文用）', '新建卷…',
+      '批次拆細綱…', '批次寫章…']) {
       assert.ok(plotGroupItems.includes(label), JSON.stringify(plotGroupItems));
     }
   });
 
-  // 批量拆场景随场景层一起删掉了。忘记删的话菜单里会多一条点了会炸的项。
-  test('章节分组菜单不再有批量拆场景', () => {
-    assert.ok(!plotGroupItems.some((x) => x.includes('拆分场景')), JSON.stringify(plotGroupItems));
+  // 批次拆場景隨場景層一起刪掉了。忘記刪的話選單裡會多一條點了會炸的項。
+  test('章節分組選單不再有批次拆場景', () => {
+    assert.ok(!plotGroupItems.some((x) => x.includes('拆分場景')), JSON.stringify(plotGroupItems));
     ui.closeMenu();
   });
 
-  // 卷 = 章节根下的一级目录（2026-10-23，原「在此新建文件夹」）：落点是章节根，后端据此认出是章节区、说法换成卷。
-  test('章节分组「新建卷…」发 newFolder，落点是章节根', () => {
+  // 卷 = 章節根下的一級目錄（2026-10-23，原「在此新建資料夾」）：落點是章節根，後端據此認出是章節區、說法換成卷。
+  test('章節分組「新建卷…」發 newFolder，落點是章節根', () => {
     ui.pick(ui.rightClick(plotHead), '新建卷…');
     const msg = ui.last('projectAction');
-    assert.ok(msg, '没发出 projectAction');
+    assert.ok(msg, '沒發出 projectAction');
     assert.equal(msg.action, 'newFolder', JSON.stringify(msg));
     assert.equal(msg.dir, 'chapters', JSON.stringify(msg));
     ui.closeMenu();
   });
 
   for (const [label, action] of [
-    ['新建细纲（接在最后一章之后）', 'newPlot'],
-    ['新建章节文件（直接粘正文用）', 'newChapter'],
+    ['新建細綱（接在最後一章之後）', 'newPlot'],
+    ['新建章節檔案（直接粘正文用）', 'newChapter'],
   ]) {
-    test(`「${label}」发 ${action}`, () => {
+    test(`「${label}」發 ${action}`, () => {
       ui.pick(ui.rightClick(plotHead), label);
       const msg = ui.last('projectAction');
-      assert.ok(msg, '没发出 projectAction');
+      assert.ok(msg, '沒發出 projectAction');
       assert.equal(msg.action, action, JSON.stringify(msg));
       ui.closeMenu();
     });
   }
 
-  // 页签条上原来的五颗按钮（补齐架构、拆细纲…、批量写章…、＋ 角色卡、＋ 设定）在分组右键里都有，拿掉了：
-  // 「故事架构」组右键「补齐架构（只补空白）」，「章节」组右键两个批量，「角色」「设定」组右键「在此新建…」。
-  test('页签条：五个页签、存档点（⚑）与刷新，没有别的按钮', () => {
+  // 頁籤條上原來的五顆按鈕（補齊架構、拆細綱…、批次寫章…、＋ 角色卡、＋ 設定）在分組右鍵裡都有，拿掉了：
+  // 「故事架構」組右鍵「補齊架構（只補空白）」，「章節」組右鍵兩個批次，「角色」「設定」組右鍵「在此新建…」。
+  test('頁籤條：五個頁籤、存檔點（⚑）與重新整理，沒有別的按鈕', () => {
     const bar = ui.doc.getElementById('projectTabs');
     const parts = [...bar.children].map((n) => (n.classList.contains('spacer') ? '~' : n.textContent.trim()));
-    assert.deepEqual(parts, ['概览', '章节', '角色', '设定', '叙事线', '~', '⚑', '⟳'], JSON.stringify(parts));
+    assert.deepEqual(parts, ['概覽', '章節', '角色', '設定', '敘事線', '~', '⚑', '⟳'], JSON.stringify(parts));
     assert.equal(bar.querySelectorAll('.chip-btn').length, 0);
     assert.deepEqual([...bar.querySelectorAll('[data-form]')].map((b) => b.dataset.form), ['checkpoints']);
     assert.deepEqual([...bar.querySelectorAll('[data-action]')].map((b) => b.dataset.action), ['refresh']);
   });
 
-  test('「刷新」发 refresh', () => {
+  test('「重新整理」發 refresh', () => {
     ui.sent.length = 0;
     ui.clickEl(ui.doc.querySelector('#projectTabs [data-action="refresh"]'));
     assert.equal(ui.last('projectAction')?.action, 'refresh', JSON.stringify(ui.sent));
   });
 
-  // 页里分组下面的空白也属于这一页：右键给的是这一页主分组的菜单，不只是一个「刷新」。
+  // 頁裡分組下面的空白也屬於這一頁：右鍵給的是這一頁主分組的選單，不只是一個「重新整理」。
   for (const [tab, label, action, dir] of [
     ['characters', '在此新建角色卡', 'newCharacter', '.novelwarden/characters'],
-    ['lore', '在此新建设定', 'newLore', '.novelwarden/lore'],
-    ['chapters', '新建细纲（接在最后一章之后）', 'newPlot', undefined],
-    ['threads', '从大纲补充叙事线', 'generateThreads', undefined],
+    ['lore', '在此新建設定', 'newLore', '.novelwarden/lore'],
+    ['chapters', '新建細綱（接在最後一章之後）', 'newPlot', undefined],
+    ['threads', '從大綱補充敘事線', 'generateThreads', undefined],
   ]) {
-    test(`「${tab}」页的空白处右键「${label}」发 ${action}`, () => {
+    test(`「${tab}」頁的空白處右鍵「${label}」發 ${action}`, () => {
       const panel = ui.doc.querySelector(`#projectBody [data-project-panel="${tab}"]`);
       ui.sent.length = 0;
       ui.pick(ui.rightClick(panel), label);
@@ -960,10 +960,10 @@ describe('工程页的右键菜单', { skip: JSDOM_SKIP }, () => {
 });
 
 /**
- * 工程页的五个页签（概览 / 章节 / 角色 / 设定 / 叙事线）：章节、角色、设定、叙事线各占一页，其余留在「概览」。
- * 五页全画、只露当前那一页；切页签不往后端要数据，重推树不换页。
+ * 工程頁的五個頁籤（概覽 / 章節 / 角色 / 設定 / 敘事線）：章節、角色、設定、敘事線各佔一頁，其餘留在「概覽」。
+ * 五頁全畫、只露當前那一頁；切頁籤不往後端要資料，重推樹不換頁。
  */
-describe('工程页的页签', { skip: JSDOM_SKIP }, () => {
+describe('工程頁的頁籤', { skip: JSDOM_SKIP }, () => {
   let ui;
   const panel = (tab) => ui.doc.querySelector(`#projectBody [data-project-panel="${tab}"]`);
   const tabBtn = (tab) => ui.doc.querySelector(`#projectTabs [data-project-tab="${tab}"]`);
@@ -975,31 +975,31 @@ describe('工程页的页签', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'project', tree: sampleTree() });
   });
 
-  test('缺省是「概览」，只露这一页', () => {
+  test('預設是「概覽」，只露這一頁', () => {
     assert.deepEqual(shown(), ['overview']);
     assert.equal(tabBtn('overview').getAttribute('aria-selected'), 'true');
     assert.ok(tabBtn('overview').classList.contains('active'));
   });
 
-  test('「概览」是故事架构与文风与摘要；章节、角色、设定、叙事线各在自己那一页', () => {
-    assert.deepEqual(groupsIn('overview'), ['故事架构', '文风与摘要']);
-    assert.deepEqual(groupsIn('chapters'), ['章节']);
-    assert.deepEqual(groupsIn('characters'), ['角色', '出场人物 · 未建卡']);
-    assert.equal(groupsIn('lore')[0], '设定');
-    assert.deepEqual(groupsIn('threads'), ['叙事线']);
+  test('「概覽」是故事架構與文風與摘要；章節、角色、設定、敘事線各在自己那一頁', () => {
+    assert.deepEqual(groupsIn('overview'), ['故事架構', '文風與摘要']);
+    assert.deepEqual(groupsIn('chapters'), ['章節']);
+    assert.deepEqual(groupsIn('characters'), ['角色', '出場人物 · 未建卡']);
+    assert.equal(groupsIn('lore')[0], '設定');
+    assert.deepEqual(groupsIn('threads'), ['敘事線']);
   });
 
-  test('没有作品名那一块', () => {
+  test('沒有作品名那一塊', () => {
     assert.equal(ui.doc.querySelector('#projectBody .project-head, #projectBody .project-title'), null);
   });
 
-  test('定稿进度横幅在「概览」页最上面', () => {
+  test('定稿進度橫幅在「概覽」頁最上面', () => {
     const banner = ui.doc.querySelector('#projectBody .banner-summary');
     assert.equal(banner?.parentElement, panel('overview'));
     assert.equal(panel('overview').firstElementChild, banner);
   });
 
-  test('点页签切页，不往后端发东西', () => {
+  test('點頁籤切頁，不往後端發東西', () => {
     ui.sent.length = 0;
     ui.clickEl(tabBtn('chapters'));
     assert.deepEqual(shown(), ['chapters']);
@@ -1010,13 +1010,13 @@ describe('工程页的页签', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual(ui.sent, []);
   });
 
-  test('重推树不换页', () => {
+  test('重推樹不換頁', () => {
     ui.post({ type: 'project', tree: sampleTree() });
     assert.deepEqual(shown(), ['chapters']);
     assert.ok(tabBtn('chapters').classList.contains('active'));
   });
 
-  test('方向键与 Home / End 在页签之间走', () => {
+  test('方向鍵與 Home / End 在頁籤之間走', () => {
     const press = (key) =>
       ui.doc.querySelector('#projectTabs .project-tab.active').dispatchEvent(new ui.window.KeyboardEvent('keydown', { key, bubbles: true }));
     press('ArrowRight');
@@ -1036,7 +1036,7 @@ describe('工程页的页签', { skip: JSDOM_SKIP }, () => {
     assert.equal(ui.doc.activeElement, tabBtn('overview'));
   });
 
-  test('还不是小说工程：页签条藏起来', () => {
+  test('還不是小說工程：頁籤條藏起來', () => {
     ui.post({ type: 'project', tree: { ...sampleTree(), initialized: false } });
     assert.ok(ui.doc.getElementById('projectTabs').classList.contains('hidden'));
     assert.ok(ui.doc.querySelector('#projectBody .project-empty'));
@@ -1045,7 +1045,7 @@ describe('工程页的页签', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('右键菜单的通用行为', { skip: JSDOM_SKIP }, () => {
+describe('右鍵選單的通用行為', { skip: JSDOM_SKIP }, () => {
   let ui;
   let historyMenu;
 
@@ -1053,73 +1053,73 @@ describe('右键菜单的通用行为', { skip: JSDOM_SKIP }, () => {
     ui = mount();
   });
 
-  // 其它页面只要基础刷新。
-  test('历史页右键弹出菜单', () => {
+  // 其它頁面只要基礎重新整理。
+  test('歷史頁右鍵彈出選單', () => {
     historyMenu = ui.rightClick(ui.doc.getElementById('pane-history'));
     assert.ok(historyMenu);
   });
 
-  test('历史页菜单只有「刷新」', () => {
-    assert.deepEqual(ui.itemsOf(historyMenu), ['刷新'], JSON.stringify(ui.itemsOf(historyMenu)));
+  test('歷史頁選單隻有「重新整理」', () => {
+    assert.deepEqual(ui.itemsOf(historyMenu), ['重新整理'], JSON.stringify(ui.itemsOf(historyMenu)));
   });
 
-  test('点「刷新」发 projectAction refresh', () => {
+  test('點「重新整理」發 projectAction refresh', () => {
     ui.clickEl(historyMenu.querySelector('button'));
     const refresh = ui.last('projectAction');
-    assert.ok(refresh, '没发出 projectAction');
+    assert.ok(refresh, '沒發出 projectAction');
     assert.equal(refresh.action, 'refresh', JSON.stringify(refresh));
   });
 
-  test('设置页右键也给刷新', () => {
-    assert.ok(ui.itemsOf(ui.rightClick(ui.doc.getElementById('pane-settings'))).includes('刷新'));
+  test('設定頁右鍵也給重新整理', () => {
+    assert.ok(ui.itemsOf(ui.rightClick(ui.doc.getElementById('pane-settings'))).includes('重新整理'));
   });
 
-  // 同时只允许一个菜单。
-  test('同时只存在一个菜单', () => {
+  // 同時只允許一個選單。
+  test('同時只存在一個選單', () => {
     ui.rightClick(ui.doc.getElementById('pane-chat'));
     assert.equal(ui.doc.querySelectorAll('.ctx-menu').length, 1);
   });
 
-  // 用绝对定位挂在 body 上，不会被内部滚动容器裁掉。
-  test('菜单挂在 body 上', () => {
+  // 用絕對定位掛在 body 上，不會被內部滾動容器裁掉。
+  test('選單掛在 body 上', () => {
     assert.equal(ui.doc.querySelector('.ctx-menu').parentElement, ui.doc.body);
   });
 
-  test('点空白处关闭菜单', () => {
+  test('點空白處關閉選單', () => {
     ui.closeMenu();
     assert.ok(!ui.doc.querySelector('.ctx-menu'));
   });
 
-  test('按 Esc 关闭菜单', () => {
+  test('按 Esc 關閉選單', () => {
     ui.rightClick(ui.doc.getElementById('pane-history'));
     ui.doc.dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     assert.ok(!ui.doc.querySelector('.ctx-menu'));
   });
 
-  // 气泡的 ⋯ 菜单与右键菜单是两个类名，互不干扰。
-  test('⋯ 菜单仍用 .msg-menu 且贴在气泡里', () => {
+  // 氣泡的 ⋯ 選單與右鍵選單是兩個類名，互不干擾。
+  test('⋯ 選單仍用 .msg-menu 且貼在氣泡裡', () => {
     ui.post({ type: 'session', session: emptySession() });
-    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '写一段') });
+    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '寫一段') });
     ui.clickEl(ui.bubble('u1').querySelector('.msg-menu-btn'));
     assert.ok(ui.doc.querySelector('.msg-menu'));
     assert.ok(!ui.doc.querySelector('.ctx-menu'));
   });
 
-  // ⋯ 菜单挂在气泡里、跟着一起滚，不该被滚动关掉——否则流式输出贴着底
-  // 跟滚时每来一段都 scrollToBottom()，菜单刚点开就没了。
-  test('滚动不关闭 ⋯ 菜单', () => {
+  // ⋯ 選單掛在氣泡裡、跟著一起滾，不該被滾動關掉——否則流式輸出貼著底
+  // 跟滾時每來一段都 scrollToBottom()，選單剛點開就沒了。
+  test('滾動不關閉 ⋯ 選單', () => {
     ui.doc.getElementById('messages').dispatchEvent(new ui.window.Event('scroll', { bubbles: true }));
     assert.ok(ui.doc.querySelector('.msg-menu'));
   });
 
-  test('右键会顶掉已打开的 ⋯ 菜单', () => {
+  test('右鍵會頂掉已開啟的 ⋯ 選單', () => {
     ui.rightClick(ui.doc.getElementById('pane-history'));
     assert.ok(!ui.doc.querySelector('.msg-menu'));
     assert.ok(ui.doc.querySelector('.ctx-menu'));
   });
 
-  // 右键菜单是 fixed 的，一滚就和目标行脱节，必须关掉。
-  test('滚动关闭右键菜单', () => {
+  // 右鍵選單是 fixed 的，一滾就和目標行脫節，必須關掉。
+  test('滾動關閉右鍵選單', () => {
     ui.doc.getElementById('messages').dispatchEvent(new ui.window.Event('scroll', { bubbles: true }));
     assert.ok(!ui.doc.querySelector('.ctx-menu'));
     ui.closeMenu();
@@ -1127,30 +1127,30 @@ describe('右键菜单的通用行为', { skip: JSDOM_SKIP }, () => {
 });
 
 /*
- * 原生右键菜单一律不许出现。
+ * 原生右鍵選單一律不許出現。
  *
- * 触控板双指点击走的事件序列与按实体右键不一样：有的环境发 contextmenu，
- * 有的只发 auxclick；页面里任何一处 stopPropagation() 又能让冒泡阶段的监听
- * 根本轮不到。三样都得挡住，漏一样就是「弹出原生右键菜单」。
+ * 觸控板雙指點選走的事件序列與按實體右鍵不一樣：有的環境發 contextmenu，
+ * 有的只發 auxclick；頁面裡任何一處 stopPropagation() 又能讓冒泡階段的監聽
+ * 根本輪不到。三樣都得擋住，漏一樣就是「彈出原生右鍵選單」。
  */
-describe('接管原生右键菜单', { skip: JSDOM_SKIP }, () => {
+describe('接管原生右鍵選單', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
     ui = mount();
   });
 
-  test('contextmenu 的默认行为被挡掉', () => {
+  test('contextmenu 的預設行為被擋掉', () => {
     const ev = new ui.window.MouseEvent('contextmenu', {
       bubbles: true, cancelable: true, clientX: 40, clientY: 60,
     });
     ui.doc.getElementById('pane-history').dispatchEvent(ev);
-    assert.ok(ev.defaultPrevented, '没有 preventDefault，原生菜单会弹出来');
+    assert.ok(ev.defaultPrevented, '沒有 preventDefault，原生選單會彈出來');
     ui.closeMenu();
   });
 
-  // 监听挂在 window 的捕获阶段，所以中途 stopPropagation 也拦不住它。
-  test('半路 stopPropagation 仍挡得住', () => {
+  // 監聽掛在 window 的捕獲階段，所以中途 stopPropagation 也攔不住它。
+  test('半路 stopPropagation 仍擋得住', () => {
     const pane = ui.doc.getElementById('pane-history');
     const swallow = (e) => e.stopPropagation();
     pane.addEventListener('contextmenu', swallow);
@@ -1159,32 +1159,32 @@ describe('接管原生右键菜单', { skip: JSDOM_SKIP }, () => {
     });
     pane.dispatchEvent(ev);
     pane.removeEventListener('contextmenu', swallow);
-    assert.ok(ev.defaultPrevented, '被 stopPropagation 挡掉了，原生菜单会弹出来');
-    assert.ok(ui.doc.querySelector('.ctx-menu'), '菜单也没弹出来');
+    assert.ok(ev.defaultPrevented, '被 stopPropagation 擋掉了，原生選單會彈出來');
+    assert.ok(ui.doc.querySelector('.ctx-menu'), '選單也沒彈出來');
     ui.closeMenu();
   });
 
-  // 只发 auxclick 的环境（部分浏览器/驱动下的双指点击）。落点与上一发不同，
-  // 所以不会被「同一次点击的尾巴」那条规则吃掉。
-  test('只发 auxclick 也弹自己的菜单', () => {
+  // 只發 auxclick 的環境（部分瀏覽器/驅動下的雙指點選）。落點與上一發不同，
+  // 所以不會被「同一次點選的尾巴」那條規則吃掉。
+  test('只發 auxclick 也彈自己的選單', () => {
     const ev = ui.auxClick(ui.doc.getElementById('pane-history'), 100, 120);
-    assert.ok(ev.defaultPrevented, 'auxclick 的默认行为没挡');
-    assert.ok(ui.doc.querySelector('.ctx-menu'), '没弹出菜单');
+    assert.ok(ev.defaultPrevented, 'auxclick 的預設行為沒擋');
+    assert.ok(ui.doc.querySelector('.ctx-menu'), '沒彈出選單');
   });
 
-  // 同一次点击的尾巴：contextmenu 之后紧跟的那发 auxclick 不该再弹一遍。
-  test('contextmenu 之后的 auxclick 不重复弹', () => {
+  // 同一次點選的尾巴：contextmenu 之後緊跟的那發 auxclick 不該再彈一遍。
+  test('contextmenu 之後的 auxclick 不重複彈', () => {
     ui.closeMenu();
     const menu = ui.rightClick(ui.doc.getElementById('pane-history'));
     ui.auxClick(ui.doc.getElementById('pane-history'));
     const now = ui.doc.querySelectorAll('.ctx-menu');
-    assert.equal(now.length, 1, `弹了 ${now.length} 个`);
-    assert.equal(now[0], menu, '菜单被重建了一遍');
+    assert.equal(now.length, 1, `彈了 ${now.length} 個`);
+    assert.equal(now[0], menu, '選單被重建了一遍');
     ui.closeMenu();
   });
 
-  // 中键（button 1）不接管：那是「新标签页打开」之类的默认行为，不是右键。
-  test('中键的 auxclick 不弹菜单', () => {
+  // 中鍵（button 1）不接管：那是「新標籤頁開啟」之類的預設行為，不是右鍵。
+  test('中鍵的 auxclick 不彈選單', () => {
     const ev = new ui.window.MouseEvent('auxclick', {
       bubbles: true, cancelable: true, button: 1, clientX: 40, clientY: 60,
     });

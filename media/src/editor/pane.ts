@@ -1,34 +1,34 @@
 /**
- * 一块编辑区。两块（正文 / 草稿）是这个工厂的两个实例，各自持有自己的
- * 文件表、冲突表与当前路径（预览还是编辑按文件记），互相不读对方的内部字段——
- * 它们之间只通过 store.ts 的 `panes` 表与 `paneOwning()` 打交道。
+ * 一塊編輯區。兩塊（正文 / 草稿）是這個工廠的兩個例項，各自持有自己的
+ * 檔案表、衝突表與當前路徑（預覽還是編輯按檔案記），互相不讀對方的內部欄位——
+ * 它們之間只通過 store.ts 的 `panes` 表與 `paneOwning()` 打交道。
  *
- * 保存带**内容 hash 乐观锁**：磁盘上的 hash 与编辑器基线不一致（作者在别处
- * 改过、或插件写入过）时保存被拒，弹冲突条让用户在「用磁盘版本覆盖编辑器」
- * 和「用编辑器内容强制保存」之间选。只有明确点了「强制保存」（页内对话框里再确认一次）
- * 才会发不带 `baseHash` 的 saveFile。
+ * 儲存帶**內容 hash 樂觀鎖**：磁碟上的 hash 與編輯器基線不一致（作者在別處
+ * 改過、或外掛寫入過）時儲存被拒，彈衝突條讓使用者在「用磁碟版本覆蓋編輯器」
+ * 和「用編輯器內容強制儲存」之間選。只有明確點了「強制儲存」（頁內對話方塊裡再確認一次）
+ * 才會發不帶 `baseHash` 的 saveFile。
  *
- * **不丢稿那几样不在这里写**：保存本身（同一份只有一个在路上、状态栏的保存状态、磁盘上没了先问）
- * 经 `saving.ts`，关标签时的三选一经 `closing.ts`，对话框是 `dialog.ts`；这里只认它们的几个函数。
- * 磁盘上的改动由 `diskSync.ts` 收来，经 `applyDiskChange` / `markGone` 落到标签上。
+ * **不丟稿那幾樣不在這裡寫**：儲存本身（同一份只有一個在路上、狀態列的儲存狀態、磁碟上沒了先問）
+ * 經 `saving.ts`，關標籤時的三選一經 `closing.ts`，對話方塊是 `dialog.ts`；這裡只認它們的幾個函式。
+ * 磁碟上的改動由 `diskSync.ts` 收來，經 `applyDiskChange` / `markGone` 落到標籤上。
  *
- * **撤销 / 重做是编辑器自己记的**（`history.ts`，每个文件一份）：打字在 `input` 里拿
- * `file.draft` 与 textarea 的当前值求差异记账；程序改写一律走 `applyEdit`；Ctrl+Z / Ctrl+Y /
- * Ctrl+Shift+Z 与 `beforeinput` 的 `historyUndo` / `historyRedo` 都拦下来走自己的，原生撤销不用。
- * 输入法组字期间不记，`compositionend` 之后整段记一步。
+ * **撤銷 / 重做是編輯器自己記的**（`history.ts`，每個檔案一份）：打字在 `input` 裡拿
+ * `file.draft` 與 textarea 的當前值求差異記賬；程式改寫一律走 `applyEdit`；Ctrl+Z / Ctrl+Y /
+ * Ctrl+Shift+Z 與 `beforeinput` 的 `historyUndo` / `historyRedo` 都攔下來走自己的，原生撤銷不用。
+ * 輸入法組字期間不記，`compositionend` 之後整段記一步。
  *
- * **标签**：名字与短标记来自后端（`OpenFile.label`），同名的加区分目录（`tabLabels.ts`）；标签条的滚动与
- * 「▾」在 `tabStrip.ts`，右键菜单里关闭类之后的那几项（移到另一侧、定位、复制路径、重新打开、固定）在
- * `tabMenu.ts`。**临时标签**（`OpenFile.preview`）的规矩都在 `upsertFile` / `slotFor` 与几处转正的地方。
+ * **標籤**：名字與短標記來自後端（`OpenFile.label`），同名的加區分目錄（`tabLabels.ts`）；標籤條的滾動與
+ * 「▾」在 `tabStrip.ts`，右鍵選單裡關閉類之後的那幾項（移到另一側、定位、複製路徑、重新開啟、固定）在
+ * `tabMenu.ts`。**臨時標籤**（`OpenFile.preview`）的規矩都在 `upsertFile` / `slotFor` 與幾處轉正的地方。
  *
- * **Markdown 预览按标签记**（`OpenFile.markdownPreview`，方案 D3）：切走再切回来还是原来那样，刷新恢复也记着（⚑）。
- * 切换走 `setPreviewing`（工具栏「预览 / 编辑」、`Ctrl+Shift+V`、查找与体检之类「先切回编辑」的地方）：编辑区视口
- * 顶上那一行与预览里对应的那一块互相滚到一处（`previewSync.ts`）。`activate` 只是切标签，不再顺手切回编辑。
+ * **Markdown 預覽按標籤記**（`OpenFile.markdownPreview`，方案 D3）：切走再切回來還是原來那樣，重新整理恢復也記著（⚑）。
+ * 切換走 `setPreviewing`（工具欄「預覽 / 編輯」、`Ctrl+Shift+V`、查詢與體檢之類「先切回編輯」的地方）：編輯區視口
+ * 頂上那一行與預覽裡對應的那一塊互相滾到一處（`previewSync.ts`）。`activate` 只是切標籤，不再順手切回編輯。
  *
- * **特殊标签**（叙事线重做三期，`store.ts` 的 `SpecialTab`：「叙事线总览」）：不对应文件的标签排在文件标签前面。切过去时
- * `activePath` 是 null——这一块此刻没有当前文件，对当前文件做事的模块都当没开文件；画的东西由那个模块挂在 `.ed-stage` 上
- * （`show` / `hide`），这里只管标签、谁在显示、刷新恢复。切回一份文件（`activate`、从别处打开一份到这一块）它就藏起来；
- * 关掉它回到切过去之前的那一份。
+ * **特殊標籤**（敘事線重做三期，`store.ts` 的 `SpecialTab`：「敘事線總覽」）：不對應檔案的標籤排在檔案標籤前面。切過去時
+ * `activePath` 是 null——這一塊此刻沒有當前檔案，對當前檔案做事的模組都當沒開檔案；畫的東西由那個模組掛在 `.ed-stage` 上
+ * （`show` / `hide`），這裡只管標籤、誰在顯示、重新整理恢復。切回一份檔案（`activate`、從別處開啟一份到這一塊）它就藏起來；
+ * 關掉它回到切過去之前的那一份。
  */
 import { setHidden } from '../dom';
 import { onContextMenu, toast } from '../globals';
@@ -97,18 +97,18 @@ import { createTabStrip, tabText } from './tabStrip';
 import { shortcutLabel } from './shortcuts';
 import { renderWordStatus } from './stats';
 
-/** 哪些扩展名有 Markdown 可预览。 */
+/** 哪些副檔名有 Markdown 可預覽。 */
 const MARKDOWN_RE = /\.(md|markdown)$/i;
 /**
- * 哪些用等宽字体。**预览与等宽是两件事**：章节可以是 .txt / 无扩展名，
- * 那时没有 Markdown 可预览（隐藏「预览」按钮），但它仍是正文，该用正文字体；
- * 只有 .json / .yml 这类结构化文件才加 .mono。
+ * 哪些用等寬字型。**預覽與等寬是兩件事**：章節可以是 .txt / 無副檔名，
+ * 那時沒有 Markdown 可預覽（隱藏「預覽」按鈕），但它仍是正文，該用正文字型；
+ * 只有 .json / .yml 這類結構化檔案才加 .mono。
  */
 const CODE_RE = /\.(json|ya?ml)$/i;
 
 /**
- * 哪些原生输入算「打字」，可以与前后几下并成一步撤销。粘贴、拖放、剪切各自一步；
- * 没有 `inputType` 的（老浏览器、测试里合成的事件）当打字。
+ * 哪些原生輸入算「打字」，可以與前後幾下併成一步撤銷。貼上、拖放、剪下各自一步；
+ * 沒有 `inputType` 的（老瀏覽器、測試裡合成的事件）當打字。
  */
 const TYPING_INPUT = new Set([
   'insertText',
@@ -119,8 +119,8 @@ const TYPING_INPUT = new Set([
 ]);
 
 /**
- * textarea 的 value 会把 `\r\n` / `\r` 归一成 `\n`。比较「编辑区里显示的是不是这一份」、
- * 算 `applyEdit` 的下标都得用同一个口径——`file.draft` 刚从磁盘读来时可能还带着 `\r\n`。
+ * textarea 的 value 會把 `\r\n` / `\r` 歸一成 `\n`。比較「編輯區裡顯示的是不是這一份」、
+ * 算 `applyEdit` 的下標都得用同一個口徑——`file.draft` 剛從磁碟讀來時可能還帶著 `\r\n`。
  */
 function viewText(text: string): string {
   return text.includes('\r') ? text.replace(/\r\n?/g, '\n') : text;
@@ -133,32 +133,32 @@ export function createPane(
 ): Pane {
   const files = new Map<string, OpenFile>();
   /**
-   * 冲突时暂存的磁盘版本，供「用磁盘版本覆盖」使用。
-   * `reopen`：不是保存撞上的，是已打开的文件被再次打开（多半是刚落盘了新产物）
-   * 而编辑器里还有未保存的修改——文案不能说「这次保存已取消」。
+   * 衝突時暫存的磁碟版本，供「用磁碟版本覆蓋」使用。
+   * `reopen`：不是儲存撞上的，是已開啟的檔案被再次開啟（多半是剛落盤了新產物）
+   * 而編輯器裡還有未儲存的修改——文案不能說「這次儲存已取消」。
    */
   const conflicts = new Map<string, { text: string; hash: string; reopen?: boolean }>();
   /**
-   * 见过、但还没载入编辑器的那份磁盘版本的 hash（保存撞上冲突、再次打开、核对磁盘时知道的）。
-   * 冲突条会因为作者接着打字而收起，这一笔不跟着丢：核对磁盘时带它，同一个新版不再报第二次。
-   * 基线换了（载入了、存成了）就清掉。
+   * 見過、但還沒載入編輯器的那份磁碟版本的 hash（儲存撞上衝突、再次開啟、核對磁碟時知道的）。
+   * 衝突條會因為作者接著打字而收起，這一筆不跟著丟：核對磁碟時帶它，同一個新版不再報第二次。
+   * 基線換了（載入了、存成了）就清掉。
    */
   const diskSeen = new Map<string, string>();
   /**
-   * 作者点过「还原」、正在等后端回磁盘版的路径。只有它们的 editorOpen 才允许
-   * 冲掉未保存的修改；其余的 editorOpen 一律当成「再打开一次」。
+   * 作者點過「還原」、正在等後端回磁碟版的路徑。只有它們的 editorOpen 才允許
+   * 沖掉未儲存的修改；其餘的 editorOpen 一律當成「再開啟一次」。
    */
   const reloading = new Set<string>();
-  /** 开着的特殊标签（`store.ts` 的 `SpecialTab`），按打开的先后。 */
+  /** 開著的特殊標籤（`store.ts` 的 `SpecialTab`），按開啟的先後。 */
   const specials: string[] = [];
-  /** 正显示着的特殊标签。不是 null 时 `activePath` 是 null。 */
+  /** 正顯示著的特殊標籤。不是 null 時 `activePath` 是 null。 */
   let shownSpecial: string | null = null;
-  /** 切到特殊标签之前的那份文件：关掉特殊标签时回到它（刷新恢复时是存下来的那一份）。 */
+  /** 切到特殊標籤之前的那份檔案：關掉特殊標籤時回到它（重新整理恢復時是存下來的那一份）。 */
   let specialReturn: string | null = null;
   /**
-   * 正文区（或预览）此刻显示的是哪一份：它的光标与滚动活在 DOM 里。`renderAll` 换成另一份时先把这一份的留住、再把那一份的
-   * 放回去——切换不只经 `activate`（点标签），工程页 / 文件页 / 「转到…」再点一份开着的、新开一份、关掉当前的露出旁边那一份，
-   * 都只改 `activePath` 再重画。从前这些路上 textarea 沿用上一份的滚动偏移，滚动事件还把它记成了这一份的位置。
+   * 正文區（或預覽）此刻顯示的是哪一份：它的游標與滾動活在 DOM 裡。`renderAll` 換成另一份時先把這一份的留住、再把那一份的
+   * 放回去——切換不只經 `activate`（點標籤），工程頁 / 檔案頁 / 「轉到…」再點一份開著的、新開一份、關掉當前的露出旁邊那一份，
+   * 都只改 `activePath` 再重畫。從前這些路上 textarea 沿用上一份的滾動偏移，滾動事件還把它記成了這一份的位置。
    */
   let shown: OpenFile | undefined;
 
@@ -204,12 +204,12 @@ export function createPane(
     return pane.activePath ? files.get(pane.activePath) : undefined;
   }
 
-  /** 这份文件有没有 Markdown 可预览（`.txt` / 无扩展名的章节没有，隐藏「预览」按钮）。 */
+  /** 這份檔案有沒有 Markdown 可預覽（`.txt` / 無副檔名的章節沒有，隱藏「預覽」按鈕）。 */
   function canPreview(file: OpenFile | undefined): boolean {
     return !!file && MARKDOWN_RE.test(file.path);
   }
 
-  /** 这份文件此刻是不是在预览里（每个标签各记各的）。 */
+  /** 這份檔案此刻是不是在預覽裡（每個標籤各記各的）。 */
   function previewing(file: OpenFile | undefined): boolean {
     return !!file?.markdownPreview && canPreview(file);
   }
@@ -219,7 +219,7 @@ export function createPane(
   }
 
   function snapshot() {
-    // 不进刷新恢复的特殊标签（对比标签）不记；正显示着的是它时照样记切过去之前的那一份，刷新后回到那份文件。
+    // 不進重新整理恢復的特殊標籤（對比標籤）不記；正顯示著的是它時照樣記切過去之前的那一份，重新整理後回到那份檔案。
     const kept = specials.filter((id) => !specialTabOf(id)?.transient);
     return {
       open: [...files.values()].map((f) => ({
@@ -229,21 +229,21 @@ export function createPane(
         preview: f.preview || undefined,
         markdownPreview: f.markdownPreview || undefined,
       })),
-      // 特殊标签正显示着：记切过去之前的那一份，刷新之后关掉特殊标签还回得去。
+      // 特殊標籤正顯示著：記切過去之前的那一份，重新整理之後關掉特殊標籤還回得去。
       active: shownSpecial ? (specialReturn && files.has(specialReturn) ? specialReturn : null) : pane.activePath,
       ...(kept.length > 0 ? { specials: kept } : {}),
       ...(shownSpecial && kept.includes(shownSpecial) ? { special: shownSpecial } : {}),
     };
   }
 
-  // ---------------------------------------------------------------- 标签
+  // ---------------------------------------------------------------- 標籤
 
-  /** 标签条：横着滚、当前那个滚进视野、末尾的「▾」（`tabStrip.ts`）。 */
+  /** 標籤條：橫著滾、當前那個滾進視野、末尾的「▾」（`tabStrip.ts`）。 */
   const strip = createTabStrip(el.tabs);
-  // 窄屏上「▾」后面再挂「↶」「↷」「保存」「⋯」，工具栏那一行收起（narrowTools.ts）。
+  // 窄屏上「▾」後面再掛「↶」「↷」「儲存」「⋯」，工具欄那一行收起（narrowTools.ts）。
   installNarrowTools(el, pane);
 
-  /** 每份文件在标签上怎么写：两块编辑区开着的放在一起比，同名的加区分目录。 */
+  /** 每份檔案在標籤上怎麼寫：兩塊編輯區開著的放在一起比，同名的加區分目錄。 */
   function currentNames(): Map<string, TabName> {
     const all = new Map(allOpenFiles().map((f) => [f.path, f]));
     for (const f of files.values()) {
@@ -257,7 +257,7 @@ export function createPane(
     const names = currentNames();
     let active: HTMLElement | null = null;
     strip.list.replaceChildren();
-    // 特殊标签排在文件标签前面（⚑）：它是这一块的一张「总表」，不随开开关关的文件挪位置。
+    // 特殊標籤排在檔案標籤前面（⚑）：它是這一塊的一張「總表」，不隨開開關關的檔案挪位置。
     for (const id of specials) {
       const tab = buildSpecialTab(id);
       if (tab) {
@@ -278,7 +278,7 @@ export function createPane(
     strip.afterRender(keep, active);
   }
 
-  /** 特殊标签：没有脏标记、没有类型短标记；点了切过去，× 与中键关掉，右键「关闭」加它自己给的几项。 */
+  /** 特殊標籤：沒有髒標記、沒有型別短標記；點了切過去，× 與中鍵關掉，右鍵「關閉」加它自己給的幾項。 */
   function buildSpecialTab(id: string): HTMLElement | undefined {
     const spec = specialTabOf(id);
     if (!spec) {
@@ -299,7 +299,7 @@ export function createPane(
     const close = document.createElement('button');
     close.className = 'ed-tab-close';
     close.textContent = '×';
-    close.title = '关闭';
+    close.title = '關閉';
     close.addEventListener('click', (e) => {
       e.stopPropagation();
       closeSpecial(id);
@@ -313,7 +313,7 @@ export function createPane(
         closeSpecial(id);
       }
     });
-    onContextMenu(tab, () => [{ label: '关闭', run: () => closeSpecial(id) }, ...(spec.menu?.(pane) ?? [])]);
+    onContextMenu(tab, () => [{ label: '關閉', run: () => closeSpecial(id) }, ...(spec.menu?.(pane) ?? [])]);
     return tab;
   }
 
@@ -321,7 +321,7 @@ export function createPane(
     if (!specialTabOf(id)) {
       return;
     }
-    // 同一个特殊标签同一时刻只在一块里：开在另一块里的先从那边拿走。
+    // 同一個特殊標籤同一時刻只在一塊裡：開在另一塊裡的先從那邊拿走。
     const elsewhere = paneWithSpecial(id);
     if (elsewhere && elsewhere !== pane) {
       elsewhere.closeSpecial(id, { quiet: true });
@@ -330,7 +330,7 @@ export function createPane(
       specials.push(id);
     }
     if (!opts?.background && shownSpecial !== id) {
-      // 切走前把光标位置留住、正在打的那一步收口（同切标签）。
+      // 切走前把游標位置留住、正在打的那一步收口（同切標籤）。
       stashCaret();
       activeFile()?.history.seal();
       if (pane.activePath) {
@@ -363,7 +363,7 @@ export function createPane(
     }
     const back = specialReturn && files.has(specialReturn) ? specialReturn : [...files.keys()].pop();
     if (wasShown && back && !opts?.quiet) {
-      // 回到切过去之前的那一份：光标、滚动、预览都照它切走时的样子（`activate` 那一套）。
+      // 回到切過去之前的那一份：游標、滾動、預覽都照它切走時的樣子（`activate` 那一套）。
       specialReturn = null;
       activate(back);
       refreshOtherTabs(pane);
@@ -373,7 +373,7 @@ export function createPane(
     if (wasShown) {
       pane.activePath = back ?? null;
       specialReturn = null;
-      // 文件都关了、还开着别的特殊标签：显示最后那一个。
+      // 檔案都關了、還開著別的特殊標籤：顯示最後那一個。
       if (!pane.activePath && specials.length > 0) {
         shownSpecial = specials[specials.length - 1];
       }
@@ -386,7 +386,7 @@ export function createPane(
     }
   }
 
-  /** 这一块认下一份文件当当前的：正显示着的特殊标签藏起来。 */
+  /** 這一塊認下一份檔案噹噹前的：正顯示著的特殊標籤藏起來。 */
   function leaveSpecial(): void {
     if (shownSpecial) {
       shownSpecial = null;
@@ -399,16 +399,16 @@ export function createPane(
     tab.className = 'ed-tab';
     tab.classList.toggle('active', file.path === pane.activePath);
     tab.classList.toggle('dirty', file.draft !== file.text);
-    // 临时标签：名字斜体，下一次单击打开别的文件时这个位置被换掉。
+    // 臨時標籤：名字斜體，下一次單擊開啟別的檔案時這個位置被換掉。
     tab.classList.toggle('preview', !!file.preview);
     tab.dataset.path = file.path;
-    tab.title = file.preview ? `${file.path}\n临时标签：编辑、保存或双击就会固定下来` : file.path;
+    tab.title = file.preview ? `${file.path}\n臨時標籤：編輯、儲存或雙擊就會固定下來` : file.path;
 
     const dot = document.createElement('span');
     dot.className = 'ed-tab-dirty';
     tab.appendChild(dot);
 
-    // 类型短标记（细纲 / 草稿 / 角色……，后端给的）：同一章的正文、细纲、草稿一眼分得开。
+    // 型別短標記（細綱 / 草稿 / 角色……，後端給的）：同一章的正文、細綱、草稿一眼分得開。
     if (label.tag) {
       const tag = document.createElement('span');
       tag.className = 'ed-tab-tag';
@@ -421,7 +421,7 @@ export function createPane(
     name.textContent = label.title;
     tab.appendChild(name);
 
-    // 仍然同名的（同一种、不同目录）：后面淡一点写区分它们的最短目录。
+    // 仍然同名的（同一種、不同目錄）：後面淡一點寫區分它們的最短目錄。
     if (label.desc) {
       const desc = document.createElement('span');
       desc.className = 'ed-tab-desc';
@@ -429,11 +429,11 @@ export function createPane(
       tab.appendChild(desc);
     }
 
-    // 磁盘上被改了而编辑器里的修改没覆盖、或磁盘上已经没有这一份：标签上挂一个醒目的「!」（不切过去）。
+    // 磁碟上被改了而編輯器裡的修改沒覆蓋、或磁碟上已經沒有這一份：標籤上掛一個醒目的「!」（不切過去）。
     const flag = conflicts.has(file.path)
-      ? '磁盘上已被改动，编辑器里的修改没有覆盖'
+      ? '磁碟上已被改動，編輯器裡的修改沒有覆蓋'
       : file.gone
-        ? '磁盘上已经没有这个文件（被删或改名）'
+        ? '磁碟上已經沒有這個檔案（被刪或改名）'
         : '';
     tab.classList.toggle('conflict', conflicts.has(file.path));
     tab.classList.toggle('gone', !!file.gone);
@@ -449,7 +449,7 @@ export function createPane(
     const close = document.createElement('button');
     close.className = 'ed-tab-close';
     close.textContent = '×';
-    close.title = '关闭';
+    close.title = '關閉';
     close.addEventListener('click', (e) => {
       e.stopPropagation();
       closeFile(file.path);
@@ -457,15 +457,15 @@ export function createPane(
     tab.appendChild(close);
 
     tab.addEventListener('click', (e) => {
-      // 双击临时标签：转正。点第一下 activate 就把整排标签重画了，第二下落在新的那个元素上——
-      // 所以按这一下的点击次数认，不指望 dblclick 落在同一个元素上（下面那个 dblclick 是兜底）。
+      // 雙擊臨時標籤：轉正。點第一下 activate 就把整排標籤重畫了，第二下落在新的那個元素上——
+      // 所以按這一下的點選次數認，不指望 dblclick 落在同一個元素上（下面那個 dblclick 是兜底）。
       if (e.detail >= 2 && file.preview) {
         file.preview = false;
       }
       activate(file.path);
     });
     tab.addEventListener('dblclick', () => pin(file.path));
-    // 中键关闭，与浏览器/编辑器一致。
+    // 中鍵關閉，與瀏覽器/編輯器一致。
     tab.addEventListener('auxclick', (e) => {
       if (e.button === 1) {
         e.preventDefault();
@@ -477,8 +477,8 @@ export function createPane(
   }
 
   /**
-   * 标签右键菜单：关闭当前/左侧/右侧/其它。
-   * 批量关闭**合成一个对话框问一次**（几份没保存就列出几份），见 `closing.ts`。
+   * 標籤右鍵選單：關閉當前/左側/右側/其它。
+   * 批次關閉**合成一個對話方塊問一次**（幾份沒儲存就列出幾份），見 `closing.ts`。
    */
   function tabMenuItems(anchor: string): MenuItem[] {
     const order = [...files.keys()];
@@ -487,24 +487,24 @@ export function createPane(
     const right = order.slice(idx + 1);
     const closeMany = (paths: string[]) => void requestClose(pane, paths);
 
-    const items: MenuItem[] = [{ label: '关闭', run: () => closeFile(anchor) }];
+    const items: MenuItem[] = [{ label: '關閉', run: () => closeFile(anchor) }];
     if (left.length > 0) {
-      items.push({ label: `关闭左侧（${left.length}）`, run: () => closeMany(left) });
+      items.push({ label: `關閉左側（${left.length}）`, run: () => closeMany(left) });
     }
     if (right.length > 0) {
-      items.push({ label: `关闭右侧（${right.length}）`, run: () => closeMany(right) });
+      items.push({ label: `關閉右側（${right.length}）`, run: () => closeMany(right) });
     }
     if (left.length + right.length > 0) {
       items.push({
-        label: `关闭其它（${left.length + right.length}）`,
+        label: `關閉其它（${left.length + right.length}）`,
         run: () => closeMany([...left, ...right]),
       });
     }
-    // 移到另一侧、在文件页中定位、复制相对路径、重新打开刚关闭的、固定（tabMenu.ts）。
+    // 移到另一側、在檔案頁中定位、複製相對路徑、重新開啟剛關閉的、固定（tabMenu.ts）。
     return [...items, ...extraTabItems(pane, anchor)];
   }
 
-  /** 临时标签转正。 */
+  /** 臨時標籤轉正。 */
   function pin(path: string): void {
     const file = files.get(path);
     if (!file?.preview) {
@@ -520,9 +520,9 @@ export function createPane(
     if (!file) {
       return;
     }
-    // 不抢焦点地切（上一章 / 下一章时另一块里配对的那一份）：不认下「当前这一块」，焦点留在原处。
+    // 不搶焦點地切（上一章 / 下一章時另一塊裡配對的那一份）：不認下「當前這一塊」，焦點留在原處。
     const quiet = opts?.focus === false;
-    // 切走前把光标位置留住，切回来还在原处；正在打的那一步也收口，切回来再打另起一步。
+    // 切走前把游標位置留住，切回來還在原處；正在打的那一步也收口，切回來再打另起一步。
     stashCaret();
     activeFile()?.history.seal();
     leaveSpecial();
@@ -533,13 +533,13 @@ export function createPane(
     renderAll();
     announceActive();
     if (previewing(file)) {
-      // 这一份切走时在预览里：照旧在预览里，滚到切走时的位置。
+      // 這一份切走時在預覽裡：照舊在預覽裡，滾到切走時的位置。
       el.preview.scrollTop = file.previewScrollTop ?? 0;
       if (!quiet) {
         el.preview.focus({ preventScroll: true });
       }
     } else {
-      // 手机上切过来只是看：不把焦点放进正文区（一聚焦就弹软键盘），点进正文才打字。
+      // 手機上切過來只是看：不把焦點放進正文區（一聚焦就彈軟鍵盤），點進正文才打字。
       if (!quiet && !avoidSoftKeyboard()) {
         el.area.focus();
       }
@@ -551,7 +551,7 @@ export function createPane(
     persist();
   }
 
-  /** 切走之前把这一份的光标与滚动（在预览里就是预览的滚动）留住。 */
+  /** 切走之前把這一份的游標與滾動（在預覽裡就是預覽的滾動）留住。 */
   function stashCaret(): void {
     const file = activeFile();
     if (file) {
@@ -559,7 +559,7 @@ export function createPane(
     }
   }
 
-  /** 把正显示着的这一份的光标与滚动从 DOM 读回它身上。textarea / 预览藏着时（特殊标签盖着）滚动读出来是 0，不读。 */
+  /** 把正顯示著的這一份的游標與滾動從 DOM 讀回它身上。textarea / 預覽藏著時（特殊標籤蓋著）滾動讀出來是 0，不讀。 */
   function stashView(file: OpenFile): void {
     if (previewing(file)) {
       if (!el.preview.classList.contains('hidden')) {
@@ -573,7 +573,7 @@ export function createPane(
     }
   }
 
-  /** 换上这一份之后把它的光标与滚动放回去（新开的是 0：从顶上开始，不沿用上一份的偏移）。先落光标、再滚。 */
+  /** 換上這一份之後把它的游標與滾動放回去（新開的是 0：從頂上開始，不沿用上一份的偏移）。先落游標、再滾。 */
   function restoreView(file: OpenFile): void {
     if (previewing(file)) {
       el.preview.scrollTop = file.previewScrollTop ?? 0;
@@ -585,10 +585,10 @@ export function createPane(
   }
 
   /**
-   * 当前这一份切到预览 / 切回编辑（工具栏「预览 / 编辑」、`Ctrl+Shift+V`，以及查找、体检、对比合并这些「先切回编辑」的地方）。
-   * 两边滚到同一处：编辑区视口顶上那一行（带小数，一段折成几行时滚到一半就是一半）在预览里对应的那一块停在顶上，反过来同理
-   * （`previewSync.ts`）。切回编辑时光标留在原处——它要是不在视口里了，就放到视口顶上那一行的行首（⚑），免得一打字又跳回去。
-   * 没有文件、要预览的不是 Markdown 时返回 false。`focus: false`：焦点不动（缺省进正文区 / 预览）。
+   * 當前這一份切到預覽 / 切回編輯（工具欄「預覽 / 編輯」、`Ctrl+Shift+V`，以及查詢、體檢、對比合併這些「先切回編輯」的地方）。
+   * 兩邊滾到同一處：編輯區視口頂上那一行（帶小數，一段折成幾行時滾到一半就是一半）在預覽裡對應的那一塊停在頂上，反過來同理
+   * （`previewSync.ts`）。切回編輯時游標留在原處——它要是不在視口裡了，就放到視口頂上那一行的行首（⚑），免得一打字又跳回去。
+   * 沒有檔案、要預覽的不是 Markdown 時返回 false。`focus: false`：焦點不動（預設進正文區 / 預覽）。
    */
   function setPreviewing(on: boolean, opts?: { focus?: boolean }): boolean {
     const file = activeFile();
@@ -624,7 +624,7 @@ export function createPane(
       if (caretLine < Math.floor(target.top) || caretLine > target.bottom) {
         file.caret = starts[Math.min(starts.length - 1, Math.ceil(target.top - 1e-6))];
       }
-      // 先落光标、再滚：落选区时浏览器可能自己把光标滚进视野。
+      // 先落游標、再滾：落選區時瀏覽器可能自己把游標滾進視野。
       el.area.setSelectionRange(file.caret, file.caret);
       el.area.scrollTop = target.scrollTop;
       file.scrollTop = el.area.scrollTop;
@@ -634,7 +634,7 @@ export function createPane(
   }
 
   function closeFile(path: string): void {
-    // 未保存内容不能一点就没：先问「保存 / 不保存 / 取消」，保存的要等回执回来才关。
+    // 未儲存內容不能一點就沒：先問「儲存 / 不儲存 / 取消」，儲存的要等回執回來才關。
     void requestClose(pane, [path]);
   }
 
@@ -643,7 +643,7 @@ export function createPane(
     const names = currentNames();
     for (const path of paths) {
       if (files.has(path)) {
-        // 作者亲手关的才进「最近关闭」（右键「重新打开刚关闭的」、「▾」列表底下）。
+        // 作者親手關的才進「最近關閉」（右鍵「重新開啟剛關閉的」、「▾」列表底下）。
         const name = names.get(path);
         noteClosed({ path, pane: pane.id, title: name ? tabText(name) : path });
         dropFile(path);
@@ -667,8 +667,8 @@ export function createPane(
     if (file === activeFile()) {
       stashCaret();
     }
-    // 搬家不是关闭：未保存内容与撤销历史都带走，接手的那一块接得上就接。冲突条、见过的磁盘新版、
-    // 「磁盘上没了」与光标只有页面里直接搬（`moveOut`，`local`）才接——经后端重读来的那一份可能已经不是它们说的那一份。
+    // 搬家不是關閉：未儲存內容與撤銷歷史都帶走，接手的那一塊接得上就接。衝突條、見過的磁碟新版、
+    // 「磁碟上沒了」與游標只有頁面裡直接搬（`moveOut`，`local`）才接——經後端重讀來的那一份可能已經不是它們說的那一份。
     const carry: CarriedDraft = {
       history: file.history,
       historyText: file.draft,
@@ -695,7 +695,7 @@ export function createPane(
     if (!file) {
       return undefined;
     }
-    // 接手的那一块收到的就是这一份的基线（不经后端重读），未保存内容按 hash 对得上原样接上。
+    // 接手的那一塊收到的就是這一份的基線（不經後端重讀），未儲存內容按 hash 對得上原樣接上。
     const view: EditorFileView = {
       path: file.path,
       name: file.name,
@@ -715,7 +715,7 @@ export function createPane(
     return { view, carried: { ...carried, hash: file.hash, local: true } };
   }
 
-  /** 这一份要从这块里拿走了：光标与滚动记下来（正显示着的先从 DOM 读回来），这一页里再打开它时放回去。 */
+  /** 這一份要從這塊裡拿走了：游標與滾動記下來（正顯示著的先從 DOM 讀回來），這一頁裡再開啟它時放回去。 */
   function keepView(path: string): void {
     const file = files.get(path);
     if (!file) {
@@ -734,7 +734,7 @@ export function createPane(
     diskSeen.delete(path);
     if (pane.activePath === path) {
       pane.activePath = [...files.keys()].pop() || null;
-      // 文件都关了、还开着特殊标签：切到它（同关掉一个标签之后显示旁边那一个）。
+      // 檔案都關了、還開著特殊標籤：切到它（同關掉一個標籤之後顯示旁邊那一個）。
       if (!pane.activePath && !shownSpecial && specials.length > 0) {
         shownSpecial = specials[specials.length - 1];
       }
@@ -746,13 +746,13 @@ export function createPane(
 
   function renderAll(): void {
     const file = activeFile();
-    // 换了一份（或没了）：DOM 里还是上一份，先把它的光标与滚动留住；换上之后在下面放回这一份的。
+    // 換了一份（或沒了）：DOM 裡還是上一份，先把它的游標與滾動留住；換上之後在下面放回這一份的。
     const switched = file !== shown;
     if (switched && shown) {
       stashView(shown);
     }
     renderTabs();
-    // 特殊标签：正显示着的那一个挂上、露出来，其余藏起来（画什么由那个模块管）。
+    // 特殊標籤：正顯示著的那一個掛上、露出來，其餘藏起來（畫什麼由那個模組管）。
     for (const id of specials) {
       const spec = specialTabOf(id);
       if (id === shownSpecial) {
@@ -771,17 +771,17 @@ export function createPane(
     const conflict = file ? conflicts.get(file.path) : undefined;
     const gone = !!file?.gone && !conflict;
     setHidden(el.conflict, !conflict && !gone);
-    // 磁盘上已经没有这一份：没有磁盘版本可载入。保存（含冲突条上的强制保存）会先问要不要在原路径重建。
+    // 磁碟上已經沒有這一份：沒有磁碟版本可載入。儲存（含衝突條上的強制儲存）會先問要不要在原路徑重建。
     setHidden(el.conflictTake, gone);
     if (gone && file) {
       el.conflictText.textContent =
-        `磁盘上已经没有「${file.name}」这个文件（被删或改名）。编辑器里的内容还在；` +
-        '要保存的话，会先问你要不要在原路径重建。';
+        `磁碟上已經沒有「${file.name}」這個檔案（被刪或改名）。編輯器裡的內容還在；` +
+        '要儲存的話，會先問你要不要在原路徑重建。';
     } else if (conflict && file) {
       el.conflictText.textContent = conflict.reopen
-        ? `「${file.name}」在磁盘上已被改动（刚写入了新内容，或在别处改过），编辑器里还有未保存的修改，没有覆盖。`
-        : `「${file.name}」在磁盘上已被改动（可能是你在别处编辑，或插件写入了内容）。` +
-          '为不覆盖别人的修改，这次保存已取消。';
+        ? `「${file.name}」在磁碟上已被改動（剛寫入了新內容，或在別處改過），編輯器裡還有未儲存的修改，沒有覆蓋。`
+        : `「${file.name}」在磁碟上已被改動（可能是你在別處編輯，或外掛寫入了內容）。` +
+          '為不覆蓋別人的修改，這次儲存已取消。';
     }
 
     if (!file) {
@@ -796,14 +796,14 @@ export function createPane(
       return;
     }
 
-    // 面包屑（后端给的称呼），原始路径在悬停提示上；目录段点了在「文件」页定位。
+    // 麵包屑（後端給的稱呼），原始路徑在懸停提示上；目錄段點了在「檔案」頁定位。
     renderBreadcrumb(el.path, file);
 
     setHidden(el.previewBtn, !canPreview(file));
-    el.previewBtn.textContent = showing ? '编辑' : '预览';
-    el.previewBtn.title = `${showing ? '回到编辑' : '预览 Markdown'}（${shortcutLabel('preview')}）`;
+    el.previewBtn.textContent = showing ? '編輯' : '預覽';
+    el.previewBtn.title = `${showing ? '回到編輯' : '預覽 Markdown'}（${shortcutLabel('preview')}）`;
     el.area.classList.toggle('mono', CODE_RE.test(file.path));
-    // draftPath 由后端给出（它知道什么算章节），前端不自己判断。细纲与草稿一样只对章节给。
+    // draftPath 由後端給出（它知道什麼算章節），前端不自己判斷。細綱與草稿一樣只對章節給。
     setHidden(el.plotBtn, !file.draftPath);
     setHidden(el.draftBtn, !file.draftPath);
 
@@ -825,11 +825,11 @@ export function createPane(
     emitEditorChange({ type: 'render', pane });
   }
 
-  /** 重画预览。滚动位置留着：保存回执、磁盘上的新版进来都会重画，不该把人弹回顶上。 */
+  /** 重畫預覽。滾動位置留著：儲存回執、磁碟上的新版進來都會重畫，不該把人彈回頂上。 */
   function showPreview(file: OpenFile): void {
     const top = el.preview.scrollTop;
     renderPreview(el.preview, file.draft, file.path, (path) =>
-      // 在哪一块预览里点的，就开在哪一块。
+      // 在哪一塊預覽裡點的，就開在哪一塊。
       post({ type: 'openEditor', path, pane: pane.id })
     );
     el.preview.scrollTop = top;
@@ -842,11 +842,11 @@ export function createPane(
     }
 
     el.statusFile.textContent = file.name;
-    // 字数那一格（全文 / 选中、距目标、本次 / 今日码字，点开是码字统计面板）归 stats.ts。
+    // 字數那一格（全文 / 選中、距目標、本次 / 今日碼字，點開是碼字統計面板）歸 stats.ts。
     renderWordStatus(el.statusWords, pane, file);
 
     if (previewing(file)) {
-      el.statusPos.textContent = '预览';
+      el.statusPos.textContent = '預覽';
     } else {
       const upto = el.area.value.slice(0, el.area.selectionStart);
       const line = upto.split('\n').length;
@@ -854,31 +854,31 @@ export function createPane(
       el.statusPos.textContent = `行 ${line}，列 ${col}`;
     }
 
-    // 「● 未保存」→「保存中…」→「已保存 14:32」，自动保存开着时旁边挂一枚（saving.ts）。
+    // 「● 未儲存」→「儲存中…」→「已儲存 14:32」，自動儲存開著時旁邊掛一枚（saving.ts）。
     renderSaveState(el.statusSave, file);
   }
 
-  /** 保存状态变了（saving.ts 调）：标签与状态栏重画，正文不动。 */
+  /** 儲存狀態變了（saving.ts 調）：標籤與狀態列重畫，正文不動。 */
   function refresh(): void {
     renderTabs();
     updateStatus();
   }
 
-  // ---------------------------------------------------------------- 编辑
+  // ---------------------------------------------------------------- 編輯
 
   function currentSelection(): TextSelection {
     return { start: el.area.selectionStart, end: el.area.selectionEnd };
   }
 
   /**
-   * 改动之前的选区。`beforeinput` 那一刻的选区最准（浏览器还没动 textarea）；拿不到时
-   * （老浏览器、测试里合成的 `input`）照差异推：退格前光标在被删那段的末尾，Delete 前在开头，
-   * 打字盖掉选区时选中的就是被盖掉的那段，纯插入是光标停在起点。
+   * 改動之前的選區。`beforeinput` 那一刻的選區最準（瀏覽器還沒動 textarea）；拿不到時
+   * （老瀏覽器、測試裡合成的 `input`）照差異推：退格前游標在被刪那段的末尾，Delete 前在開頭，
+   * 打字蓋掉選區時選中的就是被蓋掉的那段，純插入是游標停在起點。
    */
   let selectionBefore: TextSelection | undefined;
-  /** 输入法组字中：拼音还没上屏，这期间的 `input` 只刷新显示，不记撤销。 */
+  /** 輸入法組字中：拼音還沒上屏，這期間的 `input` 只重新整理顯示，不記撤銷。 */
   let composing = false;
-  /** 组字开始那一刻的内容与选区，`compositionend` 时整段算一步。 */
+  /** 組字開始那一刻的內容與選區，`compositionend` 時整段算一步。 */
   let compositionBase: { text: string; selection: TextSelection } | undefined;
 
   function derivedBefore(change: TextChange, inputType: string | undefined): TextSelection {
@@ -891,13 +891,13 @@ export function createPane(
   }
 
   /**
-   * 内容变了之后的那一串收尾：冲突条过期、标签圆点、按钮、状态栏、草稿持久化、通知订阅者。
-   * 文字已经写进 `file.draft`（当前文件也已写进 textarea）。
+   * 內容變了之後的那一串收尾：衝突條過期、標籤圓點、按鈕、狀態列、草稿持久化、通知訂閱者。
+   * 文字已經寫進 `file.draft`（當前檔案也已寫進 textarea）。
    */
   function afterContentChange(file: OpenFile, source: EditSource, change?: TextChange): void {
-    // 内容一变，之前那次冲突提示就过期了（磁盘上没了这件事不会因为打字就过期）。
+    // 內容一變，之前那次衝突提示就過期了（磁碟上沒了這件事不會因為打字就過期）。
     conflicts.delete(file.path);
-    // 在临时标签里改了东西：转正。有未保存修改的标签永远不会被换掉，靠的就是这一句。
+    // 在臨時標籤裡改了東西：轉正。有未儲存修改的標籤永遠不會被換掉，靠的就是這一句。
     if (file.preview && file.draft !== file.text) {
       file.preview = false;
       schedulePersist();
@@ -917,7 +917,7 @@ export function createPane(
     emitEditorChange({ type: 'edit', pane, file, source, change });
   }
 
-  /** 把 `file.draft` 写进 textarea 并落选区（当前文件、不在预览时）。保住滚动位置。 */
+  /** 把 `file.draft` 寫進 textarea 並落選區（當前檔案、不在預覽時）。保住滾動位置。 */
   function showDraft(file: OpenFile, selection: TextSelection): void {
     const sel = clampSelection(selection, viewText(file.draft).length);
     file.caret = sel.start;
@@ -932,7 +932,7 @@ export function createPane(
     el.area.setSelectionRange(sel.start, sel.end);
   }
 
-  /** 记一步撤销、换内容、写回编辑区、收尾。打字以外的改动最后都落到这里。 */
+  /** 記一步撤銷、換內容、寫回編輯區、收尾。打字以外的改動最後都落到這裡。 */
   function commitEdit(
     file: OpenFile,
     next: string,
@@ -948,7 +948,7 @@ export function createPane(
     afterContentChange(file, source, change);
   }
 
-  /** 改动之前的选区：当前文件取 textarea 的，否则取切走时留下的光标。 */
+  /** 改動之前的選區：當前檔案取 textarea 的，否則取切走時留下的游標。 */
   function selectionOf(file: OpenFile): TextSelection {
     return file === activeFile() && !previewing(file)
       ? currentSelection()
@@ -976,7 +976,7 @@ export function createPane(
       showDraft(file, after);
       return false;
     }
-    // 磁盘上读来的 `\r\n` 还没被编辑区归一过时，这一步连归一一起记：撤销回去仍是原样。
+    // 磁碟上讀來的 `\r\n` 還沒被編輯區歸一過時，這一步連歸一一起記：撤銷回去仍是原樣。
     const change =
       view === file.draft
         ? trimChange(range.start, view.slice(range.start, range.end), inserted)
@@ -988,15 +988,15 @@ export function createPane(
     return true;
   }
 
-  /** 去掉替换前后相同的头尾，只记真正变了的那一段。 */
+  /** 去掉替換前後相同的頭尾，只記真正變了的那一段。 */
   function trimChange(at: number, removed: string, inserted: string): TextChange | undefined {
     const d = diffText(removed, inserted);
     return d && { at: at + d.at, removed: d.removed, inserted: d.inserted };
   }
 
   /**
-   * 整份换内容（「还原」、用磁盘版本覆盖、未改过的文件被再次打开时换成磁盘新版）：也记一步，
-   * 作者可以撤销回去——那时它又是脏的，与磁盘不一致，逻辑自洽。光标尽量留在原处。
+   * 整份換內容（「還原」、用磁碟版本覆蓋、未改過的檔案被再次開啟時換成磁碟新版）：也記一步，
+   * 作者可以撤銷回去——那時它又是髒的，與磁碟不一致，邏輯自洽。游標儘量留在原處。
    */
   function replaceAll(file: OpenFile, next: string): void {
     const change = diffText(file.draft, next);
@@ -1017,7 +1017,7 @@ export function createPane(
 
   function stepHistory(dir: 'undo' | 'redo'): boolean {
     const file = activeFile();
-    // 组字中途不动：组字开始时记下的那份底稿会对不上。
+    // 組字中途不動：組字開始時記下的那份底稿會對不上。
     if (!file || composing) {
       return false;
     }
@@ -1032,7 +1032,7 @@ export function createPane(
   }
 
   el.area.addEventListener('beforeinput', (e) => {
-    // 浏览器自己的撤销 / 重做（右键菜单、系统快捷键）也走编辑器的记录。
+    // 瀏覽器自己的撤銷 / 重做（右鍵選單、系統快捷鍵）也走編輯器的記錄。
     if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
       e.preventDefault();
       stepHistory(e.inputType === 'historyUndo' ? 'undo' : 'redo');
@@ -1050,7 +1050,7 @@ export function createPane(
     }
     const next = el.area.value;
     if (composing || (e as InputEvent).isComposing) {
-      // 组字中途：只刷新显示（字数、圆点），不记撤销；底稿留到 compositionend。
+      // 組字中途：只重新整理顯示（字數、圓點），不記撤銷；底稿留到 compositionend。
       compositionBase ??= { text: file.draft, selection: selectionBefore ?? currentSelection() };
       if (next !== file.draft) {
         file.draft = next;
@@ -1086,7 +1086,7 @@ export function createPane(
     if (!file || !base) {
       return;
     }
-    // 上屏的那一整段算一步（取消组字时前后一样，什么都不记）。
+    // 上屏的那一整段算一步（取消組字時前後一樣，什麼都不記）。
     const next = el.area.value;
     const change = diffText(base.text, next, el.area.selectionEnd);
     if (change) {
@@ -1111,7 +1111,7 @@ export function createPane(
     }
   });
 
-  /** Ctrl/Cmd+Z 撤销，Ctrl+Y 与 Ctrl/Cmd+Shift+Z 重做。认出来返回 true。 */
+  /** Ctrl/Cmd+Z 撤銷，Ctrl+Y 與 Ctrl/Cmd+Shift+Z 重做。認出來返回 true。 */
   function historyKey(e: KeyboardEvent): 'undo' | 'redo' | undefined {
     if (!(e.ctrlKey || e.metaKey) || e.altKey) {
       return undefined;
@@ -1127,7 +1127,7 @@ export function createPane(
   }
 
   el.area.addEventListener('keydown', (e) => {
-    // 输入法组字中途的按键一律放行：Tab、回车、Ctrl 组合键都是输入法的。
+    // 輸入法組字中途的按鍵一律放行：Tab、回車、Ctrl 組合鍵都是輸入法的。
     if (isImeComposing(e)) {
       return;
     }
@@ -1152,9 +1152,9 @@ export function createPane(
   });
 
   /**
-   * Tab 在 textarea 里默认是切焦点；写作时更需要它缩进（规则见 `indent.ts`，单位见 `indentUnit`：
-   * 正文两个全角空格，其余两个半角空格）。没有选区时在光标处插一级；有选区时给碰到的每一行
-   * 行首加一级，**选中的字一个不删**；Shift+Tab 去掉一级。一次按键一步撤销。
+   * Tab 在 textarea 裡預設是切焦點；寫作時更需要它縮排（規則見 `indent.ts`，單位見 `indentUnit`：
+   * 正文兩個全形空格，其餘兩個半形空格）。沒有選區時在游標處插一級；有選區時給碰到的每一行
+   * 行首加一級，**選中的字一個不刪**；Shift+Tab 去掉一級。一次按鍵一步撤銷。
    */
   function handleTab(shift: boolean): void {
     const file = activeFile();
@@ -1174,11 +1174,11 @@ export function createPane(
     }
   }
 
-  // 标签条空白处右键：以当前激活标签为准。
+  // 標籤條空白處右鍵：以當前啟用標籤為準。
   onContextMenu(el.tabs, () => (pane.activePath ? tabMenuItems(pane.activePath) : []));
 
-  // 正文区菜单：预览模式没有可编辑内容，provider 返回空数组即不弹。
-  // 功能模块加的项（按在名字上：打开它的卡或条目）排在最前面，见 api.ts 的 addAreaMenu。
+  // 正文區選單：預覽模式沒有可編輯內容，provider 返回空陣列即不彈。
+  // 功能模組加的項（按在名字上：開啟它的卡或條目）排在最前面，見 api.ts 的 addAreaMenu。
   onContextMenu(el.area, (at) => {
     if (previewing(activeFile())) {
       return [];
@@ -1188,12 +1188,12 @@ export function createPane(
     return [
       ...extra,
       ...(extra.length > 0 ? [{ sep: true } as const] : []),
-      { label: '剪切', disabled: !hasSel, run: () => areaCut(pane) },
-      { label: '复制', disabled: !hasSel, run: () => areaCopy(el.area) },
-      { label: '粘贴', run: () => void areaPaste(pane) },
+      { label: '剪下', disabled: !hasSel, run: () => areaCut(pane) },
+      { label: '複製', disabled: !hasSel, run: () => areaCopy(el.area) },
+      { label: '貼上', run: () => void areaPaste(pane) },
       { sep: true },
       {
-        label: '全选',
+        label: '全選',
         run: () => {
           el.area.focus();
           el.area.select();
@@ -1202,8 +1202,8 @@ export function createPane(
     ];
   });
 
-  // 谁被点/被聚焦，谁就是「当前」这一块——Ctrl+S 保存的是它。
-  // 换了一块就等于换了「正在编辑的文件」，资源管理器的高亮要跟着走。
+  // 誰被點/被聚焦，誰就是「當前」這一塊——Ctrl+S 儲存的是它。
+  // 換了一塊就等於換了「正在編輯的檔案」，資源管理器的高亮要跟著走。
   const claimFocus = () => {
     if (activePane !== pane) {
       setActivePane(pane);
@@ -1213,10 +1213,10 @@ export function createPane(
   el.root.addEventListener('focusin', claimFocus);
   el.root.addEventListener('pointerdown', claimFocus);
 
-  // ---------------------------------------------------------------- 保存
+  // ---------------------------------------------------------------- 儲存
 
   function save(force: boolean): void {
-    // 在临时标签上按了保存（Ctrl+S、工具栏、「文件 → 保存」）：转正，哪怕没有可存的。
+    // 在臨時標籤上按了儲存（Ctrl+S、工具欄、「檔案 → 儲存」）：轉正，哪怕沒有可存的。
     if (pane.activePath) {
       pin(pane.activePath);
     }
@@ -1224,13 +1224,13 @@ export function createPane(
   }
 
   function savePath(path: string, force: boolean): void {
-    // 经 saving.ts：同一份同一时刻只有一个保存在路上，状态栏跟着走；磁盘上没了的先问要不要重建。
+    // 經 saving.ts：同一份同一時刻只有一個儲存在路上，狀態列跟著走；磁碟上沒了的先問要不要重建。
     void requestSave(pane, path, { force });
   }
 
   /**
-   * 选中引文那一句。按编辑区里**当下**的文字找（可能有没保存的修改）；预览模式先切回编辑。
-   * 滚动用高亮镜像层量出那一句的纵向位置（`highlight.ts` 的 `scrollToOffset`），停在视口偏上三分之一。
+   * 選中引文那一句。按編輯區裡**當下**的文字找（可能有沒儲存的修改）；預覽模式先切回編輯。
+   * 滾動用高亮映象層量出那一句的縱向位置（`highlight.ts` 的 `scrollToOffset`），停在視口偏上三分之一。
    */
   function reveal(path: string, quote: string): boolean {
     if (!files.has(path)) {
@@ -1257,8 +1257,8 @@ export function createPane(
       settleSave(incoming.path, 'saved');
       return;
     }
-    // 这边没有保存在路上：是别的窗口存了同一份（回执是广播的）。对这边来说那是磁盘变了，不是存成了——
-    // 照「磁盘上变了」处理。从前这里直接把基线换成别人存的那一份，下一次保存就把别人的改动盖掉了。
+    // 這邊沒有儲存在路上：是別的視窗存了同一份（回執是廣播的）。對這邊來說那是磁碟變了，不是存成了——
+    // 照「磁碟上變了」處理。從前這裡直接把基線換成別人存的那一份，下一次儲存就把別人的改動蓋掉了。
     if (!isSaving(incoming.path)) {
       applyDiskChange(incoming);
       return;
@@ -1267,8 +1267,8 @@ export function createPane(
     file.hash = incoming.hash;
     file.gone = false;
     diskSeen.delete(file.path);
-    // draftPath 后端每次都会带回；万一缺席也不要把已有的值冲掉，
-    // 否则工具栏上的「草稿」按钮会在首次保存后消失。
+    // draftPath 後端每次都會帶回；萬一缺席也不要把已有的值沖掉，
+    // 否則工具欄上的「草稿」按鈕會在首次儲存後消失。
     if (incoming.draftPath !== undefined) {
       file.draftPath = incoming.draftPath;
     }
@@ -1281,8 +1281,8 @@ export function createPane(
     conflicts.delete(file.path);
     renderAll();
     persist();
-    // 存成了不弹 toast：状态栏写「已保存 14:32」。保存期间又敲了字的仍是脏的，状态栏照实写「未保存」；
-    // 在路上时又要存过的，settleSave 接着再存一次。
+    // 存成了不彈 toast：狀態列寫「已儲存 14:32」。儲存期間又敲了字的仍是髒的，狀態列照實寫「未儲存」；
+    // 在路上時又要存過的，settleSave 接著再存一次。
     settleSave(file.path, 'saved');
   }
 
@@ -1293,7 +1293,7 @@ export function createPane(
       return;
     }
     if (!isSaving(path)) {
-      // 不是这边那一次（别的窗口的保存撞了冲突，回执是广播的）：只当它带来了一份磁盘版本。
+      // 不是這邊那一次（別的視窗的儲存撞了衝突，回執是廣播的）：只當它帶來了一份磁碟版本。
       applyDiskChange({ path, name: file.name, text: diskText, hash: diskHash, bytes: diskText.length });
       return;
     }
@@ -1301,10 +1301,10 @@ export function createPane(
     conflicts.set(path, { text: diskText, hash: diskHash });
     diskSeen.set(path, diskHash);
     file.gone = false;
-    // 撞上冲突：这一份不再自动保存，直到作者在冲突条上选了（基线换了）。绝不替他强制保存。
+    // 撞上衝突：這一份不再自動儲存，直到作者在衝突條上選了（基線換了）。絕不替他強制儲存。
     blockAutoSave(path, file.hash);
     settleSave(path, 'conflict');
-    // 手动保存撞上的切过去给人看；自动保存撞上的不切（作者可能正在别的标签里写），标签上挂着「!」。
+    // 手動儲存撞上的切過去給人看；自動儲存撞上的不切（作者可能正在別的標籤裡寫），標籤上掛著「!」。
     if (!auto && pane.activePath !== path) {
       activate(path);
     } else {
@@ -1312,8 +1312,8 @@ export function createPane(
     }
     toast(
       auto
-        ? `「${file.name}」在磁盘上已被改过，这一份先不自动保存了，编辑器里的修改留着。`
-        : '文件已被外部修改，保存已取消。',
+        ? `「${file.name}」在磁碟上已被改過，這一份先不自動儲存了，編輯器裡的修改留著。`
+        : '檔案已被外部修改，儲存已取消。',
       true
     );
   }
@@ -1335,38 +1335,38 @@ export function createPane(
       file.label = incoming.label;
     }
     if (incoming.hash === file.hash) {
-      // 磁盘上就是基线那一份（又出现了、或别处存回了同一份）：之前见过的新版与冲突都作废。
+      // 磁碟上就是基線那一份（又出現了、或別處存回了同一份）：之前見過的新版與衝突都作廢。
       diskSeen.delete(file.path);
       conflicts.delete(file.path);
       renderAll();
       return;
     }
     if (!wasGone && incoming.hash === diskSeen.get(file.path)) {
-      return; // 这一份新版已经知道了（冲突条收起了也一样），不再报第二次。
+      return; // 這一份新版已經知道了（衝突條收起了也一樣），不再報第二次。
     }
     if (file.draft === file.text) {
-      // 没改过：就地换成新内容。记一步撤销（与「再次打开时磁盘有新版」同一处理），不切标签、不抢焦点，
-      // 光标与滚动留在原处（夹进新长度）。
+      // 沒改過：就地換成新內容。記一步撤銷（與「再次開啟時磁碟有新版」同一處理），不切標籤、不搶焦點，
+      // 游標與滾動留在原處（夾進新長度）。
       file.text = incoming.text;
       file.hash = incoming.hash;
       diskSeen.delete(file.path);
       conflicts.delete(file.path);
       replaceAll(file, incoming.text);
       if (file === activeFile()) {
-        noteStatus(file.path, '磁盘上有新版本，已载入');
+        noteStatus(file.path, '磁碟上有新版本，已載入');
       }
     } else if (viewText(incoming.text) === viewText(file.draft)) {
-      // 磁盘上的正好就是编辑器里这一份（别处存了同样的字）：认下来，不算冲突。
+      // 磁碟上的正好就是編輯器裡這一份（別處存了同樣的字）：認下來，不算衝突。
       file.text = incoming.text;
       file.hash = incoming.hash;
       diskSeen.delete(file.path);
       conflicts.delete(file.path);
     } else {
-      // 改过：编辑器里的修改一个字不动，挂冲突条，标签上标出来；自动保存先停下（存了也是撞冲突）。
+      // 改過：編輯器裡的修改一個字不動，掛衝突條，標籤上標出來；自動儲存先停下（存了也是撞衝突）。
       conflicts.set(file.path, { text: incoming.text, hash: incoming.hash, reopen: true });
       diskSeen.set(file.path, incoming.hash);
       blockAutoSave(file.path, file.hash);
-      toast(`「${file.name}」在磁盘上被改过，编辑器里的修改留着、没有覆盖（标签上标了「!」）。`, true);
+      toast(`「${file.name}」在磁碟上被改過，編輯器裡的修改留著、沒有覆蓋（標籤上標了「!」）。`, true);
     }
     renderAll();
     persist();
@@ -1384,9 +1384,9 @@ export function createPane(
     conflicts.delete(path);
     diskSeen.delete(path);
     if (saving) {
-      toast(`「${file.name}」在磁盘上已经没有了（被删或改名），这次没有保存。再按一次保存会先问你要不要在原路径重建。`, true);
+      toast(`「${file.name}」在磁碟上已經沒有了（被刪或改名），這次沒有儲存。再按一次儲存會先問你要不要在原路徑重建。`, true);
     } else if (fresh && file.draft !== file.text) {
-      toast(`「${file.name}」在磁盘上已经没有了（被删或改名），编辑器里的修改还在。`, true);
+      toast(`「${file.name}」在磁碟上已經沒有了（被刪或改名），編輯器裡的修改還在。`, true);
     }
     renderAll();
   }
@@ -1400,9 +1400,9 @@ export function createPane(
   }
 
   /**
-   * 「对比合并…」放回编辑器之后（`replace.ts`）：基线换成合并时读到的磁盘那份，冲突就此解决——与冲突条上
-   * 「用磁盘版本覆盖」同一套收尾：冲突条收起、见过的磁盘新版（`diskSeen`）作废（之后磁盘再变、哪怕变回那一份，
-   * 核对时照样报）、自动保存的闸放开（之后照常停笔就存，带的是新基线）。磁盘上读得到才合并得了，所以也不再是「没了」。
+   * 「對比合併…」放回編輯器之後（`replace.ts`）：基線換成合併時讀到的磁碟那份，衝突就此解決——與衝突條上
+   * 「用磁碟版本覆蓋」同一套收尾：衝突條收起、見過的磁碟新版（`diskSeen`）作廢（之後磁碟再變、哪怕變回那一份，
+   * 核對時照樣報）、自動儲存的閘放開（之後照常停筆就存，帶的是新基線）。磁碟上讀得到才合併得了，所以也不再是「沒了」。
    */
   function rebase(path: string, text: string, hash: string): void {
     const file = files.get(path);
@@ -1419,8 +1419,8 @@ export function createPane(
     persist();
   }
 
-  // 按钮上写的键按平台（Mac 上 ⌘S），从快捷键表取；页面模板里那一句只是没跑脚本时的样子。
-  el.saveBtn.title = `保存（${shortcutLabel('save')}）`;
+  // 按鈕上寫的鍵按平臺（Mac 上 ⌘S），從快捷鍵表取；頁面模板裡那一句只是沒跑指令碼時的樣子。
+  el.saveBtn.title = `儲存（${shortcutLabel('save')}）`;
   el.saveBtn.addEventListener('click', () => save(false));
 
   el.revertBtn.addEventListener('click', () => {
@@ -1430,7 +1430,7 @@ export function createPane(
     }
     const reload = (): void => {
       reloading.add(file.path);
-      // 磁盘版回来之前别让自动保存把要丢掉的修改存下去。
+      // 磁碟版回來之前別讓自動儲存把要丟掉的修改存下去。
       holdSave(file.path);
       post({ type: 'reloadFile', path: file.path });
     };
@@ -1439,12 +1439,12 @@ export function createPane(
       return;
     }
     void askDialog({
-      title: '还原',
-      message: `放弃「${file.name}」的未保存修改，重新从磁盘读取？`,
-      detail: '放弃之后还能按 Ctrl+Z 撤销回来。',
+      title: '還原',
+      message: `放棄「${file.name}」的未儲存修改，重新從磁碟讀取？`,
+      detail: '放棄之後還能按 Ctrl+Z 撤銷回來。',
       buttons: [
         { value: 'cancel', label: '取消' },
-        { value: 'revert', label: '放弃修改', primary: true, danger: true },
+        { value: 'revert', label: '放棄修改', primary: true, danger: true },
       ],
       cancel: 'cancel',
     }).then((answer) => {
@@ -1458,7 +1458,7 @@ export function createPane(
     setPreviewing(!previewing(activeFile()));
   });
 
-  // 预览能拿焦点（不进 Tab 顺序）：切到预览之后方向键、翻页键滚的是它，再按一下 Ctrl+Shift+V 也认得出是这一块。
+  // 預覽能拿焦點（不進 Tab 順序）：切到預覽之後方向鍵、翻頁鍵滾的是它，再按一下 Ctrl+Shift+V 也認得出是這一塊。
   el.preview.tabIndex = -1;
   el.preview.addEventListener('scroll', () => {
     const file = activeFile();
@@ -1476,7 +1476,7 @@ export function createPane(
 
   el.plotBtn.addEventListener('click', () => {
     const file = activeFile();
-    // 与「草稿」一样传**章节**路径：细纲落在哪由后端推导，还没有就按模板建一份。
+    // 與「草稿」一樣傳**章節**路徑：細綱落在哪由後端推導，還沒有就按模板建一份。
     if (file) {
       post({ type: 'openPlot', path: file.path });
     }
@@ -1484,7 +1484,7 @@ export function createPane(
 
   el.draftBtn.addEventListener('click', () => {
     const file = activeFile();
-    // 传的是**章节**路径：草稿路径由后端推导，并在缺席时按需创建。
+    // 傳的是**章節**路徑：草稿路徑由後端推導，並在缺席時按需建立。
     if (file) {
       post({ type: 'openDraft', path: file.path });
     }
@@ -1499,12 +1499,12 @@ export function createPane(
     file.text = disk.text;
     file.hash = disk.hash;
     diskSeen.delete(file.path);
-    // 整份换内容也记一步：点错了可以撤销回编辑器里原来那份。
+    // 整份換內容也記一步：點錯了可以撤銷回編輯器裡原來那份。
     replaceAll(file, disk.text);
     conflicts.delete(file.path);
     renderAll();
     persist();
-    toast('已载入磁盘上的版本。');
+    toast('已載入磁碟上的版本。');
   });
 
   el.conflictForce.addEventListener('click', () => {
@@ -1512,17 +1512,17 @@ export function createPane(
     if (!file) {
       return;
     }
-    // 磁盘上已经没有这一份：没有「别人的改动」可丢，保存那条路会问要不要在原路径重建（重建照样带基线）。
+    // 磁碟上已經沒有這一份：沒有「別人的改動」可丟，儲存那條路會問要不要在原路徑重建（重建照樣帶基線）。
     if (file.gone) {
       savePath(file.path, true);
       return;
     }
     void askDialog({
-      title: '用编辑器内容强制保存',
-      message: `确定用编辑器里的内容覆盖磁盘上的「${file.name}」？磁盘上的改动会丢失。`,
+      title: '用編輯器內容強制儲存',
+      message: `確定用編輯器裡的內容覆蓋磁碟上的「${file.name}」？磁碟上的改動會丟失。`,
       buttons: [
         { value: 'cancel', label: '取消' },
-        { value: 'force', label: '覆盖磁盘上的版本', primary: true, danger: true },
+        { value: 'force', label: '覆蓋磁碟上的版本', primary: true, danger: true },
       ],
       cancel: 'cancel',
     }).then((answer) => {
@@ -1532,19 +1532,19 @@ export function createPane(
     });
   });
 
-  // ---------------------------------------------------------------- 收文件
+  // ---------------------------------------------------------------- 收檔案
 
   function upsertFile(incoming: EditorFileView, carried?: CarriedDraft, intent?: EditorOpenIntent): void {
     const existing = files.get(incoming.path);
     const pending = pendingDrafts.get(incoming.path);
     pendingDrafts.delete(incoming.path);
-    // 单击打开（工程页 / 文件页的一行）且开关开着：开成临时标签。
+    // 單擊開啟（工程頁 / 檔案頁的一行）且開關開著：開成臨時標籤。
     const wantPreview = !!intent?.preview && previewTabsEnabled();
 
     if (existing) {
-      // 已打开。只有「还原」发起的那一次才冲掉未保存的修改；其余的（落盘后
-      // 自动打开、工程页再点一次）碰上脏草稿就不动它——磁盘版变了就挂冲突条
-      // 让作者自己选，没变就只是切过去。
+      // 已開啟。只有「還原」發起的那一次才沖掉未儲存的修改；其餘的（落盤後
+      // 自動開啟、工程頁再點一次）碰上髒草稿就不動它——磁碟版變了就掛衝突條
+      // 讓作者自己選，沒變就只是切過去。
       const reload = reloading.delete(incoming.path);
       if (reload) {
         releaseSave(incoming.path);
@@ -1555,7 +1555,7 @@ export function createPane(
         existing.hash = incoming.hash;
         existing.gone = false;
         diskSeen.delete(incoming.path);
-        // 「还原」也记一步撤销：作者可以退回刚才没保存的那份。
+        // 「還原」也記一步撤銷：作者可以退回剛才沒儲存的那份。
         replaceAll(existing, incoming.text);
         conflicts.delete(incoming.path);
       } else if (incoming.hash !== existing.hash) {
@@ -1563,7 +1563,7 @@ export function createPane(
         diskSeen.set(incoming.path, incoming.hash);
         existing.gone = false;
         blockAutoSave(incoming.path, existing.hash);
-        toast(`「${existing.name}」在磁盘上已被改过，编辑器里的未保存修改保留着。`, true);
+        toast(`「${existing.name}」在磁碟上已被改過，編輯器裡的未儲存修改保留著。`, true);
       }
       if (incoming.draftPath !== undefined) {
         existing.draftPath = incoming.draftPath;
@@ -1574,19 +1574,19 @@ export function createPane(
       if (incoming.label !== undefined) {
         existing.label = incoming.label;
       }
-      // 已经开着的被别的路子正常打开了一次（落盘后自动打开、点引文、双击那一行……）：临时标签就此转正。
-      // 单击打开一份已经开着的什么都不改——不把一个固定的标签降回临时的。
+      // 已經開著的被別的路子正常開啟了一次（落盤後自動開啟、點引文、雙擊那一行……）：臨時標籤就此轉正。
+      // 單擊開啟一份已經開著的什麼都不改——不把一個固定的標籤降回臨時的。
       if (!intent?.preview) {
         existing.preview = false;
       }
       leaveSpecial();
       pane.activePath = incoming.path;
     } else {
-      // 从另一块搬来的（带着草稿或撤销历史）优先；否则看刷新前存下的草稿。
+      // 從另一塊搬來的（帶著草稿或撤銷歷史）優先；否則看重新整理前存下的草稿。
       const restore = carried && (carried.draft !== undefined || carried.history) ? carried : pending;
       const file = newFile(incoming, restore);
       if (restore?.local) {
-        // 页面里直接搬过来的：冲突条与见过的磁盘新版照旧挂着（基线没换，它们还作数）。
+        // 頁面裡直接搬過來的：衝突條與見過的磁碟新版照舊掛著（基線沒換，它們還作數）。
         if (restore.conflict) {
           conflicts.set(file.path, restore.conflict);
         }
@@ -1607,9 +1607,9 @@ export function createPane(
   }
 
   /**
-   * 新收进来的这一份是不是临时标签。有未保存修改的一律不是；从另一块经 `editorOpen` 搬来的保持原样
-   * （单击打开才保持临时，别的路子打开的转正）；「移到另一侧」搬来的转正（作者明说要它在那边）；刷新恢复、
-   * 改名搬家的照存下来的那样（开关关了就不是）；其余看这一次是不是单击打开的。
+   * 新收進來的這一份是不是臨時標籤。有未儲存修改的一律不是；從另一塊經 `editorOpen` 搬來的保持原樣
+   * （單擊開啟才保持臨時，別的路子開啟的轉正）；「移到另一側」搬來的轉正（作者明說要它在那邊）；重新整理恢復、
+   * 改名搬家的照存下來的那樣（開關關了就不是）；其餘看這一次是不是單擊開啟的。
    */
   function previewOf(
     file: OpenFile,
@@ -1630,11 +1630,11 @@ export function createPane(
   }
 
   /**
-   * 新的一份占谁的位置：
-   * 1. `replace`（上一章 / 下一章）指着的那一份**没改过**就在它的位置换掉（它是临时的，新的一份接着是临时的）；
-   *    改过了就另开一个标签。
-   * 2. 新的一份是临时标签：这一块已有的那个临时标签被换掉（它一改就转正了，所以总是没改过的；万一改过，转正、不换）。
-   * 3. 都不是：开在最后。
+   * 新的一份佔誰的位置：
+   * 1. `replace`（上一章 / 下一章）指著的那一份**沒改過**就在它的位置換掉（它是臨時的，新的一份接著是臨時的）；
+   *    改過了就另開一個標籤。
+   * 2. 新的一份是臨時標籤：這一塊已有的那個臨時標籤被換掉（它一改就轉正了，所以總是沒改過的；萬一改過，轉正、不換）。
+   * 3. 都不是：開在最後。
    */
   function slotFor(file: OpenFile, intent: EditorOpenIntent | undefined): string | undefined {
     const target = intent?.replace;
@@ -1659,7 +1659,7 @@ export function createPane(
     return undefined;
   }
 
-  /** 把新的一份放进标签表：给了 `at` 就占它的位置（它被换掉，不进「最近关闭」），否则排在最后。 */
+  /** 把新的一份放進標籤表：給了 `at` 就佔它的位置（它被換掉，不進「最近關閉」），否則排在最後。 */
   function insertFile(file: OpenFile, at: string | undefined): void {
     if (!at || !files.has(at)) {
       files.set(file.path, file);
@@ -1697,30 +1697,30 @@ export function createPane(
       history: new EditHistory(),
     };
     if (restore?.draft !== undefined) {
-      // 刷新前的未保存草稿（或从另一块编辑区搬过来的）：仅当磁盘内容未变
-      // （hash 一致）才贴回去，否则拿旧内容盖新内容就是另一种静默覆盖。
-      // moved 是例外——文件刚改名/搬家，hash 基线必然变了，草稿照贴。
+      // 重新整理前的未儲存草稿（或從另一塊編輯區搬過來的）：僅當磁碟內容未變
+      // （hash 一致）才貼回去，否則拿舊內容蓋新內容就是另一種靜默覆蓋。
+      // moved 是例外——檔案剛改名/搬家，hash 基線必然變了，草稿照貼。
       if (restore.moved || restore.hash === incoming.hash) {
         file.draft = restore.draft;
       } else {
-        toast(`「${file.name}」在离开期间被改过，已放弃未保存的草稿。`, true);
+        toast(`「${file.name}」在離開期間被改過，已放棄未儲存的草稿。`, true);
       }
     }
-    // 预览还是编辑：搬家、刷新恢复都照原样（⚑ 刷新恢复也记着）。
+    // 預覽還是編輯：搬家、重新整理恢復都照原樣（⚑ 重新整理恢復也記著）。
     if (restore?.markdownPreview) {
       file.markdownPreview = true;
     }
-    // 搬家带来的撤销历史：内容与搬走时一字不差才接上，否则那份差异对不上位置。
+    // 搬家帶來的撤銷歷史：內容與搬走時一字不差才接上，否則那份差異對不上位置。
     if (restore?.history && restore.historyText === file.draft) {
       file.history = restore.history;
     }
-    // 页面里直接搬过来的（「移到另一侧」）：「磁盘上没了」与光标、滚动位置也接上。
+    // 頁面裡直接搬過來的（「移到另一側」）：「磁碟上沒了」與游標、滾動位置也接上。
     if (restore?.local) {
       file.gone = !!restore.gone;
       file.caret = restore.caret ?? 0;
       file.scrollTop = restore.scrollTop ?? 0;
     }
-    // 这一页里关掉过（或临时标签被换掉过）：回到关掉时的光标与滚动。内容变了的话夹进新长度（`restoreView`）。
+    // 這一頁裡關掉過（或臨時標籤被換掉過）：回到關掉時的游標與滾動。內容變了的話夾進新長度（`restoreView`）。
     const seen = takeView(incoming.path);
     if (seen && !restore?.local) {
       file.caret = seen.caret;
@@ -1730,8 +1730,8 @@ export function createPane(
   }
 
   /**
-   * 恢复阶段按存下来的 active 定位，其余情况新开的就是当前的。`restoring`：这一份是刷新恢复回来的——特殊标签正显示着时
-   * 不把它换下去（存下来的那一份记成「关掉特殊标签时回到它」）；作者此刻从别处打开的照常切过去。
+   * 恢復階段按存下來的 active 定位，其餘情況新開的就是當前的。`restoring`：這一份是重新整理恢復回來的——特殊標籤正顯示著時
+   * 不把它換下去（存下來的那一份記成「關掉特殊標籤時回到它」）；作者此刻從別處開啟的照常切過去。
    */
   function claimActivePath(path: string, restoring: boolean): void {
     const wanted = pendingActive.get(pane.id);

@@ -1,15 +1,15 @@
 /**
- * 会话存储 SessionStore 的读写、容错与列表。
- * 迁自 scripts/smoke-session.js（全部 70 条）。
+ * 會話儲存 SessionStore 的讀寫、容錯與列表。
+ * 遷自 scripts/smoke-session.js（全部 70 條）。
  *
- * 两点与别的集成用例不同：
+ * 兩點與別的整合用例不同：
  *
- * 1. **不 initialize 工程**。原脚本只 `NovelProject.open(WORK)`，
- *    `新建不落盘` 那条断言的正是 `.novelwarden/sessions` 压根不存在，
- *    所以这里用 makeTempDir 而不是 makeTempProject。
- * 2. **vscode 桩必须在 loadModule 之前装**。bundle 是 `external: ['vscode']`，
- *    模块体在 _compile 时就会 require('vscode')。原脚本装完从不还原，
- *    这里挂 restore() 到 after()。
+ * 1. **不 initialize 工程**。原指令碼只 `NovelProject.open(WORK)`，
+ *    `新建不落盤` 那條斷言的正是 `.novelwarden/sessions` 壓根不存在，
+ *    所以這裡用 makeTempDir 而不是 makeTempProject。
+ * 2. **vscode 樁必須在 loadModule 之前裝**。bundle 是 `external: ['vscode']`，
+ *    模組體在 _compile 時就會 require('vscode')。原指令碼裝完從不還原，
+ *    這裡掛 restore() 到 after()。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,13 +27,13 @@ describe('session.ts · SessionStore', () => {
   let WORK;
   let sessionsDir;
   let store;
-  /** 第一个会话，跨小节复用。 */
+  /** 第一個會話，跨小節複用。 */
   let s;
-  /** 更早的那个会话，列表与删除都要用。 */
+  /** 更早的那個會話，列表與刪除都要用。 */
   let older;
 
   before(() => {
-    // project.ts 的 readConfig 仍读 vscode 配置，给个最小桩（原脚本 L27-42）。
+    // project.ts 的 readConfig 仍讀 vscode 配置，給個最小樁（原指令碼 L27-42）。
     stub = installVscodeStub({ level: 'config' });
     projectMod = loadModule('src/core/model/project.ts');
     sessionMod = loadModule('src/core/model/session.ts');
@@ -49,7 +49,7 @@ describe('session.ts · SessionStore', () => {
     stub.restore();
   });
 
-  describe('目录与路径', () => {
+  describe('目錄與路徑', () => {
     let project;
 
     before(() => {
@@ -60,12 +60,12 @@ describe('session.ts · SessionStore', () => {
       assert.equal(project.sessionsDir, sessionsDir, project.sessionsDir);
     });
 
-    test('空目录时列表为空数组', async () => {
+    test('空目錄時列表為空陣列', async () => {
       assert.equal((await store.list()).length, 0);
     });
   });
 
-  describe('新建与写入', () => {
+  describe('新建與寫入', () => {
     let turnsAtCreate;
     let notPersisted;
     let blank;
@@ -73,38 +73,38 @@ describe('session.ts · SessionStore', () => {
 
     before(async () => {
       s = store.create({
-        target: { kind: 'manuscript', plotRelPath: '.novelwarden/summaries/004-夜访.md' },
+        target: { kind: 'manuscript', plotRelPath: '.novelwarden/summaries/004-夜訪.md' },
         targetNo: 4,
       });
-      // 「新会话无轮次」「新建不落盘」都必须在 push / write 之前取值。
+      // 「新會話無輪次」「新建不落盤」都必須在 push / write 之前取值。
       turnsAtCreate = s.turns.length;
       notPersisted = !fs.existsSync(sessionsDir) || fs.readdirSync(sessionsDir).length === 0;
 
-      // 不给 seed 时落到全书大纲：它是唯一一个不依赖任何章节就一定存在的产物。
+      // 不給 seed 時落到全書大綱：它是唯一一個不依賴任何章節就一定存在的產物。
       blank = store.create();
 
-      s.title = '青崖镇的夜';
+      s.title = '青崖鎮的夜';
       s.turns.push({
-        id: 't1', role: 'user', content: '林昭夜访沈氏。', at: '2026-08-01T10:00:00.000Z',
+        id: 't1', role: 'user', content: '林昭夜訪沈氏。', at: '2026-08-01T10:00:00.000Z',
         attachments: [{ id: 'a1', kind: 'selection', label: '003.md:5-9', relPath: 'chapters/003.md',
-          range: { start: 5, end: 9 }, text: '选中的原文' }],
+          range: { start: 5, end: 9 }, text: '選中的原文' }],
         excludedIds: ['style'],
       });
       s.turns.push({
         id: 't2', role: 'assistant', content: '三更，林昭醒了。', at: '2026-08-01T10:01:00.000Z',
         context: { usedTokens: 1200, budget: 60000, clamped: false,
-          items: [{ id: 'style', label: '文风指南', kind: 'style', priority: 1, tokens: 0, status: 'excluded' }] },
-        acceptedTo: 'chapters/004-夜访.md',
+          items: [{ id: 'style', label: '文風指南', kind: 'style', priority: 1, tokens: 0, status: 'excluded' }] },
+        acceptedTo: 'chapters/004-夜訪.md',
       });
-      // 外部 agent 经 MCP 留下的那一轮：段（文字与工具条交替），generate 那一段还带着产出的正文。
+      // 外部 agent 經 MCP 留下的那一輪：段（文字與工具條交替），generate 那一段還帶著產出的正文。
       s.turns.push({
-        id: 't3', role: 'assistant', content: '我先看看。\n\n写好了。', at: '2026-08-01T10:02:00.000Z',
+        id: 't3', role: 'assistant', content: '我先看看。\n\n寫好了。', at: '2026-08-01T10:02:00.000Z',
         segments: [
           { kind: 'tool', call: { callId: 'c1', name: 'read', title: 'read', ok: true, summary: '19 行', elapsedMs: 2 } },
           { kind: 'text', text: '我先看看。' },
           { kind: 'tool', call: { callId: 'c2', name: 'generate', title: 'generate 正文·生成',
             ok: true, summary: '正文 · 620 字', elapsedMs: 12400, output: '三更，林昭醒了。' } },
-          { kind: 'text', text: '写好了。' },
+          { kind: 'text', text: '寫好了。' },
         ],
         mcp: true,
       });
@@ -112,51 +112,51 @@ describe('session.ts · SessionStore', () => {
       raw = fs.readFileSync(path.join(sessionsDir, `${s.id}.json`), 'utf8');
     });
 
-    test('新会话有 id', () => {
+    test('新會話有 id', () => {
       assert.ok(/^\d{8}-\d{6}-[0-9a-f]{6}$/.test(s.id), s.id);
     });
 
-    test('新会话记住写入目标', () => {
+    test('新會話記住寫入目標', () => {
       assert.equal(s.targetNo, 4);
     });
 
-    test('新会话继承创作目标', () => {
-      assert.equal(s.target.plotRelPath, '.novelwarden/summaries/004-夜访.md');
+    test('新會話繼承創作目標', () => {
+      assert.equal(s.target.plotRelPath, '.novelwarden/summaries/004-夜訪.md');
     });
 
-    test('阶段跟着目标走', () => {
+    test('階段跟著目標走', () => {
       assert.equal(s.stage, 'manuscript', s.stage);
     });
 
-    // 默认能力永远是讨论——默认就花钱产出一份要不要都不知道的产物是不对的。
-    test('默认能力是讨论', () => {
+    // 預設能力永遠是討論——預設就花錢產出一份要不要都不知道的產物是不對的。
+    test('預設能力是討論', () => {
       assert.equal(s.capability, 'discuss', s.capability);
     });
 
-    test('新会话无轮次', () => {
+    test('新會話無輪次', () => {
       assert.equal(turnsAtCreate, 0);
     });
 
-    test('新建不落盘', () => {
+    test('新建不落盤', () => {
       assert.ok(notPersisted);
     });
 
-    test('无 seed 时落到全书大纲', () => {
+    test('無 seed 時落到全書大綱', () => {
       assert.equal(blank.target.kind, 'outline');
       assert.equal(blank.stage, 'outline');
     });
 
-    test('写入后文件存在', () => {
+    test('寫入後檔案存在', () => {
       assert.ok(fs.existsSync(path.join(sessionsDir, `${s.id}.json`)));
     });
 
-    test('文件是合法 JSON 且带换行结尾', () => {
+    test('檔案是合法 JSON 且帶換行結尾', () => {
       JSON.parse(raw);
       assert.ok(raw.endsWith('\n'));
     });
   });
 
-  describe('读回（round-trip）', () => {
+  describe('讀回（round-trip）', () => {
     let back;
     let ghost;
 
@@ -165,74 +165,74 @@ describe('session.ts · SessionStore', () => {
       ghost = await store.read('nope');
     });
 
-    test('读回 id 一致', () => {
+    test('讀回 id 一致', () => {
       assert.equal(back.id, s.id);
     });
 
-    test('读回标题一致', () => {
-      assert.equal(back.title, '青崖镇的夜');
+    test('讀回標題一致', () => {
+      assert.equal(back.title, '青崖鎮的夜');
     });
 
-    test('读回 targetNo', () => {
+    test('讀回 targetNo', () => {
       assert.equal(back.targetNo, 4);
     });
 
-    test('读回创作目标', () => {
-      assert.equal(back.target.plotRelPath, '.novelwarden/summaries/004-夜访.md');
+    test('讀回創作目標', () => {
+      assert.equal(back.target.plotRelPath, '.novelwarden/summaries/004-夜訪.md');
     });
 
-    test('读回阶段与能力', () => {
+    test('讀回階段與能力', () => {
       assert.equal(back.stage, 'manuscript');
       assert.equal(back.capability, 'discuss');
     });
 
-    test('读回三轮', () => {
+    test('讀回三輪', () => {
       assert.equal(back.turns.length, 3);
     });
 
-    test('读回用户消息原文', () => {
-      assert.equal(back.turns[0].content, '林昭夜访沈氏。');
+    test('讀回使用者訊息原文', () => {
+      assert.equal(back.turns[0].content, '林昭夜訪沈氏。');
     });
 
-    test('读回附件快照', () => {
-      assert.equal(back.turns[0].attachments[0].text, '选中的原文');
+    test('讀回附件快照', () => {
+      assert.equal(back.turns[0].attachments[0].text, '選中的原文');
     });
 
-    test('读回附件行范围', () => {
+    test('讀回附件行範圍', () => {
       assert.equal(back.turns[0].attachments[0].range.end, 9);
     });
 
-    test('读回排除名单', () => {
+    test('讀回排除名單', () => {
       assert.equal(back.turns[0].excludedIds[0], 'style');
     });
 
-    test('读回上下文明细', () => {
+    test('讀回上下文明細', () => {
       assert.equal(back.turns[1].context.usedTokens, 1200);
     });
 
-    test('读回采纳路径', () => {
-      assert.equal(back.turns[1].acceptedTo, 'chapters/004-夜访.md');
+    test('讀回採納路徑', () => {
+      assert.equal(back.turns[1].acceptedTo, 'chapters/004-夜訪.md');
     });
 
-    // 顺序是这一轮唯一存不回来的东西：不落盘的话，重开面板画出来的就是另一副样子。
-    test('读回 MCP 那一轮的段（顺序原样）', () => {
+    // 順序是這一輪唯一存不回來的東西：不落盤的話，重開面板畫出來的就是另一副樣子。
+    test('讀回 MCP 那一輪的段（順序原樣）', () => {
       assert.deepEqual(
         back.turns[2].segments.map((seg) => (seg.kind === 'text' ? `文字:${seg.text}` : `工具:${seg.call.callId}`)),
-        ['工具:c1', '文字:我先看看。', '工具:c2', '文字:写好了。']
+        ['工具:c1', '文字:我先看看。', '工具:c2', '文字:寫好了。']
       );
     });
 
-    // 从前这几千字根本没进会话：刷新一下，作者刚生成的东西就没了。
-    test('读回 generate 产出的正文', () => {
+    // 從前這幾千字根本沒進會話：重新整理一下，作者剛生成的東西就沒了。
+    test('讀回 generate 產出的正文', () => {
       assert.equal(back.turns[2].segments[2].call.output, '三更，林昭醒了。');
     });
 
-    // 重开面板时靠它把这一轮认成「外部 Agent」那一条，而不是普通的回复。
-    test('读回「这是 MCP 调用留下的一轮」', () => {
+    // 重開面板時靠它把這一輪認成「外部 Agent」那一條，而不是普通的回覆。
+    test('讀回「這是 MCP 呼叫留下的一輪」', () => {
       assert.equal(back.turns[2].mcp, true);
     });
 
-    test('普通回复不带 mcp 标记', () => {
+    test('普通回覆不帶 mcp 標記', () => {
       assert.equal(back.turns[1].mcp, undefined);
     });
 
@@ -241,34 +241,34 @@ describe('session.ts · SessionStore', () => {
     });
   });
 
-  describe('列表与排序', () => {
+  describe('列表與排序', () => {
     let list;
 
     before(async () => {
       older = store.create();
-      older.title = '更早的对话';
+      older.title = '更早的對話';
       older.createdAt = '2026-07-01T10:00:00.000Z';
       older.updatedAt = '2026-07-01T10:00:00.000Z';
-      older.turns.push({ id: 'x1', role: 'user', content: '早先问的问题', at: older.updatedAt });
+      older.turns.push({ id: 'x1', role: 'user', content: '早先問的問題', at: older.updatedAt });
       await store.write(older);
 
       list = await store.list();
     });
 
-    test('列出两个会话', () => {
+    test('列出兩個會話', () => {
       assert.equal(list.length, 2, `got ${list.length}`);
     });
 
-    test('按更新时间倒序', () => {
+    test('按更新時間倒序', () => {
       assert.equal(list[0].id, s.id, `first=${list[0].title}`);
     });
 
-    test('列表带轮次数', () => {
+    test('列表帶輪次數', () => {
       assert.equal(list[0].turnCount, 3);
     });
 
-    test('列表 preview 取最后一条用户消息', () => {
-      assert.equal(list[0].preview, '林昭夜访沈氏。', list[0].preview);
+    test('列表 preview 取最後一條使用者訊息', () => {
+      assert.equal(list[0].preview, '林昭夜訪沈氏。', list[0].preview);
     });
 
     test('列表不含 turns 全文', () => {
@@ -276,7 +276,7 @@ describe('session.ts · SessionStore', () => {
     });
   });
 
-  describe('容错', () => {
+  describe('容錯', () => {
     let brokenRead;
     let listAfterBroken;
     let partial;
@@ -288,41 +288,41 @@ describe('session.ts · SessionStore', () => {
     let goodThinking;
 
     before(async () => {
-      fs.writeFileSync(path.join(sessionsDir, 'broken.json'), '{ 这不是 JSON');
+      fs.writeFileSync(path.join(sessionsDir, 'broken.json'), '{ 這不是 JSON');
       brokenRead = await store.read('broken');
       listAfterBroken = await store.list();
 
       fs.writeFileSync(path.join(sessionsDir, 'partial.json'), JSON.stringify({
-        title: '', turns: [{ role: 'user', content: '有效' }, { role: '天知道', content: '无效' }, 'garbage'],
+        title: '', turns: [{ role: 'user', content: '有效' }, { role: '天知道', content: '無效' }, 'garbage'],
       }));
       partial = await store.read('partial');
 
       fs.writeFileSync(path.join(sessionsDir, 'notjson.txt'), 'ignore me');
       listAfterNotJson = await store.list();
 
-      // 旧会话（0.2.x 只有 targetNo，没有 target/stage/capability）。
-      // 这条路每个升级上来的用户都会走一遍，读不出来等于整个历史凭空消失。
+      // 舊會話（0.2.x 只有 targetNo，沒有 target/stage/capability）。
+      // 這條路每個升級上來的使用者都會走一遍，讀不出來等於整個歷史憑空消失。
       fs.writeFileSync(path.join(sessionsDir, 'legacy.json'), JSON.stringify({
-        title: '旧对话', createdAt: '2026-01-01T00:00:00.000Z', targetNo: 7,
-        turns: [{ role: 'user', content: '续写第七章' }],
+        title: '舊對話', createdAt: '2026-01-01T00:00:00.000Z', targetNo: 7,
+        turns: [{ role: 'user', content: '續寫第七章' }],
       }));
       legacy = await store.read('legacy');
 
-      // 手改坏的 target/能力：认不出的一律回落，绝不抛。
+      // 手改壞的 target/能力：認不出的一律回落，絕不拋。
       fs.writeFileSync(path.join(sessionsDir, 'weird.json'), JSON.stringify({
         target: { kind: '天知道', plotRelPath: 'x' }, stage: 'nope', capability: 'nope', turns: [],
       }));
       weird = await store.read('weird');
 
-      // 该阶段不支持的能力也要回落——正文阶段没有 split。
+      // 該階段不支援的能力也要回落——正文階段沒有 split。
       fs.writeFileSync(path.join(sessionsDir, 'badcap.json'), JSON.stringify({
         target: { kind: 'manuscript', plotRelPath: '.novelwarden/summaries/001-x.md' },
         stage: 'manuscript', capability: 'split', turns: [],
       }));
       badcap = await store.read('badcap');
 
-      // 思考深度：认不出的档位当没设过（= 不思考），一个手改坏的字段
-      // 不该让整个会话读不出来。
+      // 思考深度：認不出的檔位當沒設過（= 不思考），一個手改壞的欄位
+      // 不該讓整個會話讀不出來。
       fs.writeFileSync(path.join(sessionsDir, 'thinking.json'), JSON.stringify({
         target: { kind: 'outline' }, stage: 'outline', capability: 'discuss',
         thinking: '想很久', turns: [],
@@ -336,84 +336,84 @@ describe('session.ts · SessionStore', () => {
       goodThinking = await store.read('thinking2');
     });
 
-    test('损坏文件读出 undefined', () => {
+    test('損壞檔案讀出 undefined', () => {
       assert.equal(brokenRead, undefined);
     });
 
-    test('损坏文件不影响列表', () => {
-      assert.equal(listAfterBroken.length, 2, '坏文件应被跳过');
+    test('損壞檔案不影響列表', () => {
+      assert.equal(listAfterBroken.length, 2, '壞檔案應被跳過');
     });
 
-    test('认不出的思考深度当没设过', () => {
+    test('認不出的思考深度當沒設過', () => {
       assert.equal(badThinking.thinking, undefined);
     });
 
-    test('合法的思考深度原样读回', () => {
+    test('合法的思考深度原樣讀回', () => {
       assert.equal(goodThinking.thinking, 'high');
     });
 
-    test('缺字段时补默认标题', () => {
-      assert.equal(partial.title, '未命名对话', partial.title);
+    test('缺欄位時補預設標題', () => {
+      assert.equal(partial.title, '未命名對話', partial.title);
     });
 
-    test('缺时间戳时补当前时间', () => {
+    test('缺時間戳時補當前時間', () => {
       assert.equal(typeof partial.createdAt, 'string');
       assert.ok(partial.createdAt.length > 10);
     });
 
-    test('过滤掉非法轮次', () => {
+    test('過濾掉非法輪次', () => {
       assert.equal(partial.turns.length, 1, `got ${partial.turns.length}`);
     });
 
-    test('保留合法轮次', () => {
+    test('保留合法輪次', () => {
       assert.equal(partial.turns[0].content, '有效');
     });
 
-    test('非 .json 文件被忽略', () => {
+    test('非 .json 檔案被忽略', () => {
       assert.ok(listAfterNotJson.every((x) => x.id !== 'notjson'));
     });
 
-    test('旧会话读得出来', () => {
+    test('舊會話讀得出來', () => {
       assert.ok(legacy);
-      assert.equal(legacy.title, '旧对话');
+      assert.equal(legacy.title, '舊對話');
     });
 
-    // 序号 → 路径要读盘，而 normalize 是纯的；这一步由 controller 补。
-    test('旧会话回落到大纲', () => {
+    // 序號 → 路徑要讀盤，而 normalize 是純的；這一步由 controller 補。
+    test('舊會話回落到大綱', () => {
       assert.equal(legacy.target.kind, 'outline', JSON.stringify(legacy.target));
     });
 
-    test('旧会话保留 targetNo 供 controller 还原', () => {
+    test('舊會話保留 targetNo 供 controller 還原', () => {
       assert.equal(legacy.targetNo, 7);
     });
 
-    test('旧会话有合法的阶段与能力', () => {
+    test('舊會話有合法的階段與能力', () => {
       assert.equal(legacy.stage, 'outline');
       assert.equal(legacy.capability, 'discuss');
     });
 
-    test('认不出的 target 回落到大纲', () => {
+    test('認不出的 target 回落到大綱', () => {
       assert.equal(weird.target.kind, 'outline');
     });
 
-    test('认不出的阶段回落', () => {
+    test('認不出的階段回落', () => {
       assert.equal(weird.stage, 'outline');
     });
 
-    test('认不出的能力回落到默认', () => {
+    test('認不出的能力回落到預設', () => {
       assert.equal(weird.capability, 'discuss');
     });
 
-    test('阶段不支持的能力回落', () => {
+    test('階段不支援的能力回落', () => {
       assert.equal(badcap.capability, 'discuss', badcap.capability);
     });
 
-    test('但目标本身保留', () => {
+    test('但目標本身保留', () => {
       assert.equal(badcap.target.plotRelPath, '.novelwarden/summaries/001-x.md');
     });
   });
 
-  describe('重命名与删除', () => {
+  describe('重新命名與刪除', () => {
     let renamed;
     let persisted;
     let blankRename;
@@ -423,49 +423,49 @@ describe('session.ts · SessionStore', () => {
     let ghostDelete;
 
     before(async () => {
-      renamed = await store.rename(s.id, '  改个名字  ');
+      renamed = await store.rename(s.id, '  改個名字  ');
       persisted = await store.read(s.id);
       blankRename = await store.rename(s.id, '   ');
       ghostRename = await store.rename('nope', 'x');
 
       await store.delete(older.id);
       deletedRead = await store.read(older.id);
-      // 落点与工程页的删除同一套（`trashPathFor`）：回收站里保留原相对路径 `.novelwarden/sessions/<id>.json`。
+      // 落點與工程頁的刪除同一套（`trashPathFor`）：回收站裡保留原相對路徑 `.novelwarden/sessions/<id>.json`。
       trashed = fs.existsSync(path.join(WORK, '.novelwarden', '.trash', '.novelwarden', 'sessions', `${older.id}.json`));
       ghostDelete = await store.delete('nope');
     });
 
-    test('重命名生效', () => {
-      assert.equal(renamed.title, '改个名字', renamed.title);
+    test('重新命名生效', () => {
+      assert.equal(renamed.title, '改個名字', renamed.title);
     });
 
-    test('重命名已落盘', () => {
-      assert.equal(persisted.title, '改个名字');
+    test('重新命名已落盤', () => {
+      assert.equal(persisted.title, '改個名字');
     });
 
-    test('空标题不覆盖原名', () => {
-      assert.equal(blankRename.title, '改个名字');
+    test('空標題不覆蓋原名', () => {
+      assert.equal(blankRename.title, '改個名字');
     });
 
-    test('重命名不存在的会话返回 undefined', () => {
+    test('重新命名不存在的會話返回 undefined', () => {
       assert.equal(ghostRename, undefined);
     });
 
-    test('删除后读不到', () => {
+    test('刪除後讀不到', () => {
       assert.equal(deletedRead, undefined);
     });
 
-    test('删除移入 .novelwarden/.trash，保留原相对路径（.trash/.novelwarden/sessions/<id>.json）', () => {
+    test('刪除移入 .novelwarden/.trash，保留原相對路徑（.trash/.novelwarden/sessions/<id>.json）', () => {
       assert.ok(trashed);
     });
 
-    test('删除不存在的会话不报错', () => {
+    test('刪除不存在的會話不報錯', () => {
       assert.equal(ghostDelete, undefined);
     });
   });
 
-  // 第 6 条：会话删除与工程页的删除同一套落点——同名加序号，不盖掉上一次删的。
-  describe('同一个 id 删两次：两份都留在回收站', () => {
+  // 第 6 條：會話刪除與工程頁的刪除同一套落點——同名加序號，不蓋掉上一次刪的。
+  describe('同一個 id 刪兩次：兩份都留在回收站', () => {
     const trashOf = (name) => path.join(WORK, '.novelwarden', '.trash', '.novelwarden', 'sessions', name);
     let id;
     let first;
@@ -475,12 +475,12 @@ describe('session.ts · SessionStore', () => {
     before(async () => {
       const a = store.create();
       id = a.id;
-      a.title = '第一次的会话';
+      a.title = '第一次的會話';
       await store.write(a);
       await store.delete(id);
 
-      // 同一个 id 再落盘一次（手抄回来的、或者撞了 id）：再删也不该盖掉回收站里那一份。
-      const b = { ...store.create(), id, title: '第二次的会话' };
+      // 同一個 id 再落盤一次（手抄回來的、或者撞了 id）：再刪也不該蓋掉回收站裡那一份。
+      const b = { ...store.create(), id, title: '第二次的會話' };
       await store.write(b);
       await store.delete(id);
 
@@ -489,83 +489,83 @@ describe('session.ts · SessionStore', () => {
       flatLeft = fs.existsSync(path.join(WORK, '.novelwarden', '.trash', `${id}.json`));
     });
 
-    test('第一次删的那一份原样在 <id>.json', () => {
-      assert.equal(first?.title, '第一次的会话');
+    test('第一次刪的那一份原樣在 <id>.json', () => {
+      assert.equal(first?.title, '第一次的會話');
     });
 
-    test('第二次删的加序号落在 <id>-2.json', () => {
-      assert.equal(second?.title, '第二次的会话');
+    test('第二次刪的加序號落在 <id>-2.json', () => {
+      assert.equal(second?.title, '第二次的會話');
     });
 
-    test('不再平铺在 .trash/ 根下', () => {
+    test('不再平鋪在 .trash/ 根下', () => {
       assert.equal(flatLeft, false);
     });
 
-    test('会话目录里已经没有它', async () => {
+    test('會話目錄裡已經沒有它', async () => {
       assert.equal(await store.read(id), undefined);
     });
   });
 
-  describe('标题推导', () => {
+  describe('標題推導', () => {
     test('取首句', () => {
-      assert.equal(sessionMod.deriveTitle('林昭进城，被守卫拦下。然后呢'), '林昭进城');
+      assert.equal(sessionMod.deriveTitle('林昭進城，被守衛攔下。然後呢'), '林昭進城');
     });
 
-    test('剥列表符号', () => {
-      assert.equal(sessionMod.deriveTitle('1. 沈氏出场'), '沈氏出场');
+    test('剝列表符號', () => {
+      assert.equal(sessionMod.deriveTitle('1. 沈氏出場'), '沈氏出場');
     });
 
-    test('跳过空行', () => {
-      assert.equal(sessionMod.deriveTitle('\n\n  \n真正的内容'), '真正的内容');
+    test('跳過空行', () => {
+      assert.equal(sessionMod.deriveTitle('\n\n  \n真正的內容'), '真正的內容');
     });
 
-    test('空文本兜底', () => {
-      assert.equal(sessionMod.deriveTitle('   '), '新对话');
+    test('空文字兜底', () => {
+      assert.equal(sessionMod.deriveTitle('   '), '新對話');
     });
 
-    test('长句截断到 24 字', () => {
+    test('長句截斷到 24 字', () => {
       assert.equal(
-        sessionMod.deriveTitle('这是一个非常非常非常非常非常非常非常非常长的没有标点的句子').length,
+        sessionMod.deriveTitle('這是一個非常非常非常非常非常非常非常非常長的沒有標點的句子').length,
         24
       );
     });
   });
 
-  // 命令类的轮次（生成细纲、拆成场景）content 本来就是空的：该说的都在大纲和
-  // 细纲里，作者一个字都不必打。空串会让历史列表出现一排「新对话」。
-  describe('轮次预览', () => {
+  // 命令類的輪次（生成細綱、拆成場景）content 本來就是空的：該說的都在大綱和
+  // 細綱裡，作者一個字都不必打。空串會讓歷史列表出現一排「新對話」。
+  describe('輪次預覽', () => {
     const t = (content, command) => ({ id: 'p1', role: 'user', content, at: sessionMod.nowIso(), command });
 
-    test('有话就用那句话', () => {
-      assert.equal(sessionMod.turnPreview(t('林昭夜访沈氏。')), '林昭夜访沈氏。');
+    test('有話就用那句話', () => {
+      assert.equal(sessionMod.turnPreview(t('林昭夜訪沈氏。')), '林昭夜訪沈氏。');
     });
 
-    test('空输入的命令轮次用命令名', () => {
-      assert.equal(sessionMod.turnPreview(t('', '生成细纲')), '/生成细纲');
+    test('空輸入的命令輪次用命令名', () => {
+      assert.equal(sessionMod.turnPreview(t('', '生成細綱')), '/生成細綱');
     });
 
-    test('两样都有时话优先', () => {
-      assert.equal(sessionMod.turnPreview(t('慢一点', '生成细纲')), '慢一点');
+    test('兩樣都有時話優先', () => {
+      assert.equal(sessionMod.turnPreview(t('慢一點', '生成細綱')), '慢一點');
     });
 
-    test('两样都没有时给空串', () => {
+    test('兩樣都沒有時給空串', () => {
       assert.equal(sessionMod.turnPreview(t('   ')), '');
     });
 
-    // 于是标题推导也跟着能说出这一轮干了什么，不再落到「新对话」。
-    test('命令轮次的标题不再是「新对话」', () => {
-      assert.equal(sessionMod.deriveTitle(sessionMod.turnPreview(t('', '拆成场景'))), '/拆成场景');
+    // 於是標題推導也跟著能說出這一輪幹了什麼，不再落到「新對話」。
+    test('命令輪次的標題不再是「新對話」', () => {
+      assert.equal(sessionMod.deriveTitle(sessionMod.turnPreview(t('', '拆成場景'))), '/拆成場景');
     });
   });
 
   describe('id 唯一性', () => {
-    test('200 次生成无碰撞', () => {
+    test('200 次生成無碰撞', () => {
       const ids = new Set();
       for (let i = 0; i < 200; i++) ids.add(sessionMod.makeSessionId());
       assert.equal(ids.size, 200, `got ${ids.size}`);
     });
 
-    test('turnId 200 次无碰撞', () => {
+    test('turnId 200 次無碰撞', () => {
       const turnIds = new Set();
       for (let i = 0; i < 200; i++) turnIds.add(sessionMod.makeTurnId());
       assert.equal(turnIds.size, 200, `got ${turnIds.size}`);

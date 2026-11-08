@@ -1,48 +1,48 @@
 /**
- * 正文的自动续写：一章写不到目标字数、或者被输出上限截断时，接着再调几次把它写完。
+ * 正文的自動續寫：一章寫不到目標字數、或者被輸出上限截斷時，接著再調幾次把它寫完。
  *
  * 移植自 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）`generate-draft.command.ts`
- * 的 `extendDraftIfNeeded` / `shouldAutoContinue`（GD:930-1186）与 `bounded-completion.ts`
- * 的 `appendVisibleTextContinuation`（拼接时去掉与已写末尾重叠的开头）。
+ * 的 `extendDraftIfNeeded` / `shouldAutoContinue`（GD:930-1186）與 `bounded-completion.ts`
+ * 的 `appendVisibleTextContinuation`（拼接時去掉與已寫末尾重疊的開頭）。
  *
- * ## 一条链，单步与批量共用
+ * ## 一條鏈，單步與批次共用
  *
- * 与 `structured.ts` 那三条链同一个 {@link ChainIO}：对话页第一次调用是流式的，后面几轮
- * 照样流进同一个气泡；将来批量写正文（四期）换一个走分档池的 `ChainIO` 就能用。
+ * 與 `structured.ts` 那三條鏈同一個 {@link ChainIO}：對話頁第一次呼叫是流式的，後面幾輪
+ * 照樣流進同一個氣泡；將來批次寫正文（四期）換一個走分檔池的 `ChainIO` 就能用。
  *
- * ## 比上游宽松：已写的不丢（D6）
+ * ## 比上游寬鬆：已寫的不丟（D6）
  *
- * 上游在这几种情况下整份作废、不保存：恢复那一轮仍没进展、最后仍被截断、最后仍不到八成。
- * 这里一律**保留并说清**——卡片照样可以写入，说明里写着为什么停、差多少。作者看着
- * 一章写了 2100 / 3000 字的正文，比看着一句「结果未保存」有用得多，而且那 2100 字的钱
- * 已经花了。只有「一个字正文都没有」（思考把输出预算吃光）才报错。
+ * 上游在這幾種情況下整份作廢、不儲存：恢復那一輪仍沒進展、最後仍被截斷、最後仍不到八成。
+ * 這裡一律**保留並說清**——卡片照樣可以寫入，說明裡寫著為什麼停、差多少。作者看著
+ * 一章寫了 2100 / 3000 字的正文，比看著一句「結果未儲存」有用得多，而且那 2100 字的錢
+ * 已經花了。只有「一個字正文都沒有」（思考把輸出預算吃光）才報錯。
  *
- * 另一处：续写某一轮调用失败（网络、限流）时，前面写好的也保留，不让一次抖动把整章带走。
- * 作者自己点了停止不算——那是他不要了。
+ * 另一處：續寫某一輪呼叫失敗（網路、限流）時，前面寫好的也保留，不讓一次抖動把整章帶走。
+ * 作者自己點了停止不算——那是他不要了。
  *
- * ## 收尾过早时先回退（五期补遗 §1.1 ⚑，上游没有）
+ * ## 收尾過早時先回退（五期補遺 §1.1 ⚑，上游沒有）
  *
- * 三期真实模型首跑：三章的第一次调用都正常收尾、只写到目标的 55–77%。第一次调用已经按细纲
- * 收了尾（章末吊着读者的那一下），不到八成的续写只能接在收尾**后面**——第 3 章在收尾之后又写了 869 字，
- * 最后把第 4 章才登场的人写了出来。被截断时结尾停在半句上，往后接没问题；正常收尾时结尾就是
- * 收尾那一场，往后接必然越过它。
+ * 三期真實模型首跑：三章的第一次呼叫都正常收尾、只寫到目標的 55–77%。第一次呼叫已經按細綱
+ * 收了尾（章末吊著讀者的那一下），不到八成的續寫只能接在收尾**後面**——第 3 章在收尾之後又寫了 869 字，
+ * 最後把第 4 章才登場的人寫了出來。被截斷時結尾停在半句上，往後接沒問題；正常收尾時結尾就是
+ * 收尾那一場，往後接必然越過它。
  *
- * 所以正常收尾（`end`）又不够八成时，续写先把收尾那一场切掉（model/manuscriptCheck.ts 的
- * `rewindPoint`：切最后约四分之一、最多 600 字，至少留一半），从切点接着写、写足之后重新收尾。
- * 一次写一千字上下的模型一章要这样走两三轮，所以可以回退几次，但**每次只在
- * 上一轮新写的那一段里切**（前几轮已经接受的正文不再动）；回退那一轮净多的不到 300 字、或者上一轮那一段
- * 短得没法切，就停——不往收尾后面接。网关不报收尾原因（`stop` 缺席）时分不清是收尾还是截断，照旧往后接。
+ * 所以正常收尾（`end`）又不夠八成時，續寫先把收尾那一場切掉（model/manuscriptCheck.ts 的
+ * `rewindPoint`：切最後約四分之一、最多 600 字，至少留一半），從切點接著寫、寫足之後重新收尾。
+ * 一次寫一千字上下的模型一章要這樣走兩三輪，所以可以回退幾次，但**每次只在
+ * 上一輪新寫的那一段裡切**（前幾輪已經接受的正文不再動）；回退那一輪淨多的不到 300 字、或者上一輪那一段
+ * 短得沒法切，就停——不往收尾後面接。閘道器不報收尾原因（`stop` 缺席）時分不清是收尾還是截斷，照舊往後接。
  *
- * ## 停在半句上算截断
+ * ## 停在半句上算截斷
  *
- * 只信模型报的收尾原因不够：百章实验第 3 章停在「他已经到了极限，全身」，字数过了八成，照样定稿了。
- * 每一次调用之后看一眼结尾那个字（model/manuscriptCheck.ts 的 `endsMidSentence`）：不是句末标点就按
- * `maxTokens` 处理——往后接、不回退。写完仍停在半句上时 `truncated` 为真，批量写章据此停下。
+ * 只信模型報的收尾原因不夠：百章實驗第 3 章停在「他已經到了極限，全身」，字數過了八成，照樣定稿了。
+ * 每一次呼叫之後看一眼結尾那個字（model/manuscriptCheck.ts 的 `endsMidSentence`）：不是句末標點就按
+ * `maxTokens` 處理——往後接、不回退。寫完仍停在半句上時 `truncated` 為真，批次寫章據此停下。
  *
- * ## 写完查三样（§1.2、§1.3、§1.5）
+ * ## 寫完查三樣（§1.2、§1.3、§1.5）
  *
- * 比喻词超没超上限、有没有拉丁字母缩写、后面几章才登场的人有没有提前写进来——只记说明，
- * 不改正文。最后一样批量写章据此停下（features/pipelineBatch.ts）。
+ * 比喻詞超沒超上限、有沒有拉丁字母縮寫、後面幾章才登場的人有沒有提前寫進來——只記說明，
+ * 不改正文。最後一樣批次寫章據此停下（features/pipelineBatch.ts）。
  */
 import { CancelledError, StopSignal } from '../llm/provider';
 import { countWords } from '../model/fs';
@@ -70,31 +70,31 @@ import { describeError } from '../runtime/logger';
 import { CallOutcome, ChainIO, ChainResult, Tally } from './structured';
 import { trimModifiers } from './trim';
 
-// 续写时带已写正文的最后 1600 字：取法在装配那一层（「接着写」的第一次调用也要它）。
+// 續寫時帶已寫正文的最後 1600 字：取法在裝配那一層（「接著寫」的第一次呼叫也要它）。
 export { CONTINUE_TAIL_CHARS, continuationTail } from '../context/layers/render';
 
-/** 一轮续写少于这么多字算「没进展」（上游 GD:1121）。 */
+/** 一輪續寫少於這麼多字算「沒進展」（上游 GD:1121）。 */
 export const MIN_ROUND_GAIN = 300;
-/** 被截断、而正文还不到这么多字：输出预算被思考吃光了（上游 GD:973-986）。 */
+/** 被截斷、而正文還不到這麼多字：輸出預算被思考吃光了（上游 GD:973-986）。 */
 export const STARVED_CHARS = 100;
 /**
- * 续写的开头与已写末尾重合这么多个非空白字符才算「重复了一截」，要去掉。
- * 太短会误伤：两段都以「他」开头不算重叠（上游 `MIN_VISIBLE_OVERLAP_CHARS`）。
+ * 續寫的開頭與已寫末尾重合這麼多個非空白字元才算「重複了一截」，要去掉。
+ * 太短會誤傷：兩段都以「他」開頭不算重疊（上游 `MIN_VISIBLE_OVERLAP_CHARS`）。
  */
 export const MIN_OVERLAP_CHARS = 48;
-/** 比对重叠时各取多少字（上游 `CONTINUATION_VISIBLE_TAIL_CHARS`）。 */
+/** 比對重疊時各取多少字（上游 `CONTINUATION_VISIBLE_TAIL_CHARS`）。 */
 const OVERLAP_WINDOW = 1600;
-/** 整段重复：去掉空白后不短于这么多字、又与已写的某一段一字不差（上游 `sanitizeDraftText`）。 */
+/** 整段重複：去掉空白後不短於這麼多字、又與已寫的某一段一字不差（上游 `sanitizeDraftText`）。 */
 const DUPLICATE_PARAGRAPH_CHARS = 40;
 
 /**
- * 这一轮之后还要不要续。
+ * 這一輪之後還要不要續。
  *
- * - 没有目标字数：不续——「有字就算写够」，不拿猜出来的数去续（总计划 D6 的另一半）；
- * - 到了 {@link MAX_CONTINUE_ROUNDS} 轮：不续；
- * - 被输出上限截断：续——结尾停在半句上，哪怕字数够了；
- * - 因为别的原因停了（`other`：多半是内容审查）：不续，再调一次多半还是停；
- * - 其余看字数：不到目标的八成就续（与 `deriveStage` 同一个 {@link MANUSCRIPT_DONE_RATIO}）。
+ * - 沒有目標字數：不續——「有字就算寫夠」，不拿猜出來的數去續（總計劃 D6 的另一半）；
+ * - 到了 {@link MAX_CONTINUE_ROUNDS} 輪：不續；
+ * - 被輸出上限截斷：續——結尾停在半句上，哪怕字數夠了；
+ * - 因為別的原因停了（`other`：多半是內容審查）：不續，再調一次多半還是停；
+ * - 其餘看字數：不到目標的八成就續（與 `deriveStage` 同一個 {@link MANUSCRIPT_DONE_RATIO}）。
  */
 export function shouldContinue(s: { words: number; target?: number; stop?: StopSignal; rounds: number }): boolean {
   if (!s.target || s.target <= 0 || s.rounds >= MAX_CONTINUE_ROUNDS) {
@@ -109,26 +109,26 @@ export function shouldContinue(s: { words: number; target?: number; stop?: StopS
   return s.words < lowerBound(s.target);
 }
 
-/** 目标字数的八成：到了这个数就算写够。 */
+/** 目標字數的八成：到了這個數就算寫夠。 */
 export function lowerBound(target: number): number {
   return Math.floor(target * MANUSCRIPT_DONE_RATIO);
 }
 
 /**
- * 去掉模型自己加的界面话术：「点我继续生成后续内容」「未完待续」这类单独成行的提示，
- * 以及三个以上的连续空行。只动这几样，正文一个字不碰。
+ * 去掉模型自己加的介面話術：「點我繼續生成後續內容」「未完待續」這類單獨成行的提示，
+ * 以及三個以上的連續空行。只動這幾樣，正文一個字不碰。
  */
 export function sanitizeAddition(text: string): string {
   return text
-    .replace(/^\s*(?:点我继续生成后续内容|继续生成后续内容|请点击继续|未完待续)[。.！!…]*\s*$/gm, '')
+    .replace(/^\s*(?:(?:点|點)我(?:继|繼)(?:续|續)生成(?:后|後)(?:续|續)(?:内|內)容|(?:继|繼)(?:续|續)生成(?:后|後)(?:续|續)(?:内|內)容|(?:请|請)(?:点|點)(?:击|擊)(?:继|繼)(?:续|續)|未完待(?:续|續))[。.！!…]*\s*$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
 /**
- * 续出来的这一段开头与已写末尾重叠的那一截去掉（按非空白字符比，≥ {@link MIN_OVERLAP_CHARS}）。
+ * 續出來的這一段開頭與已寫末尾重疊的那一截去掉（按非空白字元比，≥ {@link MIN_OVERLAP_CHARS}）。
  *
- * 模型接着写时常把已写的最后一两句复述一遍再往下走——拼上去就是一句话出现两次。
+ * 模型接著寫時常把已寫的最後一兩句複述一遍再往下走——拼上去就是一句話出現兩次。
  */
 export function stripOverlap(existing: string, addition: string): string {
   const tail = existing.slice(-OVERLAP_WINDOW).replace(/\s+/g, '');
@@ -144,7 +144,7 @@ export function stripOverlap(existing: string, addition: string): string {
   if (overlap === 0) {
     return addition;
   }
-  // 按非空白字符数往后数，跳过重叠的那一截。
+  // 按非空白字元數往後數，跳過重疊的那一截。
   let consumed = 0;
   for (let i = 0; i < addition.length; i++) {
     if (!/\s/.test(addition[i])) {
@@ -169,10 +169,10 @@ function paragraphKey(p: string): string {
 }
 
 /**
- * 把续写的这一段接到已写的后面：去话术、去重叠、去整段重复，段与段之间空一行。
+ * 把續寫的這一段接到已寫的後面：去話術、去重疊、去整段重複，段與段之間空一行。
  *
- * 返回拼好的全文与**真正新增**的那一段——`continue` 写法落盘时只追加后者，
- * 「这一轮多了几个字」也按后者算。
+ * 返回拼好的全文與**真正新增**的那一段——`continue` 寫法落盤時只追加後者，
+ * 「這一輪多了幾個字」也按後者算。
  */
 export function joinContinuation(existing: string, addition: string): { text: string; added: string } {
   const base = existing.trim();
@@ -193,14 +193,14 @@ export function joinContinuation(existing: string, addition: string): { text: st
   return { text: [base, added].filter(Boolean).join('\n\n'), added };
 }
 
-/** 两段文字合起来有多少字：`continue` 写法下「这一章写到多少字了」要连已有的一起算。 */
+/** 兩段文字合起來有多少字：`continue` 寫法下「這一章寫到多少字了」要連已有的一起算。 */
 export function wordsOf(...parts: string[]): number {
   return parts.reduce((sum, p) => sum + countWords(p), 0);
 }
 
-// ---------------------------------------------------------------- 续写链
+// ---------------------------------------------------------------- 續寫鏈
 
-/** 写正文时的进度：第几轮（0 = 第一次调用）、这一章写到多少字了、目标多少。 */
+/** 寫正文時的進度：第幾輪（0 = 第一次呼叫）、這一章寫到多少字了、目標多少。 */
 export interface WriteProgress {
   round: number;
   words: number;
@@ -209,65 +209,65 @@ export interface WriteProgress {
 
 export interface ManuscriptChainContext {
   mode: WriteMode;
-  /** 本章已有的正文（`continue` 写法才有）。「写到多少字了」连它一起算。 */
+  /** 本章已有的正文（`continue` 寫法才有）。「寫到多少字了」連它一起算。 */
   existing: string;
-  /** 目标字数。缺席时不自动续写（`shouldContinue`）。卡片上的「写够了没有」、删修饰的保底按它算。 */
+  /** 目標字數。缺席時不自動續寫（`shouldContinue`）。卡片上的「寫夠了沒有」、刪修飾的保底按它算。 */
   target?: number;
   /**
-   * 续写往哪儿写：该不该再续、还差多少字按它算。开着删修饰时比 `target` 多两成（`writingAim`），
-   * 删完落在目标附近；缺席就是 `target`。
+   * 續寫往哪兒寫：該不該再續、還差多少字按它算。開著刪修飾時比 `target` 多兩成（`writingAim`），
+   * 刪完落在目標附近；缺席就是 `target`。
    */
   aim?: number;
-  /** 上一章的结尾（重演检测用）。第 1 章、上一章还没写正文时缺席。 */
+  /** 上一章的結尾（重演檢測用）。第 1 章、上一章還沒寫正文時缺席。 */
   prevEnding?: string;
-  /** 第一次调用有没有思考——截断且没几个字时，报错的说法不一样。 */
+  /** 第一次呼叫有沒有思考——截斷且沒幾個字時，報錯的說法不一樣。 */
   reasoned: boolean;
-  /** 后面几章才登场的人（名字与别名）：写完查一遍有没有提前写进来。 */
+  /** 後面幾章才登場的人（名字與別名）：寫完查一遍有沒有提前寫進來。 */
   notYet?: readonly (NotYet & { aliases?: readonly string[] })[];
-  /** 这本书写正文时不该用的词：续写那一轮告诉它已经用了哪几个，写完数一遍。 */
+  /** 這本書寫正文時不該用的詞：續寫那一輪告訴它已經用了哪幾個，寫完數一遍。 */
   banned?: readonly string[];
-  /** 写完之后跑一轮删修饰（`trim.ts`）。设置里的「写完正文删修饰」。 */
+  /** 寫完之後跑一輪刪修飾（`trim.ts`）。設定裡的「寫完正文刪修飾」。 */
   trim?: boolean;
-  /** 每一轮开始时报一次进度。流式期间的进度由 `ChainIO.call` 的 `progress` 选项另报。 */
+  /** 每一輪開始時報一次進度。流式期間的進度由 `ChainIO.call` 的 `progress` 選項另報。 */
   onProgress?(p: WriteProgress): void;
   signal?: AbortSignal;
 }
 
 export interface ManuscriptChainResult extends ChainResult {
-  /** 续写了几轮（不含第一次调用；丢弃的那一轮也算）。 */
+  /** 續寫了幾輪（不含第一次呼叫；丟棄的那一輪也算）。 */
   rounds: number;
-  /** 这一章写完之后的总字数（`continue` 写法含已有的）。 */
+  /** 這一章寫完之後的總字數（`continue` 寫法含已有的）。 */
   words: number;
-  /** 这一次新写的字数。 */
+  /** 這一次新寫的字數。 */
   added: number;
-  /** 不到目标的八成。 */
+  /** 不到目標的八成。 */
   short: boolean;
-  /** 结尾停在半句上：最后一轮仍被输出上限截断，或者结尾那个字不是句末标点（{@link endsMidSentence}）。 */
+  /** 結尾停在半句上：最後一輪仍被輸出上限截斷，或者結尾那個字不是句末標點（{@link endsMidSentence}）。 */
   truncated: boolean;
-  /** 新稿开头与上一章结尾重合的那一段原文（重演）。 */
+  /** 新稿開頭與上一章結尾重合的那一段原文（重演）。 */
   replay?: string;
-  /** 后面几章才登场、却写进了这一次新写的正文里的人。 */
+  /** 後面幾章才登場、卻寫進了這一次新寫的正文裡的人。 */
   early?: EarlyEntrance[];
-  /** 删修饰真删了字时：删之前那一版（只含这一次新写的，与 `raw` 对应）。 */
+  /** 刪修飾真刪了字時：刪之前那一版（只含這一次新寫的，與 `raw` 對應）。 */
   untrimmed?: string;
 }
 
 /**
- * 写一章正文：第一次调用之后按需续写，最后查一遍重演。见文件头与三期计划 §3。
+ * 寫一章正文：第一次呼叫之後按需續寫，最後查一遍重演。見檔案頭與三期計劃 §3。
  *
- * `first` 是已经跑完的第一次调用（对话页流式跑的那一次）。返回的 `raw` 只含**这一次
- * 新写的**正文——`continue` 写法落盘是追加，已有的那部分不该再写一遍。
+ * `first` 是已經跑完的第一次呼叫（對話頁流式跑的那一次）。返回的 `raw` 只含**這一次
+ * 新寫的**正文——`continue` 寫法落盤是追加，已有的那部分不該再寫一遍。
  */
 export async function completeManuscript(
   first: CallOutcome,
   io: ChainIO,
   ctx: ManuscriptChainContext
 ): Promise<ManuscriptChainResult> {
-  // 显式标注类型：`t.fail()` 返回 never，TS 只对显式标注的变量做控制流收窄。
+  // 顯式標註型別：`t.fail()` 返回 never，TS 只對顯式標註的變數做控制流收窄。
   const t: Tally = new Tally(true);
   const base = ctx.existing.trim();
   const aim = ctx.aim ?? ctx.target;
-  // 「接着写」的第一次调用也可能把已写的最后几句复述一遍：一样去重叠。
+  // 「接著寫」的第一次呼叫也可能把已寫的最後幾句複述一遍：一樣去重疊。
   let added = joinContinuation(base, cleanOutput(first.text)).added;
   let stop = first.stop;
   const total = () => wordsOf(base, added);
@@ -275,66 +275,66 @@ export async function completeManuscript(
   if (stop === 'maxTokens' && countWords(added) < STARVED_CHARS) {
     t.fail(
       ctx.reasoned
-        ? '模型把输出上限几乎全用在了思考上，正文还没写几个字就被截断了。调大设置页的「最大输出 token」，或降低思考深度再试。'
-        : '正文还没写几个字就被输出上限截断了。调大设置页的「最大输出 token」再试。'
+        ? '模型把輸出上限幾乎全用在了思考上，正文還沒寫幾個字就被截斷了。調大設定頁的「最大輸出 token」，或降低思考深度再試。'
+        : '正文還沒寫幾個字就被輸出上限截斷了。調大設定頁的「最大輸出 token」再試。'
     );
   }
-  // 模型说正常收尾（或网关不报原因）、结尾却停在半句上：照截断处理——往后接，不回退。
+  // 模型說正常收尾（或閘道器不報原因）、結尾卻停在半句上：照截斷處理——往後接，不回退。
   const settle = (s: StopSignal | undefined, text: string, round: string): StopSignal | undefined => {
     if (s === 'maxTokens' || s === 'other' || !endsMidSentence(text)) {
       return s;
     }
-    t.note(`${round}的结尾停在半句上（${s === 'end' ? '模型报的是正常收尾' : '网关没报收尾原因'}），按截断接着写`);
+    t.note(`${round}的結尾停在半句上（${s === 'end' ? '模型報的是正常收尾' : '閘道器沒報收尾原因'}），按截斷接著寫`);
     return 'maxTokens';
   };
-  stop = settle(stop, added, '第一次调用');
+  stop = settle(stop, added, '第一次呼叫');
 
   let rounds = 0;
   let recoveryUsed = false;
   let recoveryPending = false;
   let rewinds = 0;
-  /** 最近一次回退之前这一章写到多少字：回退那一轮写完之后对着它算净多了几个字。 */
+  /** 最近一次回退之前這一章寫到多少字：回退那一輪寫完之後對著它算淨多了幾個字。 */
   let beforeCut = 0;
   /**
-   * 上一轮新写的那一段（第一次调用之后就是 `added` 全部）。**回退只在它里面切**：前几轮已经接受的
-   * 正文不再动，最多也只白扔上一轮的四分之一。
+   * 上一輪新寫的那一段（第一次呼叫之後就是 `added` 全部）。**回退只在它裡面切**：前幾輪已經接受的
+   * 正文不再動，最多也只白扔上一輪的四分之一。
    */
   let fresh = added;
   /**
-   * 回退时切掉、还没有被新写的结尾替上的那一截。回退之后那一轮没写成（调用失败、截断丢弃）
-   * 就把它放回去——宁可留着那个短一点但收了尾的结尾，也不留一章没有结尾的正文。
+   * 回退時切掉、還沒有被新寫的結尾替上的那一截。回退之後那一輪沒寫成（呼叫失敗、截斷丟棄）
+   * 就把它放回去——寧可留著那個短一點但收了尾的結尾，也不留一章沒有結尾的正文。
    */
   let pendingCut: string | undefined;
   const restoreCut = () => {
     if (pendingCut) {
       added = [added, pendingCut].filter(Boolean).join('\n\n');
       pendingCut = undefined;
-      // 放回去的是一个正常收尾的结尾，不是停在半句上的那一截。
+      // 放回去的是一個正常收尾的結尾，不是停在半句上的那一截。
       stop = 'end';
       io.reset?.(added);
-      t.note('回退之后那一轮没写成，原来的结尾放回去了');
+      t.note('回退之後那一輪沒寫成，原來的結尾放回去了');
     }
   };
   const usedBanned = (text: string) => (ctx.banned?.length ? countBanned(text, ctx.banned) : []);
   let lastGain = Number.POSITIVE_INFINITY;
   while (shouldContinue({ words: total(), target: aim, stop, rounds })) {
-    // 正常收尾、而上一轮只多了几句：模型认为这一章写完了，再催也是注水（上游 GD:1152）。
+    // 正常收尾、而上一輪只多了幾句：模型認為這一章寫完了，再催也是注水（上游 GD:1152）。
     if (stop !== 'maxTokens' && lastGain < MIN_ROUND_GAIN) {
-      t.note(`续写第 ${rounds} 轮只多了 ${lastGain} 字，模型已经收尾，不再续写`);
+      t.note(`續寫第 ${rounds} 輪只多了 ${lastGain} 字，模型已經收尾，不再續寫`);
       break;
     }
-    // 正常收尾又不够八成：结尾已经收在这一章的最后一场上了，往后接就越过它（见文件头）。先回退到收尾那一场
-    // 之前再写；写完又是这样就再回退一次——一次写一千字上下的模型，一章要这样走两三轮。回退那一轮
-    // 净多的不到 300 字、或者上一轮那一段短得没法切，就停在这里，不往收尾后面接。
+    // 正常收尾又不夠八成：結尾已經收在這一章的最後一場上了，往後接就越過它（見檔案頭）。先回退到收尾那一場
+    // 之前再寫；寫完又是這樣就再回退一次——一次寫一千字上下的模型，一章要這樣走兩三輪。回退那一輪
+    // 淨多的不到 300 字、或者上一輪那一段短得沒法切，就停在這裡，不往收尾後面接。
     let rewinding = false;
     if (stop === 'end') {
       if (rewinds > 0 && total() - beforeCut < MIN_ROUND_GAIN) {
-        t.note(`回退重写那一轮只比回退之前多了 ${total() - beforeCut} 字，模型又收了尾，没有再往收尾后面续写`);
+        t.note(`回退重寫那一輪只比回退之前多了 ${total() - beforeCut} 字，模型又收了尾，沒有再往收尾後面續寫`);
         break;
       }
       const point = rewindPoint(fresh);
       if (!point && rewinds > 0) {
-        t.note(`回退重写之后模型又收了尾（到 ${total()} 字），上一轮那一段太短、没法再切，没有再往收尾后面续写`);
+        t.note(`回退重寫之後模型又收了尾（到 ${total()} 字），上一輪那一段太短、沒法再切，沒有再往收尾後面續寫`);
         break;
       }
       if (point) {
@@ -347,15 +347,15 @@ export async function completeManuscript(
         rewinding = true;
         io.reset?.(added);
         t.note(
-          `写到 ${beforeCut}${ctx.target ? ` / ${ctx.target}` : ''} 字就收了尾：` +
-            `拿掉结尾 ${point.paragraphs} 段（约 ${countWords(point.cut)} 字），从它前面接着写，写足之后重新收尾`
+          `寫到 ${beforeCut}${ctx.target ? ` / ${ctx.target}` : ''} 字就收了尾：` +
+            `拿掉結尾 ${point.paragraphs} 段（約 ${countWords(point.cut)} 字），從它前面接著寫，寫足之後重新收尾`
         );
       }
     }
     rounds++;
     const written = [base, added].filter(Boolean).join('\n\n');
     const before = total();
-    // 上一轮停在半句上：新写的是那半句的后半截，直接接上，不空行。
+    // 上一輪停在半句上：新寫的是那半句的後半截，直接接上，不空行。
     const glue = endsMidSentence(written) ? '' : '\n\n';
     ctx.onProgress?.({ round: rounds, words: before, target: ctx.target });
     const messages = await io.build({
@@ -376,7 +376,7 @@ export async function completeManuscript(
       out = await t.call(
         io,
         messages,
-        recoveryPending ? `续写第 ${rounds} 轮（恢复）` : rewinding ? `续写第 ${rounds} 轮（回退重写结尾）` : `续写第 ${rounds} 轮`,
+        recoveryPending ? `續寫第 ${rounds} 輪（恢復）` : rewinding ? `續寫第 ${rounds} 輪（回退重寫結尾）` : `續寫第 ${rounds} 輪`,
         {
           separator: glue,
           progress: { round: rounds, base: before },
@@ -386,28 +386,28 @@ export async function completeManuscript(
       if (err instanceof CancelledError || ctx.signal?.aborted) {
         throw err;
       }
-      // 一次网络抖动不该把前面写好的几千字带走（D6）。
-      t.note(`续写第 ${rounds} 轮调用失败（${describeError(err)}），停在这里，已写的保留`);
+      // 一次網路抖動不該把前面寫好的幾千字帶走（D6）。
+      t.note(`續寫第 ${rounds} 輪呼叫失敗（${describeError(err)}），停在這裡，已寫的保留`);
       io.reset?.(added);
       restoreCut();
       break;
     }
     const joined = joinContinuation(written, cleanOutput(out.text));
     const gain = countWords(joined.added);
-    const outStop = settle(out.stop, `${written}${glue}${joined.added}`, `续写第 ${rounds} 轮`);
+    const outStop = settle(out.stop, `${written}${glue}${joined.added}`, `續寫第 ${rounds} 輪`);
 
-    // 被截断又几乎没写出新东西：这一轮丢掉，只给一次恢复机会（上游 GD:1130-1146）。
+    // 被截斷又幾乎沒寫出新東西：這一輪丟掉，只給一次恢復機會（上游 GD:1130-1146）。
     if (outStop === 'maxTokens' && gain < MIN_ROUND_GAIN) {
       io.reset?.(added);
       if (recoveryUsed) {
-        t.note(`续写第 ${rounds} 轮（恢复）仍被截断、只多了 ${gain} 字，已丢弃，停在这里；已写的保留`);
+        t.note(`續寫第 ${rounds} 輪（恢復）仍被截斷、只多了 ${gain} 字，已丟棄，停在這裡；已寫的保留`);
         stop = outStop;
         restoreCut();
         break;
       }
       recoveryUsed = true;
       recoveryPending = true;
-      t.note(`续写第 ${rounds} 轮被截断、只多了 ${gain} 字，已丢弃，再给一次恢复机会`);
+      t.note(`續寫第 ${rounds} 輪被截斷、只多了 ${gain} 字，已丟棄，再給一次恢復機會`);
       stop = outStop;
       lastGain = Number.POSITIVE_INFINITY;
       continue;
@@ -418,20 +418,20 @@ export async function completeManuscript(
     stop = outStop;
     recoveryPending = false;
     lastGain = gain;
-    t.note(`续写第 ${rounds} 轮：多了 ${gain} 字，到 ${total()}${ctx.target ? ` / ${ctx.target}` : ''} 字`);
+    t.note(`續寫第 ${rounds} 輪：多了 ${gain} 字，到 ${total()}${ctx.target ? ` / ${ctx.target}` : ''} 字`);
   }
-  // 到了轮数上限、回退之后那一轮还没写成：同样放回去。
+  // 到了輪數上限、回退之後那一輪還沒寫成：同樣放回去。
   restoreCut();
 
   if (rounds >= MAX_CONTINUE_ROUNDS && shouldContinue({ words: total(), target: aim, stop, rounds: 0 })) {
-    t.note(`续写到了上限 ${MAX_CONTINUE_ROUNDS} 轮，没有再续`);
+    t.note(`續寫到了上限 ${MAX_CONTINUE_ROUNDS} 輪，沒有再續`);
   }
   if (stop === 'other') {
-    t.note('模型因为别的原因停下了（常见的是内容审查），没有再续写');
+    t.note('模型因為別的原因停下了（常見的是內容審查），沒有再續寫');
   }
   let untrimmed: string | undefined;
   if (ctx.trim) {
-    // 删之前够八成的，删完也得够：不然主按钮转去推「接着写」，这一轮等于白删。
+    // 刪之前夠八成的，刪完也得夠：不然主按鈕轉去推「接著寫」，這一輪等於白刪。
     const floor = ctx.target && total() >= lowerBound(ctx.target) ? lowerBound(ctx.target) - wordsOf(base) : undefined;
     const trimmed = await trimModifiers(io, t, added, { floor, signal: ctx.signal });
     added = trimmed.text;
@@ -443,16 +443,16 @@ export async function completeManuscript(
   if (truncated) {
     t.note(
       midSentence
-        ? `结尾停在半句上：「${chapterText.trim().slice(-20)}」。${ctx.target ? '续写没能把它接完，' : '细纲与配置里都没写目标字数，所以没有自动续写，'}写入后可以接着写或手改。`
+        ? `結尾停在半句上：「${chapterText.trim().slice(-20)}」。${ctx.target ? '續寫沒能把它接完，' : '細綱與配置裡都沒寫目標字數，所以沒有自動續寫，'}寫入後可以接著寫或手改。`
         : ctx.target
-          ? '最后一轮仍被输出上限截断，结尾可能停在半句上。写入后可以接着写或手改。'
-          : '输出被输出上限截断，结尾可能停在半句上。细纲与配置里都没写目标字数，所以没有自动续写。'
+          ? '最後一輪仍被輸出上限截斷，結尾可能停在半句上。寫入後可以接著寫或手改。'
+          : '輸出被輸出上限截斷，結尾可能停在半句上。細綱與配置裡都沒寫目標字數，所以沒有自動續寫。'
     );
   }
   const words = total();
   const short = !!ctx.target && words < lowerBound(ctx.target);
   if (short) {
-    t.note(`未写够：这一章写到 ${words} / ${ctx.target} 字，不到八成。已写的照样可以写入，之后主按钮会推「接着写」`);
+    t.note(`未寫夠：這一章寫到 ${words} / ${ctx.target} 字，不到八成。已寫的照樣可以寫入，之後主按鈕會推「接著寫」`);
   }
 
   let replay: string | undefined;
@@ -460,30 +460,30 @@ export async function completeManuscript(
     const v = detectReplay(ctx.prevEnding, added);
     if (v.hit) {
       replay = v.quote;
-      t.note(`开头与上一章结尾大段重合（连续 ${v.run} 字），可能把上一章最后一场又演了一遍`);
+      t.note(`開頭與上一章結尾大段重合（連續 ${v.run} 字），可能把上一章最後一場又演了一遍`);
     }
   }
 
-  // 写完查三样（五期补遗 §1.2、§1.3、§1.5）：只记说明，不改正文。
+  // 寫完查三樣（五期補遺 §1.2、§1.3、§1.5）：只記說明，不改正文。
   const similes = countSimiles(chapterText);
   if (similes > SIMILE_LIMIT) {
-    t.note(`比喻词${SIMILE_WORDS.map((w) => `「${w}」`).join('')}全章合计 ${similes} 次（${describeSimiles(chapterText)}），超过 ${SIMILE_LIMIT} 次的上限`);
+    t.note(`比喻詞${SIMILE_WORDS.map((w) => `「${w}」`).join('')}全章合計 ${similes} 次（${describeSimiles(chapterText)}），超過 ${SIMILE_LIMIT} 次的上限`);
   }
   const dialogue = dialogueShare(chapterText);
   if (dialogue < DIALOGUE_FLOOR) {
-    t.note(`对白段只占 ${Math.round(dialogue * 100)}%（人类网文约三成），读起来像旁白`);
+    t.note(`對白段只佔 ${Math.round(dialogue * 100)}%（人類網文約三成），讀起來像旁白`);
   }
   const banned = usedBanned(chapterText);
   if (banned.length > 0) {
-    t.note(`正文用到了这本书不该用的词：${describeBanned(banned)}。换成这个故事里的人会说的话`);
+    t.note(`正文用到了這本書不該用的詞：${describeBanned(banned)}。換成這個故事裡的人會說的話`);
   }
   const acronyms = latinAcronyms(added);
   if (acronyms.length > 0) {
-    t.note(`正文里有英文缩写：${acronyms.join('、')}。故事的年代用不上这种说法的话，改成那个年代的人会说的话`);
+    t.note(`正文裡有英文縮寫：${acronyms.join('、')}。故事的年代用不上這種說法的話，改成那個年代的人會說的話`);
   }
   const early = ctx.notYet?.length ? findEarlyEntrances(added, ctx.notYet) : [];
   for (const e of early) {
-    t.note(`${e.name}按细纲第 ${e.no} 章才登场，本章已经写到了：「${e.quote}」`);
+    t.note(`${e.name}按細綱第 ${e.no} 章才登場，本章已經寫到了：「${e.quote}」`);
   }
 
   return {

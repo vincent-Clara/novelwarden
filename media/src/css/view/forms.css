@@ -1,4 +1,4 @@
-/* 表单控件与栅格。 */
+/* 表單控制元件與柵格。 */
 
 input,
 select,
@@ -51,13 +51,13 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
-/* 两段式提交的第二段（W9「写完即定稿」）：换了字，也换个颜色，看得出这一下会多花钱。 */
+/* 兩段式提交的第二段（W9「寫完即定稿」）：換了字，也換個顏色，看得出這一下會多花錢。 */
 .nf-form .primary.is-armed {
   background: var(--vscode-inputValidation-warningBorder, #b89500);
   border-color: var(--vscode-inputValidation-warningBorder, #b89500);
 }
 
-/* 一行字带「选…」（新建一本书的「放在」）：框与按钮并排。 */
+/* 一行字帶「選…」（新建一本書的「放在」）：框與按鈕並排。 */
 .field-row {
   display: flex;
   gap: 6px;
@@ -68,7 +68,7 @@ textarea:focus {
   flex: none;
 }
 
-/* 表单说明下面的几行小字（导入写好的书：开头几章、丢掉了什么）。 */
+/* 表單說明下面的幾行小字（匯入寫好的書：開頭幾章、丟掉了什麼）。 */
 .nf-form .form-details {
   margin: 0;
   padding-left: 1.2em;

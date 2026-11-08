@@ -1,19 +1,19 @@
 /**
- * 情节大纲的夹具。大纲一章一条（docs/design/plans/2026-10-21-outline-per-chapter.md），而且**没有文件**：它是各章细纲
- * 「梗概」的汇总（docs/design/plans/2026-10-22-outline-from-plots.md）。要「大纲覆盖到第 20 章」，就得有第 1–20 章
- * 各一份带梗概的细纲——`writeOutline` 照一份大纲文本把它们写出来。
+ * 情節大綱的夾具。大綱一章一條（docs/design/plans/2026-10-21-outline-per-chapter.md），而且**沒有檔案**：它是各章細綱
+ * 「梗概」的彙總（docs/design/plans/2026-10-22-outline-from-plots.md）。要「大綱覆蓋到第 20 章」，就得有第 1–20 章
+ * 各一份帶梗概的細綱——`writeOutline` 照一份大綱文字把它們寫出來。
  *
  * ```js
- * outlineOf(20)                                    // 第 1–20 章，每条一行「第N章的事。」
- * outlineOf(20, { text: { 1: '林昭进青云宗。' } })  // 第 1 章换成指定的正文
- * outlineOf(40, { from: 21, heading: false })      // 只要第 21–40 章那几条，不带 `# 情节大纲`
- * writeOutline(t, outlineOf(20))                   // 写成第 1–20 章的细纲空壳（t 是 tmpProject 的路径助手）
+ * outlineOf(20)                                    // 第 1–20 章，每條一行「第N章的事。」
+ * outlineOf(20, { text: { 1: '林昭進青雲宗。' } })  // 第 1 章換成指定的正文
+ * outlineOf(40, { from: 21, heading: false })      // 只要第 21–40 章那幾條，不帶 `# 情節大綱`
+ * writeOutline(t, outlineOf(20))                   // 寫成第 1–20 章的細綱空殼（t 是 tmpProject 的路徑助手）
  * ```
  */
 const fs = require('fs');
 const path = require('path');
 
-function outlineOf(to, { from = 1, title = '情节大纲', heading = true, text = {}, titles = {} } = {}) {
+function outlineOf(to, { from = 1, title = '情節大綱', heading = true, text = {}, titles = {} } = {}) {
   const entries = [];
   for (let no = from; no <= to; no++) {
     entries.push(`## 第${no}章${titles[no] ? `：${titles[no]}` : ''}\n${text[no] ?? `第${no}章的事。`}`);
@@ -21,7 +21,7 @@ function outlineOf(to, { from = 1, title = '情节大纲', heading = true, text 
   return `${heading ? `# ${title}\n\n` : ''}${entries.join('\n\n')}\n`;
 }
 
-/** 一章一条认出来：`## 第N章：标题` 下面到下一个 `#` 标题之前。区间标题、认不出的段落不算。 */
+/** 一章一條認出來：`## 第N章：標題` 下面到下一個 `#` 標題之前。區間標題、認不出的段落不算。 */
 function entriesOf(text) {
   const out = [];
   let cur;
@@ -43,15 +43,15 @@ function entriesOf(text) {
   return out.map((e) => ({ no: e.no, title: e.title, text: e.lines.join('\n').trim() })).filter((e) => e.text);
 }
 
-/** 只有标题与梗概的一份细纲（与网关拆大纲时建的空壳同一个样子，只是不带空的那几节）。 */
+/** 只有標題與梗概的一份細綱（與閘道器拆大綱時建的空殼同一個樣子，只是不帶空的那幾節）。 */
 function stubOf({ no, title, text }) {
   return `---\nno: ${no}\ntitle: ${title}\ngeneratedBy: novelwarden\n---\n\n# 第${no}章${title ? ` ${title}` : ''}\n\n## 梗概\n\n${text}\n`;
 }
 
 /**
- * 照一份大纲文本写各章细纲：这一章还没有细纲（`summaries/` 下没有同号的 .md）就建一份空壳——有正文落正文的镜像
- * （`chapters/003-夜访.md` → `summaries/003-夜访.md`），没有就是 `summaries/NNN.md`；已经有了就只换它的「梗概」一节
- * （与网关存大纲时同一个口径）。`t` 是 tmpProject 的路径助手（`write` / `rel`）；章节根按缺省的 `chapters/` 认。
+ * 照一份大綱文字寫各章細綱：這一章還沒有細綱（`summaries/` 下沒有同號的 .md）就建一份空殼——有正文落正文的映象
+ * （`chapters/003-夜访.md` → `summaries/003-夜访.md`），沒有就是 `summaries/NNN.md`；已經有了就只換它的「梗概」一節
+ * （與閘道器存大綱時同一個口徑）。`t` 是 tmpProject 的路徑助手（`write` / `rel`）；章節根按預設的 `chapters/` 認。
  */
 function writeOutline(t, text) {
   const dir = t.rel('.novelwarden/summaries');
@@ -75,7 +75,7 @@ function writeOutline(t, text) {
   }
 }
 
-/** 目录下各级以数字开头的文件（缺省只要 .md）。 */
+/** 目錄下各級以數字開頭的檔案（預設只要 .md）。 */
 function listDeep(dir, keep = (name) => /\.md$/i.test(name)) {
   const out = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

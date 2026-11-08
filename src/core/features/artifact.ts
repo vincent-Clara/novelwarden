@@ -1,33 +1,33 @@
 /**
- * 产物解析：模型的一坨输出 → 可以采纳落盘的结构化产物。
+ * 產物解析：模型的一坨輸出 → 可以採納落盤的結構化產物。
  *
- * ## 为什么要单独一层
+ * ## 為什麼要單獨一層
  *
- * `generate` / `settle` 两个能力产出的是**要写进文件的东西**，不是聊天气泡。
- * 写进文件就意味着解析失败＝这一次生成白花钱，而且用户看着一段像模像样的回答
- * 却等不来那张「写入吗」的卡片，只会以为是插件坏了。
+ * `generate` / `settle` 兩個能力產出的是**要寫進檔案的東西**，不是聊天氣泡。
+ * 寫進檔案就意味著解析失敗＝這一次生成白花錢，而且使用者看著一段像模像樣的回答
+ * 卻等不來那張「寫入嗎」的卡片，只會以為是外掛壞了。
  *
- * 所以沿用定稿那一套**三层降级**（summarize.ts 的 parseSummaryResponse）：
+ * 所以沿用定稿那一套**三層降級**（summarize.ts 的 parseSummaryResponse）：
  *
- * 1. **JSON**——提示词要求的形状。字段缺失、类型不对、数组/字符串混用逐个兜住，
- *    不整体作废。
- * 2. **Markdown 小节**——模型忽略 JSON 要求、改用 `## 关键事件` 时走这条。
- *    作者手改过的产物重新解析时也走这条。
- * 3. **全文塞进主字段**——信息密度低，但比让这次生成彻底作废强。
+ * 1. **JSON**——提示詞要求的形狀。欄位缺失、型別不對、陣列/字串混用逐個兜住，
+ *    不整體作廢。
+ * 2. **Markdown 小節**——模型忽略 JSON 要求、改用 `## 關鍵事件` 時走這條。
+ *    作者手改過的產物重新解析時也走這條。
+ * 3. **全文塞進主欄位**——資訊密度低，但比讓這次生成徹底作廢強。
  *
- * ## 解析不落盘
+ * ## 解析不落盤
  *
- * 这里只把文本变成对象，**一个字都不写磁盘**。落盘在 `generation/accept.ts`，
- * 且必须由用户在那张权限卡片上点了「写入」才发生（AGENTS.md 第 3 / 19 条：
- * 不静默覆盖、产物落盘前必须过一遍人）。分开还有一个好处：产出先摊在气泡里
- * 给他看，他改两个字再点写入。
+ * 這裡只把文字變成物件，**一個字都不寫磁碟**。落盤在 `generation/accept.ts`，
+ * 且必須由使用者在那張許可權卡片上點了「寫入」才發生（AGENTS.md 第 3 / 19 條：
+ * 不靜默覆蓋、產物落盤前必須過一遍人）。分開還有一個好處：產出先攤在氣泡裡
+ * 給他看，他改兩個字再點寫入。
  *
- * ## 多步生成交来的是规范化结果
+ * ## 多步生成交來的是規範化結果
  *
- * 小说配置、角色图谱、设定清单、细纲批次由生成链（generation/structured.ts）分几次调用拼出来，
- * 交到气泡里的是**将要落盘的样子**：配置是 `config.md` 全文、角色图谱、设定清单与细纲批次是
- * 规范化的 JSON。这里认那几种形状，也认模型第一次调用的原样输出（agent 那条路、
- * 老会话），并照旧三层降级。合同本身在 features/blueprint.ts、roster.ts、loreList.ts、novelConfig.ts。
+ * 小說配置、角色圖譜、設定清單、細綱批次由生成鏈（generation/structured.ts）分幾次呼叫拼出來，
+ * 交到氣泡裡的是**將要落盤的樣子**：配置是 `config.md` 全文、角色圖譜、設定清單與細綱批次是
+ * 規範化的 JSON。這裡認那幾種形狀，也認模型第一次呼叫的原樣輸出（agent 那條路、
+ * 老會話），並照舊三層降級。合同本身在 features/blueprint.ts、roster.ts、loreList.ts、novelConfig.ts。
  */
 import { normalizeGender } from '../model/gender';
 import { hasContent, parseMarkdown, pickSections } from '../model/markdown';
@@ -57,9 +57,9 @@ import { toSectionText } from './summarize';
 
 export type { RosterEntry, LoreListEntry, LoreDraft };
 
-// ---------------------------------------------------------------- 产物形状
+// ---------------------------------------------------------------- 產物形狀
 
-/** 配置的 frontmatter 字段。产物给了就用产物的，没给就沿用磁盘那份。 */
+/** 配置的 frontmatter 欄位。產物給了就用產物的，沒給就沿用磁碟那份。 */
 export type ConfigFields = Partial<
   Pick<
     BookConfig,
@@ -67,30 +67,30 @@ export type ConfigFields = Partial<
   >
 >;
 
-/** 一章细纲：七节，外加文件名要用的标题与目标字数。出场的人就写在「出场人物」一节里。 */
+/** 一章細綱：七節，外加檔名要用的標題與目標字數。出場的人就寫在「出場人物」一節裡。 */
 export interface PlotFields {
   sections: PlotSections;
   title?: string;
   targetWords?: number;
-  /** 「设定」一节（计划用到、要引入的设定）。没带就沿用磁盘那份（handlers/plot.ts）。 */
+  /** 「設定」一節（計劃用到、要引入的設定）。沒帶就沿用磁碟那份（handlers/plot.ts）。 */
   lore?: LoreLine[];
   /**
-   * 「设定」一节里 `isNew` 的那几行（本章首次引入、后面还会用到的新设定）：采纳单章细纲时建空条目（完善设定 §3，
-   * 同批量拆细纲的 `createPlannedLore`）。不写进细纲文件——那里只有 `lore`。
+   * 「設定」一節裡 `isNew` 的那幾行（本章首次引入、後面還會用到的新設定）：採納單章細綱時建空條目（完善設定 §3，
+   * 同批次拆細綱的 `createPlannedLore`）。不寫進細綱檔案——那裡只有 `lore`。
    */
   newLore?: LoreLine[];
   /**
-   * 这一章在叙事线上的计划（细纲合同的 `threads`，叙事线二期）：写入时整组换掉各条线里这一章的计划事件
-   * （features/threadPlan.ts）。不写进细纲文件。undefined = 合同里没写这个字段（手写的 Markdown、老会话的草稿）：不动原来的计划。
+   * 這一章在敘事線上的計劃（細綱合同的 `threads`，敘事線二期）：寫入時整組換掉各條線裡這一章的計劃事件
+   * （features/threadPlan.ts）。不寫進細綱檔案。undefined = 合同裡沒寫這個欄位（手寫的 Markdown、老會話的草稿）：不動原來的計劃。
    */
   threads?: PlanEntry[];
-  /** `threads` 里没收的那几条（类型不对、没写是哪条线……）：卡片上与写入时的日志里说出来（第 2 条）。 */
+  /** `threads` 裡沒收的那幾條（型別不對、沒寫是哪條線……）：卡片上與寫入時的日誌裡說出來（第 2 條）。 */
   planNotes?: string[];
 }
 
 /**
- * 解析出来的产物。`kind` 与 `CreationTarget.kind` 不完全对应：架构层五件里
- * 「角色图谱」产出的是一组角色卡、「设定清单」产出的是一组设定条目（外加分类目录），其余三件是一份文档。
+ * 解析出來的產物。`kind` 與 `CreationTarget.kind` 不完全對應：架構層五件裡
+ * 「角色圖譜」產出的是一組角色卡、「設定清單」產出的是一組設定條目（外加分類目錄），其餘三件是一份文件。
  */
 export type Artifact =
   | {
@@ -98,43 +98,43 @@ export type Artifact =
       doc: SettingFileDoc;
       sections: Record<string, string>;
       config?: ConfigFields;
-      /** 配置草稿里附带的文风：只在 `style.md` 空着时写过去（D14）。 */
+      /** 配置草稿裡附帶的文風：只在 `style.md` 空著時寫過去（D14）。 */
       style?: string;
     }
   | { kind: 'characterRoster'; characters: RosterEntry[] }
-  /** 设定清单：本书的分类目录（落盘时建成 `lore/` 下的目录，空的也建）与条目。 */
+  /** 設定清單：本書的分類目錄（落盤時建成 `lore/` 下的目錄，空的也建）與條目。 */
   | { kind: 'loreList'; categories: string[]; entries: LoreListEntry[] }
   /**
-   * 一批要落盘的设定条目（完善设定，2026-10-19）。展开一条设定时第一项是目标条目（按 `relPath` 认），
-   * 其余是建议拆出来的子条目（建空条目）。`questions` 是还没定、要作者拍板的问题：**只上卡片，不落盘**。
+   * 一批要落盤的設定條目（完善設定，2026-10-19）。展開一條設定時第一項是目標條目（按 `relPath` 認），
+   * 其餘是建議拆出來的子條目（建空條目）。`questions` 是還沒定、要作者拍板的問題：**只上卡片，不落盤**。
    *
-   * `settle`：落定设定（二期）交来的一批——新建的与改已有的（带 `relPath`）都在里面，没有「目标条目」与子条目之分，
-   * 落盘走另一条路（generation/loreSettle.ts）。
+   * `settle`：落定設定（二期）交來的一批——新建的與改已有的（帶 `relPath`）都在裡面，沒有「目標條目」與子條目之分，
+   * 落盤走另一條路（generation/loreSettle.ts）。
    */
   | { kind: 'loreEntries'; entries: LoreDraft[]; questions: string[]; settle?: boolean }
-  /** `range` 给了就只替换大纲里落在这一段的那几条（model/outlineFile.ts 的 `mergeOutline`）。 */
+  /** `range` 給了就只替換大綱裡落在這一段的那幾條（model/outlineFile.ts 的 `mergeOutline`）。 */
   | { kind: 'outlineDoc'; text: string; range?: ChapterRange }
   | ({ kind: 'plot' } & PlotFields)
-  /** 一批细纲：一章一份，按章号升序，只含区间内的章。 */
+  /** 一批細綱：一章一份，按章號升序，只含區間內的章。 */
   | { kind: 'plotBatch'; items: BlueprintItem[]; range: ChapterRange }
   | { kind: 'manuscript'; text: string };
 
-/** 章号闭区间。 */
+/** 章號閉區間。 */
 export interface ChapterRange {
   from: number;
   to: number;
 }
 
 /**
- * 按 action 解析。**绝不抛**：解析这一步出异常，用户丢的是刚花掉的那次调用。
- * 实在认不出就退回一个「全文塞进主字段」的产物，让他至少能手工取用。
+ * 按 action 解析。**絕不拋**：解析這一步出異常，使用者丟的是剛花掉的那次呼叫。
+ * 實在認不出就退回一個「全文塞進主欄位」的產物，讓他至少能手工取用。
  *
- * 架构层要看 target 才分得清是哪一件（五件同属一个阶段）；其余阶段只看 action。单条设定（展开）也在架构层，
- * 按目标认，**不做全文兜底**：解析不了就是空的，没有落盘卡片（{@link parseLoreExpansion}）。落定设定（二期）
- * 按能力认、排在设定清单（`doc === 'lore'`）之前——两者目标相同，同样不做全文兜底（{@link parseLoreSettle}）。
+ * 架構層要看 target 才分得清是哪一件（五件同屬一個階段）；其餘階段只看 action。單條設定（展開）也在架構層，
+ * 按目標認，**不做全文兜底**：解析不了就是空的，沒有落盤卡片（{@link parseLoreExpansion}）。落定設定（二期）
+ * 按能力認、排在設定清單（`doc === 'lore'`）之前——兩者目標相同，同樣不做全文兜底（{@link parseLoreSettle}）。
  *
- * `range` 只对两层有意义：大纲（续写的那一段，落盘时按区间合并）与细纲（**给了区间
- * 就是一批**，按批次合同严格解码，不做全文兜底——见 {@link parsePlotStrict} 为什么）。
+ * `range` 只對兩層有意義：大綱（續寫的那一段，落盤時按區間合併）與細綱（**給了區間
+ * 就是一批**，按批次合同嚴格解碼，不做全文兜底——見 {@link parsePlotStrict} 為什麼）。
  */
 export function parseArtifact(
   action: CreationAction,
@@ -147,7 +147,7 @@ export function parseArtifact(
     case 'manuscript':
       return { kind: 'manuscript', text };
     case 'outline':
-      // 大纲是 Markdown，没有 JSON 可解——原样收下。
+      // 大綱是 Markdown，沒有 JSON 可解——原樣收下。
       return range ? { kind: 'outlineDoc', text, range } : { kind: 'outlineDoc', text };
     case 'plot':
       if (range && action.capability === 'generate') {
@@ -170,7 +170,7 @@ export function parseArtifact(
   }
 }
 
-/** 产物是不是空的。空产物不必问「写不写」——写下去只会得到一个空文件。 */
+/** 產物是不是空的。空產物不必問「寫不寫」——寫下去只會得到一個空檔案。 */
 export function isArtifactEmpty(artifact: Artifact): boolean {
   switch (artifact.kind) {
     case 'outlineDoc':
@@ -191,79 +191,79 @@ export function isArtifactEmpty(artifact: Artifact): boolean {
   }
 }
 
-/** 一句话描述，给落盘卡片与气泡末尾那一行用（「细纲 · 6/7 节」「角色图谱 · 5 人」）。 */
+/** 一句話描述，給落盤卡片與氣泡末尾那一行用（「細綱 · 6/7 節」「角色圖譜 · 5 人」）。 */
 export function describeArtifact(artifact: Artifact): string {
   switch (artifact.kind) {
     case 'settingDoc': {
       const keys = SETTING_SECTION_KEYS[artifact.doc];
       const filled = keys.filter((k) => artifact.sections[k]?.trim()).length;
-      return `${SETTING_TITLE[artifact.doc]} · ${filled}/${keys.length} 节`;
+      return `${SETTING_TITLE[artifact.doc]} · ${filled}/${keys.length} 節`;
     }
     case 'characterRoster':
-      return `角色图谱 · ${artifact.characters.length} 人`;
+      return `角色圖譜 · ${artifact.characters.length} 人`;
     case 'loreList':
-      return `设定清单 · ${artifact.entries.length} 条 · ${artifact.categories.length} 个分类`;
+      return `設定清單 · ${artifact.entries.length} 條 · ${artifact.categories.length} 個分類`;
     case 'loreEntries':
       return describeLoreEntries(artifact);
     case 'outlineDoc':
-      return `情节大纲 · ${artifact.text.length} 字`;
+      return `情節大綱 · ${artifact.text.length} 字`;
     case 'plot': {
       const filled = Object.values(artifact.sections).filter((v) => v.trim()).length;
-      return `细纲 · ${filled}/${PLOT_SECTION_KEYS.length} 节`;
+      return `細綱 · ${filled}/${PLOT_SECTION_KEYS.length} 節`;
     }
     case 'plotBatch': {
       const nos = artifact.items.map((b) => b.no);
       const span = nos.length > 1 ? `第 ${nos[0]}–${nos[nos.length - 1]} 章` : `第 ${nos[0]} 章`;
       const fresh = new Set(artifact.items.flatMap((b) => b.newCharacters.map((c) => c.name))).size;
-      return `细纲 · ${span}（${nos.length} 章）${fresh > 0 ? ` · 新角色 ${fresh} 人` : ''}`;
+      return `細綱 · ${span}（${nos.length} 章）${fresh > 0 ? ` · 新角色 ${fresh} 人` : ''}`;
     }
     case 'manuscript':
       return `正文 · ${artifact.text.length} 字`;
   }
 }
 
-/** 写成「（未交代）」的节不算展开了。 */
+/** 寫成「（未交代）」的節不算展開了。 */
 const UNTOLD = /^[（(]\s*未交代\s*[)）]$/u;
 
 /**
- * 「设定 · 天机阁 · 展开 3/3 节 + 暗设 · 拆出 2 条 · 还没定的 3 问」；落定设定是「落定设定 · 4 条（改已有的 1 条）·
- * 还没定的 2 问」（改不改已有的按气泡里带没带路径算，落盘时还会按磁盘再认一遍，卡片上那两行以那一遍为准）。
+ * 「設定 · 天機閣 · 展開 3/3 節 + 暗設 · 拆出 2 條 · 還沒定的 3 問」；落定設定是「落定設定 · 4 條（改已有的 1 條）·
+ * 還沒定的 2 問」（改不改已有的按氣泡裡帶沒帶路徑算，落盤時還會按磁碟再認一遍，卡片上那兩行以那一遍為準）。
  */
 function describeLoreEntries(artifact: Extract<Artifact, { kind: 'loreEntries' }>): string {
   const [head, ...rest] = artifact.entries;
   const parts: string[] = [];
   if (artifact.settle) {
     const old = artifact.entries.filter((e) => e.relPath).length;
-    parts.push(`落定设定 · ${artifact.entries.length} 条${old > 0 ? `（改已有的 ${old} 条）` : ''}`);
+    parts.push(`落定設定 · ${artifact.entries.length} 條${old > 0 ? `（改已有的 ${old} 條）` : ''}`);
   } else if (head?.relPath) {
     const { visible, hidden } = splitLoreHidden(head.body);
     const filled = pickSections(visible, LORE_BODY_KEYS);
     const n = LORE_BODY_KEYS.filter((k) => hasContent(filled[k]) && !UNTOLD.test(filled[k].trim())).length;
-    parts.push(`设定 · ${head.title} · 展开 ${n}/${LORE_BODY_KEYS.length} 节${hidden ? ' + 暗设' : ''}`);
+    parts.push(`設定 · ${head.title} · 展開 ${n}/${LORE_BODY_KEYS.length} 節${hidden ? ' + 暗設' : ''}`);
   } else {
-    parts.push(`设定 · ${artifact.entries.length} 条`);
+    parts.push(`設定 · ${artifact.entries.length} 條`);
   }
   if (!artifact.settle && head?.relPath && rest.length > 0) {
-    parts.push(`拆出 ${rest.length} 条`);
+    parts.push(`拆出 ${rest.length} 條`);
   }
   if (artifact.questions.length > 0) {
-    parts.push(`还没定的 ${artifact.questions.length} 问`);
+    parts.push(`還沒定的 ${artifact.questions.length} 問`);
   }
   return parts.join(' · ');
 }
 
 const SETTING_TITLE: Record<SettingFileDoc, string> = {
-  config: '小说配置',
+  config: '小說配置',
   premise: '故事前提',
-  world: '世界观',
+  world: '世界觀',
 };
 
-// ---------------------------------------------------------------- 细纲
+// ---------------------------------------------------------------- 細綱
 
-/** JSON 里七节的别名：蓝图合同用的是英文键。 */
+/** JSON 裡七節的別名：藍圖合同用的是英文鍵。 */
 const PLOT_KEY_ALIASES: Record<(typeof PLOT_SECTION_KEYS)[number], string[]> = {
   梗概: ['梗概', 'synopsis', 'summary'],
-  出场人物: ['出场人物', 'characters', '出场角色', '人物'],
+  出场人物: ['出场人物', 'characters', '出場角色', '人物'],
   时间地点: ['时间地点', 'timePlace', 'time_place'],
   关键事件: ['关键事件', 'keyEvents', 'key_events', 'events', '事件'],
   看点: ['看点', 'highlights'],
@@ -272,19 +272,19 @@ const PLOT_KEY_ALIASES: Record<(typeof PLOT_SECTION_KEYS)[number], string[]> = {
 };
 
 /**
- * 只走前两层，**不做全文兜底**。解析不出结构就返回 undefined。
+ * 只走前兩層，**不做全文兜底**。解析不出結構就返回 undefined。
  *
- * 批量路径（工程页一次给几十章写细纲）必须用这个：那里没有人逐份过目，
- * 而全文兜底会把模型的一句「我不太确定这一章写什么」变成一份「已规划」的
- * 细纲——流水线状态从此开始撒谎，紧接着的批量写正文会照着这份垃圾往下写。
+ * 批次路徑（工程頁一次給幾十章寫細綱）必須用這個：那裡沒有人逐份過目，
+ * 而全文兜底會把模型的一句「我不太確定這一章寫什麼」變成一份「已規劃」的
+ * 細綱——流水線狀態從此開始撒謊，緊接著的批次寫正文會照著這份垃圾往下寫。
  *
- * 创作页反过来走 {@link parseArtifact} 的兜底：那里产物就摊在屏幕上，
- * 用户看得见它是什么，兜底至少留住了这次调用的钱。
+ * 創作頁反過來走 {@link parseArtifact} 的兜底：那裡產物就攤在螢幕上，
+ * 使用者看得見它是什麼，兜底至少留住了這次呼叫的錢。
  */
 export function parsePlotStrict(text: string): PlotFields | undefined {
   const outer = objectOf(text);
-  // 单章也用批次合同的单项形式（第 22 条：生成与落定两个入口契约一致），
-  // 模型答的是 `{"blueprints":[{…}]}`——取里面那一项。
+  // 單章也用批次合同的單項形式（第 22 條：生成與落定兩個入口契約一致），
+  // 模型答的是 `{"blueprints":[{…}]}`——取裡面那一項。
   const wrapped = Array.isArray(outer?.blueprints) ? outer.blueprints[0] : undefined;
   const fromJson =
     wrapped && typeof wrapped === 'object' && !Array.isArray(wrapped) ? (wrapped as Record<string, unknown>) : outer;
@@ -293,27 +293,27 @@ export function parsePlotStrict(text: string): PlotFields | undefined {
     for (const key of PLOT_SECTION_KEYS) {
       sections[key] = toSectionText(pickAlias(fromJson, PLOT_KEY_ALIASES[key]));
     }
-    // 出场人物是一行名单（「林昭、沈氏」），不是一条一行的列表——与蓝图落盘的样子一致。
+    // 出場人物是一行名單（「林昭、沈氏」），不是一條一行的列表——與藍圖落盤的樣子一致。
     const cast = strList(pickAlias(fromJson, PLOT_KEY_ALIASES.出场人物));
     if (cast.length > 0) {
       sections.出场人物 = cast.join('、');
     }
-    // 关键事件一条一行，与批次同一套规矩：给成一段字也按换行与分号切成条。
+    // 關鍵事件一條一行，與批次同一套規矩：給成一段字也按換行與分號切成條。
     const events = keyEventList(pickAlias(fromJson, PLOT_KEY_ALIASES.关键事件));
     if (events) {
       sections.关键事件 = events.map((e) => `- ${e}`).join('\n');
     }
-    // 语法合法但完全不相干的 JSON（`{"text":"..."}`）认下来会得到一份空细纲
-    // **并且不再降级**，比解析失败更糟。
+    // 語法合法但完全不相干的 JSON（`{"text":"..."}`）認下來會得到一份空細綱
+    // **並且不再降級**，比解析失敗更糟。
     if (Object.values(sections).some((v) => v.trim())) {
       const settings = fromJson.settings ?? fromJson.设定;
-      // 叙事线的计划（二期）：与批次同一套解码（第 22 条）；没写就不带，写入时不动原来的计划。
+      // 敘事線的計劃（二期）：與批次同一套解碼（第 22 條）；沒寫就不帶，寫入時不動原來的計劃。
       const plan = decodePlanEntries(fromJson.threads ?? fromJson.叙事线, num(fromJson.chapterNumber) ?? 0);
       return {
         sections,
         title: clipTitle(str(fromJson.title ?? fromJson.标题)),
         targetWords: num(fromJson.targetWords ?? fromJson.目标字数),
-        // 「设定」一节：合同里可选，没写就不带（落盘时沿用磁盘那份）。`isNew` 的另记一份，采纳时建空条目。
+        // 「設定」一節：合同裡可選，沒寫就不帶（落盤時沿用磁碟那份）。`isNew` 的另記一份，採納時建空條目。
         ...(settings !== undefined ? { lore: loreLinesFromJson(settings), ...newLoreOf(settings) } : {}),
         ...(plan.entries ? { threads: plan.entries } : {}),
         ...(plan.notes.length > 0 ? { planNotes: plan.notes } : {}),
@@ -326,8 +326,8 @@ export function parsePlotStrict(text: string): PlotFields | undefined {
 }
 
 /**
- * 蓝图 `settings` 里 `isNew` 的那几行（写法同批次的 `blueprintSettings`）：名字截长，同名只留第一行。
- * 一行都没有就不带这个字段。
+ * 藍圖 `settings` 裡 `isNew` 的那幾行（寫法同批次的 `blueprintSettings`）：名字截長，同名只留第一行。
+ * 一行都沒有就不帶這個欄位。
  */
 function newLoreOf(raw: unknown): { newLore?: LoreLine[] } {
   if (!Array.isArray(raw)) {
@@ -345,11 +345,11 @@ function newLoreOf(raw: unknown): { newLore?: LoreLine[] } {
 }
 
 /**
- * 一批细纲：按批次合同严格解码，只留区间内的章、同号只留第一份，按章号升序。
+ * 一批細綱：按批次合同嚴格解碼，只留區間內的章、同號只留第一份，按章號升序。
  *
- * 解不出来就是空的——采纳时据此说「解析不出」，不写任何东西。生成那一步的漏章、
- * 重复章由生成链当场报错（fail-closed），走到这里的是已经过了那一关的规范化结果，
- * 或者作者在气泡里改过的那一份。
+ * 解不出來就是空的——採納時據此說「解析不出」，不寫任何東西。生成那一步的漏章、
+ * 重複章由生成鏈當場報錯（fail-closed），走到這裡的是已經過了那一關的規範化結果，
+ * 或者作者在氣泡裡改過的那一份。
  */
 export function parsePlotBatch(text: string, range: ChapterRange): BlueprintItem[] {
   const decoded = decodeBlueprints(text);
@@ -362,9 +362,9 @@ export function parsePlotBatch(text: string, range: ChapterRange): BlueprintItem
     .sort((a, b) => a.no - b.no);
 }
 
-// ---------------------------------------------------------------- 架构
+// ---------------------------------------------------------------- 架構
 
-/** 各件兜底塞进哪一节：那一件的主体，也就是「填过没有」看的那一节。 */
+/** 各件兜底塞進哪一節：那一件的主體，也就是「填過沒有」看的那一節。 */
 const SETTING_FALLBACK: Record<SettingFileDoc, string> = {
   config: '核心梗概',
   premise: '核心冲突链',
@@ -372,10 +372,10 @@ const SETTING_FALLBACK: Record<SettingFileDoc, string> = {
 };
 
 /**
- * 小说配置 / 前提 / 世界观：JSON 同名键 → Markdown 小节 → 全文塞进主体那一节。
+ * 小說配置 / 前提 / 世界觀：JSON 同名鍵 → Markdown 小節 → 全文塞進主體那一節。
  *
- * 配置另外认两种形状：生成链交来的规范化草稿（带 frontmatter 的 `config.md` 全文，
- * 末尾可能有一节「文风」），以及上游合同的英文键 JSON（模型第一次调用的原样输出）。
+ * 配置另外認兩種形狀：生成鏈交來的規範化草稿（帶 frontmatter 的 `config.md` 全文，
+ * 末尾可能有一節「文風」），以及上游合同的英文鍵 JSON（模型第一次呼叫的原樣輸出）。
  */
 export function parseSettingArtifact(doc: SettingFileDoc, text: string): Extract<Artifact, { kind: 'settingDoc' }> {
   if (doc === 'config') {
@@ -418,8 +418,8 @@ export function parseSettingArtifact(doc: SettingFileDoc, text: string): Extract
 }
 
 /**
- * 配置的两种特殊形状（见 {@link parseSettingArtifact}）。都认不出返回 undefined，
- * 回到通用的三层降级。
+ * 配置的兩種特殊形狀（見 {@link parseSettingArtifact}）。都認不出返回 undefined，
+ * 回到通用的三層降級。
  */
 function parseConfigDraft(text: string): Extract<Artifact, { kind: 'settingDoc' }> | undefined {
   const pickConfig = (c: ConfigFields & { genre?: string; subGenre?: string; audience?: string }): ConfigFields => ({
@@ -430,7 +430,7 @@ function parseConfigDraft(text: string): Extract<Artifact, { kind: 'settingDoc' 
     pov: c.pov,
     totalChapters: c.totalChapters,
     wordsPerChapter: c.wordsPerChapter,
-    // 草稿是 `config.md` 全文，frontmatter 里带着作者的分段格式（mergeWithAuthor 从磁盘那份抄来的）。
+    // 草稿是 `config.md` 全文，frontmatter 裡帶著作者的分段格式（mergeWithAuthor 從磁碟那份抄來的）。
     paragraphStyle: c.paragraphStyle,
   });
 
@@ -465,10 +465,10 @@ function parseConfigDraft(text: string): Extract<Artifact, { kind: 'settingDoc' 
 }
 
 /**
- * 角色图谱：`{characters:[{name, role, 身份, 性格, …}]}` → 裸数组 → 每个 `## 名字` 一人。
+ * 角色圖譜：`{characters:[{name, role, 身份, 性格, …}]}` → 裸陣列 → 每個 `## 名字` 一人。
  *
- * Markdown 那一层把整节内容当作「身份」：模型不按 JSON 答时，能留住的就是
- * 「这个人是谁」这一段。名字相同的只收第一个。
+ * Markdown 那一層把整節內容當作「身份」：模型不按 JSON 答時，能留住的就是
+ * 「這個人是誰」這一段。名字相同的只收第一個。
  */
 export function parseRoster(text: string): RosterEntry[] {
   const out: RosterEntry[] = [];
@@ -511,7 +511,7 @@ export function parseRoster(text: string): RosterEntry[] {
     return out;
   }
 
-  // Markdown：每个 `## 名字` 一节。
+  // Markdown：每個 `## 名字` 一節。
   const lines = text.split(/\r?\n/);
   let current: { name: string; buf: string[] } | undefined;
   const flush = () => {
@@ -535,7 +535,7 @@ export function parseRoster(text: string): RosterEntry[] {
 
 // ---------------------------------------------------------------- 取值工具
 
-/** 最外层 JSON 对象。不是对象（数组、纯文本）返回 undefined。 */
+/** 最外層 JSON 物件。不是物件（陣列、純文字）返回 undefined。 */
 function objectOf(text: string): Record<string, unknown> | undefined {
   const json = extractJsonObject(text);
   if (!json) {
@@ -552,15 +552,15 @@ function objectOf(text: string): Record<string, unknown> | undefined {
 }
 
 /**
- * 清单：`{characters:[…]}` → `[…]` 裸数组。
+ * 清單：`{characters:[…]}` → `[…]` 裸陣列。
  *
- * 模型漏掉外层键是每天都会遇到的事；键名认不出时取第一个数组值——
- * `{"角色列表":[…]}` 这种也别丢。
+ * 模型漏掉外層鍵是每天都會遇到的事；鍵名認不出時取第一個陣列值——
+ * `{"角色列表":[…]}` 這種也別丟。
  */
 function listOf(text: string, ...keys: string[]): unknown[] {
-  // 整段就是一个数组时先认数组：只有一个人的裸数组 `[{"name":"林昭","aliases":[…]}]`
-  // 里，「第一个 `{` 到最后一个 `}`」恰好是那个人自己——当成外层对象去取数组键，
-  // 取到的是他的 aliases，名单就成了空的。
+  // 整段就是一個陣列時先認陣列：只有一個人的裸陣列 `[{"name":"林昭","aliases":[…]}]`
+  // 裡，「第一個 `{` 到最後一個 `}`」恰好是那個人自己——當成外層物件去取陣列鍵，
+  // 取到的是他的 aliases，名單就成了空的。
   if (text.trimStart().startsWith('[')) {
     const bare = bareArray(text);
     if (bare) {
@@ -611,10 +611,10 @@ function pickEnum<T extends string>(v: unknown, values: readonly T[]): T | undef
 }
 
 /**
- * 标题长度收口。
+ * 標題長度收口。
  *
- * 标题会变成文件名（`012-<标题>.md`），而模型很爱把一整句梗概当标题。
- * 在标点处断一次再截断，比硬切 18 个字读起来像个标题。
+ * 標題會變成檔名（`012-<標題>.md`），而模型很愛把一整句梗概當標題。
+ * 在標點處斷一次再截斷，比硬切 18 個字讀起來像個標題。
  */
 function clipTitle(text: string): string {
   const head = text.split(/[。！？；;\n]/)[0].trim() || text.trim();
@@ -625,7 +625,7 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v.trim() : typeof v === 'number' ? String(v) : '';
 }
 
-/** 字符串数组；写成 `a、b` 的一个字符串也拆开。 */
+/** 字串陣列；寫成 `a、b` 的一個字串也拆開。 */
 function strList(v: unknown): string[] {
   if (Array.isArray(v)) {
     return v.map(str).filter(Boolean);

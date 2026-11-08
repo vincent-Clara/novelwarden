@@ -1,13 +1,13 @@
 /**
- * `lore` —— 设定名录：记设定、建条目、整合（设定名录，2026-10-18）。
+ * `lore` —— 設定名錄：記設定、建條目、整合（設定名錄，2026-10-18）。
  *
- * 每个动作都是工程页设定组那几项右键菜单背后的同一个函数，确认框（含调用次数）与对比都在
- * feature 自己那里。这几个 feature 不报调用次数，回给模型的只有一句「交出去了」（`handed`），次数以
- * 确认框为准。
+ * 每個動作都是工程頁設定組那幾項右鍵選單背後的同一個函式，確認框（含呼叫次數）與對比都在
+ * feature 自己那裡。這幾個 feature 不報呼叫次數，回給模型的只有一句「交出去了」（`handed`），次數以
+ * 確認框為準。
  *
- * **没有「按目录整理」**：它会搬文件，而移动是第 25 条明确不给外部 agent 的——作者在工程页自己点。
+ * **沒有「按目錄整理」**：它會搬檔案，而移動是第 25 條明確不給外部 agent 的——作者在工程頁自己點。
  *
- * 设定出现在哪几章的唯一真相是定稿过的细纲「设定」一节：先定稿（summary finalize，会顺手记设定），再建条目、整合。
+ * 設定出現在哪幾章的唯一真相是定稿過的細綱「設定」一節：先定稿（summary finalize，會順手記設定），再建條目、整合。
  */
 import { str } from '../schema';
 import { defineActionTool, handed } from './actions';
@@ -16,42 +16,42 @@ import { recordLore } from '../../features/loreRecord';
 
 export const loreTool = defineActionTool({
   name: 'lore',
-  summary: '设定条目（地点、势力、物品、概念……）。出现在哪几章以各章同步过的细纲为准：先同步再建条目、整合。',
+  summary: '設定條目（地點、勢力、物品、概念……）。出現在哪幾章以各章同步過的細綱為準：先同步再建條目、整合。',
 
   params: {
-    path: str('章节路径（record），或设定条目的工程内相对路径（integrate）。'),
-    name: str('名录里还没有条目的设定名字，与细纲里的写法一致。'),
+    path: str('章節路徑（record），或設定條目的工程內相對路徑（integrate）。'),
+    name: str('名錄裡還沒有條目的設定名字，與細綱裡的寫法一致。'),
   },
 
   actions: {
     record: {
-      label: '记设定：给了 path 就单独记那一章（只换细纲的「设定」一节），没给就补记所有同步过、还没记过设定的章',
+      label: '記設定：給了 path 就單獨記那一章（只換細綱的「設定」一節），沒給就補記所有同步過、還沒記過設定的章',
       costly: true,
       uses: ['path'],
       async run(ctx, args) {
         const path = typeof args.path === 'string' && args.path.trim() ? args.path.trim() : undefined;
         await recordLore(ctx.project, path);
-        return handed(path ? `${path} 记设定` : '补记设定');
+        return handed(path ? `${path} 記設定` : '補記設定');
       },
     },
     build: {
-      label: '给同步过的章里出现过、还没有条目的设定建条目；给了 name 就建那一条，没给就建出现 2 章以上的全部',
+      label: '給同步過的章裡出現過、還沒有條目的設定建條目；給了 name 就建那一條，沒給就建出現 2 章以上的全部',
       costly: true,
       uses: ['name'],
       async run(ctx, args) {
         const name = typeof args.name === 'string' && args.name.trim() ? args.name.trim() : undefined;
         await buildLoreEntries(ctx.project, name ? [name] : undefined);
-        return handed(name ? `「${name}」建条目` : '批量建条目');
+        return handed(name ? `「${name}」建條目` : '批次建條目');
       },
     },
     integrate: {
-      label: '把同步过的章里的新内容并进设定条目；给了 path 就整合那一条，没给就是有新内容的全部',
+      label: '把同步過的章裡的新內容並進設定條目；給了 path 就整合那一條，沒給就是有新內容的全部',
       costly: true,
       uses: ['path'],
       async run(ctx, args) {
         const path = typeof args.path === 'string' && args.path.trim() ? args.path.trim() : undefined;
         await integrateLore(ctx.project, path ? [path] : undefined);
-        return handed(path ? `设定 ${path} 整合` : '整合设定');
+        return handed(path ? `設定 ${path} 整合` : '整合設定');
       },
     },
   },

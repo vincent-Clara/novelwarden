@@ -1,15 +1,15 @@
 /**
- * 写正文那张落盘卡片（W7 的后端一半）：卡片上说清写了多长、是不是追加、有没有重演上一章结尾；
- * 写的过程中推进度，丢弃一轮时让气泡退回去。
+ * 寫正文那張落盤卡片（W7 的後端一半）：卡片上說清寫了多長、是不是追加、有沒有重演上一章結尾；
+ * 寫的過程中推進度，丟棄一輪時讓氣泡退回去。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 「x / y 字 · 已达标 / 未写够」 | 作者点写入之前就该知道这一章够不够长（D6） |
- * | 续写了几轮、一共调了几次 | 第 4 条：钱花在哪要看得见 |
- * | 接着写的卡片说「追加」，写明已有与新写各多少 | 点下去之后这一章是多长 |
- * | 重演：gate 带红色块与两段式确认 | 不替作者拒收，但不能让他一下点过去（总计划 §2.4） |
- * | 写的过程中推 `writeProgress` | 气泡顶上那条进度（W7） |
- * | 丢弃一轮时推 `streamReset` | 气泡里不留一段不会被写入的文字 |
+ * | 「x / y 字 · 已達標 / 未寫夠」 | 作者點寫入之前就該知道這一章夠不夠長（D6） |
+ * | 續寫了幾輪、一共調了幾次 | 第 4 條：錢花在哪要看得見 |
+ * | 接著寫的卡片說「追加」，寫明已有與新寫各多少 | 點下去之後這一章是多長 |
+ * | 重演：gate 帶紅色塊與兩段式確認 | 不替作者拒收，但不能讓他一下點過去（總計劃 §2.4） |
+ * | 寫的過程中推 `writeProgress` | 氣泡頂上那條進度（W7） |
+ * | 丟棄一輪時推 `streamReset` | 氣泡裡不留一段不會被寫入的文字 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -28,12 +28,12 @@ let posted = [];
 let gates = [];
 let script = [];
 
-const P2 = '.novelwarden/summaries/002-客栈.md';
+const P2 = '.novelwarden/summaries/002-客棧.md';
 const P3 = '.novelwarden/summaries/003-夜访.md';
 const P4 = '.novelwarden/summaries/004-井.md';
 
 const CH1_END =
-  '客栈的灯还亮着，沈氏坐在柜台后面拨算盘，看见他进门，手指停在半空，半晌才说了一句：“李叔来过，问你去了哪里，我说你出城收账去了。”林昭没有答话，把湿透的斗篷挂在门后，从灶上端下那碗早就凉了的姜汤，一口一口喝完。';
+  '客棧的燈還亮著，沈氏坐在櫃檯後面撥算盤，看見他進門，手指停在半空，半晌才說了一句：“李叔來過，問你去了哪裡，我說你出城收賬去了。”林昭沒有答話，把溼透的斗篷掛在門後，從灶上端下那碗早就涼了的薑湯，一口一口喝完。';
 
 function attach() {
   controller.attach({
@@ -98,18 +98,18 @@ before(async () => {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  t = await makeTempProject(bundle.project, { prefix: 'write-card', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'write-card', title: '青雲劍錄' });
   project = t.project;
   const ws = new bundle.ws.Workspace(project);
   const empty = bundle.plotFile.emptyPlotSections();
-  for (const [no, title] of [[1, '夜入青云'], [2, '客栈'], [3, '夜访'], [4, '井']]) {
+  for (const [no, title] of [[1, '夜入青雲'], [2, '客棧'], [3, '夜訪'], [4, '井']]) {
     await ws.writePlot({
       no, title, targetWords: 1000, upstreamHash: '', done: false,
-      sections: { ...empty, 梗概: `第 ${no} 章的梗概`, 关键事件: `第 ${no} 章的关键事件`, 看点: `- 第 ${no} 章的看点` },
+      sections: { ...empty, 梗概: `第 ${no} 章的梗概`, 关键事件: `第 ${no} 章的關鍵事件`, 看点: `- 第 ${no} 章的看點` },
     });
   }
-  await ws.createChapter(1, '夜入青云', `${filler(900, 1)}\n\n${CH1_END}`);
-  await ws.createChapter(3, '夜访', filler(300, 3));
+  await ws.createChapter(1, '夜入青雲', `${filler(900, 1)}\n\n${CH1_END}`);
+  await ws.createChapter(3, '夜訪', filler(300, 3));
   await project.syncManifest();
 
   controller = new bundle.controller.ChatController(project);
@@ -121,7 +121,7 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('写第 2 章：截断续写一轮，开头重演了上一章结尾', () => {
+describe('寫第 2 章：截斷續寫一輪，開頭重演了上一章結尾', () => {
   let r;
   before(async () => {
     r = await send(P2, [
@@ -130,26 +130,26 @@ describe('写第 2 章：截断续写一轮，开头重演了上一章结尾', (
     ]);
   });
 
-  test('卡片写明字数与达标', () => {
-    assert.match(r.gate.detail, /\d+ \/ 1000 字 · 已达标/);
+  test('卡片寫明字數與達標', () => {
+    assert.match(r.gate.detail, /\d+ \/ 1000 字 · 已達標/);
   });
 
-  test('卡片写明续写了几轮、一共调了几次', () => {
-    assert.match(r.gate.detail, /这一轮一共调了 2 次模型（续写 1 轮）/);
+  test('卡片寫明續寫了幾輪、一共調了幾次', () => {
+    assert.match(r.gate.detail, /這一輪一共調了 2 次模型（續寫 1 輪）/);
   });
 
-  test('重演：红色块写明重合的原句，写入要点两下', () => {
-    assert.match(r.gate.danger, /与上一章结尾大段重合/);
-    assert.match(r.gate.danger, /沈氏坐在柜台后面/);
-    assert.equal(r.gate.confirm, '确定仍要写入');
+  test('重演：紅色塊寫明重合的原句，寫入要點兩下', () => {
+    assert.match(r.gate.danger, /與上一章結尾大段重合/);
+    assert.match(r.gate.danger, /沈氏坐在櫃檯後面/);
+    assert.equal(r.gate.confirm, '確定仍要寫入');
   });
 
-  test('气泡上的记录也带着字数与重演', () => {
+  test('氣泡上的記錄也帶著字數與重演', () => {
     assert.equal(r.assistant.artifact.length.target, 1000);
     assert.ok(r.assistant.artifact.replay.includes('沈氏'));
   });
 
-  test('写的过程中推进度：第 0 轮起，报到第 1 轮', () => {
+  test('寫的過程中推進度：第 0 輪起，報到第 1 輪', () => {
     assert.ok(r.progress.length >= 2, String(r.progress.length));
     assert.equal(r.progress[0].round, 0);
     assert.ok(r.progress.some((p) => p.round === 1));
@@ -157,32 +157,32 @@ describe('写第 2 章：截断续写一轮，开头重演了上一章结尾', (
   });
 });
 
-describe('接着写第 3 章：卡片说「追加」', () => {
+describe('接著寫第 3 章：卡片說「追加」', () => {
   let r;
   before(async () => {
     r = await send(P3, [{ text: filler(600, 30), stop: 'end' }], { writeMode: 'continue' });
   });
 
-  test('标题说追加，不说覆盖', () => {
+  test('標題說追加，不說覆蓋', () => {
     assert.ok(r.gate.title.includes('追加到'), r.gate.title);
   });
 
-  test('写明已有多少、这一次新写多少', () => {
-    assert.match(r.gate.detail, /900 \/ 1000 字 · 已达标（已有 300 字，这一次新写 600 字，追加在末尾）/);
+  test('寫明已有多少、這一次新寫多少', () => {
+    assert.match(r.gate.detail, /900 \/ 1000 字 · 已達標（已有 300 字，這一次新寫 600 字，追加在末尾）/);
   });
 
-  test('没有重演的红色块', () => {
+  test('沒有重演的紅色塊', () => {
     assert.equal(r.gate.danger, undefined);
     assert.equal(r.gate.confirm, undefined);
   });
 
-  test('追加进了磁盘', () => {
-    const text = t.read('chapters/003-夜访.txt');
+  test('追加進了磁碟', () => {
+    const text = t.read('chapters/003-夜訪.txt');
     assert.ok(text.includes(filler(300, 3)) && text.includes(filler(600, 30)));
   });
 });
 
-describe('写第 4 章：丢弃一轮、最后未写够', () => {
+describe('寫第 4 章：丟棄一輪、最後未寫夠', () => {
   let r;
   before(async () => {
     r = await send(P4, [
@@ -192,13 +192,13 @@ describe('写第 4 章：丢弃一轮、最后未写够', () => {
     ]);
   });
 
-  test('丢弃那一轮时推了 streamReset，退回到丢弃之前那一版', () => {
+  test('丟棄那一輪時推了 streamReset，退回到丟棄之前那一版', () => {
     assert.ok(r.resets.length >= 1);
     assert.equal(r.resets[0].text, filler(400, 40));
   });
 
-  test('卡片写「未写够」，照样问写不写', () => {
+  test('卡片寫「未寫夠」，照樣問寫不寫', () => {
     assert.ok(r.gate);
-    assert.match(r.gate.detail, /400 \/ 1000 字 · 未写够/);
+    assert.match(r.gate.detail, /400 \/ 1000 字 · 未寫夠/);
   });
 });

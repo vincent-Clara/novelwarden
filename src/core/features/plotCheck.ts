@@ -1,14 +1,14 @@
 /**
- * 写前冲突检查的取数与调用（百章实验复盘）：本章细纲、前面定稿的连续性事实，调一次模型，校验交回来的
- * 冲突。判断规则、提示词与校验在 model/plotCheck.ts（纯函数）。
+ * 寫前衝突檢查的取數與呼叫（百章實驗覆盤）：本章細綱、前面定稿的連續性事實，調一次模型，校驗交回來的
+ * 衝突。判斷規則、提示詞與校驗在 model/plotCheck.ts（純函式）。
  *
- * 只在批量写章里跑（features/pipelineBatch.ts，预检之后、写之前）：批量没有人看着，细纲与既成事实
- * 对不上还往下写，就是百章实验里死了的人再死一次。对话页写一章时作者就在场。
+ * 只在批次寫章裡跑（features/pipelineBatch.ts，預檢之後、寫之前）：批次沒有人看著，細綱與既成事實
+ * 對不上還往下寫，就是百章實驗裡死了的人再死一次。對話頁寫一章時作者就在場。
  *
- * 零调用的情形：细纲是空的、细纲上记了 `factCheckOk: true`、前面没有定稿过的章、选不出相关的事实。
+ * 零呼叫的情形：細綱是空的、細綱上記了 `factCheckOk: true`、前面沒有定稿過的章、選不出相關的事實。
  *
- * 2026-10-25 起改成转写：比对的模型按格式写，转写模型（「转写」那一档，features/poolIO.ts 的 `poolTranscriber`）照抄成
- * `{"conflicts":[…]}`；只写了「无矛盾」的不转。
+ * 2026-10-25 起改成轉寫：比對的模型按格式寫，轉寫模型（「轉寫」那一檔，features/poolIO.ts 的 `poolTranscriber`）照抄成
+ * `{"conflicts":[…]}`；只寫了「無矛盾」的不轉。
  */
 import { readConfig } from '../config';
 import { contextLimitsOf } from '../model/contextDetail';
@@ -32,36 +32,36 @@ import { jsonList } from './parse';
 import { poolTranscriber } from './poolIO';
 import { TranscribeCall, TranscribeSpec, transcribeJson } from './transcribe';
 
-const log = scoped('流水线');
+const log = scoped('流水線');
 
 export interface PlotCheckOutcome {
-  /** 实际调了几次模型。 */
+  /** 實際調了幾次模型。 */
   calls: number;
   conflicts: PlotConflict[];
-  /** 模型报了、但两句原文对不上而丢掉的几处。 */
+  /** 模型報了、但兩句原文對不上而丟掉的幾處。 */
   dropped: number;
-  /** 没查的原因（零调用）。 */
+  /** 沒查的原因（零呼叫）。 */
   skipped?: string;
 }
 
-/** 冲突检查那一步的转写：合同、原来的解码（`conflicts` 数组），章号按对应关系填。 */
+/** 衝突檢查那一步的轉寫：合同、原來的解碼（`conflicts` 陣列），章號按對應關係填。 */
 const PLOT_CHECK_TRANSCRIBE: TranscribeSpec<unknown[]> = {
-  label: '写前冲突检查',
+  label: '寫前衝突檢查',
   contract: PLOT_CHECK_JSON_CONTRACT,
   decode: (json) => {
     const list = jsonList(json, 'conflicts');
-    return list ? { ok: true, value: list } : { ok: false, message: '缺少 conflicts 数组' };
+    return list ? { ok: true, value: list } : { ok: false, message: '缺少 conflicts 陣列' };
   },
   mapped: ['chapter'],
   looksLike: looksLikePlotCheck,
 };
 
 /**
- * 比对第 `no` 章的细纲与前面定稿的事实。写的那一次按格式写，转写模型照抄成 JSON；转写不合格重转 1 次（2026-10-25 起，
- * 替掉了从前「不是合格的 JSON 就带提醒重来 1 次」——JSON 的毛病现在归转写）。没按格式写、转写还不行就抛错——
- * 调用方把它当成「这一步没做成」记一句、照写（检查是额外的一道，不该因为它写不了章）。
+ * 比對第 `no` 章的細綱與前面定稿的事實。寫的那一次按格式寫，轉寫模型照抄成 JSON；轉寫不合格重轉 1 次（2026-10-25 起，
+ * 替掉了從前「不是合格的 JSON 就帶提醒重來 1 次」——JSON 的毛病現在歸轉寫）。沒按格式寫、轉寫還不行就拋錯——
+ * 呼叫方把它當成「這一步沒做成」記一句、照寫（檢查是額外的一道，不該因為它寫不了章）。
  *
- * `transcribe` 缺省走「转写」那一档（没有可用模型时报错，同样当成没做成）。
+ * `transcribe` 預設走「轉寫」那一檔（沒有可用模型時報錯，同樣當成沒做成）。
  */
 export async function checkPlotAgainstFacts(
   project: NovelProject,
@@ -72,10 +72,10 @@ export async function checkPlotAgainstFacts(
 ): Promise<PlotCheckOutcome> {
   const plot = await project.getPlot(no);
   if (!plot || !isPlotFilled(plot.sections)) {
-    return { calls: 0, conflicts: [], dropped: 0, skipped: '这一章还没有细纲' };
+    return { calls: 0, conflicts: [], dropped: 0, skipped: '這一章還沒有細綱' };
   }
   if (plot.factCheckOk) {
-    return { calls: 0, conflicts: [], dropped: 0, skipped: '细纲上记了 factCheckOk，放行' };
+    return { calls: 0, conflicts: [], dropped: 0, skipped: '細綱上記了 factCheckOk，放行' };
   }
   const finalized = await project.finalizedFacts(no);
   const config = readConfig();
@@ -86,7 +86,7 @@ export async function checkPlotAgainstFacts(
     { recent: limits.factsChapters, chars: limits.factsChars }
   );
   if (facts.length === 0) {
-    return { calls: 0, conflicts: [], dropped: 0, skipped: '前面没有同步过、留下连续性事实的章' };
+    return { calls: 0, conflicts: [], dropped: 0, skipped: '前面沒有同步過、留下連續性事實的章' };
   }
 
   const text = [plot.sections.梗概, plot.sections.关键事件, plot.sections.看点].filter((s) => s.trim()).join('\n\n');
@@ -101,22 +101,22 @@ export async function checkPlotAgainstFacts(
     { role: 'system' as const, content: PLOT_CHECK_SYSTEM },
     { role: 'user' as const, content: user },
   ];
-  const raw = await runner.run(`第 ${no} 章 · 写前冲突检查`, (llm) => collectText(llm.stream(messages, options)));
+  const raw = await runner.run(`第 ${no} 章 · 寫前衝突檢查`, (llm) => collectText(llm.stream(messages, options)));
   if (saysNoConflict(raw)) {
     return { calls: 1, conflicts: [], dropped: 0 };
   }
   const r = await transcribeJson(raw, PLOT_CHECK_TRANSCRIBE, (m, label) => transcribe(m, `第 ${no} 章 · ${label}`));
   const calls = 1 + r.calls;
   if (r.notes.length > 0) {
-    log.info(`第 ${no} 章写前冲突检查：${r.notes.join('；')}`);
+    log.info(`第 ${no} 章寫前衝突檢查：${r.notes.join('；')}`);
   }
   if (!r.ok) {
-    const why = r.failed ? r.message : r.calls > 0 ? `转写没成：${r.message}` : r.message;
-    throw Object.assign(new Error(`写前冲突检查的输出整理不出来（${why}）`), { calls });
+    const why = r.failed ? r.message : r.calls > 0 ? `轉寫沒成：${r.message}` : r.message;
+    throw Object.assign(new Error(`寫前衝突檢查的輸出整理不出來（${why}）`), { calls });
   }
   const { conflicts, dropped } = verifyConflicts(r.value, text, facts);
   if (dropped > 0) {
-    log.info(`第 ${no} 章写前冲突检查：${dropped} 处原文对不上，已丢弃`);
+    log.info(`第 ${no} 章寫前衝突檢查：${dropped} 處原文對不上，已丟棄`);
   }
   return { calls, conflicts, dropped };
 }

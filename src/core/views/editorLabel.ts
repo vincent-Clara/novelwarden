@@ -1,23 +1,25 @@
+import { traditionalLabel } from '../model/labels';
+import { UNFILED_FILENAME, TIMELINE_FILENAME } from '../model/threadFile';
 /**
- * 内置编辑器怎么称呼一份文件：标签上的类型短标记与名字、工具栏上的面包屑。
+ * 內建編輯器怎麼稱呼一份檔案：標籤上的型別短標記與名字、工具欄上的麵包屑。
  *
- * **纯函数、零 I/O、绝不抛**——每次 `editorOpen` / `editorSaved` / `editorDiskChanged` 都要带一份，
- * 输入是前端传上来的路径。种类来自 `workspace/kind.ts` 的 `kindOfPath`（与网关同一张表），章号与标题
- * 来自章节 / 细纲的文件名规则（`model/chapterFile.ts` / `model/plotFile.ts`）——与 `kind`、`draftPath`
- * 同一条原则：这些规则只在后端，前端不拿路径猜。
+ * **純函式、零 I/O、絕不拋**——每次 `editorOpen` / `editorSaved` / `editorDiskChanged` 都要帶一份，
+ * 輸入是前端傳上來的路徑。種類來自 `workspace/kind.ts` 的 `kindOfPath`（與閘道器同一張表），章號與標題
+ * 來自章節 / 細綱的檔名規則（`model/chapterFile.ts` / `model/plotFile.ts`）——與 `kind`、`draftPath`
+ * 同一條原則：這些規則只在後端，前端不拿路徑猜。
  *
- * 标题取**文件名**里的那一段，不读 H1：读盘要花一趟，而标签上要的只是「这是哪一份」。
+ * 標題取**檔名**裡的那一段，不讀 H1：讀盤要花一趟，而標籤上要的只是「這是哪一份」。
  *
- * | 种类 | 短标记 | 标签上的名字 | 面包屑 |
+ * | 種類 | 短標記 | 標籤上的名字 | 麵包屑 |
  * |---|---|---|---|
- * | 正文 `chapters/第一卷/003-夜访.md` | （不带） | 003-夜访 | 正文 › 第一卷 › 第 3 章 夜访 |
- * | 细纲 `.novelwarden/summaries/第一卷/003-夜访.md` | 细纲 | 003-夜访 | 细纲 › 第一卷 › 第 3 章 夜访 |
- * | 草稿 `drafts/003-夜访.md` | 草稿 | 003-夜访 | 草稿 › 第 3 章 夜访 |
- * | 角色 / 设定 | 角色 / 设定 | 林晚 | 角色 › 配角 › 林晚 |
- * | 架构三件、情节大纲 | （不带） | 小说配置 / 情节大纲 | 故事架构 › 小说配置 |
- * | 文风指南、全文大纲、叙事线、敏感词表 | （不带） | 文风指南 / 全文大纲 / 叙事线 / 敏感词表 | 文风与摘要 › 文风指南 |
- * | 写作技能 | 技能 | 技能目录名 | 技能 › 名字 |
- * | 其他 | （不带） | 原文件名（扩展名留着） | 按目录一段一段 |
+ * | 正文 `chapters/第一卷/003-夜访.md` | （不帶） | 003-夜訪 | 正文 › 第一卷 › 第 3 章 夜訪 |
+ * | 細綱 `.novelwarden/summaries/第一卷/003-夜访.md` | 細綱 | 003-夜訪 | 細綱 › 第一卷 › 第 3 章 夜訪 |
+ * | 草稿 `drafts/003-夜访.md` | 草稿 | 003-夜訪 | 草稿 › 第 3 章 夜訪 |
+ * | 角色 / 設定 | 角色 / 設定 | 林晚 | 角色 › 配角 › 林晚 |
+ * | 架構三件、情節大綱 | （不帶） | 小說配置 / 情節大綱 | 故事架構 › 小說配置 |
+ * | 文風指南、全文大綱、敘事線、敏感詞表 | （不帶） | 文風指南 / 全文大綱 / 敘事線 / 敏感詞表 | 文風與摘要 › 文風指南 |
+ * | 寫作技能 | 技能 | 技能目錄名 | 技能 › 名字 |
+ * | 其他 | （不帶） | 原檔名（副檔名留著） | 按目錄一段一段 |
  */
 import * as path from 'node:path';
 import { NovelProject } from '../model/project';
@@ -27,33 +29,33 @@ import { parsePlotFileName } from '../model/plotFile';
 import { kindOfPath } from '../workspace/kind';
 import type { EditorCrumb, EditorFileLabel } from '../protocol';
 
-/** 区根那一段怎么叫。 */
+/** 區根那一段怎麼叫。 */
 const AREA_LABEL = {
   chapter: '正文',
-  plot: '细纲',
+  plot: '細綱',
   draft: '草稿',
   character: '角色',
-  lore: '设定',
-  threads: '叙事线',
+  lore: '設定',
+  threads: '敘事線',
   skill: '技能',
 } as const;
 
 /**
- * 架构三件之外那几份固定文件的中文称呼。**与「转到…」的索引（`views/quickOpen.ts`）共用这一张表**，
- * 与工程页那几行的叫法一致——同一份文件在标签上、面包屑上、Ctrl+P 的候选里不许叫两个名字。
- * 架构三件用 `SETTING_DOC_LABEL`（同样三处共用）。
+ * 架構三件之外那幾份固定檔案的中文稱呼。**與「轉到…」的索引（`views/quickOpen.ts`）共用這一張表**，
+ * 與工程頁那幾行的叫法一致——同一份檔案在標籤上、麵包屑上、Ctrl+P 的候選裡不許叫兩個名字。
+ * 架構三件用 `SETTING_DOC_LABEL`（同樣三處共用）。
  */
 export const FIXED_DOC_LABEL = {
-  outline: '情节大纲',
-  style: '文风指南',
-  threads: '叙事线',
-  globalSummary: '全文大纲',
-  sensitive: '敏感词表',
+  outline: '情節大綱',
+  style: '文風指南',
+  threads: '敘事線',
+  globalSummary: '全文大綱',
+  sensitive: '敏感詞表',
 } as const;
 
-/** 有中文称呼的固定文件归在哪一组（与工程页的分组同一个说法）。 */
-const ARCHITECTURE = '故事架构';
-const STYLE_GROUP = '文风与摘要';
+/** 有中文稱呼的固定檔案歸在哪一組（與工程頁的分組同一個說法）。 */
+const ARCHITECTURE = '故事架構';
+const STYLE_GROUP = '文風與摘要';
 
 export function describeEditorFile(project: NovelProject, relPath: string): EditorFileLabel {
   const info = kindOfPath(project, relPath);
@@ -66,7 +68,7 @@ export function describeEditorFile(project: NovelProject, relPath: string): Edit
     case 'plot':
       return inArea(project.relPath(project.plotsDir), rel, AREA_LABEL.plot, AREA_LABEL.plot, plotLeaf(base));
     case 'draft':
-      // 草稿镜像正文的路径：文件名像章节的照样写「第 N 章 标题」。
+      // 草稿映象正文的路徑：檔名像章節的照樣寫「第 N 章 標題」。
       return inArea(project.relPath(project.draftsDir), rel, AREA_LABEL.draft, AREA_LABEL.draft, chapterLeaf(base));
     case 'character':
       return inArea(project.relPath(project.charactersDir), rel, AREA_LABEL.character, AREA_LABEL.character, plainLeaf(base));
@@ -81,8 +83,8 @@ export function describeEditorFile(project: NovelProject, relPath: string): Edit
     case 'globalSummary':
       return fixed(rel, STYLE_GROUP, FIXED_DOC_LABEL.globalSummary);
     case 'threads':
-      // 叙事线一条线一个文件（`threads/<线名>.md`）：标签上是线名，面包屑「叙事线 › 线名」，短标记「叙事线」。
-      return inArea(project.relPath(project.threadsDir), rel, AREA_LABEL.threads, AREA_LABEL.threads, plainLeaf(base));
+      // 敘事線一條線一個檔案（`threads/<線名>.md`）：標籤上是線名，麵包屑「敘事線 › 線名」，短標記「敘事線」。
+      return inArea(project.relPath(project.threadsDir), rel, AREA_LABEL.threads, AREA_LABEL.threads, threadLeaf(base));
     case 'sensitive':
       return fixed(rel, STYLE_GROUP, FIXED_DOC_LABEL.sensitive);
     case 'skill':
@@ -92,7 +94,7 @@ export function describeEditorFile(project: NovelProject, relPath: string): Edit
   }
 }
 
-/** 在某个区里的文件：区根一段（可点）、中间各级目录（可点）、最后是这份文件。 */
+/** 在某個區裡的檔案：區根一段（可點）、中間各級目錄（可點）、最後是這份檔案。 */
 function inArea(
   root: string,
   rel: string,
@@ -112,7 +114,7 @@ function inArea(
   return { tag, title: leaf.title, crumbs };
 }
 
-/** 固定的单文件：组名一段（点了定位到它所在的目录）+ 中文称呼。 */
+/** 固定的單檔案：組名一段（點了定位到它所在的目錄）+ 中文稱呼。 */
 function fixed(rel: string, group: string, title: string): EditorFileLabel {
   return { tag: '', title, crumbs: [{ label: group, dir: parentOf(rel) }, { label: title }] };
 }
@@ -120,16 +122,16 @@ function fixed(rel: string, group: string, title: string): EditorFileLabel {
 function skillLabel(project: NovelProject, rel: string, base: string): EditorFileLabel {
   const root = project.relPath(project.skillsDir);
   if (!root || !rel.startsWith(`${root}/`)) {
-    // 阶段绑定那一份（`.novelwarden/skills.json`）。
-    return { tag: AREA_LABEL.skill, title: '技能绑定', crumbs: [{ label: AREA_LABEL.skill, dir: root }, { label: '技能绑定' }] };
+    // 階段繫結那一份（`.novelwarden/skills.json`）。
+    return { tag: AREA_LABEL.skill, title: '技能繫結', crumbs: [{ label: AREA_LABEL.skill, dir: root }, { label: '技能繫結' }] };
   }
-  // `skills/<名字>/SKILL.md` 叫那个名字；技能目录里别的文件叫自己的文件名。
+  // `skills/<名字>/SKILL.md` 叫那個名字；技能目錄裡別的檔案叫自己的檔名。
   const parts = rel.slice(root.length + 1).split('/');
   const title = parts.length === 2 && /^skill\.md$/i.test(parts[1]) ? parts[0] : stem(base);
   return inArea(root, rel, AREA_LABEL.skill, AREA_LABEL.skill, { title, crumb: title });
 }
 
-/** 认不出的文件：原文件名（扩展名留着——`project.json` 去掉扩展名就认不出了），目录一段一段。 */
+/** 認不出的檔案：原檔名（副檔名留著——`project.json` 去掉副檔名就認不出了），目錄一段一段。 */
 function otherLabel(rel: string, base: string): EditorFileLabel {
   const parts = rel.split('/').filter(Boolean);
   const crumbs: EditorCrumb[] = [];
@@ -142,7 +144,7 @@ function otherLabel(rel: string, base: string): EditorFileLabel {
   return { tag: '', title: base || rel, crumbs };
 }
 
-/** 章节（与镜像它的草稿）：标签上是去掉扩展名的文件名，面包屑上是「第 N 章 标题」。 */
+/** 章節（與映象它的草稿）：標籤上是去掉副檔名的檔名，麵包屑上是「第 N 章 標題」。 */
 function chapterLeaf(base: string): { title: string; crumb: string } {
   const parsed = parseChapterFileName(base);
   return parsed ? { title: stem(base), crumb: chapterCrumb(parsed.order, parsed.stem) } : plainLeaf(base);
@@ -153,18 +155,26 @@ function plotLeaf(base: string): { title: string; crumb: string } {
   return parsed ? { title: stem(base), crumb: chapterCrumb(parsed.no, parsed.stem) } : plainLeaf(base);
 }
 
+/** 只翻譯兩個固定保留檔案的顯示名稱，不翻譯作者自訂的線名。 */
+function threadLeaf(base: string): { title: string; crumb: string } {
+  const leaf = plainLeaf(base);
+  return base === UNFILED_FILENAME || base === TIMELINE_FILENAME
+    ? { title: traditionalLabel(leaf.title), crumb: traditionalLabel(leaf.crumb) }
+    : leaf;
+}
+
 function plainLeaf(base: string): { title: string; crumb: string } {
   const title = stem(base);
   return { title, crumb: title };
 }
 
-/** 「第 3 章 夜访」；文件名里没有标题时就是「第 3 章」。 */
+/** 「第 3 章 夜訪」；檔名裡沒有標題時就是「第 3 章」。 */
 function chapterCrumb(no: number, title: string): string {
   const named = title.trim();
   return named ? `第 ${no} 章 ${named}` : `第 ${no} 章`;
 }
 
-/** 去掉扩展名。只有扩展名的（`.gitignore`）原样留着。 */
+/** 去掉副檔名。只有副檔名的（`.gitignore`）原樣留著。 */
 function stem(base: string): string {
   const ext = path.posix.extname(base);
   return ext && ext !== base ? base.slice(0, -ext.length) : base;

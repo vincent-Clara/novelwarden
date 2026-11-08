@@ -1,11 +1,11 @@
 /**
- * Draft store：未采纳的产物存哪里。
+ * Draft store：未採納的產物存哪裡。
  *
- * 存在理由与从前 `ChatTurn.artifact` 存进会话是同一条：**刷新网页后采纳按钮
- * 还在**，不然刚生成的四个场景就只剩一段谁也用不上的 JSON。
+ * 存在理由與從前 `ChatTurn.artifact` 存進會話是同一條：**重新整理網頁後採納按鈕
+ * 還在**，不然剛生成的四個場景就只剩一段誰也用不上的 JSON。
  *
- * 所以这组用例钉三件事：内存里存得住、随会话文件往返一趟还认得出、
- * 会话文件被手改坏时**不抛**（第 1 条：容错优先）。
+ * 所以這組用例釘三件事：記憶體裡存得住、隨會話檔案往返一趟還認得出、
+ * 會話檔案被手改壞時**不拋**（第 1 條：容錯優先）。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,10 +27,10 @@ function makeDraft(over = {}) {
   return {
     id: 'd1',
     action: { stage: 'plot', capability: 'generate' },
-    target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/001-夜入青云.md' },
-    raw: '{"关键事件":"进宗门"}',
-    artifact: { kind: 'plot', sections: { 梗概: '', 关键事件: '进宗门', 看点: '' } },
-    summary: '细纲 · 1/8 节',
+    target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/001-夜入青雲.md' },
+    raw: '{"关键事件":"進宗門"}',
+    artifact: { kind: 'plot', sections: { 梗概: '', 关键事件: '進宗門', 看点: '' } },
+    summary: '細綱 · 1/8 節',
     words: 3,
     createdAt: '2026-08-15T10:00:00.000Z',
     ...over,
@@ -56,7 +56,7 @@ after(() => {
   cleanup(WORK);
 });
 
-describe('DraftStore · 内存', () => {
+describe('DraftStore · 記憶體', () => {
   let s;
 
   before(() => {
@@ -66,39 +66,39 @@ describe('DraftStore · 内存', () => {
     s.put(makeDraft({ id: 'd3' }), 'sess-b');
   });
 
-  test('put 之后取得回来', () => {
-    assert.equal(s.get('d1').raw, '{"关键事件":"进宗门"}');
+  test('put 之後取得回來', () => {
+    assert.equal(s.get('d1').raw, '{"关键事件":"進宗門"}');
   });
 
-  test('取不认识的 id 给 undefined，不抛', () => {
-    assert.equal(s.get('没有这个'), undefined);
+  test('取不認識的 id 給 undefined，不拋', () => {
+    assert.equal(s.get('沒有這個'), undefined);
   });
 
-  test('bySession 只给那个会话的', () => {
+  test('bySession 只給那個會話的', () => {
     assert.deepEqual(s.bySession('sess-a').map((d) => d.id), ['d1', 'd2']);
   });
 
-  test('另一个会话互不干扰', () => {
+  test('另一個會話互不幹擾', () => {
     assert.deepEqual(s.bySession('sess-b').map((d) => d.id), ['d3']);
   });
 
-  // 会话切换/关闭时清掉那个会话的草稿：留着只会把内存撑成一本书。
-  test('dropBySession 清掉那一个会话', () => {
+  // 會話切換/關閉時清掉那個會話的草稿：留著只會把記憶體撐成一本書。
+  test('dropBySession 清掉那一個會話', () => {
     s.dropBySession('sess-a');
     assert.equal(s.get('d1'), undefined);
   });
 
-  test('dropBySession 不动别的会话', () => {
+  test('dropBySession 不動別的會話', () => {
     assert.equal(s.get('d3').id, 'd3');
   });
 
-  test('drop 不存在的会话不抛', () => {
-    s.dropBySession('从来没有过');
+  test('drop 不存在的會話不拋', () => {
+    s.dropBySession('從來沒有過');
     assert.equal(s.get('d3').id, 'd3');
   });
 });
 
-describe('DraftStore · 一个会话留多少份', () => {
+describe('DraftStore · 一個會話留多少份', () => {
   let s;
   let kept;
 
@@ -110,8 +110,8 @@ describe('DraftStore · 一个会话留多少份', () => {
     kept = s.bySession('sess');
   });
 
-  // draft.raw 与 ChatTurn.content 是同一段文字，全留着等于把会话文件写两遍。
-  test('超出上限就丢最老的', () => {
+  // draft.raw 與 ChatTurn.content 是同一段文字，全留著等於把會話檔案寫兩遍。
+  test('超出上限就丟最老的', () => {
     assert.equal(kept.length, drafts.MAX_DRAFTS_PER_SESSION, String(kept.length));
   });
 
@@ -119,12 +119,12 @@ describe('DraftStore · 一个会话留多少份', () => {
     assert.equal(kept[kept.length - 1].id, `d${drafts.MAX_DRAFTS_PER_SESSION + 5}`);
   });
 
-  test('被挤掉的取不到了', () => {
+  test('被擠掉的取不到了', () => {
     assert.equal(s.get('d1'), undefined);
   });
 });
 
-describe('随会话往返一趟', () => {
+describe('隨會話往返一趟', () => {
   let reloaded;
   let s;
 
@@ -133,10 +133,10 @@ describe('随会话往返一趟', () => {
     session.turns.push({
       id: 't1',
       role: 'assistant',
-      content: '{"关键事件":"进宗门"}',
+      content: '{"关键事件":"進宗門"}',
       at: '2026-08-15T10:00:00.000Z',
       draftId: 'd1',
-      artifact: { where: '第 1 章 · 细纲', summary: '细纲 · 1/8 节', overwrites: false },
+      artifact: { where: '第 1 章 · 細綱', summary: '細綱 · 1/8 節', overwrites: false },
     });
     session.drafts = [makeDraft()];
     await store.write(session);
@@ -145,38 +145,38 @@ describe('随会话往返一趟', () => {
     s.load(session.id, reloaded.drafts);
   });
 
-  test('草稿跟着会话落了盘', () => {
+  test('草稿跟著會話落了盤', () => {
     assert.equal(reloaded.drafts.length, 1, JSON.stringify(reloaded.drafts));
   });
 
-  test('落点跟着一起回来了', () => {
-    assert.equal(reloaded.drafts[0].target.plotRelPath, '.novelwarden/summaries/001-夜入青云.md');
+  test('落點跟著一起回來了', () => {
+    assert.equal(reloaded.drafts[0].target.plotRelPath, '.novelwarden/summaries/001-夜入青雲.md');
   });
 
-  test('动作跟着一起回来了', () => {
+  test('動作跟著一起回來了', () => {
     assert.equal(reloaded.drafts[0].action.capability, 'generate');
   });
 
-  test('原文跟着一起回来了', () => {
-    assert.equal(reloaded.drafts[0].raw, '{"关键事件":"进宗门"}');
+  test('原文跟著一起回來了', () => {
+    assert.equal(reloaded.drafts[0].raw, '{"关键事件":"進宗門"}');
   });
 
-  // 刷新网页后采纳按钮还在——这就是 draft 落盘的全部理由。
-  test('气泡上的 draftId 还认得出', () => {
+  // 重新整理網頁後採納按鈕還在——這就是 draft 落盤的全部理由。
+  test('氣泡上的 draftId 還認得出', () => {
     assert.equal(reloaded.turns[0].draftId, 'd1');
   });
 
-  test('展示快照也还在', () => {
-    assert.equal(reloaded.turns[0].artifact.summary, '细纲 · 1/8 节');
+  test('展示快照也還在', () => {
+    assert.equal(reloaded.turns[0].artifact.summary, '細綱 · 1/8 節');
   });
 
-  test('装回内存后取得到', () => {
-    assert.equal(s.get('d1').summary, '细纲 · 1/8 节');
+  test('裝回記憶體後取得到', () => {
+    assert.equal(s.get('d1').summary, '細綱 · 1/8 節');
   });
 });
 
-// 三期：正文的写法决定采纳时追加还是覆盖。刷新之后再写入，不能从「接着写」变成「覆盖」。
-describe('正文草稿的写法与长度随会话往返', () => {
+// 三期：正文的寫法決定採納時追加還是覆蓋。重新整理之後再寫入，不能從「接著寫」變成「覆蓋」。
+describe('正文草稿的寫法與長度隨會話往返', () => {
   let reloaded;
 
   before(async () => {
@@ -185,11 +185,11 @@ describe('正文草稿的写法与长度随会话往返', () => {
       makeDraft({
         id: 'm1',
         action: { stage: 'manuscript', capability: 'generate' },
-        target: { kind: 'manuscript', plotRelPath: '.novelwarden/summaries/003-夜访.md' },
-        raw: '他推开了门。',
+        target: { kind: 'manuscript', plotRelPath: '.novelwarden/summaries/003-夜訪.md' },
+        raw: '他推開了門。',
         writeMode: 'continue',
         length: { words: 2980, target: 3000, added: 1200, rounds: 2, reached: true },
-        replay: '沈氏坐在柜台后面',
+        replay: '沈氏坐在櫃檯後面',
       }),
       makeDraft({ id: 'm2', writeMode: 'append', length: { words: '很多' } }),
     ];
@@ -197,21 +197,21 @@ describe('正文草稿的写法与长度随会话往返', () => {
     reloaded = await store.read(session.id);
   });
 
-  test('写法、长度、重演原句都回来了', () => {
+  test('寫法、長度、重演原句都回來了', () => {
     const d = reloaded.drafts.find((x) => x.id === 'm1');
     assert.equal(d.writeMode, 'continue');
     assert.deepEqual(d.length, { words: 2980, target: 3000, added: 1200, rounds: 2, reached: true });
-    assert.equal(d.replay, '沈氏坐在柜台后面');
+    assert.equal(d.replay, '沈氏坐在櫃檯後面');
   });
 
-  test('手改坏的写法与长度当没记（不抛）', () => {
+  test('手改壞的寫法與長度當沒記（不拋）', () => {
     const d = reloaded.drafts.find((x) => x.id === 'm2');
     assert.equal(d.writeMode, undefined);
     assert.equal(d.length, undefined);
   });
 });
 
-describe('会话文件被手改坏', () => {
+describe('會話檔案被手改壞', () => {
   let session;
   let reloaded;
 
@@ -219,59 +219,59 @@ describe('会话文件被手改坏', () => {
     session = store.create();
     session.turns.push({
       id: 't1', role: 'assistant', content: 'x', at: '2026-08-15T10:00:00.000Z',
-      draftId: '这份草稿已经没了',
-      artifact: { where: '第 1 章 · 细纲', summary: '细纲 · 1/8 节', overwrites: false },
+      draftId: '這份草稿已經沒了',
+      artifact: { where: '第 1 章 · 細綱', summary: '細綱 · 1/8 節', overwrites: false },
     });
     session.turns.push({
       id: 't2', role: 'assistant', content: 'y', at: '2026-08-15T10:01:00.000Z', draftId: 'd1',
     });
     session.drafts = [
       makeDraft(),
-      // 认不出的几种：不是对象、没有 id、target 是垃圾。
+      // 認不出的幾種：不是物件、沒有 id、target 是垃圾。
       null,
-      { raw: '没有 id' },
-      { id: 'd9', action: { stage: '瞎写' }, target: '不是对象', raw: 123 },
+      { raw: '沒有 id' },
+      { id: 'd9', action: { stage: '瞎寫' }, target: '不是物件', raw: 123 },
     ];
     await store.write(session);
     reloaded = await store.read(session.id);
   });
 
-  test('读得出来，没抛', () => {
-    assert.ok(reloaded, '会话读不出来了');
+  test('讀得出來，沒拋', () => {
+    assert.ok(reloaded, '會話讀不出來了');
   });
 
-  test('认得出的那份留下', () => {
+  test('認得出的那份留下', () => {
     assert.ok(reloaded.drafts.some((d) => d.id === 'd1'), JSON.stringify(reloaded.drafts));
   });
 
-  test('认不出的丢掉', () => {
+  test('認不出的丟掉', () => {
     assert.equal(reloaded.drafts.length, 2, JSON.stringify(reloaded.drafts.map((d) => d.id)));
   });
 
-  // 字段坏掉的那份不整体作废：id 在就还认得出是哪一轮产出的，
-  // 其余字段按容错默认值补——归一化的 target 回落到全书大纲。
-  test('坏字段按默认值补上', () => {
+  // 欄位壞掉的那份不整體作廢：id 在就還認得出是哪一輪產出的，
+  // 其餘欄位按容錯預設值補——歸一化的 target 回落到全書大綱。
+  test('壞欄位按預設值補上', () => {
     const d9 = reloaded.drafts.find((d) => d.id === 'd9');
     assert.equal(d9.target.kind, 'outline', JSON.stringify(d9.target));
     assert.equal(d9.raw, '', JSON.stringify(d9.raw));
   });
 
-  // 气泡上的展示快照留着——「这一轮产出过一份剧情」翻回来看得出来。
-  // 草稿在不在已经与它无关了：写不写盘在产出的当下就问过了，气泡上没有
-  // 任何能触发写入的按钮，也就没有「草稿过期了怎么办」这回事。
-  test('展示快照留着', () => {
-    assert.equal(reloaded.turns[0].artifact.summary, '细纲 · 1/8 节');
+  // 氣泡上的展示快照留著——「這一輪產出過一份劇情」翻回來看得出來。
+  // 草稿在不在已經與它無關了：寫不寫盤在產出的當下就問過了，氣泡上沒有
+  // 任何能觸發寫入的按鈕，也就沒有「草稿過期了怎麼辦」這回事。
+  test('展示快照留著', () => {
+    assert.equal(reloaded.turns[0].artifact.summary, '細綱 · 1/8 節');
   });
 });
 
-describe('没有 drafts 字段的老会话', () => {
+describe('沒有 drafts 欄位的老會話', () => {
   let reloaded;
 
   before(async () => {
     const session = store.create();
     session.turns.push({ id: 't1', role: 'user', content: '你好', at: '2026-08-15T10:00:00.000Z' });
     await store.write(session);
-    // 手工抹掉 drafts 键，模拟二期之前写下的会话文件。
+    // 手工抹掉 drafts 鍵，模擬二期之前寫下的會話檔案。
     const file = path.join(WORK, '.novelwarden', 'sessions', `${session.id}.json`);
     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
     delete raw.drafts;
@@ -279,11 +279,11 @@ describe('没有 drafts 字段的老会话', () => {
     reloaded = await store.read(session.id);
   });
 
-  test('读得出来', () => {
+  test('讀得出來', () => {
     assert.ok(reloaded);
   });
 
-  test('drafts 退化成空数组', () => {
+  test('drafts 退化成空陣列', () => {
     assert.deepEqual(reloaded.drafts, []);
   });
 });

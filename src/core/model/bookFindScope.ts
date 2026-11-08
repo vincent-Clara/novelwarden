@@ -1,49 +1,49 @@
 /**
- * 全书查找替换的范围与上限。**纯数据、零 import**：面板上那几个勾选框（`media/src/editor/bookFind.ts`）与后端按范围
- * 列文件（`views/bookFind.ts`）、替换时认路径（`features/bookReplace.ts`）读的是同一张表——界面上写着「角色卡」，
- * 后端搜的就得是角色卡那个区。经 `media/src/protocol.ts` 打进浏览器产物。
+ * 全書查詢替換的範圍與上限。**純資料、零 import**：面板上那幾個勾選框（`media/src/editor/bookFind.ts`）與後端按範圍
+ * 列檔案（`views/bookFind.ts`）、替換時認路徑（`features/bookReplace.ts`）讀的是同一張表——介面上寫著「角色卡」，
+ * 後端搜的就得是角色卡那個區。經 `media/src/protocol.ts` 打進瀏覽器產物。
  */
 
-/** 一个范围：正文、细纲、草稿、角色卡、设定条目，以及其余几份创作文件（大纲 / 架构三件 / 文风 / 叙事线 / 全文大纲）。 */
+/** 一個範圍：正文、細綱、草稿、角色卡、設定條目，以及其餘幾份創作檔案（大綱 / 架構三件 / 文風 / 敘事線 / 全文大綱）。 */
 export type BookFindScope = 'chapter' | 'plot' | 'draft' | 'character' | 'lore' | 'doc';
 
-/** 面板上的顺序，也是结果分组的顺序。 */
+/** 面板上的順序，也是結果分組的順序。 */
 export const BOOK_FIND_SCOPES: readonly BookFindScope[] = ['chapter', 'plot', 'draft', 'character', 'lore', 'doc'];
 
-/** 勾选框上的字与结果分组的标题。 */
+/** 勾選框上的字與結果分組的標題。 */
 export const BOOK_FIND_SCOPE_LABEL: Record<BookFindScope, string> = {
   chapter: '正文',
-  plot: '细纲',
+  plot: '細綱',
   draft: '草稿',
   character: '角色卡',
-  lore: '设定条目',
-  doc: '其他创作文件',
+  lore: '設定條目',
+  doc: '其他創作檔案',
 };
 
-/** 勾选框的提示：这一项搜哪些文件。 */
+/** 勾選框的提示：這一項搜哪些檔案。 */
 export const BOOK_FIND_SCOPE_HINT: Record<BookFindScope, string> = {
-  chapter: '章节根下的正文（按章号）',
-  plot: '每一章的细纲（.novelwarden/summaries/ 下，按章号）',
+  chapter: '章節根下的正文（按章號）',
+  plot: '每一章的細綱（.novelwarden/summaries/ 下，按章號）',
   draft: 'drafts/ 下的草稿',
   character: '角色卡（.novelwarden/characters/）',
-  lore: '设定条目（.novelwarden/lore/）',
-  doc: '情节大纲、小说配置、故事前提、世界观、文风指南、叙事线、全文大纲',
+  lore: '設定條目（.novelwarden/lore/）',
+  doc: '情節大綱、小說配置、故事前提、世界觀、文風指南、敘事線、全文大綱',
 };
 
-/** 打开面板时缺省勾上哪几项：只有正文（⚑ 作者最常搜的是正文；要连细纲、角色卡一起改名时自己勾上）。 */
+/** 開啟面板時預設勾上哪幾項：只有正文（⚑ 作者最常搜的是正文；要連細綱、角色卡一起改名時自己勾上）。 */
 export const DEFAULT_BOOK_FIND_SCOPES: readonly BookFindScope[] = ['chapter'];
 
 /**
- * 一次最多列多少处。到了就停：后面的文件不再读，结果里说「只列了前 N 处」并说停在哪一份上（⚑）。
- * 搜一个「的」在三百章里能有十几万处——全列出来既读不完也看不完，多打几个字缩小范围才是正路。
- * 替换也只作用于列出来的这些（预览里看过的才换，第 19 条），换完再搜一次接着换。
+ * 一次最多列多少處。到了就停：後面的檔案不再讀，結果裡說「只列了前 N 處」並說停在哪一份上（⚑）。
+ * 搜一個「的」在三百章裡能有十幾萬處——全列出來既讀不完也看不完，多打幾個字縮小範圍才是正路。
+ * 替換也只作用於列出來的這些（預覽裡看過的才換，第 19 條），換完再搜一次接著換。
  */
 export const BOOK_FIND_LIMIT = 1000;
 
-/** 每一处那一行上下文：命中之前最多带几个字、之后最多带几个字（同一行之内，超了用「…」截）。 */
+/** 每一處那一行上下文：命中之前最多帶幾個字、之後最多帶幾個字（同一行之內，超了用「…」截）。 */
 export const BOOK_FIND_CONTEXT = { before: 24, after: 40 } as const;
 
-/** 认不认得这个范围（前端传上来的是字符串）。 */
+/** 認不認得這個範圍（前端傳上來的是字串）。 */
 export function isBookFindScope(value: unknown): value is BookFindScope {
   return typeof value === 'string' && (BOOK_FIND_SCOPES as readonly string[]).includes(value);
 }

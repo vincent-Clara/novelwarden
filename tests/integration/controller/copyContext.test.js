@@ -1,14 +1,14 @@
 /**
- * 「复制完整上下文」的后端一半：发给模型的那份消息留在回复那一轮上、随会话落盘，
- * 前端点了再经 `copyContext` 要。
+ * 「複製完整上下文」的後端一半：發給模型的那份訊息留在回覆那一輪上、隨會話落盤，
+ * 前端點了再經 `copyContext` 要。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 会话文件里那份与模型实际收到的一字不差 | 拿去核对「当时发了什么」，差一个字就不可信 |
- * | `turnDone` 只带 `fullContext` 标记，不带消息 | 一轮几万字，不随每次推会话来回搬 |
- * | 回复带回同一个 `requestId` | 回复是广播，两个视图都收得到，前端靠它认是不是自己点的 |
- * | 拼出来的文字里每条消息原样都在，开头就是系统提示 | 复制出去的就是那份，粘进网页版 AI 就能接着做 |
- * | 老回复、找不到的轮次回一句为什么 | 不回空串冒充复制成功 |
+ * | 會話檔案裡那份與模型實際收到的一字不差 | 拿去核對「當時發了什麼」，差一個字就不可信 |
+ * | `turnDone` 只帶 `fullContext` 標記，不帶訊息 | 一輪幾萬字，不隨每次推會話來回搬 |
+ * | 回覆帶回同一個 `requestId` | 回覆是廣播，兩個檢視都收得到，前端靠它認是不是自己點的 |
+ * | 拼出來的文字裡每條訊息原樣都在，開頭就是系統提示 | 複製出去的就是那份，粘進網頁版 AI 就能接著做 |
+ * | 老回覆、找不到的輪次回一句為什麼 | 不回空串冒充複製成功 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -65,13 +65,13 @@ before(async () => {
   bundle.host.initHost(h.host);
   fake = installFakeProvider(bundle.registry);
 
-  t = await makeTempProject(bundle.project, { prefix: 'copy-context', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'copy-context', title: '青雲劍錄' });
   controller = new bundle.controller.ChatController(t.project);
   controller.attach({ kind: 'sidebar', post: (m) => posted.push(m), reveal() {} });
 
-  await discuss('主角的金手指要不要换？', '可以换成一把会说话的剑。');
+  await discuss('主角的金手指要不要換？', '可以換成一把會說話的劍。');
   posted = [];
-  await discuss('那第一卷怎么收？', '收在剑认主那一刻。');
+  await discuss('那第一卷怎麼收？', '收在劍認主那一刻。');
 });
 
 after(() => {
@@ -79,8 +79,8 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('发出去的那份留在回复那一轮上', () => {
-  test('会话文件里两轮回复各留一份，与模型实际收到的一字不差', () => {
+describe('發出去的那份留在回覆那一輪上', () => {
+  test('會話檔案裡兩輪迴復各留一份，與模型實際收到的一字不差', () => {
     const turns = assistants(sessionFile().turns);
     assert.equal(turns.length, 2);
     assert.equal(fake.calls.length, 2);
@@ -90,52 +90,52 @@ describe('发出去的那份留在回复那一轮上', () => {
     }
   });
 
-  test('第二轮那份带着第一轮的讨论（历史就是这样发出去的）', () => {
+  test('第二輪那份帶著第一輪的討論（歷史就是這樣發出去的）', () => {
     const second = assistants(sessionFile().turns)[1].contextMessages;
-    assert.ok(second.some((m) => m.role === 'assistant' && m.content.includes('会说话的剑')));
+    assert.ok(second.some((m) => m.role === 'assistant' && m.content.includes('會說話的劍')));
   });
 
-  test('turnDone 只带 fullContext 标记，消息不跟着推', () => {
+  test('turnDone 只帶 fullContext 標記，訊息不跟著推', () => {
     const done = posted.filter((m) => m.type === 'turnDone' && m.turn.role === 'assistant').at(-1).turn;
     assert.equal(done.fullContext, true);
     assert.equal(done.contextMessages, undefined);
     const system = fake.calls[1].find((m) => m.role === 'system').content;
-    assert.ok(posted.every((m) => !JSON.stringify(m).includes(system)), '系统提示全文不该出现在推给前端的任何一条消息里');
+    assert.ok(posted.every((m) => !JSON.stringify(m).includes(system)), '系統提示全文不該出現在推給前端的任何一條訊息裡');
   });
 });
 
 describe('copyContext', () => {
-  test('回同一个 requestId，文字里每条消息原样都在', async () => {
+  test('回同一個 requestId，文字裡每條訊息原樣都在', async () => {
     const id = assistants(controller.current.turns)[1].id;
     const replies = await copy(id, 'r1');
     assert.equal(replies.length, 1);
     assert.equal(replies[0].requestId, 'r1');
     assert.equal(replies[0].error, undefined);
     for (const m of fake.calls[1]) {
-      assert.ok(replies[0].text.includes(m.content), `少了一条 ${m.role}`);
+      assert.ok(replies[0].text.includes(m.content), `少了一條 ${m.role}`);
     }
-    // 粘进网页版 AI 用：开头就是系统提示，不加说明；带了历史，用户 / 模型那几条标【我】/【你】。
+    // 粘進網頁版 AI 用：開頭就是系統提示，不加說明；帶了歷史，使用者 / 模型那幾條標【我】/【你】。
     const system = fake.calls[1].find((m) => m.role === 'system').content;
     assert.ok(replies[0].text.startsWith(system));
-    assert.match(replies[0].text, /\n---\n\n【你】\n可以换成一把会说话的剑。\n/);
+    assert.match(replies[0].text, /\n---\n\n【你】\n可以換成一把會說話的劍。\n/);
   });
 
-  test('功能加上之前的回复：说没留下', async () => {
+  test('功能加上之前的回覆：說沒留下', async () => {
     const turn = assistants(controller.current.turns)[0];
     const kept = turn.contextMessages;
     delete turn.contextMessages;
     try {
       const [reply] = await copy(turn.id, 'r2');
       assert.equal(reply.text, undefined);
-      assert.match(reply.error, /没有留下完整上下文/);
+      assert.match(reply.error, /沒有留下完整上下文/);
     } finally {
       turn.contextMessages = kept;
     }
   });
 
-  test('找不到这一轮：说找不到', async () => {
-    const [reply] = await copy('并不存在', 'r3');
+  test('找不到這一輪：說找不到', async () => {
+    const [reply] = await copy('並不存在', 'r3');
     assert.equal(reply.requestId, 'r3');
-    assert.match(reply.error, /找不到这一轮/);
+    assert.match(reply.error, /找不到這一輪/);
   });
 });

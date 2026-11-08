@@ -1,30 +1,30 @@
 /**
- * 全书查找替换：`Ctrl+Shift+F`（替换框 `Ctrl+Shift+H`，Mac 上 `Cmd`）或标题栏「编辑 → 全书查找替换…」。只在独立版
- * （editor.js 只在那儿加载，`editor/index.ts` 探测不到 `#wbEditor` 就整个不装）。
+ * 全書查詢替換：`Ctrl+Shift+F`（替換框 `Ctrl+Shift+H`，Mac 上 `Cmd`）或標題欄「編輯 → 全書查詢替換…」。只在獨立版
+ * （editor.js 只在那兒載入，`editor/index.ts` 探測不到 `#wbEditor` 就整個不裝）。
  *
  * ## 放在哪（⚑）
  *
- * **压在侧栏上**，与 VS Code 的「搜索」视图一样：面板挂进 `#wbSide`、侧栏挂 `bf-open`，原来那几页（对话、工程……）先藏起来，
- * 页头的任务条照常；编辑区一点都不挡——点一处、右边编辑区跳过去，左边的结果列表还在，对照着往下看。点活动栏上任一页签、
- * 面板上的 ×、Esc 收起（结果留着，再打开还在）。不做成浮层：浮层要么挡正文，要么挡结果。
+ * **壓在側欄上**，與 VS Code 的「搜尋」檢視一樣：面板掛進 `#wbSide`、側欄掛 `bf-open`，原來那幾頁（對話、工程……）先藏起來，
+ * 頁頭的任務條照常；編輯區一點都不擋——點一處、右邊編輯區跳過去，左邊的結果列表還在，對照著往下看。點活動欄上任一頁籤、
+ * 面板上的 ×、Esc 收起（結果留著，再開啟還在）。不做成浮層：浮層要麼擋正文，要麼擋結果。
  *
- * ## 查找
+ * ## 查詢
  *
- * 查找框里打字，**停顿 300ms** 才发（组字中途不发，`compositionend` 再算）；新的一次发出去之前先 `cancelBookFind` 上一次。
- * 区分大小写、正则两颗开关与查找条同一套语义（匹配口径是 core 的 `model/textFind.ts`，后端用的就是它）。范围六个勾选框，
- * 缺省只勾正文。结果按范围分组、按文件列：文件的称呼（与编辑器标签同一套）、一共几处、每一处一行上下文（命中的字高亮）。
- * **搜的是磁盘上的内容**（⚑）：编辑器里开着、有未保存修改的文件在结果上标「未保存」（列的是磁盘上那一份，替换时跳过）。
+ * 查詢框裡打字，**停頓 300ms** 才發（組字中途不發，`compositionend` 再算）；新的一次發出去之前先 `cancelBookFind` 上一次。
+ * 區分大小寫、正則兩顆開關與查詢條同一套語義（匹配口徑是 core 的 `model/textFind.ts`，後端用的就是它）。範圍六個勾選框，
+ * 預設只勾正文。結果按範圍分組、按檔案列：檔案的稱呼（與編輯器標籤同一套）、一共幾處、每一處一行上下文（命中的字高亮）。
+ * **搜的是磁碟上的內容**（⚑）：編輯器裡開著、有未儲存修改的檔案在結果上標「未儲存」（列的是磁碟上那一份，替換時跳過）。
  *
- * 点某一处：那份文件已经开着就切过去，没开着就开成正常标签（不带临时标签的标记）；然后借查找条的定位（`find.ts` 的
- * `revealFindMatch`：换成同一个查找串与开关、按后端给的「行 + 列」认回编辑区里的位置、选中离它最近的那一处、滚过去）。
+ * 點某一處：那份檔案已經開著就切過去，沒開著就開成正常標籤（不帶臨時標籤的標記）；然後借查詢條的定位（`find.ts` 的
+ * `revealFindMatch`：換成同一個查詢串與開關、按後端給的「行 + 列」認回編輯區裡的位置、選中離它最近的那一處、滾過去）。
  *
- * ## 替换
+ * ## 替換
  *
- * 填好替换框 →「预览替换」→ 每一处画成「旧字划掉 + 新字」，每一处、每个文件都有勾选框（缺省全勾；未保存的那几份勾不了）→
- * 「替换所选」（两段式：第一下只把字换成「再点一下：替换 N 个文件 M 处」，第二下才发，⚑）→ 汇总（替换了几个文件几处、
- * 每份都在「历史」里留着替换前那一版、跨文件没有一步撤销、指纹链怎么处理的、角色卡改名、跳过了哪些与为什么）。替换完自动
- * 再搜一次，列出还剩下的。写盘在后端（`features/bookReplace.ts`，经网关）；已开着的没改过的标签靠磁盘同步（`diskSync.ts`）
- * 就地换成新内容，改过的挂冲突条——这里什么都不用做。
+ * 填好替換框 →「預覽替換」→ 每一處畫成「舊字劃掉 + 新字」，每一處、每個檔案都有勾選框（預設全勾；未儲存的那幾份勾不了）→
+ * 「替換所選」（兩段式：第一下只把字換成「再點一下：替換 N 個檔案 M 處」，第二下才發，⚑）→ 彙總（替換了幾個檔案幾處、
+ * 每份都在「歷史」裡留著替換前那一版、跨檔案沒有一步撤銷、指紋鏈怎麼處理的、角色卡改名、跳過了哪些與為什麼）。替換完自動
+ * 再搜一次，列出還剩下的。寫盤在後端（`features/bookReplace.ts`，經閘道器）；已開著的沒改過的標籤靠磁碟同步（`diskSync.ts`）
+ * 就地換成新內容，改過的掛衝突條——這裡什麼都不用做。
  */
 import { clear, el } from '../dom';
 import { toast } from '../globals';
@@ -66,13 +66,13 @@ import { claimRequest, newRequestId } from './replace';
 import { revealEditor } from './shell';
 import { allOpenFiles, announceActive, paneOwning, setActivePane } from './store';
 
-/** 停顿多久才搜。 */
+/** 停頓多久才搜。 */
 export const BOOK_FIND_DEBOUNCE_MS = 300;
-/** 「替换所选」第一下之后，多久没点第二下就退回去。 */
+/** 「替換所選」第一下之後，多久沒點第二下就退回去。 */
 const CONFIRM_MS = 4000;
-/** 点了一处、那份文件还没开着：等它的 `editorOpen` 多久。 */
+/** 點了一處、那份檔案還沒開著：等它的 `editorOpen` 多久。 */
 const JUMP_WAIT_MS = 3000;
-const NO_WORKSPACE = '先打开一个工程，才能全书查找。';
+const NO_WORKSPACE = '先開啟一個工程，才能全書查詢。';
 
 interface PanelDom {
   root: HTMLElement;
@@ -98,15 +98,15 @@ let panel: PanelDom | null = null;
 
 const opts = { caseSensitive: false, regex: false };
 let mode: 'find' | 'preview' = 'find';
-/** 正在等的那一次查找，与它的条件。 */
+/** 正在等的那一次查詢，與它的條件。 */
 let waiting: string | null = null;
 let waitingQuery: BookFindQuery | null = null;
-/** 画着的结果，与它是按什么条件搜出来的（点一处时按它定位、替换时按它拼请求）。 */
+/** 畫著的結果，與它是按什麼條件搜出來的（點一處時按它定位、替換時按它拼請求）。 */
 let result: BookFindResult | null = null;
 let resultQuery: BookFindQuery | null = null;
-/** 预览里勾掉的那几处（`hitKey`）。 */
+/** 預覽裡勾掉的那幾處（`hitKey`）。 */
 let excluded = new Set<string>();
-/** 收起来的文件。 */
+/** 收起來的檔案。 */
 const collapsed = new Set<string>();
 let replacing: string | null = null;
 let summary: BookReplaceSummary | null = null;
@@ -114,18 +114,18 @@ let armed = false;
 let armTimer: ReturnType<typeof setTimeout> | undefined;
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let dirtyTimer: ReturnType<typeof setTimeout> | undefined;
-/** 打开面板之前焦点在哪（Esc 收起时还回去）。 */
+/** 開啟面板之前焦點在哪（Esc 收起時還回去）。 */
 let returnFocus: HTMLElement | null = null;
-/** 点了一处、那份文件还没开着：等它到了再定位。 */
+/** 點了一處、那份檔案還沒開著：等它到了再定位。 */
 let pendingJump: { path: string; hit: BookFindHit; query: BookFindQuery; until: number } | null = null;
 
-// ---------------------------------------------------------------- 开关
+// ---------------------------------------------------------------- 開關
 
 function workspaceOpen(): boolean {
   return !document.body.classList.contains('no-workspace');
 }
 
-/** 页内对话框、弹窗开着时不开——那时作者在答别的问题。 */
+/** 頁內對話方塊、彈窗開著時不開——那時作者在答別的問題。 */
 function blocked(): boolean {
   return isDialogOpen() || !!document.querySelector('.modal-overlay:not(.hidden)');
 }
@@ -138,7 +138,7 @@ export function isBookFindOpen(): boolean {
   return !!panel && !panel.root.classList.contains('hidden');
 }
 
-/** 打开面板（已经开着就把焦点放回查找框）。`replace`：焦点进替换框（查找框还空着时仍进查找框）。 */
+/** 開啟面板（已經開著就把焦點放回查詢框）。`replace`：焦點進替換框（查詢框還空著時仍進查詢框）。 */
 export function openBookFind(o: { replace?: boolean } = {}): void {
   if (!workspaceOpen()) {
     toast(NO_WORKSPACE);
@@ -153,7 +153,7 @@ export function openBookFind(o: { replace?: boolean } = {}): void {
     p.root.classList.remove('hidden');
     side()?.classList.add('bf-open');
   }
-  // 编辑区里选着一行之内的几个字：预填进查找框，当场搜。
+  // 編輯區裡選著一行之內的幾個字：預填進查詢框，當場搜。
   const ed = activeEditor();
   const seed = ed && !p.root.contains(document.activeElement)
     ? seedFromSelection(ed.area.value, ed.area.selectionStart, ed.area.selectionEnd)
@@ -167,7 +167,7 @@ export function openBookFind(o: { replace?: boolean } = {}): void {
   target.select();
 }
 
-/** 收起面板（结果留着，再打开还在）。`restoreFocus`：焦点还回打开之前的地方（Esc、×）。 */
+/** 收起面板（結果留著，再開啟還在）。`restoreFocus`：焦點還回開啟之前的地方（Esc、×）。 */
 export function closeBookFind(restoreFocus = false): void {
   if (!panel || !isBookFindOpen()) {
     return;
@@ -193,7 +193,7 @@ function button(cls: string, text: string, title: string): HTMLButtonElement {
 
 function textInput(cls: string, placeholder: string): HTMLInputElement {
   const input = el('input', cls);
-  // 不用 type="search"：Chrome 里在 search 框按 Esc 是清空文字，与「Esc 收起面板」打架（同查找条）。
+  // 不用 type="search"：Chrome 裡在 search 框按 Esc 是清空文字，與「Esc 收起面板」打架（同查詢條）。
   input.type = 'text';
   input.placeholder = placeholder;
   input.spellcheck = false;
@@ -207,24 +207,24 @@ function ensurePanel(): PanelDom {
   }
   const root = el('section', 'bf-panel hidden');
   root.setAttribute('role', 'search');
-  root.setAttribute('aria-label', '全书查找替换');
+  root.setAttribute('aria-label', '全書查詢替換');
 
   const head = el('div', 'bf-head');
   const close = button('icon-btn bf-close', '×', '收起（Esc）');
-  head.append(el('span', 'bf-title', '全书查找替换'), close);
+  head.append(el('span', 'bf-title', '全書查詢替換'), close);
 
   const findRow = el('div', 'bf-row');
-  const query = textInput('bf-query', '全书查找');
-  const caseBtn = button('ed-find-opt bf-case', 'Aa', '区分大小写');
-  const regexBtn = button('ed-find-opt bf-regex', '.*', '正则表达式（与查找条同一套：替换里可以用 $1 引用分组）');
+  const query = textInput('bf-query', '全書查詢');
+  const caseBtn = button('ed-find-opt bf-case', 'Aa', '區分大小寫');
+  const regexBtn = button('ed-find-opt bf-regex', '.*', '正規表示式（與查詢條同一套：替換裡可以用 $1 引用分組）');
   for (const b of [caseBtn, regexBtn]) {
     b.setAttribute('aria-pressed', 'false');
   }
   findRow.append(query, caseBtn, regexBtn);
 
   const replaceRow = el('div', 'bf-row');
-  const replace = textInput('bf-replace', '替换为');
-  const preview = button('chip-btn bf-preview', '预览替换', '先列出每一处换成什么，看过、勾过再替换（Enter）');
+  const replace = textInput('bf-replace', '替換為');
+  const preview = button('chip-btn bf-preview', '預覽替換', '先列出每一處換成什麼，看過、勾過再替換（Enter）');
   replaceRow.append(replace, preview);
 
   const scopeRow = el('div', 'bf-scopes');
@@ -252,8 +252,8 @@ function ensurePanel(): PanelDom {
   summaryBox.setAttribute('aria-live', 'polite');
 
   const actions = el('div', 'bf-actions hidden');
-  const replaceSelected = button('primary bf-replace-selected', '替换所选', '');
-  const exitPreview = button('secondary bf-exit-preview', '退出预览', '回到只查找');
+  const replaceSelected = button('primary bf-replace-selected', '替換所選', '');
+  const exitPreview = button('secondary bf-exit-preview', '退出預覽', '回到只查詢');
   actions.append(replaceSelected, exitPreview);
 
   const results = el('div', 'bf-results');
@@ -293,7 +293,7 @@ function wire(p: PanelDom): void {
       startPreview();
     }
   });
-  // 面板里任何一处按 Esc 都是收起（组字中途的 Esc 是输入法的）。
+  // 面板裡任何一處按 Esc 都是收起（組字中途的 Esc 是輸入法的）。
   p.root.addEventListener('keydown', (e) => {
     if (!isImeComposing(e) && e.key === 'Escape') {
       e.preventDefault();
@@ -324,9 +324,9 @@ function toggleOption(btn: HTMLButtonElement, key: 'caseSensitive' | 'regex'): v
   inputsChanged(true);
 }
 
-// ---------------------------------------------------------------- 查找
+// ---------------------------------------------------------------- 查詢
 
-/** 面板上此刻的查找条件。预览时带替换框里的字。 */
+/** 面板上此刻的查詢條件。預覽時帶替換框裡的字。 */
 function currentQuery(): BookFindQuery {
   const p = panel!;
   return {
@@ -338,7 +338,7 @@ function currentQuery(): BookFindQuery {
   };
 }
 
-/** 查找框、开关、范围变了：汇总收起、两段式退回，停顿之后再搜（`now`：开关、范围这种一下就定的，当场搜）。 */
+/** 查詢框、開關、範圍變了：彙總收起、兩段式退回，停頓之後再搜（`now`：開關、範圍這種一下就定的，當場搜）。 */
 function inputsChanged(now = false): void {
   summary = null;
   disarm();
@@ -349,7 +349,7 @@ function inputsChanged(now = false): void {
   }
 }
 
-/** 替换框变了：预览时停顿之后重新预览；只查找时不用搜。 */
+/** 替換框變了：預覽時停頓之後重新預覽；只查詢時不用搜。 */
 function replacementChanged(): void {
   summary = null;
   disarm();
@@ -366,7 +366,7 @@ function scheduleSearch(): void {
   render();
 }
 
-/** 叫停还在路上的那一次（不回话，前端也不再等它）。 */
+/** 叫停還在路上的那一次（不回話，前端也不再等它）。 */
 function cancelWaiting(): void {
   if (waiting) {
     post({ type: 'cancelBookFind', requestId: waiting });
@@ -376,7 +376,7 @@ function cancelWaiting(): void {
   }
 }
 
-/** 照面板上此刻的条件搜一次（预览时就是预览）。查找框空着、一个范围都没勾：清掉结果，不发。 */
+/** 照面板上此刻的條件搜一次（預覽時就是預覽）。查詢框空著、一個範圍都沒勾：清掉結果，不發。 */
 function runSearch(): void {
   clearTimeout(searchTimer);
   searchTimer = undefined;
@@ -426,16 +426,16 @@ function onResult(msg: Extract<OutMessage, { type: 'bookFindResult' }>): void {
   render();
 }
 
-// ---------------------------------------------------------------- 替换
+// ---------------------------------------------------------------- 替換
 
-/** 编辑器里开着、有未保存修改的文件（替换时跳过）。 */
+/** 編輯器裡開著、有未儲存修改的檔案（替換時跳過）。 */
 function dirtyPaths(): string[] {
   return allOpenFiles()
     .filter((f) => f.draft !== f.text)
     .map((f) => f.path);
 }
 
-/** 画着的是不是一份预览，而且条件与面板上此刻的一样（预览之后又改了输入框，就得等新的预览回来）。 */
+/** 畫著的是不是一份預覽，而且條件與面板上此刻的一樣（預覽之後又改了輸入框，就得等新的預覽回來）。 */
 function previewReady(): boolean {
   return !!result && !!resultQuery && resultQuery.replacement !== undefined && !waiting && !searchTimer && sameQuery(resultQuery, currentQuery());
 }
@@ -459,7 +459,7 @@ function replaceSelected(): void {
     return;
   }
   if (!armed) {
-    // 两段式：第一下只换字，第二下才发（改了任何一处勾选、输入框，退回第一段）。
+    // 兩段式：第一下只換字，第二下才發（改了任何一處勾選、輸入框，退回第一段）。
     armed = true;
     armTimer = setTimeout(disarm, CONFIRM_MS);
     renderActions();
@@ -479,11 +479,11 @@ function onReplaced(msg: Extract<OutMessage, { type: 'bookReplaceDone' }>): void
   replacing = null;
   summary = msg.summary;
   if (msg.summary.error && msg.summary.files === 0) {
-    // 什么都没做（上一次还没换完、正则写错）：预览留着。
+    // 什麼都沒做（上一次還沒換完、正則寫錯）：預覽留著。
     render();
     return;
   }
-  // 换过了：预览作废（磁盘上的 hash 都变了），回到只查找、再搜一次——列出来的是还剩下的。
+  // 換過了：預覽作廢（磁碟上的 hash 都變了），回到只查詢、再搜一次——列出來的是還剩下的。
   mode = 'find';
   excluded.clear();
   result = null;
@@ -491,7 +491,7 @@ function onReplaced(msg: Extract<OutMessage, { type: 'bookReplaceDone' }>): void
   runSearch();
 }
 
-// ---------------------------------------------------------------- 点一处
+// ---------------------------------------------------------------- 點一處
 
 function jumpTo(file: BookFindFile, hit: BookFindHit): void {
   const query = resultQuery;
@@ -502,7 +502,7 @@ function jumpTo(file: BookFindFile, hit: BookFindHit): void {
     revealHit(file.path, hit, query);
     return;
   }
-  // 开成正常标签（不带临时标签的标记）：从结果里点过去的是作者明确要看的那一份。
+  // 開成正常標籤（不帶臨時標籤的標記）：從結果裡點過去的是作者明確要看的那一份。
   pendingJump = { path: file.path, hit, query, until: Date.now() + JUMP_WAIT_MS };
   post({ type: 'openEditor', path: file.path, pane: 'main' });
 }
@@ -522,7 +522,7 @@ function revealHit(path: string, hit: BookFindHit, query: BookFindQuery): void {
   revealEditor();
   const offset = offsetAt(pane.area.value, hit.line, hit.col);
   if (!revealFindMatch(pane, query.query, { caseSensitive: query.caseSensitive, regex: query.regex }, offset)) {
-    toast('这一处在编辑区里找不到了（可能有没保存的修改）。', true);
+    toast('這一處在編輯區裡找不到了（可能有沒儲存的修改）。', true);
   }
 }
 
@@ -541,7 +541,7 @@ function settleJump(path: string): void {
   }
 }
 
-// ---------------------------------------------------------------- 画
+// ---------------------------------------------------------------- 畫
 
 function setStatus(text: string): void {
   if (panel) {
@@ -572,13 +572,13 @@ function renderStatus(): void {
   }
   p.notes.classList.toggle('hidden', notes.length === 0);
   if (replacing) {
-    setStatus('正在替换…');
+    setStatus('正在替換…');
   } else if (waiting) {
-    setStatus(mode === 'preview' ? '正在预览…' : '正在搜…');
+    setStatus(mode === 'preview' ? '正在預覽…' : '正在搜…');
   } else if (!q.query) {
-    setStatus('输入要找的字，停一下就开始搜。');
+    setStatus('輸入要找的字，停一下就開始搜。');
   } else if (q.scopes.length === 0) {
-    setStatus('至少勾一个范围。');
+    setStatus('至少勾一個範圍。');
   } else if (searchTimer) {
     setStatus('');
   } else if (result) {
@@ -589,7 +589,7 @@ function renderStatus(): void {
   } else {
     setStatus('');
   }
-  // 正则写错时，浏览器给的原因放在提示里。
+  // 正則寫錯時，瀏覽器給的原因放在提示裡。
   p.status.title = result?.error && !waiting ? result.error : '';
 }
 
@@ -603,7 +603,7 @@ function renderSummary(): void {
   for (const line of summaryLines(summary)) {
     box.appendChild(el('div', `bf-summary-line${line.tone ? ` ${line.tone}` : ''}`, line.text));
   }
-  const dismiss = button('icon-btn bf-summary-close', '×', '收起汇总');
+  const dismiss = button('icon-btn bf-summary-close', '×', '收起彙總');
   dismiss.addEventListener('click', () => {
     summary = null;
     renderSummary();
@@ -621,7 +621,7 @@ function renderActions(): void {
   p.exitPreview.disabled = !!replacing;
   if (!isPreview || !result) {
     p.replaceSelected.disabled = true;
-    p.replaceSelected.textContent = '替换所选';
+    p.replaceSelected.textContent = '替換所選';
     p.replaceSelected.classList.remove('confirm');
     return;
   }
@@ -629,11 +629,11 @@ function renderActions(): void {
   p.replaceSelected.disabled = picked.hits === 0 || !!replacing || !previewReady();
   p.replaceSelected.classList.toggle('confirm', armed);
   p.replaceSelected.textContent = armed
-    ? `再点一下：替换 ${picked.files} 个文件 ${picked.hits} 处`
-    : `替换所选（${picked.files} 个文件 ${picked.hits} 处）`;
+    ? `再點一下：替換 ${picked.files} 個檔案 ${picked.hits} 處`
+    : `替換所選（${picked.files} 個檔案 ${picked.hits} 處）`;
   p.replaceSelected.title = armed
-    ? '经网关逐份写；每份先在「历史」里存一版替换前的，跨文件没有一步撤销'
-    : '先点一下，按钮上写明替换几个文件几处，再点一下才替换';
+    ? '經閘道器逐份寫；每份先在「歷史」裡存一版替換前的，跨檔案沒有一步撤銷'
+    : '先點一下，按鈕上寫明替換幾個檔案幾處，再點一下才替換';
 }
 
 function renderResults(): void {
@@ -646,7 +646,7 @@ function renderResults(): void {
   const isPreview = resultQuery?.replacement !== undefined;
   const dirty = new Set(dirtyPaths());
   for (const group of groupByScope(result.files)) {
-    box.appendChild(el('div', 'bf-group', `${group.label} · ${group.files.length} 个文件 ${group.hits} 处`));
+    box.appendChild(el('div', 'bf-group', `${group.label} · ${group.files.length} 個檔案 ${group.hits} 處`));
     for (const file of group.files) {
       box.appendChild(fileBlock(file, isPreview, dirty.has(file.path)));
     }
@@ -667,7 +667,7 @@ function fileBlock(file: BookFindFile, isPreview: boolean, dirty: boolean): HTML
     box.checked = state === 'all';
     box.indeterminate = state === 'some';
     box.disabled = dirty;
-    box.title = dirty ? '编辑器里有未保存的修改：替换时跳过' : '这份文件里的每一处';
+    box.title = dirty ? '編輯器裡有未儲存的修改：替換時跳過' : '這份檔案裡的每一處';
     box.addEventListener('click', (e) => e.stopPropagation());
     box.addEventListener('change', () => {
       for (const hit of file.hits) {
@@ -687,8 +687,8 @@ function fileBlock(file: BookFindFile, isPreview: boolean, dirty: boolean): HTML
   head.appendChild(label);
   head.appendChild(el('span', 'bf-file-count', file.count > file.hits.length ? `${file.hits.length}/${file.count}` : String(file.count)));
   if (dirty) {
-    const badge = el('span', 'bf-dirty', '未保存');
-    badge.title = '编辑器里有未保存的修改：这里列的是磁盘上的内容，替换时会跳过它——先保存或放弃修改';
+    const badge = el('span', 'bf-dirty', '未儲存');
+    badge.title = '編輯器裡有未儲存的修改：這裡列的是磁碟上的內容，替換時會跳過它——先儲存或放棄修改';
     head.appendChild(badge);
   }
   head.addEventListener('click', () => {
@@ -740,7 +740,7 @@ function hitRow(file: BookFindFile, hit: BookFindHit, isPreview: boolean, dirty:
     ctx.appendChild(el('del', 'bf-old', hit.text));
     const ins = el('ins', 'bf-new', hit.replacement.replace(/\r?\n/g, '↵'));
     if (!hit.replacement) {
-      ins.title = '换成空的（删掉）';
+      ins.title = '換成空的（刪掉）';
     }
     ctx.appendChild(ins);
   } else {
@@ -758,7 +758,7 @@ function hitRow(file: BookFindFile, hit: BookFindHit, isPreview: boolean, dirty:
   return row;
 }
 
-/** 勾选变了：文件那一格的三态、状态行、按钮上的数跟着改（不整个重画，滚动位置不动）。 */
+/** 勾選變了：檔案那一格的三態、狀態行、按鈕上的數跟著改（不整個重畫，滾動位置不動）。 */
 function selectionChanged(): void {
   disarm();
   if (!panel || !result) {
@@ -780,7 +780,7 @@ function selectionChanged(): void {
   renderActions();
 }
 
-/** 编辑器里改了 / 存了：「未保存」的标记与勾选、计数跟着变（停一下再画）。 */
+/** 編輯器裡改了 / 存了：「未儲存」的標記與勾選、計數跟著變（停一下再畫）。 */
 function scheduleDirtyRefresh(): void {
   if (!isBookFindOpen() || !result) {
     return;
@@ -796,7 +796,7 @@ function scheduleDirtyRefresh(): void {
   }, 250);
 }
 
-// ---------------------------------------------------------------- 装配
+// ---------------------------------------------------------------- 裝配
 
 function resetAll(): void {
   closeBookFind(false);
@@ -822,8 +822,8 @@ function resetAll(): void {
 let installed = false;
 
 /**
- * 装上 Ctrl+Shift+F / Ctrl+Shift+H、「编辑 → 全书查找替换…」、结果与汇总的接收。`editor/index.ts` 调一次，**要在它自己的
- * `onMessage` 之后**：点了一处、那份文件的 `editorOpen` 先让编辑区收下，这里才找得到拥有它的那一块。
+ * 裝上 Ctrl+Shift+F / Ctrl+Shift+H、「編輯 → 全書查詢替換…」、結果與彙總的接收。`editor/index.ts` 調一次，**要在它自己的
+ * `onMessage` 之後**：點了一處、那份檔案的 `editorOpen` 先讓編輯區收下，這裡才找得到擁有它的那一塊。
  */
 export function installBookFind(postMessage: (msg: InMessage) => void): void {
   if (installed) {
@@ -854,7 +854,7 @@ export function installBookFind(postMessage: (msg: InMessage) => void): void {
     openBookFind({ replace: e.detail.name === 'openReplace' });
   });
 
-  // 点活动栏上任一页签：收起面板，让那一页露出来（结果留着）。
+  // 點活動欄上任一頁籤：收起面板，讓那一頁露出來（結果留著）。
   document.addEventListener('click', (e) => {
     if ((e.target as HTMLElement | null)?.closest?.('.tabbar .tab')) {
       closeBookFind(false);

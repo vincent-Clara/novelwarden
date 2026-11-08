@@ -1,15 +1,15 @@
 /**
- * 假模型本身：应答可以带收尾原因、思考、分片。
+ * 假模型本身：應答可以帶收尾原因、思考、分片。
  *
- * 续写（三期）要靠 `stop: 'maxTokens'` 区分「被截断」与「说完了」，重演检测
- * 要靠 `filler` 造出互不重样的正文——这两样要是悄悄坏了，后面那批测试会
- * 以一种很难查的方式全绿或全红。
+ * 續寫（三期）要靠 `stop: 'maxTokens'` 區分「被截斷」與「說完了」，重演檢測
+ * 要靠 `filler` 造出互不重樣的正文——這兩樣要是悄悄壞了，後面那批測試會
+ * 以一種很難查的方式全綠或全紅。
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { installFakeProvider, filler } = require('../../helpers/fakeProvider');
 
-/** 不载 bundle：registry 只要能收下 factory 就够。 */
+/** 不載 bundle：registry 只要能收下 factory 就夠。 */
 function providerWith(opts) {
   const registry = { registerProviderFactory(f) { this.factory = f; } };
   const fake = installFakeProvider(registry, opts);
@@ -18,33 +18,33 @@ function providerWith(opts) {
 
 async function collect(provider) {
   const events = [];
-  for await (const ev of provider.stream([{ role: 'user', content: '写' }], { maxOutputTokens: 100 })) {
+  for await (const ev of provider.stream([{ role: 'user', content: '寫' }], { maxOutputTokens: 100 })) {
     events.push(ev);
   }
   return events;
 }
 
-describe('假模型的应答形状', () => {
-  test('纯字符串照旧只发一条 text，不发 stop', async () => {
+describe('假模型的應答形狀', () => {
+  test('純字串照舊只發一條 text，不發 stop', async () => {
     const { provider } = providerWith({ replies: ['一段正文'] });
     const events = await collect(provider);
     assert.deepEqual(events, [{ type: 'text', text: '一段正文' }]);
   });
 
-  test('对象应答在正文之后发 stop', async () => {
-    const { provider } = providerWith({ replies: [{ text: '写到一半', stop: 'maxTokens' }] });
+  test('物件應答在正文之後發 stop', async () => {
+    const { provider } = providerWith({ replies: [{ text: '寫到一半', stop: 'maxTokens' }] });
     const events = await collect(provider);
     assert.deepEqual(events.at(-1), { type: 'stop', reason: 'maxTokens' });
-    assert.equal(events.filter((e) => e.type === 'text').map((e) => e.text).join(''), '写到一半');
+    assert.equal(events.filter((e) => e.type === 'text').map((e) => e.text).join(''), '寫到一半');
   });
 
-  test('思考先于正文', async () => {
+  test('思考先於正文', async () => {
     const { provider } = providerWith({ replies: [{ reasoning: '先想想', text: '正文', stop: 'end' }] });
     const types = (await collect(provider)).map((e) => e.type);
     assert.deepEqual(types, ['reasoning', 'text', 'stop']);
   });
 
-  test('chunks 把正文切成几片，拼回去一字不差', async () => {
+  test('chunks 把正文切成幾片，拼回去一字不差', async () => {
     const text = filler(100, 1);
     const { provider } = providerWith({ replies: [{ text, chunks: 4 }] });
     const parts = (await collect(provider)).filter((e) => e.type === 'text');
@@ -52,28 +52,28 @@ describe('假模型的应答形状', () => {
     assert.equal(parts.map((e) => e.text).join(''), text);
   });
 
-  test('reply 函数也可以回对象', async () => {
-    const { provider, fake } = providerWith({ reply: (_m, i) => ({ text: `第${i}轮`, stop: 'end' }) });
+  test('reply 函式也可以回物件', async () => {
+    const { provider, fake } = providerWith({ reply: (_m, i) => ({ text: `第${i}輪`, stop: 'end' }) });
     await collect(provider);
     const events = await collect(provider);
-    assert.equal(events[0].text, '第1轮');
+    assert.equal(events[0].text, '第1輪');
     assert.equal(fake.callCount(), 2);
   });
 });
 
 describe('filler', () => {
-  test('恰好 n 个字，收在句号上', () => {
+  test('恰好 n 個字，收在句號上', () => {
     const text = filler(2345, 7);
     assert.equal(text.length, 2346);
     assert.equal(text.slice(-1), '。');
     assert.ok(!text.slice(0, -1).includes('。'));
   });
 
-  test('同 seed 可复现', () => {
+  test('同 seed 可復現', () => {
     assert.equal(filler(300, 3), filler(300, 3));
   });
 
-  test('不同 seed 之间没有公共 8-gram（不会被重演检测误判）', () => {
+  test('不同 seed 之間沒有公共 8-gram（不會被重演檢測誤判）', () => {
     const grams = (s) => new Set(Array.from({ length: s.length - 7 }, (_, i) => s.slice(i, i + 8)));
     const a = grams(filler(1200, 1));
     const shared = [...grams(filler(1200, 2))].filter((g) => a.has(g));

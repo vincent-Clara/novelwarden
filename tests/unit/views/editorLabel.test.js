@@ -1,14 +1,14 @@
 /**
- * 内置编辑器怎么称呼一份文件（`views/editorLabel.ts`）：标签上的类型短标记与名字、工具栏上的面包屑。
- * 规则只在后端（`kindOfPath` 与章节 / 细纲的文件名规则），前端不拿路径猜——与 `kind`、`draftPath` 同一条原则。
+ * 內建編輯器怎麼稱呼一份檔案（`views/editorLabel.ts`）：標籤上的型別短標記與名字、工具欄上的麵包屑。
+ * 規則只在後端（`kindOfPath` 與章節 / 細綱的檔名規則），前端不拿路徑猜——與 `kind`、`draftPath` 同一條原則。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 同一章的正文 / 细纲 / 草稿三份短标记各不相同、名字一样 | 从前三个标签都只写「003-夜访.md」 |
- * | 面包屑写「第 3 章 夜访」，分卷目录各占一段且可点 | 原始路径 `.novelwarden/summaries/…` 看不懂 |
- * | 架构几件、大纲、文风是中文称呼 | `config.md` 在标签上叫 config 等于没说 |
- * | 认不出的文件扩展名留着 | `project.json` 去掉扩展名就认不出了 |
- * | 越界、空串不抛 | 输入是前端传上来的路径 |
+ * | 同一章的正文 / 細綱 / 草稿三份短標記各不相同、名字一樣 | 從前三個標籤都只寫「003-夜訪.md」 |
+ * | 麵包屑寫「第 3 章 夜訪」，分卷目錄各佔一段且可點 | 原始路徑 `.novelwarden/summaries/…` 看不懂 |
+ * | 架構幾件、大綱、文風是中文稱呼 | `config.md` 在標籤上叫 config 等於沒說 |
+ * | 認不出的副檔名留著 | `project.json` 去掉副檔名就認不出了 |
+ * | 越界、空串不拋 | 輸入是前端傳上來的路徑 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -35,130 +35,136 @@ after(() => {
   if (t) cleanup(t.dir);
 });
 
-/** 面包屑写成一行字，目录段后面标 `[dir]`。 */
+/** 麵包屑寫成一行字，目錄段後面標 `[dir]`。 */
 const crumbs = (rel) =>
   describeFile(rel)
     .crumbs.map((c) => (c.dir !== undefined ? `${c.label}[${c.dir}]` : c.label))
     .join(' › ');
 
-describe('editorLabel · 正文 / 细纲 / 草稿', () => {
-  test('正文不带短标记，名字去掉扩展名', () => {
-    const l = describeFile('chapters/003-夜访.md');
-    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '', title: '003-夜访' });
+describe('editorLabel · 正文 / 細綱 / 草稿', () => {
+  test('正文不帶短標記，名字去掉副檔名', () => {
+    const l = describeFile('chapters/003-夜訪.md');
+    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '', title: '003-夜訪' });
   });
 
-  test('正文的面包屑：正文 › 第 3 章 夜访', () => {
-    assert.equal(crumbs('chapters/003-夜访.md'), '正文[chapters] › 第 3 章 夜访');
+  test('正文的麵包屑：正文 › 第 3 章 夜訪', () => {
+    assert.equal(crumbs('chapters/003-夜訪.md'), '正文[chapters] › 第 3 章 夜訪');
   });
 
-  test('分卷目录里的正文：卷目录各占一段、可点', () => {
-    assert.equal(crumbs('chapters/第一卷/003-夜访.txt'), '正文[chapters] › 第一卷[chapters/第一卷] › 第 3 章 夜访');
-    assert.equal(describeFile('chapters/第一卷/003-夜访.txt').title, '003-夜访');
+  test('分卷目錄裡的正文：卷目錄各佔一段、可點', () => {
+    assert.equal(crumbs('chapters/第一卷/003-夜訪.txt'), '正文[chapters] › 第一卷[chapters/第一卷] › 第 3 章 夜訪');
+    assert.equal(describeFile('chapters/第一卷/003-夜訪.txt').title, '003-夜訪');
   });
 
-  test('细纲带「细纲」，面包屑从细纲根起、卷目录照样一段', () => {
-    const l = describeFile('.novelwarden/summaries/第一卷/003-夜访.md');
-    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '细纲', title: '003-夜访' });
+  test('細綱帶「細綱」，麵包屑從細綱根起、卷目錄照樣一段', () => {
+    const l = describeFile('.novelwarden/summaries/第一卷/003-夜訪.md');
+    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '細綱', title: '003-夜訪' });
     assert.equal(
-      crumbs('.novelwarden/summaries/第一卷/003-夜访.md'),
-      '细纲[.novelwarden/summaries] › 第一卷[.novelwarden/summaries/第一卷] › 第 3 章 夜访'
+      crumbs('.novelwarden/summaries/第一卷/003-夜訪.md'),
+      '細綱[.novelwarden/summaries] › 第一卷[.novelwarden/summaries/第一卷] › 第 3 章 夜訪'
     );
   });
 
-  test('草稿带「草稿」，面包屑同样写第几章', () => {
-    const l = describeFile('drafts/003-夜访.md');
-    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '草稿', title: '003-夜访' });
-    assert.equal(crumbs('drafts/003-夜访.md'), '草稿[drafts] › 第 3 章 夜访');
+  test('草稿帶「草稿」，麵包屑同樣寫第幾章', () => {
+    const l = describeFile('drafts/003-夜訪.md');
+    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '草稿', title: '003-夜訪' });
+    assert.equal(crumbs('drafts/003-夜訪.md'), '草稿[drafts] › 第 3 章 夜訪');
   });
 
-  test('同一章的三份：名字一样、短标记各不相同', () => {
-    const tags = ['chapters/003-夜访.md', '.novelwarden/summaries/003-夜访.md', 'drafts/003-夜访.md'].map(
+  test('同一章的三份：名字一樣、短標記各不相同', () => {
+    const tags = ['chapters/003-夜訪.md', '.novelwarden/summaries/003-夜訪.md', 'drafts/003-夜訪.md'].map(
       (p) => describeFile(p).tag
     );
     assert.equal(new Set(tags).size, 3, JSON.stringify(tags));
   });
 
-  test('文件名里没有标题：面包屑写「第 N 章」', () => {
+  test('檔名裡沒有標題：麵包屑寫「第 N 章」', () => {
     assert.equal(crumbs('chapters/007.md'), '正文[chapters] › 第 7 章');
   });
 
-  test('没有扩展名的章节照样认', () => {
+  test('沒有副檔名的章節照樣認', () => {
     assert.equal(describeFile('chapters/012-雪夜').title, '012-雪夜');
     assert.equal(crumbs('chapters/012-雪夜'), '正文[chapters] › 第 12 章 雪夜');
   });
 });
 
-describe('editorLabel · 角色与设定', () => {
+describe('editorLabel · 角色與設定', () => {
   test('角色卡：角色 › 林晚', () => {
     const l = describeFile('.novelwarden/characters/林晚.md');
     assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '角色', title: '林晚' });
     assert.equal(crumbs('.novelwarden/characters/林晚.md'), '角色[.novelwarden/characters] › 林晚');
   });
 
-  test('子目录里的角色卡：子目录一段', () => {
+  test('子目錄裡的角色卡：子目錄一段', () => {
     assert.equal(
       crumbs('.novelwarden/characters/配角/李叔.md'),
       '角色[.novelwarden/characters] › 配角[.novelwarden/characters/配角] › 李叔'
     );
   });
 
-  test('设定条目：设定 › 地点 › 青石镇', () => {
-    const l = describeFile('.novelwarden/lore/地点/青石镇.md');
-    assert.equal(l.tag, '设定');
-    assert.equal(crumbs('.novelwarden/lore/地点/青石镇.md'), '设定[.novelwarden/lore] › 地点[.novelwarden/lore/地点] › 青石镇');
+  test('設定條目：設定 › 地點 › 青石鎮', () => {
+    const l = describeFile('.novelwarden/lore/地點/青石鎮.md');
+    assert.equal(l.tag, '設定');
+    assert.equal(crumbs('.novelwarden/lore/地點/青石鎮.md'), '設定[.novelwarden/lore] › 地點[.novelwarden/lore/地點] › 青石鎮');
   });
 });
 
-describe('editorLabel · 有中文称呼的固定文件', () => {
-  test('小说配置：标签上是中文称呼、不带短标记，面包屑归在故事架构', () => {
+describe('editorLabel · 有中文稱呼的固定檔案', () => {
+  test('小說配置：標籤上是中文稱呼、不帶短標記，麵包屑歸在故事架構', () => {
     const l = describeFile('.novelwarden/config.md');
-    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '', title: '小说配置' });
-    assert.equal(crumbs('.novelwarden/config.md'), '故事架构[.novelwarden] › 小说配置');
+    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '', title: '小說配置' });
+    assert.equal(crumbs('.novelwarden/config.md'), '故事架構[.novelwarden] › 小說配置');
   });
 
-  test('故事前提、世界观、情节大纲', () => {
+  test('故事前提、世界觀、情節大綱', () => {
     assert.equal(describeFile('.novelwarden/premise.md').title, '故事前提');
-    assert.equal(describeFile('.novelwarden/world.md').title, '世界观');
-    assert.equal(crumbs('.novelwarden/outline.md'), '故事架构[.novelwarden] › 情节大纲');
+    assert.equal(describeFile('.novelwarden/world.md').title, '世界觀');
+    assert.equal(crumbs('.novelwarden/outline.md'), '故事架構[.novelwarden] › 情節大綱');
   });
 
-  test('文风指南、全文大纲归在文风与摘要（与工程页、「转到…」同一个叫法）', () => {
-    assert.equal(describeFile('.novelwarden/style.md').title, '文风指南');
-    assert.equal(describeFile('.novelwarden/summaries/global.md').title, '全文大纲');
+  test('文風指南、全文大綱歸在文風與摘要（與工程頁、「轉到…」同一個叫法）', () => {
+    assert.equal(describeFile('.novelwarden/style.md').title, '文風指南');
+    assert.equal(describeFile('.novelwarden/summaries/global.md').title, '全文大綱');
   });
 
-  test('叙事线一条线一个文件：标签是线名、短标记「叙事线」，面包屑从叙事线目录起', () => {
-    const l = describeFile('.novelwarden/threads/林昭与沈青.md');
-    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '叙事线', title: '林昭与沈青' });
-    assert.equal(crumbs('.novelwarden/threads/林昭与沈青.md'), '叙事线[.novelwarden/threads] › 林昭与沈青');
-    assert.equal(describeFile('.novelwarden/threads.md').title, 'threads.md', '七期的单文件是 other');
+  test('敘事線一條線一個檔案：標籤是線名、短標記「敘事線」，麵包屑從敘事線目錄起', () => {
+    const l = describeFile('.novelwarden/threads/林昭與沈青.md');
+    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '敘事線', title: '林昭與沈青' });
+    assert.equal(crumbs('.novelwarden/threads/林昭與沈青.md'), '敘事線[.novelwarden/threads] › 林昭與沈青');
+    assert.equal(describeFile('.novelwarden/threads.md').title, 'threads.md', '七期的單檔案是 other');
   });
 
-  test('敏感词表（写作体检用）也是中文称呼、归在文风与摘要', () => {
+  test('敏感詞表（寫作體檢用）也是中文稱呼、歸在文風與摘要', () => {
     const l = describeFile('.novelwarden/sensitive.txt');
-    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '', title: '敏感词表' });
-    assert.equal(crumbs('.novelwarden/sensitive.txt'), '文风与摘要[.novelwarden] › 敏感词表');
+    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '', title: '敏感詞表' });
+    assert.equal(crumbs('.novelwarden/sensitive.txt'), '文風與摘要[.novelwarden] › 敏感詞表');
   });
 });
 
-describe('editorLabel · 其他文件', () => {
-  test('写作技能：SKILL.md 叫技能目录的名字', () => {
-    const l = describeFile('.novelwarden/skills/快节奏/SKILL.md');
-    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '技能', title: '快节奏' });
+describe('editorLabel · 其他檔案', () => {
+  test('寫作技能：SKILL.md 叫技能目錄的名字', () => {
+    const l = describeFile('.novelwarden/skills/快節奏/SKILL.md');
+    assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '技能', title: '快節奏' });
   });
 
-  test('认不出的文件：原文件名、扩展名留着、目录一段一段', () => {
+  test('認不出的檔案：原檔名、副檔名留著、目錄一段一段', () => {
     const l = describeFile('.novelwarden/project.json');
     assert.deepEqual({ tag: l.tag, title: l.title }, { tag: '', title: 'project.json' });
     assert.equal(crumbs('.novelwarden/project.json'), '.novelwarden[.novelwarden] › project.json');
   });
 
-  test('工程根下的随手文件只有一段', () => {
+  test('工程根下的隨手檔案只有一段', () => {
     assert.equal(crumbs('notes.txt'), 'notes.txt');
   });
 
-  test('越界、空串不抛', () => {
+  test('越界、空串不拋', () => {
     assert.doesNotThrow(() => describeFile('../外面.md'));
     assert.doesNotThrow(() => describeFile(''));
   });
+});
+
+test('固定保留檔案顯示繁體，路徑與作者自訂的線名不轉換', () => {
+  assert.equal(describeFile('.novelwarden/threads/未归属的伏笔.md').title, '未歸屬的伏筆');
+  assert.equal(describeFile('.novelwarden/threads/时间线.md').title, '時間線');
+  assert.equal(describeFile('.novelwarden/threads/主线.md').title, '主线');
 });

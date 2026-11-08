@@ -1,16 +1,16 @@
 /**
- * 编辑器「名词补全」的名词表（`src/core/views/nameIndex.ts`），真临时工程。
+ * 編輯器「名詞補全」的名詞表（`src/core/views/nameIndex.ts`），真臨時工程。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 角色卡 | 名字、别名（名字里括号内外各一截也算；一个字的不要）、一句话取「身份」第一句（没写取标签）、路径 |
- * | 设定条目 | 标题、关键词当别名、分类就是目录（根下是空串）、一句话取 `brief`（没写取正文第一句） |
- * | 未建条目 | 名录里定稿过的「设定」一节出现过、没有条目的名字：建议分类、一句话取最近那一章的说明；人名、已有条目不算 |
- * | 顺序 | 角色卡 → 设定条目 → 未建条目 |
- * | 卡改了会更新 | 改别名、新建一条设定、删一张卡，表跟着变，指纹跟着变；没变时指纹不变 |
- * | 读盘 | 没变的时候一份卡、一条设定、一份细纲都不读；变了只重读卡与条目 |
- * | 还不是小说工程 | `initialized: false`，表是空的 |
- * | controller | `requestNameIndex` 回 `nameIndex`（同一个 `requestId` 与指纹）；带着对得上的 `have` 时不带表 |
+ * | 角色卡 | 名字、別名（名字裡括號內外各一截也算；一個字的不要）、一句話取「身份」第一句（沒寫取標籤）、路徑 |
+ * | 設定條目 | 標題、關鍵詞當別名、分類就是目錄（根下是空串）、一句話取 `brief`（沒寫取正文第一句） |
+ * | 未建條目 | 名錄裡定稿過的「設定」一節出現過、沒有條目的名字：建議分類、一句話取最近那一章的說明；人名、已有條目不算 |
+ * | 順序 | 角色卡 → 設定條目 → 未建條目 |
+ * | 卡改了會更新 | 改別名、新建一條設定、刪一張卡，表跟著變，指紋跟著變；沒變時指紋不變 |
+ * | 讀盤 | 沒變的時候一份卡、一條設定、一份細綱都不讀；變了只重讀卡與條目 |
+ * | 還不是小說工程 | `initialized: false`，表是空的 |
+ * | controller | `requestNameIndex` 回 `nameIndex`（同一個 `requestId` 與指紋）；帶著對得上的 `have` 時不帶表 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,9 +27,9 @@ let bundle;
 let t;
 let project;
 
-/** 一份定稿过的细纲（有 `sourceHash`），「设定」一节照给。 */
+/** 一份定稿過的細綱（有 `sourceHash`），「設定」一節照給。 */
 const finalizedPlot = (no, title, lore) =>
-  `---\nno: ${no}\ntitle: ${title}\nsourceHash: done${no}\n---\n\n# ${title}\n\n## 梗概\n梗概\n\n## 关键事件\n事件\n\n## 设定\n\n${lore}\n`;
+  `---\nno: ${no}\ntitle: ${title}\nsourceHash: done${no}\n---\n\n# ${title}\n\n## 梗概\n梗概\n\n## 關鍵事件\n事件\n\n## 設定\n\n${lore}\n`;
 
 before(async () => {
   bundle = loadBundle({
@@ -40,30 +40,30 @@ before(async () => {
     db: './src/core/runtime/db.ts',
   });
   bundle.host.initHost(makeFakeHost({ settings: () => ({}) }).host);
-  t = await makeTempProject(bundle.project, { prefix: 'name-index', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'name-index', title: '青雲劍錄' });
   project = t.project;
 
   t.write(
     '.novelwarden/characters/林昭.md',
-    '---\nname: 林昭\naliases: [阿昭, 小林]\n---\n\n# 林昭\n\n## 身份\n青云宗外门弟子，十七岁。父母早亡，由李叔带大。\n'
+    '---\nname: 林昭\naliases: [阿昭, 小林]\n---\n\n# 林昭\n\n## 身份\n青雲宗外門弟子，十七歲。父母早亡，由李叔帶大。\n'
   );
-  t.write('.novelwarden/characters/配角/李叔.md', '---\ntags: [镇上铁匠, 长辈]\n---\n\n# 李叔\n');
-  t.write('.novelwarden/characters/沈怀山.md', '---\nname: 沈怀山（老沈）\naliases: [沈, 沈先生]\n---\n\n# 沈怀山\n');
+  t.write('.novelwarden/characters/配角/李叔.md', '---\ntags: [鎮上鐵匠, 長輩]\n---\n\n# 李叔\n');
+  t.write('.novelwarden/characters/沈懷山.md', '---\nname: 沈懷山（老沈）\naliases: [沈, 沈先生]\n---\n\n# 沈懷山\n');
   t.write(
-    '.novelwarden/lore/门派/青云宗.md',
-    '---\ntitle: 青云宗\nkeywords: [青云门, 宗门, 宗]\nbrief: 正道第一大宗，坐落在青云山上\n---\n\n# 青云宗\n'
+    '.novelwarden/lore/門派/青雲宗.md',
+    '---\ntitle: 青雲宗\nkeywords: [青雲門, 宗門, 宗]\nbrief: 正道第一大宗，坐落在青雲山上\n---\n\n# 青雲宗\n'
   );
-  t.write('.novelwarden/lore/地点/青崖镇.md', '# 青崖镇\n\n## 概要\n\n青云山脚下的小镇。镇上多铁匠。\n');
-  t.write('.novelwarden/lore/天书.md', '---\ntitle: 天书\n---\n\n# 天书\n');
+  t.write('.novelwarden/lore/地點/青崖镇.md', '# 青崖鎮\n\n## 概要\n\n青雲山腳下的小鎮。鎮上多鐵匠。\n');
+  t.write('.novelwarden/lore/天書.md', '---\ntitle: 天書\n---\n\n# 天書\n');
 
-  // 两章定稿过的细纲：黑水河没有条目（未建），青云宗有，林昭是人（不算设定）。
+  // 兩章定稿過的細綱：黑水河沒有條目（未建），青雲宗有，林昭是人（不算設定）。
   t.write('chapters/001-楔子.md', '# 楔子\n\n雨下了三天。');
   t.write(
     '.novelwarden/summaries/001-楔子.md',
-    finalizedPlot(1, '楔子', '- 黑水河〔地点〕：镇外那条终年发黑的河\n- 青云宗〔门派〕：收徒\n- 林昭〔人物〕：主角')
+    finalizedPlot(1, '楔子', '- 黑水河〔地點〕：鎮外那條終年發黑的河\n- 青雲宗〔門派〕：收徒\n- 林昭〔人物〕：主角')
   );
-  t.write('chapters/002-入镇.md', '# 入镇\n\n他走进镇子。');
-  t.write('.novelwarden/summaries/002-入镇.md', finalizedPlot(2, '入镇', '- 黑水河〔地点〕：河上起了雾\n- 照骨镜〔物品〕'));
+  t.write('chapters/002-入鎮.md', '# 入鎮\n\n他走進鎮子。');
+  t.write('.novelwarden/summaries/002-入鎮.md', finalizedPlot(2, '入鎮', '- 黑水河〔地點〕：河上起了霧\n- 照骨鏡〔物品〕'));
   project.invalidate();
 });
 
@@ -71,72 +71,72 @@ after(() => {
   if (t) cleanup(t.dir, bundle.db);
 });
 
-describe('views/nameIndex › 名词表', () => {
+describe('views/nameIndex › 名詞表', () => {
   let index;
   const byName = (name) => index.names.find((n) => n.name === name);
   before(async () => {
     index = await bundle.names.buildNameIndex(project);
   });
 
-  test('是小说工程', () => {
+  test('是小說工程', () => {
     assert.equal(index.initialized, true);
   });
 
-  test('角色卡：名字、别名、来源、类型空串、一句话取「身份」第一句、路径', () => {
+  test('角色卡：名字、別名、來源、型別空串、一句話取「身份」第一句、路徑', () => {
     assert.deepEqual(byName('林昭'), {
       name: '林昭',
       aliases: ['阿昭', '小林'],
       source: 'character',
       category: '',
-      brief: '青云宗外门弟子，十七岁。',
+      brief: '青雲宗外門弟子，十七歲。',
       path: '.novelwarden/characters/林昭.md',
     });
   });
 
-  test('没写「身份」的卡：一句话取标签', () => {
-    assert.equal(byName('李叔').brief, '镇上铁匠、长辈');
+  test('沒寫「身份」的卡：一句話取標籤', () => {
+    assert.equal(byName('李叔').brief, '鎮上鐵匠、長輩');
     assert.equal(byName('李叔').path, '.novelwarden/characters/配角/李叔.md');
   });
 
-  test('名字里括号内外各一截都当别名；一个字的别名不要', () => {
-    assert.deepEqual(byName('沈怀山（老沈）').aliases, ['沈怀山', '老沈', '沈先生']);
+  test('名字裡括號內外各一截都當別名；一個字的別名不要', () => {
+    assert.deepEqual(byName('沈懷山（老沈）').aliases, ['沈懷山', '老沈', '沈先生']);
   });
 
-  test('设定条目：关键词当别名（一个字的不要）、分类就是目录、一句话取 brief', () => {
-    assert.deepEqual(byName('青云宗'), {
-      name: '青云宗',
-      aliases: ['青云门', '宗门'],
+  test('設定條目：關鍵詞當別名（一個字的不要）、分類就是目錄、一句話取 brief', () => {
+    assert.deepEqual(byName('青雲宗'), {
+      name: '青雲宗',
+      aliases: ['青雲門', '宗門'],
       source: 'lore',
-      category: '门派',
-      brief: '正道第一大宗，坐落在青云山上',
-      path: '.novelwarden/lore/门派/青云宗.md',
+      category: '門派',
+      brief: '正道第一大宗，坐落在青雲山上',
+      path: '.novelwarden/lore/門派/青雲宗.md',
     });
   });
 
-  test('没写 brief 的条目取正文第一句；根目录下的条目分类是空串', () => {
-    assert.equal(byName('青崖镇').brief, '青云山脚下的小镇。');
-    assert.equal(byName('青崖镇').category, '地点');
-    assert.equal(byName('天书').category, '');
-    assert.equal(byName('天书').brief, '');
+  test('沒寫 brief 的條目取正文第一句；根目錄下的條目分類是空串', () => {
+    assert.equal(byName('青崖鎮').brief, '青雲山腳下的小鎮。');
+    assert.equal(byName('青崖鎮').category, '地點');
+    assert.equal(byName('天書').category, '');
+    assert.equal(byName('天書').brief, '');
   });
 
-  test('未建条目：建议的分类、一句话取最近那一章的说明、没有路径与别名', () => {
-    assert.deepEqual(byName('黑水河'), { name: '黑水河', aliases: [], source: 'unfiled', category: '地点', brief: '河上起了雾' });
+  test('未建條目：建議的分類、一句話取最近那一章的說明、沒有路徑與別名', () => {
+    assert.deepEqual(byName('黑水河'), { name: '黑水河', aliases: [], source: 'unfiled', category: '地點', brief: '河上起了霧' });
   });
 
-  test('只出现、没说明的未建条目一句话是空串', () => {
-    assert.equal(byName('照骨镜').brief, '');
-    assert.equal(byName('照骨镜').category, '物品');
+  test('只出現、沒說明的未建條目一句話是空串', () => {
+    assert.equal(byName('照骨鏡').brief, '');
+    assert.equal(byName('照骨鏡').category, '物品');
   });
 
-  test('「设定」一节里的人名、已有条目不算未建条目', () => {
+  test('「設定」一節裡的人名、已有條目不算未建條目', () => {
     assert.deepEqual(
       index.names.filter((n) => n.source === 'unfiled').map((n) => n.name).sort(),
-      ['照骨镜', '黑水河']
+      ['照骨鏡', '黑水河']
     );
   });
 
-  test('顺序：角色卡（按名字）→ 设定条目 → 未建条目', () => {
+  test('順序：角色卡（按名字）→ 設定條目 → 未建條目', () => {
     assert.deepEqual(
       index.names.map((n) => n.source),
       ['character', 'character', 'character', 'lore', 'lore', 'lore', 'unfiled', 'unfiled']
@@ -144,43 +144,43 @@ describe('views/nameIndex › 名词表', () => {
   });
 });
 
-describe('views/nameIndex › 卡改了会更新', () => {
-  test('没变时指纹不变', async () => {
+describe('views/nameIndex › 卡改了會更新', () => {
+  test('沒變時指紋不變', async () => {
     const a = bundle.names.nameIndexSig(await bundle.names.buildNameIndex(project));
     const b = bundle.names.nameIndexSig(await bundle.names.buildNameIndex(project));
     assert.equal(a, b);
   });
 
-  test('改了一张卡的别名：表里换成新的，指纹跟着变', async () => {
+  test('改了一張卡的別名：表裡換成新的，指紋跟著變', async () => {
     const before = bundle.names.nameIndexSig(await bundle.names.buildNameIndex(project));
     t.write(
       '.novelwarden/characters/林昭.md',
-      '---\nname: 林昭\naliases: [阿昭, 小林, 林师兄]\n---\n\n# 林昭\n\n## 身份\n青云宗外门弟子，十七岁。父母早亡，由李叔带大。\n'
+      '---\nname: 林昭\naliases: [阿昭, 小林, 林師兄]\n---\n\n# 林昭\n\n## 身份\n青雲宗外門弟子，十七歲。父母早亡，由李叔帶大。\n'
     );
     const index = await bundle.names.buildNameIndex(project);
-    assert.deepEqual(index.names.find((n) => n.name === '林昭').aliases, ['阿昭', '小林', '林师兄']);
+    assert.deepEqual(index.names.find((n) => n.name === '林昭').aliases, ['阿昭', '小林', '林師兄']);
     assert.notEqual(bundle.names.nameIndexSig(index), before);
   });
 
-  test('新建一条设定：表里有了', async () => {
-    t.write('.novelwarden/lore/物品/照骨镜.md', '---\ntitle: 照骨镜\nbrief: 照得出人骨相的铜镜\n---\n\n# 照骨镜\n');
+  test('新建一條設定：表裡有了', async () => {
+    t.write('.novelwarden/lore/物品/照骨鏡.md', '---\ntitle: 照骨鏡\nbrief: 照得出人骨相的銅鏡\n---\n\n# 照骨鏡\n');
     project.invalidate();
     const index = await bundle.names.buildNameIndex(project);
-    const entry = index.names.find((n) => n.name === '照骨镜');
-    assert.equal(entry.source, 'lore', '建了条目就不再是未建条目');
+    const entry = index.names.find((n) => n.name === '照骨鏡');
+    assert.equal(entry.source, 'lore', '建了條目就不再是未建條目');
     assert.equal(entry.category, '物品');
-    assert.equal(index.names.filter((n) => n.name === '照骨镜').length, 1);
+    assert.equal(index.names.filter((n) => n.name === '照骨鏡').length, 1);
   });
 
-  test('删掉一张卡：表里没了', async () => {
-    fs.rmSync(t.rel('.novelwarden/characters/沈怀山.md'));
+  test('刪掉一張卡：表裡沒了', async () => {
+    fs.rmSync(t.rel('.novelwarden/characters/沈懷山.md'));
     const index = await bundle.names.buildNameIndex(project);
-    assert.equal(index.names.some((n) => n.name.startsWith('沈怀山')), false);
+    assert.equal(index.names.some((n) => n.name.startsWith('沈懷山')), false);
   });
 });
 
-describe('views/nameIndex › 读盘', () => {
-  /** 量一次构建读了哪些文件（相对工程根）、各几次。 */
+describe('views/nameIndex › 讀盤', () => {
+  /** 量一次構建讀了哪些檔案（相對工程根）、各幾次。 */
   async function measure() {
     const original = fsp.readFile;
     const reads = new Map();
@@ -198,7 +198,7 @@ describe('views/nameIndex › 读盘', () => {
   }
   const zone = (reads, prefix) => [...reads.keys()].filter((f) => f.startsWith(prefix));
 
-  test('没变的时候：一张卡、一条设定都不读（细纲与章节借工程上的缓存，热的时候也一份不读）', async () => {
+  test('沒變的時候：一張卡、一條設定都不讀（細綱與章節借工程上的快取，熱的時候也一份不讀）', async () => {
     await bundle.names.buildNameIndex(project);
     await Promise.all([project.listChapters(), project.listPlots()]);
     const reads = await measure();
@@ -208,8 +208,8 @@ describe('views/nameIndex › 读盘', () => {
     );
   });
 
-  test('改了一张卡：卡与条目各重读一次，正文一章都不读', async () => {
-    t.write('.novelwarden/characters/配角/李叔.md', '---\ntags: [镇上铁匠, 长辈, 话少]\n---\n\n# 李叔\n');
+  test('改了一張卡：卡與條目各重讀一次，正文一章都不讀', async () => {
+    t.write('.novelwarden/characters/配角/李叔.md', '---\ntags: [鎮上鐵匠, 長輩, 話少]\n---\n\n# 李叔\n');
     const reads = await measure();
     assert.ok(reads.get('.novelwarden/characters/配角/李叔.md') === 1);
     assert.deepEqual([...reads].filter(([, n]) => n > 1).map(([f]) => f), []);
@@ -217,7 +217,7 @@ describe('views/nameIndex › 读盘', () => {
   });
 });
 
-describe('views/nameIndex › 还不是小说工程', () => {
+describe('views/nameIndex › 還不是小說工程', () => {
   test('initialized: false，表是空的', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'novelwarden-name-index-bare-'));
     try {
@@ -240,7 +240,7 @@ describe('controller › requestNameIndex', () => {
   });
   after(() => controller.dispose());
 
-  test('回 nameIndex：同一个 requestId、带指纹与整张表', async () => {
+  test('回 nameIndex：同一個 requestId、帶指紋與整張表', async () => {
     await controller.handle({ type: 'requestNameIndex', requestId: 'nm-1' });
     const reply = posted.find((m) => m.type === 'nameIndex' && m.requestId === 'nm-1');
     assert.ok(reply, JSON.stringify(posted.map((m) => m.type)));
@@ -248,7 +248,7 @@ describe('controller › requestNameIndex', () => {
     assert.ok(reply.index.names.some((n) => n.name === '林昭'));
   });
 
-  test('带着对得上的 have：只回指纹、不带表', async () => {
+  test('帶著對得上的 have：只回指紋、不帶表', async () => {
     const first = posted.find((m) => m.type === 'nameIndex' && m.requestId === 'nm-1');
     await controller.handle({ type: 'requestNameIndex', requestId: 'nm-2', have: first.sig });
     const reply = posted.find((m) => m.type === 'nameIndex' && m.requestId === 'nm-2');
@@ -256,12 +256,12 @@ describe('controller › requestNameIndex', () => {
     assert.equal('index' in reply, false);
   });
 
-  test('have 对不上（卡改过）：照发整张表', async () => {
+  test('have 對不上（卡改過）：照發整張表', async () => {
     const first = posted.find((m) => m.type === 'nameIndex' && m.requestId === 'nm-1');
-    t.write('.novelwarden/lore/天书.md', '---\ntitle: 天书\nbrief: 无字之书\n---\n\n# 天书\n');
+    t.write('.novelwarden/lore/天書.md', '---\ntitle: 天書\nbrief: 無字之書\n---\n\n# 天書\n');
     await controller.handle({ type: 'requestNameIndex', requestId: 'nm-3', have: first.sig });
     const reply = posted.find((m) => m.type === 'nameIndex' && m.requestId === 'nm-3');
     assert.notEqual(reply.sig, first.sig);
-    assert.equal(reply.index.names.find((n) => n.name === '天书').brief, '无字之书');
+    assert.equal(reply.index.names.find((n) => n.name === '天書').brief, '無字之書');
   });
 });

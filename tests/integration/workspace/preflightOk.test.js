@@ -1,11 +1,11 @@
 /**
- * 预检的永久放行落在细纲 frontmatter 里（五期补遗 §2）：`Workspace.recordPreflightOk`。
+ * 預檢的永久放行落在細綱 frontmatter 裡（五期補遺 §2）：`Workspace.recordPreflightOk`。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 记进 `preflightOk`，同名换成新理由，别的原样留着；正文一个字节不动 | 只改 `---` 之间那一段 |
- * | 手写的细纲（没有 frontmatter）不补 | 补一段 frontmatter 等于把它拉进指纹链 |
- * | 改名留着，重新生成这一章的细纲就丢掉 | 重排过的出场是新的安排，要再问一次 |
+ * | 記進 `preflightOk`，同名換成新理由，別的原樣留著；正文一個位元組不動 | 只改 `---` 之間那一段 |
+ * | 手寫的細綱（沒有 frontmatter）不補 | 補一段 frontmatter 等於把它拉進指紋鏈 |
+ * | 改名留著，重新生成這一章的細綱就丟掉 | 重排過的出場是新的安排，要再問一次 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -29,10 +29,10 @@ before(async () => {
     db: './src/core/runtime/db.ts',
   });
   bundle.host.initHost(makeFakeHost({ overrides: { reviewReplace: undefined } }).host);
-  t = await makeTempProject(bundle.project, { prefix: 'preflight-ok', title: '青崖记' });
+  t = await makeTempProject(bundle.project, { prefix: 'preflight-ok', title: '青崖記' });
   ws = new bundle.ws.Workspace(t.project);
   const empty = bundle.plotFile.emptyPlotSections();
-  await ws.writePlot({ no: 8, title: '渡口', upstreamHash: '', done: false, sections: { ...empty, 出场人物: '林昭、沈秋', 关键事件: '林昭在渡口梦见沈秋', 看点: '船上没有人' } });
+  await ws.writePlot({ no: 8, title: '渡口', upstreamHash: '', done: false, sections: { ...empty, 出场人物: '林昭、沈秋', 关键事件: '林昭在渡口夢見沈秋', 看点: '船上沒有人' } });
 });
 
 after(() => {
@@ -45,38 +45,38 @@ const okOf = async (rel) => {
 };
 
 describe('recordPreflightOk', () => {
-  test('记进 frontmatter，正文一个字节不动', async () => {
+  test('記進 frontmatter，正文一個位元組不動', async () => {
     const body = t.read(P8).split('\n---\n').slice(1).join('\n---\n');
-    assert.equal(await ws.recordPreflightOk(P8, [{ name: '沈秋', reason: '托梦' }]), true);
-    assert.deepEqual(await okOf(P8), [{ name: '沈秋', reason: '托梦' }]);
+    assert.equal(await ws.recordPreflightOk(P8, [{ name: '沈秋', reason: '託夢' }]), true);
+    assert.deepEqual(await okOf(P8), [{ name: '沈秋', reason: '託夢' }]);
     assert.equal(t.read(P8).split('\n---\n').slice(1).join('\n---\n'), body);
   });
 
-  test('同名换成新理由，别的原样留着', async () => {
-    await ws.recordPreflightOk(P8, [{ name: '李叔', reason: '回忆' }]);
+  test('同名換成新理由，別的原樣留著', async () => {
+    await ws.recordPreflightOk(P8, [{ name: '李叔', reason: '回憶' }]);
     await ws.recordPreflightOk(P8, [{ name: '沈秋', reason: '幻象' }]);
-    assert.deepEqual(await okOf(P8), [{ name: '李叔', reason: '回忆' }, { name: '沈秋', reason: '幻象' }]);
+    assert.deepEqual(await okOf(P8), [{ name: '李叔', reason: '回憶' }, { name: '沈秋', reason: '幻象' }]);
   });
 
-  test('手写的细纲（没有 frontmatter）不补', async () => {
-    const rel = '.novelwarden/summaries/009-手写.md';
-    t.write(rel, '# 第9章 手写\n\n## 关键事件\n\n沈秋出场\n');
-    assert.equal(await ws.recordPreflightOk(rel, [{ name: '沈秋', reason: '回忆' }]), false);
+  test('手寫的細綱（沒有 frontmatter）不補', async () => {
+    const rel = '.novelwarden/summaries/009-手寫.md';
+    t.write(rel, '# 第9章 手寫\n\n## 關鍵事件\n\n沈秋出場\n');
+    assert.equal(await ws.recordPreflightOk(rel, [{ name: '沈秋', reason: '回憶' }]), false);
     assert.doesNotMatch(t.read(rel), /preflightOk/);
   });
 
-  test('改名留着', async () => {
+  test('改名留著', async () => {
     t.project.invalidate();
     const plot = await t.project.readPlot(P8);
     const to = await ws.writePlot({ ...plot, title: '夜渡' }, P8);
-    assert.deepEqual(await okOf(to), [{ name: '李叔', reason: '回忆' }, { name: '沈秋', reason: '幻象' }]);
+    assert.deepEqual(await okOf(to), [{ name: '李叔', reason: '回憶' }, { name: '沈秋', reason: '幻象' }]);
   });
 
-  test('重新生成这一章的细纲：丢掉', async () => {
+  test('重新生成這一章的細綱：丟掉', async () => {
     t.project.invalidate();
     const rel = (await t.project.getPlot(8)).relPath;
     const empty = bundle.plotFile.emptyPlotSections();
-    await ws.write(rel, { artifact: { kind: 'plot', title: '夜渡', sections: { ...empty, 出场人物: '林昭、沈秋', 关键事件: '林昭在渡口又梦见沈秋', 看点: '船上没有人' } } }, { mode: 'overwrite', review: false });
+    await ws.write(rel, { artifact: { kind: 'plot', title: '夜渡', sections: { ...empty, 出场人物: '林昭、沈秋', 关键事件: '林昭在渡口又夢見沈秋', 看点: '船上沒有人' } } }, { mode: 'overwrite', review: false });
     assert.deepEqual(await okOf(rel), []);
   });
 });

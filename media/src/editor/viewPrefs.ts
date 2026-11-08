@@ -1,9 +1,9 @@
 /**
- * 标题栏「视图」菜单的编辑器那一半：回答 `nf-view-query`、执行 `nf-view-command`（菜单那一半在
- * `view/viewMenu.ts`）。之后的阶段往「视图」里加的开关照这个样子各加一个字段、一个命令名。
+ * 標題欄「檢視」選單的編輯器那一半：回答 `nf-view-query`、執行 `nf-view-command`（選單那一半在
+ * `view/viewMenu.ts`）。之後的階段往「檢視」里加的開關照這個樣子各加一個欄位、一個命令名。
  *
- * - **单击打开为临时标签**（缺省开，记在 `novelforge.editor.prefs`）：关掉时两块编辑区里现有的临时标签
- *   一律转正——开关说「不要临时标签」，留着一个斜体的会让人以为没关上。
+ * - **單擊開啟為臨時標籤**（預設開，記在 `novelforge.editor.prefs`）：關掉時兩塊編輯區裡現有的臨時標籤
+ *   一律轉正——開關說「不要臨時標籤」，留著一個斜體的會讓人以為沒關上。
  */
 import { panes } from './store';
 import { onPrefsChange, previewTabsEnabled, setPreviewTabs } from './paragraphState';

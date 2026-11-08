@@ -1,12 +1,12 @@
 /**
- * 日志系统：脱敏、环形缓冲、detail 截断、sink 的分发与级别过滤、格式化。
- * 迁自 scripts/smoke-logging.js 的 `== 脱敏 ==`、`== 缓冲 ==`、`== detail 截断 ==`、
- * `== sink ==`、`== 格式化 ==` 五节。
+ * 日誌系統：脫敏、環形緩衝、detail 截斷、sink 的分發與級別過濾、格式化。
+ * 遷自 scripts/smoke-logging.js 的 `== 脫敏 ==`、`== 緩衝 ==`、`== detail 截斷 ==`、
+ * `== sink ==`、`== 格式化 ==` 五節。
  *
- * 三条硬约束：日志里绝不出现 API Key；缓冲有上限；sink 抛异常不能带崩调用方。
+ * 三條硬約束：日誌裡絕不出現 API Key；緩衝有上限；sink 拋異常不能帶崩呼叫方。
  *
- * 这几节改的都是 logger 的模块级状态（缓冲、sink 表、sink 级别），用例之间有先后依赖——
- * node:test 同文件内默认串行执行，顺序与迁移前一致。
+ * 這幾節改的都是 logger 的模組級狀態（緩衝、sink 表、sink 級別），用例之間有先後依賴——
+ * node:test 同檔案內預設序列執行，順序與遷移前一致。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -24,48 +24,48 @@ before(() => {
   bundle.host.initHost(makeFakeHost().host);
 });
 
-describe('脱敏', () => {
+describe('脫敏', () => {
   const cases = [
-    ['sk-proj-abcdefghijklmnop', 'OpenAI 风格'],
-    ['sk-ant-api03-QQQQzzzz1111', 'Anthropic 风格'],
-    ['Authorization: Bearer eyJhbGciOiJIUzI1NiJ9', 'Bearer 头'],
+    ['sk-proj-abcdefghijklmnop', 'OpenAI 風格'],
+    ['sk-ant-api03-QQQQzzzz1111', 'Anthropic 風格'],
+    ['Authorization: Bearer eyJhbGciOiJIUzI1NiJ9', 'Bearer 頭'],
     ['api_key=9f8e7d6c5b4a3210', 'api_key=… 形式'],
-    ['{"x-api-key": "topsecretvalue123"}', 'JSON 里的 x-api-key'],
+    ['{"x-api-key": "topsecretvalue123"}', 'JSON 裡的 x-api-key'],
   ];
   for (const [raw, label] of cases) {
-    test(`${label}被隐去`, () => {
+    test(`${label}被隱去`, () => {
       const out = logger.redact(raw);
-      assert.ok(out.includes('已隐去'), out);
+      assert.ok(out.includes('已隱去'), out);
     });
   }
 
-  // 抹的是密钥不是正文：一句普通日志不该被改写。
-  test('普通文本不受影响', () => {
-    const plain = '第 12 章《夜访》摘要已写入';
+  // 抹的是金鑰不是正文：一句普通日誌不該被改寫。
+  test('普通文字不受影響', () => {
+    const plain = '第 12 章《夜訪》摘要已寫入';
     assert.equal(logger.redact(plain), plain, logger.redact(plain));
   });
 
-  describe('emit 的两条路径都过 redact', () => {
+  describe('emit 的兩條路徑都過 redact', () => {
     let entry;
 
     before(() => {
       logger.clearLogs();
-      const log = logger.scoped('测试');
-      log.error('连接失败 sk-proj-abcdefghijklmnop', { key: 'sk-ant-api03-ZZZZwwww2222' });
+      const log = logger.scoped('測試');
+      log.error('連線失敗 sk-proj-abcdefghijklmnop', { key: 'sk-ant-api03-ZZZZwwww2222' });
       entry = logger.recentLogs().at(-1);
     });
 
-    test('message 已脱敏', () => {
+    test('message 已脫敏', () => {
       assert.ok(!entry.message.includes('abcdefghijklmnop'), entry.message);
     });
 
-    test('detail 已脱敏', () => {
+    test('detail 已脫敏', () => {
       assert.ok(!entry.detail.includes('wwww2222'), entry.detail);
     });
   });
 });
 
-describe('缓冲', () => {
+describe('緩衝', () => {
   let over;
   let kept;
   let sawDebugAfterRaise;
@@ -73,17 +73,17 @@ describe('缓冲', () => {
 
   before(() => {
     logger.clearLogs();
-    const log = logger.scoped('压测');
+    const log = logger.scoped('壓測');
     over = logger.MAX_ENTRIES + 200;
     for (let i = 0; i < over; i++) {
-      log.debug(`第 ${i} 条`);
+      log.debug(`第 ${i} 條`);
     }
     kept = [...logger.recentLogs()];
 
-    // 缓冲永远收全量：sink 级别调高不该让日志页看不到 debug。
+    // 緩衝永遠收全量：sink 級別調高不該讓日誌頁看不到 debug。
     logger.setSinkLevel('error');
     logger.clearLogs();
-    log.debug('调试内容');
+    log.debug('除錯內容');
     sawDebugAfterRaise = logger.recentLogs().some((e) => e.level === 'debug');
     logger.setSinkLevel('debug');
 
@@ -91,49 +91,49 @@ describe('缓冲', () => {
     afterClear = [...logger.recentLogs()];
   });
 
-  test('缓冲不超过上限', () => {
+  test('緩衝不超過上限', () => {
     assert.equal(kept.length, logger.MAX_ENTRIES, `${kept.length}`);
   });
 
-  test('丢的是最旧的', () => {
-    assert.equal(kept[0].message, `第 ${over - logger.MAX_ENTRIES} 条`, kept[0].message);
+  test('丟的是最舊的', () => {
+    assert.equal(kept[0].message, `第 ${over - logger.MAX_ENTRIES} 條`, kept[0].message);
   });
 
-  test('最新一条还在', () => {
-    assert.equal(kept.at(-1).message, `第 ${over - 1} 条`, kept.at(-1).message);
+  test('最新一條還在', () => {
+    assert.equal(kept.at(-1).message, `第 ${over - 1} 條`, kept.at(-1).message);
   });
 
-  test('seq 单调递增', () => {
+  test('seq 單調遞增', () => {
     assert.ok(kept.every((e, i) => i === 0 || e.seq > kept[i - 1].seq));
   });
 
-  test('调高 sink 级别后缓冲仍收 debug', () => {
+  test('調高 sink 級別後緩衝仍收 debug', () => {
     assert.ok(sawDebugAfterRaise);
   });
 
-  test('清空后只留一条痕迹', () => {
+  test('清空後只留一條痕跡', () => {
     assert.equal(afterClear.length, 1, `${afterClear.length}`);
   });
 
-  test('痕迹说明日志被清过', () => {
+  test('痕跡說明日誌被清過', () => {
     assert.ok(afterClear[0].message.includes('清空'));
   });
 });
 
-describe('detail 截断', () => {
+describe('detail 截斷', () => {
   let entry;
 
   before(() => {
     logger.clearLogs();
-    logger.scoped('测试').info('长 detail', 'x'.repeat(50000));
+    logger.scoped('測試').info('長 detail', 'x'.repeat(50000));
     entry = logger.recentLogs().at(-1);
   });
 
-  test('detail 被截断', () => {
+  test('detail 被截斷', () => {
     assert.ok(entry.detail.length < 3000, `${entry.detail.length}`);
   });
 
-  test('截断处有说明', () => {
+  test('截斷處有說明', () => {
     assert.ok(entry.detail.includes('省略'), entry.detail.slice(-40));
   });
 });
@@ -150,17 +150,17 @@ describe('sink', () => {
     logger.setSinkLevel('debug');
     seen = [];
     const sub = logger.addLogSink((e) => seen.push(e.message));
-    const log = logger.scoped('测试');
+    const log = logger.scoped('測試');
     log.info('一');
     log.info('二');
 
     sub.dispose();
     log.info('三');
 
-    // sink 抛异常只能被吞掉，绝不能带崩调用方。
+    // sink 拋異常只能被吞掉，絕不能帶崩呼叫方。
     alive = [];
     const bad = logger.addLogSink(() => {
-      throw new Error('sink 坏了');
+      throw new Error('sink 壞了');
     });
     const good = logger.addLogSink((e) => alive.push(e.message));
     threw = false;
@@ -172,8 +172,8 @@ describe('sink', () => {
     bad.dispose();
     good.dispose();
 
-    // sink 里再打日志不能无限递归。
-    const reentrant = logger.addLogSink(() => logger.scoped('回环').debug('sink 内部日志'));
+    // sink 裡再打日誌不能無限遞迴。
+    const reentrant = logger.addLogSink(() => logger.scoped('迴環').debug('sink 內部日誌'));
     recursed = false;
     try {
       log.info('五');
@@ -182,7 +182,7 @@ describe('sink', () => {
     }
     reentrant.dispose();
 
-    // 级别过滤只作用于 sink。
+    // 級別過濾只作用於 sink。
     logger.setSinkLevel('warn');
     filtered = [];
     const sub2 = logger.addLogSink((e) => filtered.push(e.level));
@@ -194,27 +194,27 @@ describe('sink', () => {
     logger.setSinkLevel('debug');
   });
 
-  test('sink 收到每一条', () => {
+  test('sink 收到每一條', () => {
     assert.equal(seen.join(','), '一,二', seen.join(','));
   });
 
-  test('dispose 后不再收', () => {
+  test('dispose 後不再收', () => {
     assert.ok(!seen.includes('三'), seen.join(','));
   });
 
-  test('坏 sink 不抛给调用方', () => {
+  test('壞 sink 不拋給呼叫方', () => {
     assert.ok(!threw);
   });
 
-  test('坏 sink 不影响别的 sink', () => {
+  test('壞 sink 不影響別的 sink', () => {
     assert.ok(alive.includes('四'), alive.join(','));
   });
 
-  test('sink 内部再打日志不炸栈', () => {
+  test('sink 內部再打日誌不炸棧', () => {
     assert.ok(!recursed);
   });
 
-  test('sink 按级别过滤', () => {
+  test('sink 按級別過濾', () => {
     assert.equal(filtered.join(','), 'warn,error', filtered.join(','));
   });
 });
@@ -236,11 +236,11 @@ describe('格式化', () => {
     assert.equal(logger.describeError(new Error('炸了')), '炸了');
   });
 
-  test('字符串原样', () => {
+  test('字串原樣', () => {
     assert.equal(logger.describeError('炸了'), '炸了');
   });
 
-  test('对象转 JSON', () => {
+  test('物件轉 JSON', () => {
     assert.equal(logger.describeError({ a: 1 }), '{"a":1}', logger.describeError({ a: 1 }));
   });
 
@@ -249,16 +249,16 @@ describe('格式化', () => {
 
     before(() => {
       logger.clearLogs();
-      logger.scoped('测试').warn('一句话', '两行\n详情');
+      logger.scoped('測試').warn('一句话', '兩行\n詳情');
       line = logger.formatLogEntry(logger.recentLogs().at(-1));
     });
 
-    test('单行含级别与来源', () => {
-      assert.ok(line.includes('WARN') && line.includes('测试'), line);
+    test('單行含級別與來源', () => {
+      assert.ok(line.includes('WARN') && line.includes('測試'), line);
     });
 
-    test('detail 缩进在下一行', () => {
-      assert.ok(line.includes('\n    两行'), JSON.stringify(line));
+    test('detail 縮排在下一行', () => {
+      assert.ok(line.includes('\n    兩行'), JSON.stringify(line));
     });
   });
 });

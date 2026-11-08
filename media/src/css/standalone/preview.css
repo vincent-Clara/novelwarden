@@ -1,15 +1,15 @@
-/* Markdown 预览。 */
+/* Markdown 預覽。 */
 
-/* ---- 预览 */
+/* ---- 預覽 */
 
-/* 字体、字号、行距、内边距（含版心）跟编辑区同一组变量，在 look.css。 */
+/* 字型、字號、行距、內邊距（含版心）跟編輯區同一組變數，在 look.css。 */
 .ed-preview {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
 
-/* 预览能拿焦点（tabIndex -1，切过来时焦点进它，方向键与翻页键滚的是它），整块不画焦点框。 */
+/* 預覽能拿焦點（tabIndex -1，切過來時焦點進它，方向鍵與翻頁鍵滾的是它），整塊不畫焦點框。 */
 .ed-preview:focus {
   outline: none;
 }
@@ -78,7 +78,7 @@
   line-height: 1.6;
 }
 
-/* frontmatter 单独框起来：它是元数据，不该混在正文里读。 */
+/* frontmatter 單獨框起來：它是後設資料，不該混在正文裡讀。 */
 .ed-preview .ed-frontmatter {
   margin: 0 0 1.4em;
   padding: 8px 12px;

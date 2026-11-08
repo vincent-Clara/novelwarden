@@ -1,67 +1,67 @@
 /**
- * `list` —— 列一个目录里有什么。`Workspace.list` 的薄包装。
+ * `list` —— 列一個目錄裡有什麼。`Workspace.list` 的薄包裝。
  *
- * 这一层的活是**把结构化数组压成模型一屏能扫完的文本**：
+ * 這一層的活是**把結構化陣列壓成模型一屏能掃完的文字**：
  *
  * ```
- * .novelwarden/summaries/（42 项）
+ * .novelwarden/summaries/（42 項）
  *   001-楔子.md          620 字
  *   002-入宗.md          710 字
  *   …
- *   （还有 32 项未列出，用 path 参数进子目录看）
+ *   （還有 32 項未列出，用 path 引數進子目錄看）
  * ```
  *
- * 上限 60 项，超了必须说出来（AGENTS 第 2 条：不静默截断）。60 是按「一屏
- * 能扫完、又装得下一本书的章节目录的前半」定的：真要找具体某一章，`search`
- * 比翻页快得多。
+ * 上限 60 項，超了必須說出來（AGENTS 第 2 條：不靜默截斷）。60 是按「一屏
+ * 能掃完、又裝得下一本書的章節目錄的前半」定的：真要找具體某一章，`search`
+ * 比翻頁快得多。
  */
 import type { ToolContext, ToolDef, ToolResult } from '../types';
 import { objectSchema, str } from '../schema';
 
-/** 一次最多列几项。 */
+/** 一次最多列幾項。 */
 export const LIST_LIMIT = 60;
 
 export const listTool: ToolDef = {
   name: 'list',
   description:
-    '列出工程里某个目录的直接子项（不递归），带类型与字数。' +
-    'path 是工程内相对路径、用正斜杠，留空则列工程根。' +
-    '几个固定位置：小说配置、故事前提、世界观是 .novelwarden/config.md、premise.md、world.md，' +
-    '情节大纲是 .novelwarden/outline.md（磁盘上没有这份文件，list 列不出来：它是各章细纲「梗概」的汇总，read / write 照样认这个路径，' +
-    '写回时按章号拆进各章细纲），细纲在 .novelwarden/summaries/（一章一份，与正文同样的相对路径、扩展名 .md：' +
-    'chapters/上部/003-夜访.txt 的细纲是 .novelwarden/summaries/上部/003-夜访.md；同步会照正文改它），' +
-    '正文在章节根目录（默认 chapters/，可以分子目录），' +
-    '全文大纲是 .novelwarden/summaries/global.md，角色卡在 .novelwarden/characters/，设定在 .novelwarden/lore/，' +
-    '叙事线（剧情线，一条线一个文件，伏笔挂在线下，可选）在 .novelwarden/threads/，挂不上线的伏笔在 .novelwarden/threads/未归属的伏笔.md。' +
-    `一次最多返回 ${LIST_LIMIT} 项，超出会截断并告诉你还有多少。`,
+    '列出工程裡某個目錄的直接子項（不遞迴），帶型別與字數。' +
+    'path 是工程內相對路徑、用正斜槓，留空則列工程根。' +
+    '幾個固定位置：小說配置、故事前提、世界觀是 .novelwarden/config.md、premise.md、world.md，' +
+    '情節大綱是 .novelwarden/outline.md（磁碟上沒有這份檔案，list 列不出來：它是各章細綱「梗概」的彙總，read / write 照樣認這個路徑，' +
+    '寫回時按章號拆進各章細綱），細綱在 .novelwarden/summaries/（一章一份，與正文同樣的相對路徑、副檔名 .md：' +
+    'chapters/上部/003-夜访.txt 的細綱是 .novelwarden/summaries/上部/003-夜访.md；同步會照正文改它），' +
+    '正文在章節根目錄（預設 chapters/，可以分子目錄），' +
+    '全文大綱是 .novelwarden/summaries/global.md，角色卡在 .novelwarden/characters/，設定在 .novelwarden/lore/，' +
+    '敘事線（劇情線，一條線一個檔案，伏筆掛線上下，可選）在 .novelwarden/threads/，掛不上線的伏筆在 .novelwarden/threads/未归属的伏笔.md。' +
+    `一次最多返回 ${LIST_LIMIT} 項，超出會截斷並告訴你還有多少。`,
   parameters: objectSchema({
-    path: str('要列的目录，工程内相对路径。留空列工程根。'),
+    path: str('要列的目錄，工程內相對路徑。留空列工程根。'),
   }),
 
   async run(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
     const dir = typeof args.path === 'string' ? args.path.trim() : '';
-    // `Workspace.list` 不抛：越界、不存在、读不动一律空数组。所以「空」有两种
-    // 含义，这里不去区分——对模型来说「这里什么都没有」就是它要的答案，
-    // 让它换个路径再试比给一句它读不懂的错误代码有用。
+    // `Workspace.list` 不拋：越界、不存在、讀不動一律空陣列。所以「空」有兩種
+    // 含義，這裡不去區分——對模型來說「這裡什麼都沒有」就是它要的答案，
+    // 讓它換個路徑再試比給一句它讀不懂的錯誤程式碼有用。
     const entries = await ctx.workspace.list(dir);
     const shown = entries.slice(0, LIST_LIMIT);
-    const head = `${dir || '（工程根）'}（${entries.length} 项）`;
+    const head = `${dir || '（工程根）'}（${entries.length} 項）`;
 
     const lines = shown.map((e) =>
       e.type === 'dir'
         ? `  ${e.name}/`
-        : `  ${e.name}    ${e.words !== undefined ? `${e.words} 字` : `${e.bytes} 字节`}`
+        : `  ${e.name}    ${e.words !== undefined ? `${e.words} 字` : `${e.bytes} 位元組`}`
     );
     if (entries.length > shown.length) {
-      lines.push(`  （还有 ${entries.length - shown.length} 项未列出，用 path 参数进子目录看）`);
+      lines.push(`  （還有 ${entries.length - shown.length} 項未列出，用 path 引數進子目錄看）`);
     }
     if (entries.length === 0) {
-      lines.push('  （空目录，或这个路径不存在）');
+      lines.push('  （空目錄，或這個路徑不存在）');
     }
 
     return {
       text: [head, ...lines].join('\n'),
-      display: { title: `list ${dir || '/'}`, detail: `${entries.length} 项` },
+      display: { title: `list ${dir || '/'}`, detail: `${entries.length} 項` },
     };
   },
 };

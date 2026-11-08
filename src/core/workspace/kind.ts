@@ -1,35 +1,35 @@
 /**
- * 路径 → 种类。**纯函数、零 I/O、绝不抛。**
+ * 路徑 → 種類。**純函式、零 I/O、絕不拋。**
  *
- * 这是整个 workspace 网关的地基：`write` 不是「往这个路径写字节」，而是
- * 「按这个路径**应有的种类**写一份合法产物」——种类判定、渲染、记账、伴生
- * 搬迁、覆盖审阅全在网关里做一次。判定得先有一张表。
+ * 這是整個 workspace 閘道器的地基：`write` 不是「往這個路徑寫位元組」，而是
+ * 「按這個路徑**應有的種類**寫一份合法產物」——種類判定、渲染、記賬、伴生
+ * 搬遷、覆蓋審閱全在閘道器裡做一次。判定得先有一張表。
  *
- * ## 为什么必须绝不抛
+ * ## 為什麼必須絕不拋
  *
- * 这个函数会被**前端传上来的路径**调用（文件页的右键菜单、内置编辑器的
- * 保存、日后 agent 的工具参数）。认不出、越界、空串一律 `{ kind: 'other' }`，
- * 越界时连 `rel` 都不给——调用方据此判「这条路径根本不该碰」，而不是拿一个
- * 抛出来的异常去猜。
+ * 這個函式會被**前端傳上來的路徑**呼叫（檔案頁的右鍵選單、內建編輯器的
+ * 儲存、日後 agent 的工具引數）。認不出、越界、空串一律 `{ kind: 'other' }`，
+ * 越界時連 `rel` 都不給——呼叫方據此判「這條路徑根本不該碰」，而不是拿一個
+ * 拋出來的異常去猜。
  *
- * ## 三条必须记住的取舍
+ * ## 三條必須記住的取捨
  *
- * 1. **正文就是章节**。一章一纲之后正文直接落 `chapters/`，没有中转站了。章节路径
- *    **不带创作目标**：第 12 章的细纲是正文路径在 `summaries/` 下的镜像
- *    （`NovelProject.plotPathForChapter`），配对要读盘，不在这里做。
- * 2. **`chapter` 与 `other` 的边界不看是不是 `.md`**（AGENTS 第 9 条：章节
- *    不认扩展名）。章节根之下 + 数字前缀 + 扩展名不在二进制黑名单 → `chapter`。
- *    角色 / 设定 / 细纲**不**跟着放宽，它们是插件自己的数据格式。
- * 3. **规则各自只定义一次**：章节名规则在 `model/chapterFile.ts`，细纲名在
- *    `model/plotFile.ts`。这里只 import，绝不复制一份正则出来。
+ * 1. **正文就是章節**。一章一綱之後正文直接落 `chapters/`，沒有中轉站了。章節路徑
+ *    **不帶創作目標**：第 12 章的細綱是正文路徑在 `summaries/` 下的映象
+ *    （`NovelProject.plotPathForChapter`），配對要讀盤，不在這裡做。
+ * 2. **`chapter` 與 `other` 的邊界不看是不是 `.md`**（AGENTS 第 9 條：章節
+ *    不認副檔名）。章節根之下 + 數字字首 + 副檔名不在二進位制黑名單 → `chapter`。
+ *    角色 / 設定 / 細綱**不**跟著放寬，它們是外掛自己的資料格式。
+ * 3. **規則各自只定義一次**：章節名規則在 `model/chapterFile.ts`，細綱名在
+ *    `model/plotFile.ts`。這裡只 import，絕不復制一份正則出來。
  *
- * ## 老工程的 `volumes/`、`manuscripts/`、`scenes/`、`plots/` 现在是 `other`
+ * ## 老工程的 `volumes/`、`manuscripts/`、`scenes/`、`plots/` 現在是 `other`
  *
- * 卷、中转站、场景三层都删掉了（见 `model/pipeline.ts` 的文件头）；细纲从 `plots/` 搬进了
- * `summaries/`，与单章摘要并成一份（见 `model/plotFile.ts` 的文件头）。老工程磁盘上
- * 那几个目录**一个字节都不动**——它们是作者的文件——但代码里彻底不认它们：判成
- * `other`，于是工程页不显示、装配器不读、网关按普通文本处理。`guard.ts` 的 `isProtectedPath`
- * 仍然把那几个目录列为受保护目录，免得哪条文件操作把它们整棵删掉。
+ * 卷、中轉站、場景三層都刪掉了（見 `model/pipeline.ts` 的檔案頭）；細綱從 `plots/` 搬進了
+ * `summaries/`，與單章摘要併成一份（見 `model/plotFile.ts` 的檔案頭）。老工程磁碟上
+ * 那幾個目錄**一個位元組都不動**——它們是作者的檔案——但程式碼裡徹底不認它們：判成
+ * `other`，於是工程頁不顯示、裝配器不讀、閘道器按普通文字處理。`guard.ts` 的 `isProtectedPath`
+ * 仍然把那幾個目錄列為受保護目錄，免得哪條檔案操作把它們整棵刪掉。
  */
 import * as path from 'node:path';
 import { NovelProject } from '../model/project';
@@ -43,15 +43,15 @@ export type ArtifactKind =
   | 'style'
   | 'globalSummary'
   /**
-   * 叙事线（2026-10-20 重做）：`.novelwarden/threads/` 这一层的 `.md`，一条线一个文件，外加「未归属的伏笔」。
-   * 链外：没有创作阶段，由排线、定稿写（model/threadFile.ts）。七期那一份 `threads.md` 判 `other`。
+   * 敘事線（2026-10-20 重做）：`.novelwarden/threads/` 這一層的 `.md`，一條線一個檔案，外加「未歸屬的伏筆」。
+   * 鏈外：沒有創作階段，由排線、定稿寫（model/threadFile.ts）。七期那一份 `threads.md` 判 `other`。
    */
   | 'threads'
-  /** 写作技能：本工程的 `.novelwarden/skills/**` 与阶段绑定 `.novelwarden/skills.json`。 */
+  /** 寫作技能：本工程的 `.novelwarden/skills/**` 與階段繫結 `.novelwarden/skills.json`。 */
   | 'skill'
   /**
-   * 自定义敏感词表 `.novelwarden/sensitive.txt`（内置编辑器的写作体检用）。链外：没有创作阶段、不进装配器、
-   * 不记指纹；单列一种而不落 `other`，是为了它照样存历史版本（作者手维护的词表，改坏了要找得回来）。
+   * 自定義敏感詞表 `.novelwarden/sensitive.txt`（內建編輯器的寫作體檢用）。鏈外：沒有創作階段、不進裝配器、
+   * 不記指紋；單列一種而不落 `other`，是為了它照樣存歷史版本（作者手維護的詞表，改壞了要找得回來）。
    */
   | 'sensitive'
   | 'plot'
@@ -63,26 +63,26 @@ export type ArtifactKind =
 
 export interface PathKind {
   kind: ArtifactKind;
-  /** 规范化后的相对路径（正斜杠）。越界时是 undefined，此时 kind 恒为 'other'。 */
+  /** 規範化後的相對路徑（正斜槓）。越界時是 undefined，此時 kind 恆為 'other'。 */
   rel?: string;
-  /** 该路径对应的创作层。非创作产物为 undefined。 */
+  /** 該路徑對應的創作層。非創作產物為 undefined。 */
   stage?: CreationStage;
-  /** 该路径对应的创作目标，供 generate 直接用。 */
+  /** 該路徑對應的創作目標，供 generate 直接用。 */
   target?: CreationTarget;
-  /** 序号。章节与细纲的都是章号。 */
+  /** 序號。章節與細綱的都是章號。 */
   no?: number;
-  /** 细纲的路径（`plot` 种类才有）。 */
+  /** 細綱的路徑（`plot` 種類才有）。 */
   plotRelPath?: string;
-  /** 架构的哪一件（`setting` 种类才有）。 */
+  /** 架構的哪一件（`setting` 種類才有）。 */
   doc?: SettingDoc;
 }
 
 /**
- * 把用户/前端给来的相对路径收敛为「工程内的、用正斜杠的」相对路径。
- * 绝对路径、`..` 逃逸、空路径一律返回 undefined。
+ * 把使用者/前端給來的相對路徑收斂為「工程內的、用正斜槓的」相對路徑。
+ * 絕對路徑、`..` 逃逸、空路徑一律返回 undefined。
  *
- * 逐字搬自 `files/fileOps.ts` 的 `normalizeRel`——那是六处守卫里最早的一份，
- * 口径不能变。fileOps 现在转发到这里。
+ * 逐字搬自 `files/fileOps.ts` 的 `normalizeRel`——那是六處守衛裡最早的一份，
+ * 口徑不能變。fileOps 現在轉發到這裡。
  */
 export function normalizeRel(relPath: string): string | undefined {
   const trimmed = (relPath ?? '').trim().replace(/\\/g, '/').replace(/\/+$/, '');
@@ -96,7 +96,7 @@ export function normalizeRel(relPath: string): string | undefined {
   return resolved;
 }
 
-/** 工程里几个固定目录的工作区相对路径。每次算一遍，不缓存——chaptersDir 可配。 */
+/** 工程裡幾個固定目錄的工作區相對路徑。每次算一遍，不快取——chaptersDir 可配。 */
 interface Dirs {
   chapters: string;
   drafts: string;
@@ -135,10 +135,10 @@ function dirsOf(project: NovelProject): Dirs {
   };
 }
 
-/** rel 落在 root 之下（含 root 本身）时返回它在 root 下的那段，否则 undefined。 */
+/** rel 落在 root 之下（含 root 本身）時返回它在 root 下的那段，否則 undefined。 */
 function under(rel: string, root: string): string | undefined {
   if (!root) {
-    // chaptersDir 被配成 `.` 时 root 是空串：整个工程根都算章节区。
+    // chaptersDir 被配成 `.` 時 root 是空串：整個工程根都算章節區。
     return rel;
   }
   if (rel === root) {
@@ -147,17 +147,17 @@ function under(rel: string, root: string): string | undefined {
   return rel.startsWith(`${root}/`) ? rel.slice(root.length + 1) : undefined;
 }
 
-/** 只认 markdown 家族的那几个区（角色 / 设定）共用。细纲的名字规则在 `model/plotFile.ts`。 */
+/** 只認 markdown 家族的那幾個區（角色 / 設定）共用。細綱的名字規則在 `model/plotFile.ts`。 */
 function isMd(rel: string): boolean {
   const ext = path.posix.extname(rel).toLowerCase();
   return ext === '.md' || ext === '.markdown';
 }
 
 /**
- * 路径 → 种类。**绝不抛。**
+ * 路徑 → 種類。**絕不拋。**
  *
- * 判定顺序有讲究：固定单文件（架构三件 / outline / style / global.md）排在各自所属
- * 目录之前——`summaries/global.md` 是全文大纲，不是一份细纲。
+ * 判定順序有講究：固定單檔案（架構三件 / outline / style / global.md）排在各自所屬
+ * 目錄之前——`summaries/global.md` 是全文大綱，不是一份細綱。
  */
 export function kindOfPath(project: NovelProject, relPath: string): PathKind {
   const rel = normalizeRel(relPath);
@@ -166,7 +166,7 @@ export function kindOfPath(project: NovelProject, relPath: string): PathKind {
   }
   const d = dirsOf(project);
 
-  // ---- 固定单文件。必须排在目录判定之前。
+  // ---- 固定單檔案。必須排在目錄判定之前。
   for (const doc of ['config', 'premise', 'world'] as const) {
     if (rel === d[doc]) {
       return { kind: 'setting', rel, doc, stage: 'setting', target: { kind: 'setting', doc } };
@@ -181,23 +181,23 @@ export function kindOfPath(project: NovelProject, relPath: string): PathKind {
   if (rel === d.globalSummary) {
     return { kind: 'globalSummary', rel };
   }
-  // 叙事线：`threads/` 这一层的 markdown，一条线一个文件（线不分子目录：更深的、目录本身、别的扩展名都是 `other`）。
-  // 没有创作阶段，由排线与定稿写。七期的 `threads.md` 不在这个目录里，落到最后的 `other`（不兼容，设计稿「删掉什么」）。
+  // 敘事線：`threads/` 這一層的 markdown，一條線一個檔案（線不分子目錄：更深的、目錄本身、別的副檔名都是 `other`）。
+  // 沒有創作階段，由排線與定稿寫。七期的 `threads.md` 不在這個目錄裡，落到最後的 `other`（不相容，設計稿「刪掉什麼」）。
   const inThreads = under(rel, d.threads);
   if (inThreads !== undefined && inThreads) {
     return !inThreads.includes('/') && isMd(inThreads) ? { kind: 'threads', rel } : { kind: 'other', rel };
   }
-  // 写作技能：链外，没有创作阶段。装配器只经 core/skills/ 读绑定的那一份。
+  // 寫作技能：鏈外，沒有創作階段。裝配器只經 core/skills/ 讀繫結的那一份。
   if (rel === d.skillBindings || under(rel, d.skills) !== undefined) {
     return { kind: 'skill', rel };
   }
-  // 敏感词表：链外的固定文件，与技能同类——没有创作阶段，装配器不读，只有内置编辑器的体检读它。
+  // 敏感詞表：鏈外的固定檔案，與技能同類——沒有創作階段，裝配器不讀，只有內建編輯器的體檢讀它。
   if (rel === d.sensitive) {
     return { kind: 'sensitive', rel };
   }
 
-  // ---- 细纲。`summaries/` 下各级子目录里数字开头的 markdown 家族（镜像正文的相对路径）。
-  // 根下的 `global.md` 上面已经判过；老工程的 `plots/` 落到最后的 other。
+  // ---- 細綱。`summaries/` 下各級子目錄裡數字開頭的 markdown 家族（映象正文的相對路徑）。
+  // 根下的 `global.md` 上面已經判過；老工程的 `plots/` 落到最後的 other。
   const inPlots = under(rel, d.plots);
   if (inPlots !== undefined && inPlots) {
     const parsed = parsePlotFileName(path.posix.basename(inPlots));
@@ -214,13 +214,13 @@ export function kindOfPath(project: NovelProject, relPath: string): PathKind {
     return { kind: 'other', rel };
   }
 
-  // ---- 角色 / 设定。递归扫描，只认 `.md`。
+  // ---- 角色 / 設定。遞迴掃描，只認 `.md`。
   const inCharacters = under(rel, d.characters);
   if (inCharacters !== undefined && inCharacters) {
     return { kind: isMd(inCharacters) ? 'character' : 'other', rel };
   }
-  // 一条设定条目是架构那一层的一个目标（展开，完善设定 2026-10-19）：MCP 的 `generate` 给条目路径就是展开它。
-  // 设定目录本身仍是设定清单（角色目录本身同理是角色图谱），那一条只在 `generate` 里认（tools/novel/generate.ts 的 `settingDirPath`）。
+  // 一條設定條目是架構那一層的一個目標（展開，完善設定 2026-10-19）：MCP 的 `generate` 給條目路徑就是展開它。
+  // 設定目錄本身仍是設定清單（角色目錄本身同理是角色圖譜），那一條只在 `generate` 裡認（tools/novel/generate.ts 的 `settingDirPath`）。
   const inLore = under(rel, d.lore);
   if (inLore !== undefined && inLore) {
     return isMd(inLore)
@@ -228,18 +228,18 @@ export function kindOfPath(project: NovelProject, relPath: string): PathKind {
       : { kind: 'other', rel };
   }
 
-  // ---- 草稿。判定必须排在章节之前：`chaptersDir` 被配成 `.` 时
-  // `drafts/` 会落进章节区（`chapterSkipDirs` 是同一条防线）。
+  // ---- 草稿。判定必須排在章節之前：`chaptersDir` 被配成 `.` 時
+  // `drafts/` 會落進章節區（`chapterSkipDirs` 是同一條防線）。
   const inDrafts = under(rel, d.drafts);
   if (inDrafts !== undefined && inDrafts) {
     return { kind: 'draft', rel };
   }
 
-  // ---- 章节。数字前缀 + 扩展名不在二进制黑名单，**不看是不是 `.md`**。
+  // ---- 章節。數字字首 + 副檔名不在二進位制黑名單，**不看是不是 `.md`**。
   const inChapters = under(rel, d.chapters);
   if (inChapters !== undefined && inChapters) {
-    // `.novelwarden/` 在 chaptersDir 配成 `.` 时会落进来，但它上面几条已经
-    // 各自拦过；剩下的 `.novelwarden/xxx` 不该被当成章节。
+    // `.novelwarden/` 在 chaptersDir 配成 `.` 時會落進來，但它上面幾條已經
+    // 各自攔過；剩下的 `.novelwarden/xxx` 不該被當成章節。
     const parsed = inChapters.startsWith('.') ? undefined : parseChapterFileName(path.posix.basename(inChapters));
     return parsed ? { kind: 'chapter', rel, no: parsed.order } : { kind: 'other', rel };
   }
@@ -248,14 +248,14 @@ export function kindOfPath(project: NovelProject, relPath: string): PathKind {
 }
 
 /**
- * 反过来：这个创作目标该落在哪个路径。`acceptArtifact` 用它。
+ * 反過來：這個創作目標該落在哪個路徑。`acceptArtifact` 用它。
  *
- * 与 `kindOfPath` 互为逆运算（见 tests/unit/workspace/kind.test.js 的往返用例）。
+ * 與 `kindOfPath` 互為逆運算（見 tests/unit/workspace/kind.test.js 的往返用例）。
  *
- * **正文不在这里**：它落在同号的章节上，而同号的章节在不在、叫什么名字要读盘才
- * 知道——这个函数是纯的。正文的落点走 views/pipeline.ts 的 `chapterTargetOf`。
- * 角色图谱给的是角色目录、设定清单给的是设定目录：它们是一组卡 / 一组条目，不是一个文件。
- * 单条设定就是那一条条目自己的路径。
+ * **正文不在這裡**：它落在同號的章節上，而同號的章節在不在、叫什麼名字要讀盤才
+ * 知道——這個函式是純的。正文的落點走 views/pipeline.ts 的 `chapterTargetOf`。
+ * 角色圖譜給的是角色目錄、設定清單給的是設定目錄：它們是一組卡 / 一組條目，不是一個檔案。
+ * 單條設定就是那一條條目自己的路徑。
  */
 export function pathOfTarget(project: NovelProject, target: CreationTarget): string {
   switch (target.kind) {
@@ -268,14 +268,14 @@ export function pathOfTarget(project: NovelProject, target: CreationTarget): str
     case 'lore':
       return target.relPath;
     case 'manuscript':
-      throw new Error('正文的落点要按章号去认同号的章节，请改用 views/pipeline.ts 的 chapterTargetOf。');
+      throw new Error('正文的落點要按章號去認同號的章節，請改用 views/pipeline.ts 的 chapterTargetOf。');
   }
 }
 
 /**
- * 这个路径是不是一份细纲。工程页的 rename/move/delete 据此分流。
+ * 這個路徑是不是一份細綱。工程頁的 rename/move/delete 據此分流。
  *
- * `files/fileOps.ts` 的同名导出转发到这里，调用方不必改。
+ * `files/fileOps.ts` 的同名匯出轉發到這裡，呼叫方不必改。
  */
 export function isPlotPath(project: NovelProject, relPath: string): boolean {
   return kindOfPath(project, relPath).kind === 'plot';

@@ -1,17 +1,17 @@
 /**
- * `generation/generate.ts`：装配 → 调模型 → 解析 → 产出 Draft。
+ * `generation/generate.ts`：裝配 → 調模型 → 解析 → 產出 Draft。
  *
- * 这一层**一个字都不写磁盘**（落盘在 `workspace/`，且只在用户点了采纳之后），
- * 所以这里要钉住的是三件事：
+ * 這一層**一個字都不寫磁碟**（落盤在 `workspace/`，且只在使用者點了採納之後），
+ * 所以這裡要釘住的是三件事：
  *
- * 1. **产出的 Draft 自带 artifact 与 summary**——从前生成一次要解析三次
- *    （生成时、后端画卡片时、采纳时），中间那次是多余的。
- * 2. **`cleanOutput` 只对正文层做**——那几条正则跑在 JSON 产物上会切坏结构。
- * 3. **失败挂在细纲上、成功清掉**（AGENTS 第 16 条），取消不算失败；架构与大纲没有
- *    归属的那一行，失败只进日志。
+ * 1. **產出的 Draft 自帶 artifact 與 summary**——從前生成一次要解析三次
+ *    （生成時、後端畫卡片時、採納時），中間那次是多餘的。
+ * 2. **`cleanOutput` 只對正文層做**——那幾條正則跑在 JSON 產物上會切壞結構。
+ * 3. **失敗掛在細綱上、成功清掉**（AGENTS 第 16 條），取消不算失敗；架構與大綱沒有
+ *    歸屬的那一行，失敗只進日誌。
  *
- * 细纲与单章摘要并成一份之后是七节（梗概 / 出场人物 / 时间地点 / 关键事件 / 看点 /
- * 状态变更 / 连续性事实），落在 `summaries/`；架构层四件同属一个阶段，解析要看 target 才分得清。
+ * 細綱與單章摘要併成一份之後是七節（梗概 / 出場人物 / 時間地點 / 關鍵事件 / 看點 /
+ * 狀態變更 / 連續性事實），落在 `summaries/`；架構層四件同屬一個階段，解析要看 target 才分得清。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -21,11 +21,11 @@ const { makeFakeHost, sleep } = require('../../helpers/fakeHost');
 const { installFakeProvider } = require('../../helpers/fakeProvider');
 const { cleanup } = require('../../helpers/teardown');
 
-// 模型只答了七节里的三节：没写的小节留空，形状描述照实说「3/7 节」。
+// 模型只答了七節裡的三節：沒寫的小節留空，形狀描述照實說「3/7 節」。
 const PLOT_JSON = JSON.stringify({
-  梗概: '林昭夜里摸进青云宗',
-  关键事件: '踩点、失手、翻墙；收在藏书阁门口。三拍推进。',
-  看点: '第三块令牌',
+  梗概: '林昭夜裡摸進青雲宗',
+  关键事件: '踩點、失手、翻牆；收在藏書閣門口。三拍推進。',
+  看点: '第三塊令牌',
 });
 
 let bundle;
@@ -37,9 +37,9 @@ let project;
 
 /** `config.read()` 的返回值。 */
 let settings = {};
-/** 第 N 次调用该回什么。 */
+/** 第 N 次呼叫該回什麼。 */
 let replyFn = () => '';
-/** warn / error 级日志。 */
+/** warn / error 級日誌。 */
 const warns = [];
 
 function configure(extra = {}) {
@@ -54,7 +54,7 @@ function configure(extra = {}) {
   h.answers.length = 0;
 }
 
-/** 收一次生成的全部回调。 */
+/** 收一次生成的全部回呼。 */
 function recorder() {
   const r = { deltas: [], reasoning: [], done: undefined, error: undefined, cancelled: false };
   return {
@@ -101,15 +101,15 @@ before(async () => {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  t = await makeTempProject(bundle.project, { prefix: 'generate', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'generate', title: '青雲劍錄' });
   project = t.project;
   const ws = new bundle.ws.Workspace(project);
   await ws.writePlot({
     no: 1,
-    title: '夜入青云',
+    title: '夜入青雲',
     upstreamHash: '',
     done: false,
-    sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '林昭进入宗门' },
+    sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '林昭進入宗門' },
   });
   await project.syncManifest();
 });
@@ -118,9 +118,9 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-const PLOT_TARGET = { kind: 'plot', plotRelPath: '.novelwarden/summaries/001-夜入青云.md' };
+const PLOT_TARGET = { kind: 'plot', plotRelPath: '.novelwarden/summaries/001-夜入青雲.md' };
 
-describe('细纲层 · 产出 Draft', () => {
+describe('細綱層 · 產出 Draft', () => {
   let out;
   let rec;
 
@@ -130,73 +130,73 @@ describe('细纲层 · 产出 Draft', () => {
     rec = recorder();
     out = await gen.generate(
       project,
-      { action: { stage: 'plot', capability: 'generate' }, target: PLOT_TARGET, ask: '排一下这一章' },
+      { action: { stage: 'plot', capability: 'generate' }, target: PLOT_TARGET, ask: '排一下這一章' },
       rec.handlers,
       { signal: new AbortController().signal }
     );
   });
 
-  test('调了一次模型', () => {
-    assert.equal(fake.calls.length, 1, `调了 ${fake.calls.length} 次`);
+  test('調了一次模型', () => {
+    assert.equal(fake.calls.length, 1, `調了 ${fake.calls.length} 次`);
   });
 
-  test('产出了 draft', () => {
+  test('產出了 draft', () => {
     assert.ok(out.draft, JSON.stringify(out));
   });
 
-  test('draft 带 id', () => {
+  test('draft 帶 id', () => {
     assert.ok(out.draft.id && typeof out.draft.id === 'string', out.draft.id);
   });
 
-  test('draft 记下了 action 与 target', () => {
+  test('draft 記下了 action 與 target', () => {
     assert.equal(out.draft.action.capability, 'generate');
     assert.equal(out.draft.target.plotRelPath, PLOT_TARGET.plotRelPath);
   });
 
-  // 生成时就带上 artifact：从前要等前端拿到文本、后端再 parse 一次画卡片。
-  test('draft 自带解析好的产物', () => {
+  // 生成時就帶上 artifact：從前要等前端拿到文字、後端再 parse 一次畫卡片。
+  test('draft 自帶解析好的產物', () => {
     assert.equal(out.draft.artifact.kind, 'plot', JSON.stringify(out.draft.artifact));
   });
 
-  // 章末钩子不单列了，模型写进「看点」的那一下原样落在看点里。
-  test('产物的看点在', () => {
-    assert.equal(out.draft.artifact.sections.看点, '第三块令牌');
+  // 章末鉤子不單列了，模型寫進「看點」的那一下原樣落在看點裡。
+  test('產物的看點在', () => {
+    assert.equal(out.draft.artifact.sections.看点, '第三塊令牌');
   });
 
-  test('draft 自带一句话形状描述', () => {
-    assert.equal(out.draft.summary, '细纲 · 3/7 节', out.draft.summary);
+  test('draft 自帶一句話形狀描述', () => {
+    assert.equal(out.draft.summary, '細綱 · 3/7 節', out.draft.summary);
   });
 
-  test('draft 记下字数', () => {
+  test('draft 記下字數', () => {
     assert.ok(out.draft.words > 0, String(out.draft.words));
   });
 
-  test('draft 带创建时间', () => {
+  test('draft 帶建立時間', () => {
     assert.ok(!Number.isNaN(Date.parse(out.draft.createdAt)), out.draft.createdAt);
   });
 
-  test('回调拿到了完整文本', () => {
+  test('回呼拿到了完整文字', () => {
     assert.equal(rec.r.done, PLOT_JSON, rec.r.done);
   });
 
-  test('装配结果一并回给调用方', () => {
+  test('裝配結果一併回給呼叫方', () => {
     assert.ok(out.built && out.built.messages.length > 0);
   });
 
-  // 一个字都不写磁盘：落盘只在用户点了采纳之后（AGENTS 第 19 条）。
-  test('细纲没有被写过', async () => {
+  // 一個字都不寫磁碟：落盤只在使用者點了採納之後（AGENTS 第 19 條）。
+  test('細綱沒有被寫過', async () => {
     const plot = await project.readPlot(PLOT_TARGET.plotRelPath);
     assert.ok(!bundle.plotFile.isPlotFilled(plot.sections), JSON.stringify(plot.sections));
   });
 });
 
-describe('正文层 · cleanOutput 只在这一层跑', () => {
+describe('正文層 · cleanOutput 只在這一層跑', () => {
   let manuscript;
   let plotRaw;
 
   before(async () => {
     configure();
-    replyFn = () => '好的，以下是续写：\n\n## 第一章 灯下\n\n雨下了三天。';
+    replyFn = () => '好的，以下是續寫：\n\n## 第一章 燈下\n\n雨下了三天。';
     const a = recorder();
     manuscript = (
       await gen.generate(
@@ -204,14 +204,14 @@ describe('正文层 · cleanOutput 只在这一层跑', () => {
         {
           action: { stage: 'manuscript', capability: 'generate' },
           target: { kind: 'manuscript', plotRelPath: PLOT_TARGET.plotRelPath },
-          ask: '接着写',
+          ask: '接著寫',
         },
         a.handlers,
         { signal: new AbortController().signal }
       )
     ).draft;
 
-    // 同一段文本走细纲层：那几条正则会把 JSON 的第一行剥掉，绝不能跑。
+    // 同一段文字走細綱層：那幾條正則會把 JSON 的第一行剝掉，絕不能跑。
     replyFn = () => `\`\`\`json\n${PLOT_JSON}\n\`\`\``;
     const b = recorder();
     plotRaw = (
@@ -224,50 +224,50 @@ describe('正文层 · cleanOutput 只在这一层跑', () => {
     ).draft.raw;
   });
 
-  test('正文剥掉了开场白', () => {
-    assert.ok(!manuscript.raw.includes('以下是续写'), manuscript.raw);
+  test('正文剝掉了開場白', () => {
+    assert.ok(!manuscript.raw.includes('以下是續寫'), manuscript.raw);
   });
 
-  test('正文剥掉了章节标题', () => {
-    assert.ok(!manuscript.raw.includes('第一章 灯下'), manuscript.raw);
+  test('正文剝掉了章節標題', () => {
+    assert.ok(!manuscript.raw.includes('第一章 燈下'), manuscript.raw);
   });
 
-  test('正文本身留着', () => {
+  test('正文字身留著', () => {
     assert.ok(manuscript.raw.includes('雨下了三天'), manuscript.raw);
   });
 
-  // 正文直接落同号的章节——但那是采纳那一步的事。生成这一步一个字都不写。
-  test('正文层也不落盘：同号章节没被建出来', async () => {
+  // 正文直接落同號的章節——但那是採納那一步的事。生成這一步一個字都不寫。
+  test('正文層也不落盤：同號章節沒被建出來', async () => {
     project.invalidate();
     assert.deepEqual((await project.listChapters()).map((c) => c.relPath), []);
   });
 
-  // 关键：JSON 产物原样保留代码围栏，剥围栏是 `parseArtifact` 的活
-  // （`stripCodeFence`），在这里剥会把「去掉开场白」那几条正则用到 JSON 上。
-  test('JSON 产物不过 cleanOutput', () => {
+  // 關鍵：JSON 產物原樣保留程式碼圍欄，剝圍欄是 `parseArtifact` 的活
+  // （`stripCodeFence`），在這裡剝會把「去掉開場白」那幾條正則用到 JSON 上。
+  test('JSON 產物不過 cleanOutput', () => {
     assert.ok(plotRaw.startsWith('```json'), plotRaw.slice(0, 40));
   });
 
-  test('围栏包着的 JSON 照样解析得出来', async () => {
+  test('圍欄包著的 JSON 照樣解析得出來', async () => {
     const artifact = bundle.generate.parseDraftArtifact(
       { stage: 'plot', capability: 'generate' },
       plotRaw,
       PLOT_TARGET
     );
-    assert.equal(artifact.sections.看点, '第三块令牌', JSON.stringify(artifact));
+    assert.equal(artifact.sections.看点, '第三塊令牌', JSON.stringify(artifact));
   });
 });
 
 /**
- * 架构四件同属一个阶段：**解析要看 target 才分得清是哪一件**——角色图谱产出的是
- * 一组角色卡，另外三件是一份文档。这是 `parseDraftArtifact` 多收一个 target 的原因。
+ * 架構四件同屬一個階段：**解析要看 target 才分得清是哪一件**——角色圖譜產出的是
+ * 一組角色卡，另外三件是一份文件。這是 `parseDraftArtifact` 多收一個 target 的原因。
  */
-describe('架构层 · 同一阶段的四件靠 target 分辨', () => {
+describe('架構層 · 同一階段的四件靠 target 分辨', () => {
   const act = { stage: 'setting', capability: 'generate' };
   const ROSTER = JSON.stringify({
     characters: [
-      { name: '林昭', role: '主角', 身份: '火场里活下来的孤儿' },
-      { name: '沈青', role: '盟友', 身份: '客栈老板娘' },
+      { name: '林昭', role: '主角', 身份: '火場裡活下來的孤兒' },
+      { name: '沈青', role: '盟友', 身份: '客棧老闆娘' },
     ],
   });
   let roster;
@@ -285,11 +285,11 @@ describe('架构层 · 同一阶段的四件靠 target 分辨', () => {
         { signal: new AbortController().signal }
       )
     ).draft;
-    replyFn = () => '## 核心梗概\n\n林昭回青崖镇查火。\n\n## 金手指\n\n一块残缺的令牌。';
+    replyFn = () => '## 核心梗概\n\n林昭回青崖鎮查火。\n\n## 金手指\n\n一塊殘缺的令牌。';
     config = (
       await gen.generate(
         project,
-        { action: act, target: { kind: 'setting', doc: 'config' }, ask: '展开这个脑洞' },
+        { action: act, target: { kind: 'setting', doc: 'config' }, ask: '展開這個腦洞' },
         recorder().handlers,
         { signal: new AbortController().signal }
       )
@@ -297,60 +297,60 @@ describe('架构层 · 同一阶段的四件靠 target 分辨', () => {
     cardsAfter = await project.listCharacters();
   });
 
-  test('角色图谱解析成一组人', () => {
+  test('角色圖譜解析成一組人', () => {
     assert.equal(roster.artifact.kind, 'characterRoster', JSON.stringify(roster.artifact));
-    assert.equal(roster.summary, '角色图谱 · 2 人', roster.summary);
+    assert.equal(roster.summary, '角色圖譜 · 2 人', roster.summary);
   });
 
-  test('小说配置解析成一份文档', () => {
+  test('小說配置解析成一份檔案', () => {
     assert.equal(config.artifact.kind, 'settingDoc', JSON.stringify(config.artifact));
     assert.equal(config.artifact.doc, 'config');
-    assert.equal(config.summary, '小说配置 · 2/8 节', config.summary);
+    assert.equal(config.summary, '小說配置 · 2/8 節', config.summary);
   });
 
-  // 同一段文本，target 不同解析出来就不同：采纳时重新解析也必须带上 target。
-  test('parseDraftArtifact 带上 target 才认得出角色图谱', () => {
+  // 同一段文字，target 不同解析出來就不同：採納時重新解析也必須帶上 target。
+  test('parseDraftArtifact 帶上 target 才認得出角色圖譜', () => {
     const withTarget = gen.parseDraftArtifact(act, ROSTER, { kind: 'setting', doc: 'characters' });
     assert.equal(withTarget.kind, 'characterRoster');
   });
 
-  // 一个字都不写磁盘：角色卡要等作者在卡片上点了写入才建（第 19 条）。
-  test('生成角色图谱不建角色卡', () => {
+  // 一個字都不寫磁碟：角色卡要等作者在卡片上點了寫入才建（第 19 條）。
+  test('生成角色圖譜不建角色卡', () => {
     assert.deepEqual(cardsAfter.map((c) => c.name), []);
   });
 });
 
-describe('讨论类能力 · 没有可采纳的东西', () => {
+describe('討論類能力 · 沒有可採納的東西', () => {
   let draft;
 
   before(async () => {
     configure();
-    replyFn = () => '我觉得这一章的冲突可以提前。';
+    replyFn = () => '我覺得這一章的衝突可以提前。';
     const rec = recorder();
     draft = (
       await gen.generate(
         project,
-        { action: { stage: 'plot', capability: 'discuss' }, target: PLOT_TARGET, ask: '你怎么看' },
+        { action: { stage: 'plot', capability: 'discuss' }, target: PLOT_TARGET, ask: '你怎麼看' },
         rec.handlers,
         { signal: new AbortController().signal }
       )
     ).draft;
   });
 
-  test('仍然产出 draft（文本要留在气泡里）', () => {
-    assert.ok(draft, '讨论也该有 draft');
+  test('仍然產出 draft（文字要留在氣泡裡）', () => {
+    assert.ok(draft, '討論也該有 draft');
   });
 
-  test('draft 没有 artifact', () => {
+  test('draft 沒有 artifact', () => {
     assert.equal(draft.artifact, undefined, JSON.stringify(draft.artifact));
   });
 
-  test('draft 没有 summary', () => {
+  test('draft 沒有 summary', () => {
     assert.equal(draft.summary, undefined, draft.summary);
   });
 });
 
-describe('模型抛错', () => {
+describe('模型拋錯', () => {
   let rec;
   let out;
   let failures;
@@ -359,7 +359,7 @@ describe('模型抛错', () => {
     configure();
     fake.reset();
     replyFn = () => {
-      throw new bundle.provider.LlmError('假装 429 限流');
+      throw new bundle.provider.LlmError('假裝 429 限流');
     };
     rec = recorder();
     out = await gen.generate(
@@ -373,25 +373,25 @@ describe('模型抛错', () => {
     failures = await bundle.errorLog.listActiveFailures(project);
   });
 
-  test('onError 被调用', () => {
+  test('onError 被呼叫', () => {
     assert.ok(rec.r.error && rec.r.error.includes('429'), rec.r.error);
   });
 
-  test('没有产出 draft', () => {
+  test('沒有產出 draft', () => {
     assert.equal(out.draft, undefined, JSON.stringify(out.draft));
   });
 
-  // 第 16 条：失败要留在出错的东西身上，toast 五秒就没了。
-  test('失败挂在细纲上', () => {
+  // 第 16 條：失敗要留在出錯的東西身上，toast 五秒就沒了。
+  test('失敗掛在細綱上', () => {
     assert.ok(failures[PLOT_TARGET.plotRelPath], JSON.stringify(Object.keys(failures)));
   });
 
-  test('失败进日志', () => {
+  test('失敗進日誌', () => {
     assert.ok(warns.some((w) => w.includes('429')), warns.join('|'));
   });
 });
 
-describe('成功要清掉失败标记', () => {
+describe('成功要清掉失敗標記', () => {
   let failures;
 
   before(async () => {
@@ -408,17 +408,17 @@ describe('成功要清掉失败标记', () => {
     failures = await bundle.errorLog.listActiveFailures(project);
   });
 
-  // 修好了还挂着标记，用户会学会无视它。
-  test('细纲上的红标记没了', () => {
+  // 修好了還掛著標記，使用者會學會無視它。
+  test('細綱上的紅標記沒了', () => {
     assert.ok(!failures[PLOT_TARGET.plotRelPath], JSON.stringify(failures));
   });
 });
 
 /**
- * 失败挂在**细纲**上（工程页那一行）。架构与大纲没有归属的那一行——失败只进日志，
- * 不凭空挂到某一章头上。
+ * 失敗掛在**細綱**上（工程頁那一行）。架構與大綱沒有歸屬的那一行——失敗只進日誌，
+ * 不憑空掛到某一章頭上。
  */
-describe('模型抛错 · 架构与大纲的失败只进日志', () => {
+describe('模型拋錯 · 架構與大綱的失敗只進日誌', () => {
   let rec;
   let keysBefore;
   let keysAfter;
@@ -427,7 +427,7 @@ describe('模型抛错 · 架构与大纲的失败只进日志', () => {
     configure();
     keysBefore = Object.keys(await bundle.errorLog.listActiveFailures(project)).sort();
     replyFn = () => {
-      throw new bundle.provider.LlmError('假装 429 限流');
+      throw new bundle.provider.LlmError('假裝 429 限流');
     };
     rec = recorder();
     await gen.generate(
@@ -446,15 +446,15 @@ describe('模型抛错 · 架构与大纲的失败只进日志', () => {
     keysAfter = Object.keys(await bundle.errorLog.listActiveFailures(project)).sort();
   });
 
-  test('onError 被调用', () => {
+  test('onError 被呼叫', () => {
     assert.ok(rec.r.error && rec.r.error.includes('429'), rec.r.error);
   });
 
-  test('不凭空挂到某一章上', () => {
+  test('不憑空掛到某一章上', () => {
     assert.deepEqual(keysAfter, keysBefore);
   });
 
-  test('失败进日志', () => {
+  test('失敗進日誌', () => {
     assert.ok(warns.some((w) => w.includes('429')), warns.join('|'));
   });
 });
@@ -480,21 +480,21 @@ describe('取消', () => {
     failures = await bundle.errorLog.listActiveFailures(project);
   });
 
-  test('onCancelled 被调用', () => {
+  test('onCancelled 被呼叫', () => {
     assert.ok(rec.r.cancelled);
   });
 
-  test('取消不报错', () => {
+  test('取消不報錯', () => {
     assert.equal(rec.r.error, undefined, rec.r.error);
   });
 
-  // 用户自己点的停止不是失败，挂个红标记只会让他以为出了问题。
-  test('取消不记失败', () => {
+  // 使用者自己點的停止不是失敗，掛個紅標記只會讓他以為出了問題。
+  test('取消不記失敗', () => {
     assert.ok(!failures[PLOT_TARGET.plotRelPath], JSON.stringify(failures));
   });
 });
 
-describe('模型引用无效时不调模型', () => {
+describe('模型引用無效時不調模型', () => {
   let rec;
   let out;
   let callsBefore;
@@ -511,23 +511,23 @@ describe('模型引用无效时不调模型', () => {
     );
   });
 
-  test('说明了原因', () => {
-    assert.ok(rec.r.error, '应当 onError');
+  test('說明瞭原因', () => {
+    assert.ok(rec.r.error, '應當 onError');
   });
 
-  test('没有调模型', () => {
+  test('沒有調模型', () => {
     assert.equal(fake.calls.length, callsBefore);
   });
 
-  test('没有 draft 也没有 built', () => {
+  test('沒有 draft 也沒有 built', () => {
     assert.equal(out.draft, undefined);
     assert.equal(out.built, undefined);
   });
 });
 
-describe('装配明细 · 降级与丢弃进 warn 日志', () => {
+describe('裝配明細 · 降級與丟棄進 warn 日誌', () => {
   before(async () => {
-    // 预算压到最小，长附件必然被截断或丢弃。「不静默截断」要求它进日志。
+    // 預算壓到最小，長附件必然被截斷或丟棄。「不靜默截斷」要求它進日誌。
     configure({
       providers: [{ id: 'p', kind: 'vscode-lm', models: [{ name: 'm', contextWindow: 2000, maxOutputTokens: 500 }] }],
       models: ['p/m'],
@@ -540,24 +540,24 @@ describe('装配明细 · 降级与丢弃进 warn 日志', () => {
         action: { stage: 'plot', capability: 'generate' },
         target: PLOT_TARGET,
         ask: 'x',
-        attachments: [{ id: 'big', kind: 'file', label: '大文件', text: '雨'.repeat(20000) }],
+        attachments: [{ id: 'big', kind: 'file', label: '大檔案', text: '雨'.repeat(20000) }],
       },
       rec.handlers,
       { signal: new AbortController().signal }
     );
   });
 
-  test('降级/丢弃的条目进了 warn 日志', () => {
-    assert.ok(warns.some((w) => w.includes('降级') || w.includes('丢弃')), warns.join('|'));
+  test('降級/丟棄的條目進了 warn 日誌', () => {
+    assert.ok(warns.some((w) => w.includes('降級') || w.includes('丟棄')), warns.join('|'));
   });
 
-  // 一次正文生成的 prompt 有十万字，进了缓冲会把此前所有日志挤没。
-  test('日志里没有 prompt 全文', () => {
+  // 一次正文生成的 prompt 有十萬字，進了緩衝會把此前所有日誌擠沒。
+  test('日誌裡沒有 prompt 全文', () => {
     assert.ok(!warns.some((w) => w.includes('雨雨雨雨雨雨雨雨雨雨')), warns.join('|').slice(0, 200));
   });
 });
 
-describe('previewContext · 只装配不调模型', () => {
+describe('previewContext · 只裝配不調模型', () => {
   let built;
   let callsBefore;
 
@@ -567,15 +567,15 @@ describe('previewContext · 只装配不调模型', () => {
     built = await gen.previewContext(project, {
       action: { stage: 'plot', capability: 'generate' },
       target: PLOT_TARGET,
-      ask: '预览一下',
+      ask: '預覽一下',
     });
   });
 
-  test('装出了消息', () => {
+  test('裝出了訊息', () => {
     assert.ok(built.messages.length > 0);
   });
 
-  test('一次模型都没调', () => {
+  test('一次模型都沒調', () => {
     assert.equal(fake.calls.length, callsBefore);
   });
 });

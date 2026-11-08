@@ -1,11 +1,11 @@
 {
-  // 每个壳一条构建任务，命令与 package.json 的 scripts 一一对应（不在这里另写一份
-  // 命令行——那样两处会漂）。哪条任务服务哪个启动配置，见 .vscode/README.md。
+  // 每個殼一條構建任務，命令與 package.json 的 scripts 一一對應（不在這裡另寫一份
+  // 命令列——那樣兩處會漂）。哪條任務服務哪個啟動配置，見 .vscode/README.md。
   "version": "2.0.0",
   "tasks": [
     {
-      // 默认构建任务，插件壳的两条 launch 都靠它（${defaultBuildTask}）。
-      // esbuild.js 会连 media/src → dist/media/ 一起监听，漏了 webview 会 404。
+      // 預設構建任務，外掛殼的兩條 launch 都靠它（${defaultBuildTask}）。
+      // esbuild.js 會連 media/src → dist/media/ 一起監聽，漏了 webview 會 404。
       "label": "watch",
       "type": "npm",
       "script": "watch",
@@ -15,7 +15,7 @@
       "group": { "kind": "build", "isDefault": true }
     },
     {
-      "label": "插件：一次性编译",
+      "label": "外掛：一次性編譯",
       "type": "npm",
       "script": "compile",
       "problemMatcher": "$esbuild",
@@ -23,10 +23,10 @@
       "group": "build"
     },
     {
-      // 只监听前端产物。改 media/src/ 时够用，比整个 watch 轻。
-      // 独立版的页面资源也来自这里（经 embed-media 内嵌），但**改完要重启服务**
-      // ——mediaAssets.ts 是启动时读进内存的。
-      "label": "前端：监听构建（media/src → dist/media）",
+      // 只監聽前端產物。改 media/src/ 時夠用，比整個 watch 輕。
+      // 獨立版的頁面資源也來自這裡（經 embed-media 內嵌），但**改完要重啟服務**
+      // ——mediaAssets.ts 是啟動時讀進記憶體的。
+      "label": "前端：監聽構建（media/src → dist/media）",
       "type": "shell",
       "command": "node scripts/build-media.js --watch",
       "isBackground": true,
@@ -35,9 +35,9 @@
       "group": "build"
     },
     {
-      // 独立版/单文件的前置：把 dist/media 的产物 base64 内嵌进
-      // src/shells/standalone/mediaAssets.ts（生成文件，已 gitignore）。
-      "label": "独立版：内嵌前端资源",
+      // 獨立版/單檔案的前置：把 dist/media 的產物 base64 內嵌進
+      // src/shells/standalone/mediaAssets.ts（生成檔案，已 gitignore）。
+      "label": "獨立版：內嵌前端資源",
       "type": "npm",
       "script": "embed",
       "problemMatcher": [],
@@ -45,8 +45,8 @@
       "group": "build"
     },
     {
-      // 「跑单文件可执行」那条 launch 的 preLaunchTask。npm run dist 自带 embed。
-      "label": "独立版：编译单文件",
+      // 「跑單檔案可執行」那條 launch 的 preLaunchTask。npm run dist 自帶 embed。
+      "label": "獨立版：編譯單檔案",
       "type": "npm",
       "script": "dist",
       "problemMatcher": [],
@@ -54,9 +54,9 @@
       "group": "build"
     },
     {
-      // 桌面壳的 sidecar（当前平台）。app:dev / app:build 会自己触发，
-      // 这条是"只想单独编一次 sidecar"时用。
-      "label": "桌面版：编译 sidecar（当前平台）",
+      // 桌面殼的 sidecar（當前平臺）。app:dev / app:build 會自己觸發，
+      // 這條是"只想單獨編一次 sidecar"時用。
+      "label": "桌面版：編譯 sidecar（當前平臺）",
       "type": "npm",
       "script": "sidecar",
       "problemMatcher": [],
@@ -64,7 +64,7 @@
       "group": "build"
     },
     {
-      "label": "桌面版：编译 sidecar（含 Windows 交叉编译）",
+      "label": "桌面版：編譯 sidecar（含 Windows 交叉編譯）",
       "type": "npm",
       "script": "sidecar:all",
       "problemMatcher": [],
@@ -72,7 +72,7 @@
       "group": "build"
     },
     {
-      "label": "桌面版：出安装包",
+      "label": "桌面版：出安裝包",
       "type": "npm",
       "script": "app:build",
       "problemMatcher": [],
@@ -88,7 +88,7 @@
       "group": "build"
     },
     {
-      "label": "测试：全部",
+      "label": "測試：全部",
       "type": "npm",
       "script": "test",
       "problemMatcher": [],
@@ -96,7 +96,7 @@
       "group": { "kind": "test", "isDefault": true }
     },
     {
-      "label": "测试：unit",
+      "label": "測試：unit",
       "type": "npm",
       "script": "test:unit",
       "problemMatcher": [],
@@ -104,7 +104,7 @@
       "group": "test"
     },
     {
-      "label": "测试：integration",
+      "label": "測試：integration",
       "type": "npm",
       "script": "test:integration",
       "problemMatcher": [],
@@ -112,7 +112,7 @@
       "group": "test"
     },
     {
-      "label": "测试：dom",
+      "label": "測試：dom",
       "type": "npm",
       "script": "test:dom",
       "problemMatcher": [],
@@ -120,8 +120,8 @@
       "group": "test"
     },
     {
-      // 独立版的真 HTTP/WS 服务，需要 Bun。
-      "label": "测试：e2e（需 Bun）",
+      // 獨立版的真 HTTP/WS 服務，需要 Bun。
+      "label": "測試：e2e（需 Bun）",
       "type": "npm",
       "script": "test:e2e",
       "problemMatcher": [],
@@ -129,8 +129,8 @@
       "group": "test"
     },
     {
-      // 架构不变式：core 零 vscode 依赖、壳之间不互相 import、没有"我是哪个壳"的分支。
-      "label": "测试：contract（架构不变式）",
+      // 架構不變式：core 零 vscode 依賴、殼之間不互相 import、沒有"我是哪個殼"的分支。
+      "label": "測試：contract（架構不變式）",
       "type": "npm",
       "script": "test:contract",
       "problemMatcher": [],

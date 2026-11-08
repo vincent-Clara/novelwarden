@@ -1,196 +1,196 @@
-# 七期：叙事线 Implementation Plan
+# 七期：敘事線 Implementation Plan
 
-> **接手须知：** 这份计划面向新的 agent，假设你**没有读过**前面的对话。开工前必读：
-> 1. 根目录 [AGENTS.md](../../../AGENTS.md)：本期直接关系到第 1、2、3、4、11、12、16、17、19、20 条。
-> 2. [总计划](2026-09-30-blueprint-pipeline-roadmap.md) 的 §1 #22、§2.3（正文那一行）、§5 七期。
-> 3. [四期计划](2026-09-30-blueprint-pipeline-phase4.md) 的 §1（连续性事实）、§3（定稿）、§4（`evidence` 层）：叙事线的事件挂在定稿上，写法照着 `evidence` 层。
-> 4. 上游源码：`~/workspace/AI-Novel-Writer`（GPL-3.0，源自 AI_NovelGenerator），叙事线在 `src/shared/narrative-thread.ts`、`src/services/narrative-thread-candidate-generator.ts`、`electron/repositories/narrative-thread-repository.ts`、`generate-draft.command.ts:1452-1498`。移植处在注释里注明出处。
+> **接手須知：** 這份計劃面向新的 agent，假設你**沒有讀過**前面的對話。開工前必讀：
+> 1. 根目錄 [AGENTS.md](../../../AGENTS.md)：本期直接關係到第 1、2、3、4、11、12、16、17、19、20 條。
+> 2. [總計劃](2026-09-30-blueprint-pipeline-roadmap.md) 的 §1 #22、§2.3（正文那一行）、§5 七期。
+> 3. [四期計劃](2026-09-30-blueprint-pipeline-phase4.md) 的 §1（連續性事實）、§3（定稿）、§4（`evidence` 層）：敘事線的事件掛在定稿上，寫法照著 `evidence` 層。
+> 4. 上游原始碼：`~/workspace/AI-Novel-Writer`（GPL-3.0，源自 AI_NovelGenerator），敘事線在 `src/shared/narrative-thread.ts`、`src/services/narrative-thread-candidate-generator.ts`、`electron/repositories/narrative-thread-repository.ts`、`generate-draft.command.ts:1452-1498`。移植處在註釋裡註明出處。
 >
-> 六期计划里标 ⚑ 的 4 处，作者 2026-10-01 已全部认可。本计划新标 ⚑ 的照旧是自定、收尾时报给作者确认的。
+> 六期計劃裡標 ⚑ 的 4 處，作者 2026-10-01 已全部認可。本計劃新標 ⚑ 的照舊是自定、收尾時報給作者確認的。
 >
-> 每个 Task 做完立刻 commit，commit 之间 `npm run typecheck` 必须零错误。
+> 每個 Task 做完立刻 commit，commit 之間 `npm run typecheck` 必須零錯誤。
 
-**Goal:** 跨章的伏笔与线索有一个地方记：`.novelforge/threads.md`，每条线写着类型、计划在第几章埋下、第几章前回收、作者意图，以及正文里推进到哪一步（事件，每条带一句逐字原文）。工程页一个动作从细纲排出 3–8 条线（1 次调用）；定稿时多一步，判这一章推进了哪几条（0–1 次调用，证据逐字校验）；写正文时挑最多 6 条和本章有关的线带进上下文（≤1200 字），并写明「没到回收章不许提前揭开」。
+**Goal:** 跨章的伏筆與線索有一個地方記：`.novelforge/threads.md`，每條線寫著型別、計劃在第幾章埋下、第幾章前回收、作者意圖，以及正文裡推進到哪一步（事件，每條帶一句逐字原文）。工程頁一個動作從細綱排出 3–8 條線（1 次呼叫）；定稿時多一步，判這一章推進了哪幾條（0–1 次呼叫，證據逐字校驗）；寫正文時挑最多 6 條和本章有關的線帶進上下文（≤1200 字），並寫明「沒到回收章不許提前揭開」。
 
-**Architecture:** 纯函数先行（文件格式的解析与外科式追加、状态推导、挑线、事件校验），再是两个调模型的动作（排线、定稿第三步），然后是装配的 `threads` 层，最后是工程页那一行、验收与文档。
+**Architecture:** 純函式先行（檔案格式的解析與外科式追加、狀態推導、挑線、事件校驗），再是兩個調模型的動作（排線、定稿第三步），然後是裝配的 `threads` 層，最後是工程頁那一行、驗收與文件。
 
-**Tech Stack:** TypeScript、`node:test`、jsdom、Bun（e2e）。不新增依赖。
+**Tech Stack:** TypeScript、`node:test`、jsdom、Bun（e2e）。不新增依賴。
 
 ## Global Constraints
 
-- `src/core/` 零 `vscode` import；分层契约测试全程要绿。
-- **容错**（第 1 条）：`threads.md` 是作者的 Markdown，怎么手改都不许崩。认不出的行原样留着、不当成线也不当成事件。
-- **机器只追加、不改写**（第 3 条）：排线只在文件末尾追加新线，定稿只在某条线的事件列表末尾追加事件行。作者写的字（包括自加的行、改过的意图、删掉的事件）一个都不动，不整份重渲染。
-- **不静默截断**（第 2 条）：挑线时因为 6 条 / 1200 字放不下的线、定稿时证据找不到而丢掉的事件，一律进明细或日志与完成提示。
-- **动手之前写明调用次数**（第 4 条）：排线「预计 1 次」；定稿「预计 1–3 次」；批量写章的上限跟着变。
-- **SQLite 只放可丢弃的痕迹**（第 17 条）：叙事线是内容，只落 Markdown。
-- 本期结束时 `npm run typecheck` + `npm run test:node` + `npm run test:e2e` 全绿。**不调真实模型**。
+- `src/core/` 零 `vscode` import；分層契約測試全程要綠。
+- **容錯**（第 1 條）：`threads.md` 是作者的 Markdown，怎麼手改都不許崩。認不出的行原樣留著、不當成線也不當成事件。
+- **機器只追加、不改寫**（第 3 條）：排線只在檔案末尾追加新線，定稿只在某條線的事件列表末尾追加事件行。作者寫的字（包括自加的行、改過的意圖、刪掉的事件）一個都不動，不整份重渲染。
+- **不靜默截斷**（第 2 條）：挑線時因為 6 條 / 1200 字放不下的線、定稿時證據找不到而丟掉的事件，一律進明細或日誌與完成提示。
+- **動手之前寫明呼叫次數**（第 4 條）：排線「預計 1 次」；定稿「預計 1–3 次」；批次寫章的上限跟著變。
+- **SQLite 只放可丟棄的痕跡**（第 17 條）：敘事線是內容，只落 Markdown。
+- 本期結束時 `npm run typecheck` + `npm run test:node` + `npm run test:e2e` 全綠。**不調真實模型**。
 
 ---
 
-## 本期定下的东西
+## 本期定下的東西
 
-标 ⚑ 的是本期自定的取舍，收尾时报给作者。
+標 ⚑ 的是本期自定的取捨，收尾時報給作者。
 
-### 1. 文件格式（`model/threadsFile.ts`）
+### 1. 檔案格式（`model/threadsFile.ts`）
 
 ```markdown
 # 叙事线
 
-> 跨章的伏笔与线索。……（模板里的说明，解析时忽略）
+> 跨章的伏筆與線索。……（模板裡的說明，解析時忽略）
 
-## 玉佩的来历
-- 类型：伏笔
-- 计划：第 2–8 章
-- 意图：林昭身上的玉佩是沈家旧物，第 8 章前揭开他的身世。
+## 玉佩的來歷
+- 型別：伏筆
+- 計劃：第 2–8 章
+- 意圖：林昭身上的玉佩是沈家舊物，第 8 章前揭開他的身世。
 - 事件：
-  - 第 3 章 · 埋下：「他摸了摸怀里那块温润的玉佩」——玉佩第一次露面
-  - 第 5 章 · 推进：「沈青盯着那道云纹看了很久」——沈青认出了纹样
+  - 第 3 章 · 埋下：「他摸了摸懷裡那塊溫潤的玉佩」——玉佩第一次露面
+  - 第 5 章 · 推進：「沈青盯著那道雲紋看了很久」——沈青認出了紋樣
 ```
 
-- 一个 `## ` 标题是一条线，标题就是线的名字（同名按审稿引文那套归一化判，`model/review.ts` 的 `normalizeQuote`）。
-- 「计划：第 a–b 章」= 从第 a 章埋下、到第 b 章前回收（上游 `targetStartChapter` / `targetEndChapter`，UI 上叫「计划埋设」「预计回收」）。容错：`第2-8章`、`2~8`、`第 5 章`（a = b）都认；缺了就是没有区间。
-- 事件行：`第 N 章 · 类型：「证据」——理由`。类型四种：**埋下 / 推进 / 回收 / 放弃**（上游 `planted / progressing / resolved / abandoned`）。容错：分隔符写成 `-`、空格、半角冒号，引号换成别的，证据或理由缺了，都认；没有章号的行不算事件（原样留着）。事件行写在 `- 事件：` 下面缩进，或直接写成顶格的 `- 第 N 章 …` 都认。
-- **状态不落盘**（与流水线状态同一个口径）：取章号最大的那条事件的类型，同章取写在后面的那条；没有事件就是「计划中」。状态五种：计划中 / 已埋下 / 推进中 / 已回收 / 已放弃。已回收、已放弃是「收了的」，不再带进上下文、不再判事件。作者想放弃一条线：加一行 `第 N 章 · 放弃：——不写了`，或者整条删掉。
-- 外科式写入两个纯函数：`appendThreads(raw, threads)`（文件末尾追加，文件空或不存在时先写模板头）与 `appendEvents(raw, title, events)`（找到那条线，插在它最后一条事件后面；没有 `- 事件：` 就补一行）。原文件的换行符（CRLF）、BOM、其余行原样保留。
+- 一個 `## ` 標題是一條線，標題就是線的名字（同名按審稿引文那套歸一化判，`model/review.ts` 的 `normalizeQuote`）。
+- 「計劃：第 a–b 章」= 從第 a 章埋下、到第 b 章前回收（上游 `targetStartChapter` / `targetEndChapter`，UI 上叫「計劃埋設」「預計回收」）。容錯：`第2-8章`、`2~8`、`第 5 章`（a = b）都認；缺了就是沒有區間。
+- 事件行：`第 N 章 · 型別：「證據」——理由`。型別四種：**埋下 / 推進 / 回收 / 放棄**（上游 `planted / progressing / resolved / abandoned`）。容錯：分隔符寫成 `-`、空格、半形冒號，引號換成別的，證據或理由缺了，都認；沒有章號的行不算事件（原樣留著）。事件行寫在 `- 事件：` 下面縮排，或直接寫成頂格的 `- 第 N 章 …` 都認。
+- **狀態不落盤**（與流水線狀態同一個口徑）：取章號最大的那條事件的型別，同章取寫在後面的那條；沒有事件就是「計劃中」。狀態五種：計劃中 / 已埋下 / 推進中 / 已回收 / 已放棄。已回收、已放棄是「收了的」，不再帶進上下文、不再判事件。作者想放棄一條線：加一行 `第 N 章 · 放棄：——不寫了`，或者整條刪掉。
+- 外科式寫入兩個純函式：`appendThreads(raw, threads)`（檔案末尾追加，檔案空或不存在時先寫模板頭）與 `appendEvents(raw, title, events)`（找到那條線，插在它最後一條事件後面；沒有 `- 事件：` 就補一行）。原檔案的換行符（CRLF）、BOM、其餘行原樣保留。
 
-### 2. 排叙事线（`features/threads.ts` 的 `generateThreads`，新）
+### 2. 排敘事線（`features/threads.ts` 的 `generateThreads`，新）
 
-- ⚑ **是工程页动作，不进主按钮、不走写入卡**。叙事线是可选的（第 20 条只推一个下一步，不能拿它挡路）；它只往文件末尾**追加新线**、同名的跳过、已有的不改——这是第 19 条的批量路径（只补空白、不问、不覆盖），确认框写明「预计 1 次调用」。入口：工程页「文风与摘要」组的「叙事线」一行（行内按钮 + 右键）、agent 的 `run generateThreads`（同一个确认框）。
-- ⚑ 走「剧情细纲」档（`plotOutline`）：排线和拆细纲是同一种活——在大纲与各章计划之间排跨章的东西。不新增档位（设置页那张表不动）。
-- 输入（修上游 #10：上游只给**一章**蓝图、不给已有的线）：小说配置的规模与一句话、故事前提（「悬念骨架」就在这里）、情节大纲、**全部已排细纲**（一行一章：章号、标题、本章目的、章末钩子，关键事件截短）、已有的线（名字 + 区间，叫它别重复）。超出输入预算时从细纲一览的最后截，截了写日志。
-- 提示词移植上游 `narrative-thread-plan-candidate` 的系统提示（「只从章节蓝图提出可供作者确认的伏笔与叙事线索计划，不得声称正文事件已经发生……优先提出 3–8 条真正有用的候选；不足 3 条时不要凑数」），输出 `{"threads":[{"title","type","from","to","intent"}]}`。
-- 校验（修上游 #8：上游先截到 8 条再校验，前面几条坏了后面好的也丢）：先逐条校验再取前 8 条。名字 1–30 字、类型 1–12 字、意图 1–200 字；`1 ≤ from ≤ to`，配置里有总章数时 `to ≤ 总章数`；名字与已有的线、与同一批里前面的重名就跳过。一条都不合格 → 失败，挂红 ❗ 在「叙事线」那一行上（第 16 条）。
-- 剥代码围栏、宽松取 JSON（`features/parse.ts`），不做修复重试：1 次就是 1 次，坏了作者再点一次。
-- 完成提示「排出 5 条叙事线（同名跳过 1 条），已追加到 threads.md」，并打开文件。
+- ⚑ **是工程頁動作，不進主按鈕、不走寫入卡**。敘事線是可選的（第 20 條只推一個下一步，不能拿它擋路）；它只往檔案末尾**追加新線**、同名的跳過、已有的不改——這是第 19 條的批次路徑（只補空白、不問、不覆蓋），確認框寫明「預計 1 次呼叫」。入口：工程頁「文風與摘要」組的「敘事線」一行（行內按鈕 + 右鍵）、agent 的 `run generateThreads`（同一個確認框）。
+- ⚑ 走「劇情細綱」檔（`plotOutline`）：排線和拆細綱是同一種活——在大綱與各章計劃之間排跨章的東西。不新增檔位（設定頁那張表不動）。
+- 輸入（修上游 #10：上游只給**一章**藍圖、不給已有的線）：小說配置的規模與一句話、故事前提（「懸念骨架」就在這裡）、情節大綱、**全部已排細綱**（一行一章：章號、標題、本章目的、章末鉤子，關鍵事件截短）、已有的線（名字 + 區間，叫它別重複）。超出輸入預算時從細綱一覽的最後截，截了寫日誌。
+- 提示詞移植上游 `narrative-thread-plan-candidate` 的系統提示（「只從章節藍圖提出可供作者確認的伏筆與敘事線索計劃，不得聲稱正文事件已經發生……優先提出 3–8 條真正有用的候選；不足 3 條時不要湊數」），輸出 `{"threads":[{"title","type","from","to","intent"}]}`。
+- 校驗（修上游 #8：上游先截到 8 條再校驗，前面幾條壞了後面好的也丟）：先逐條校驗再取前 8 條。名字 1–30 字、型別 1–12 字、意圖 1–200 字；`1 ≤ from ≤ to`，配置裡有總章數時 `to ≤ 總章數`；名字與已有的線、與同一批裡前面的重名就跳過。一條都不合格 → 失敗，掛紅 ❗ 在「敘事線」那一行上（第 16 條）。
+- 剝程式碼圍欄、寬鬆取 JSON（`features/parse.ts`），不做修復重試：1 次就是 1 次，壞了作者再點一次。
+- 完成提示「排出 5 條敘事線（同名跳過 1 條），已追加到 threads.md」，並開啟檔案。
 
-### 3. 定稿第三步：本章推进了哪几条线（`features/threads.ts` 的 `recordThreadEvents`）
+### 3. 定稿第三步：本章推進了哪幾條線（`features/threads.ts` 的 `recordThreadEvents`）
 
 ```
 定稿第 N 章
   1. 摘要（1 次）
-  2. 角色状态（0–1 次）
-  3. 叙事线（0–1 次）：还没收的线 → 判本章推进了哪几条 → 证据逐字校验 → 追加事件
+  2. 角色狀態（0–1 次）
+  3. 敘事線（0–1 次）：還沒收的線 → 判本章推進了哪幾條 → 證據逐字校驗 → 追加事件
 ```
 
-- ⚑ **定稿时自动做、直接写**（上游要作者在编辑器里一条线一条线手动点「AI 识别定稿事件」再逐条确认）。理由与 D15 角色状态同一个：批量「写完即定稿」时没人看，而事件只是**追加**一行带原文的记录，不吞任何东西；证据逐字校验就是那道闸。这一条写进第 19 条的例外清单。
-- 一次调用判所有还没收的线（上游一次只判一条）。送哪几条：状态不是已回收 / 已放弃的线，按 §4 的顺序排，最多 12 条（多出的写日志）。一条都没有（没有 `threads.md`、或者都收了）→ 不调，这一步 0 次。
-- 提示词移植上游 `narrative-thread-event-candidate`（「你是小说定稿事实审查员……证据必须是正文中逐字出现、最多 240 字的短摘录……最多 5 项」），改成多条线、中文类型：输出 `{"events":[{"thread","type","evidence","reason"}]}`。
-- 校验（修上游 #11：上游只去空白，一个「。」也算逐字出现）：`thread` 认得出（同名归一）；`type` 是四种之一；证据按审稿那套归一化（NFKC、去空白与标点）后在本章正文里找得到，且归一后至少 4 个字（`MIN_QUOTE_CHARS`）；证据 ≤240 字、理由 ≤100 字（超了截）；最多 5 条。同一条线、同一章、证据归一后相同的事件已经有了就不重复记（重新定稿同一章时）。
-- 找不到证据、认不出线的事件**丢弃**（与连续性事实同一个理由：没有原文撑着的多半是编的），丢了几条写进日志和定稿的完成提示。
-- 失败（调用失败、解析不出来）：摘要、角色状态照样算数，黄 ❗ 挂在章节上（`op: 'threads'`，与角色状态那一步同一个做法）。
-- ⚑ 用哪个模型：单章入口用对话页选定的那个（与摘要同）；批量「写完即定稿」走「单章摘要」档（`plotSummary`）——它和摘要一样是「读一章、按合同摘出东西」，不新增档位。
-- `FINALIZE_CALLS` 改成 `{ low: 1, high: 3, max: 3 }`，说明「摘要 1 次；本章出场的人有角色卡时更新角色状态 1 次；有还没收的叙事线时判一次本章推进了哪几条」。主按钮、工作台、右键、批量确认框都用它，批量写章「写完即定稿」的上限跟着从 10n 变成 11n。
-- 任务条三步：摘要 → 角色状态 → 叙事线（`total: 3`）。
+- ⚑ **定稿時自動做、直接寫**（上游要作者在編輯器裡一條線一條線手動點「AI 識別定稿事件」再逐條確認）。理由與 D15 角色狀態同一個：批次「寫完即定稿」時沒人看，而事件只是**追加**一行帶原文的記錄，不吞任何東西；證據逐字校驗就是那道閘。這一條寫進第 19 條的例外清單。
+- 一次呼叫判所有還沒收的線（上游一次只判一條）。送哪幾條：狀態不是已回收 / 已放棄的線，按 §4 的順序排，最多 12 條（多出的寫日誌）。一條都沒有（沒有 `threads.md`、或者都收了）→ 不調，這一步 0 次。
+- 提示詞移植上游 `narrative-thread-event-candidate`（「你是小說定稿事實審查員……證據必須是正文中逐字出現、最多 240 字的短摘錄……最多 5 項」），改成多條線、中文型別：輸出 `{"events":[{"thread","type","evidence","reason"}]}`。
+- 校驗（修上游 #11：上游只去空白，一個「。」也算逐字出現）：`thread` 認得出（同名歸一）；`type` 是四種之一；證據按審稿那套歸一化（NFKC、去空白與標點）後在本章正文裡找得到，且歸一後至少 4 個字（`MIN_QUOTE_CHARS`）；證據 ≤240 字、理由 ≤100 字（超了截）；最多 5 條。同一條線、同一章、證據歸一後相同的事件已經有了就不重複記（重新定稿同一章時）。
+- 找不到證據、認不出線的事件**丟棄**（與連續性事實同一個理由：沒有原文撐著的多半是編的），丟了幾條寫進日誌和定稿的完成提示。
+- 失敗（呼叫失敗、解析不出來）：摘要、角色狀態照樣算數，黃 ❗ 掛在章節上（`op: 'threads'`，與角色狀態那一步同一個做法）。
+- ⚑ 用哪個模型：單章入口用對話頁選定的那個（與摘要同）；批次「寫完即定稿」走「單章摘要」檔（`plotSummary`）——它和摘要一樣是「讀一章、按合同摘出東西」，不新增檔位。
+- `FINALIZE_CALLS` 改成 `{ low: 1, high: 3, max: 3 }`，說明「摘要 1 次；本章出場的人有角色卡時更新角色狀態 1 次；有還沒收的敘事線時判一次本章推進了哪幾條」。主按鈕、工作臺、右鍵、批次確認框都用它，批次寫章「寫完即定稿」的上限跟著從 10n 變成 11n。
+- 任務條三步：摘要 → 角色狀態 → 敘事線（`total: 3`）。
 
-### 4. 写正文时带哪几条线（`threads` 层）
+### 4. 寫正文時帶哪幾條線（`threads` 層）
 
-⚑ **挑线**（修上游 #2、#4、#6：上游按创建顺序取前 6 条，一条超长的线会让后面全部丢掉，第 1 章不带）：
+⚑ **挑線**（修上游 #2、#4、#6：上游按建立順序取前 6 條，一條超長的線會讓後面全部丟掉，第 1 章不帶）：
 
-- 候选：还没收的线里，满足任一条的——本章细纲（标题、目的、关键事件、章末钩子）提到了它的名字；本章在它的计划区间里；本章已经过了它的回收章；它已经埋下了（有事件）；本章出场的人（细纲 `characters[]`，≥2 字）出现在它的名字或意图里。**计划中、还没到埋下那一章、细纲也没提到的线不带**——带进去等于提示模型提前埋。
-- 排序：细纲提到的 → 本章在区间里的（回收章近的在前）→ 已过回收章的 → 其余已埋下的（最近一次推进近的在前）→ 只是人物对上的。同档按文件里的顺序。
-- 最多 6 条、一共 1200 字（上游 `ACTIVE_THREAD_LIMIT` / `ACTIVE_THREAD_CHAR_LIMIT`）。每行的意图截到 60 字、证据截到 40 字，一条线不可能一个人吃掉 1200 字；放不下的那条**跳过、接着试下一条**（上游是 `break`），丢的条目 `dropped` 并写原因（第 2 条）。
-- 第 1 章也带：计划在第 1 章埋下的线，写第 1 章的人得知道。
-- **状态按「写到这一章时」算**（`asOf`）：重写、重新定稿第 N 章时只看第 N 章之前的事件——后面几章记下的推进、回收在第 N 章看来还没发生，带进去就是把后面的剧情透给前面（与 `evidence` 层只取前面各章同一个道理）。定稿第三步送哪几条线去判也按这个算。
-- 一行长这样：`- 玉佩的来历（伏笔 · 已埋下 · 第 2 章埋、第 8 章前收；第 8 章之前不要揭开）意图：……；最近：第 3 章「他摸了摸怀里……」`。没到回收章的线写「第 b 章之前不要揭开」，本章就是回收章写「计划在本章前后回收，以本章细纲为准」，过了写「已过计划回收的第 b 章」。状态用中文，不像上游那样把英文枚举塞进中文提示词（上游 #7）。
-- 小节标题：`# 进行中的叙事线（只作提醒：以本章细纲为准，细纲没写到的线不要硬塞；没到回收章的线不许提前揭开）`，排在「定稿原文片段」后面、「前文正文」前面。
-- 配方：正文层 P1，排在 `outlineSlice` 后面（它和大纲那一节一样是「计划」，很短）。续写、审稿、修稿不带（续写只带「接着写」真正要看的；审稿判的是正文与细纲）。
-- 条目：一条线一个条目，`id` 为 `thread:<序号>`，`label`「叙事线 · 玉佩的来历」，`note` 写状态、区间与为什么带它（「细纲提到」「本章在计划区间内」……）。没有 `threads.md`、或者没有一条候选 → 这一层什么都不出（没有东西被截断）。
+- 候選：還沒收的線裡，滿足任一條的——本章細綱（標題、目的、關鍵事件、章末鉤子）提到了它的名字；本章在它的計劃區間裡；本章已經過了它的回收章；它已經埋下了（有事件）；本章出場的人（細綱 `characters[]`，≥2 字）出現在它的名字或意圖裡。**計劃中、還沒到埋下那一章、細綱也沒提到的線不帶**——帶進去等於提示模型提前埋。
+- 排序：細綱提到的 → 本章在區間裡的（回收章近的在前）→ 已過回收章的 → 其餘已埋下的（最近一次推進近的在前）→ 只是人物對上的。同檔按檔案裡的順序。
+- 最多 6 條、一共 1200 字（上游 `ACTIVE_THREAD_LIMIT` / `ACTIVE_THREAD_CHAR_LIMIT`）。每行的意圖截到 60 字、證據截到 40 字，一條線不可能一個人吃掉 1200 字；放不下的那條**跳過、接著試下一條**（上游是 `break`），丟的條目 `dropped` 並寫原因（第 2 條）。
+- 第 1 章也帶：計劃在第 1 章埋下的線，寫第 1 章的人得知道。
+- **狀態按「寫到這一章時」算**（`asOf`）：重寫、重新定稿第 N 章時只看第 N 章之前的事件——後面幾章記下的推進、回收在第 N 章看來還沒發生，帶進去就是把後面的劇情透給前面（與 `evidence` 層只取前面各章同一個道理）。定稿第三步送哪幾條線去判也按這個算。
+- 一行長這樣：`- 玉佩的來歷（伏筆 · 已埋下 · 第 2 章埋、第 8 章前收；第 8 章之前不要揭開）意圖：……；最近：第 3 章「他摸了摸懷裡……」`。沒到回收章的線寫「第 b 章之前不要揭開」，本章就是回收章寫「計劃在本章前後回收，以本章細綱為準」，過了寫「已過計劃回收的第 b 章」。狀態用中文，不像上游那樣把英文列舉塞進中文提示詞（上游 #7）。
+- 小節標題：`# 進行中的敘事線（只作提醒：以本章細綱為準，細綱沒寫到的線不要硬塞；沒到回收章的線不許提前揭開）`，排在「定稿原文片段」後面、「前文正文」前面。
+- 配方：正文層 P1，排在 `outlineSlice` 後面（它和大綱那一節一樣是「計劃」，很短）。續寫、審稿、修稿不帶（續寫只帶「接著寫」真正要看的；審稿判的是正文與細綱）。
+- 條目：一條線一個條目，`id` 為 `thread:<序號>`，`label`「敘事線 · 玉佩的來歷」，`note` 寫狀態、區間與為什麼帶它（「細綱提到」「本章在計劃區間內」……）。沒有 `threads.md`、或者沒有一條候選 → 這一層什麼都不出（沒有東西被截斷）。
 
-### 5. 工程页「叙事线」一行（W2 的延伸）
+### 5. 工程頁「敘事線」一行（W2 的延伸）
 
-- 放在「文风与摘要」组（与全书摘要、文风指南同类：一份可选的固定文件），不进「故事架构」组——那组的 x/5 是主链的五件，叙事线不挡路。
-- 说明：没有文件或一条线都没有时「未生成」，有了写「5 条 · 3 条进行中 · 1 条已回收」，已过回收章还没收的另加「· 1 条已过回收章」（以「下一可写章 − 1」为当前章）。
-- 行内按钮：没有线时「从细纲排出」，有了「从细纲补充」，都发 `projectAction('generateThreads')`（后端弹确认框）；还没有细纲时不给按钮，说明写「拆出细纲之后可以从细纲排出」。右键：打开、从细纲排出 / 补充叙事线。失败的 ❗ 挂在这一行上。
-- `ProjectTree` 加 `threadsPath` 与 `threads: { total, open, closed, overdue }`；`threads.md` 每次刷新只读一次（`projectTreeReads` 钉着）。
+- 放在「文風與摘要」組（與全書摘要、文風指南同類：一份可選的固定檔案），不進「故事架構」組——那組的 x/5 是主鏈的五件，敘事線不擋路。
+- 說明：沒有檔案或一條線都沒有時「未生成」，有了寫「5 條 · 3 條進行中 · 1 條已回收」，已過回收章還沒收的另加「· 1 條已過回收章」（以「下一可寫章 − 1」為當前章）。
+- 行內按鈕：沒有線時「從細綱排出」，有了「從細綱補充」，都發 `projectAction('generateThreads')`（後端彈確認框）；還沒有細綱時不給按鈕，說明寫「拆出細綱之後可以從細綱排出」。右鍵：開啟、從細綱排出 / 補充敘事線。失敗的 ❗ 掛在這一行上。
+- `ProjectTree` 加 `threadsPath` 與 `threads: { total, open, closed, overdue }`；`threads.md` 每次重新整理只讀一次（`projectTreeReads` 釘著）。
 
-### 6. 周边
+### 6. 周邊
 
-- `workspace/kind.ts`：新种类 `threads`（固定单文件，排在目录判定之前，无 stage / target），`docHandler`；`Workspace.writeThreads(text)`。
+- `workspace/kind.ts`：新種類 `threads`（固定單檔案，排在目錄判定之前，無 stage / target），`docHandler`；`Workspace.writeThreads(text)`。
 - `runtime/errorLog.ts`：`FailureTargetKind` 加 `threads`。
-- agent 工具：`run` 加 `generateThreads`；`list` 的固定位置加 `.novelforge/threads.md`；`search` 的 `KINDS` 加 `threads`；`naming.ts` 的审阅框说「叙事线」。
-- `model/tiers.ts` 的 `TASK_HINT`：`plotOutline` 与 `plotSummary` 两行补一句「排叙事线」「定稿时判叙事线」。
+- agent 工具：`run` 加 `generateThreads`；`list` 的固定位置加 `.novelforge/threads.md`；`search` 的 `KINDS` 加 `threads`；`naming.ts` 的審閱框說「敘事線」。
+- `model/tiers.ts` 的 `TASK_HINT`：`plotOutline` 與 `plotSummary` 兩行補一句「排敘事線」「定稿時判敘事線」。
 
 ### 7. 本期不做
 
-- 上游的「沉寂提醒阈值」与沉寂 N 章的徽章：工程页只报「已过回收章」几条。
-- 编辑、删除单条事件的界面：就是 Markdown，作者直接改。
-- 剧情树（上游 ADR-0014）、配置变更的影响预览。
-- 拆完细纲自动排线：要调模型，不能不问（第 4 条）。
-- 审稿时对照叙事线：五期审稿判的是正文与细纲，不扩。
-- sample-novel 不加 `threads.md`（夹具的 hash 断言与文件计数不动）。
+- 上游的「沉寂提醒閾值」與沉寂 N 章的徽章：工程頁只報「已過回收章」幾條。
+- 編輯、刪除單條事件的介面：就是 Markdown，作者直接改。
+- 劇情樹（上游 ADR-0014）、配置變更的影響預覽。
+- 拆完細綱自動排線：要調模型，不能不問（第 4 條）。
+- 審稿時對照敘事線：五期審稿判的是正文與細綱，不擴。
+- sample-novel 不加 `threads.md`（夾具的 hash 斷言與檔案計數不動）。
 
 ---
 
-## 提交节奏（8 个 commit）
+## 提交節奏（8 個 commit）
 
-| # | 前缀 | 主题 |
+| # | 字首 | 主題 |
 |---|---|---|
-| 1 | `docs` | 本计划 |
-| 2 | `feat(model)` | 叙事线文件：解析、外科式追加、状态推导、挑线、事件校验（纯函数 + 单测） |
-| 3 | `feat(features)` | 从细纲排叙事线：工程页动作与 agent 的 `run generateThreads` |
-| 4 | `feat(features)` | 定稿第三步：判本章推进了哪几条叙事线，证据逐字校验后追加事件 |
-| 5 | `feat(context)` | `threads` 层：写正文时带最多 6 条有关的线，放不下的写进明细 |
-| 6 | `feat(media)` | 工程页「叙事线」一行 |
-| 7 | `test` | 七期验收——排线、连写 3 章并定稿，第 3 章的装配里有线与第 2 章的事件 |
-| 8 | `docs` | README、AGENTS.md 与本期动到的模块 README |
+| 1 | `docs` | 本計劃 |
+| 2 | `feat(model)` | 敘事線檔案：解析、外科式追加、狀態推導、挑線、事件校驗（純函式 + 單測） |
+| 3 | `feat(features)` | 從細綱排敘事線：工程頁動作與 agent 的 `run generateThreads` |
+| 4 | `feat(features)` | 定稿第三步：判本章推進了哪幾條敘事線，證據逐字校驗後追加事件 |
+| 5 | `feat(context)` | `threads` 層：寫正文時帶最多 6 條有關的線，放不下的寫進明細 |
+| 6 | `feat(media)` | 工程頁「敘事線」一行 |
+| 7 | `test` | 七期驗收——排線、連寫 3 章並定稿，第 3 章的裝配裡有線與第 2 章的事件 |
+| 8 | `docs` | README、AGENTS.md 與本期動到的模組 README |
 
 ---
 
-### Task 2：纯函数（commit 2）
+### Task 2：純函式（commit 2）
 
 - Create `src/core/model/threadsFile.ts`：`Thread`、`ThreadEvent`、`ThreadStatus`、`THREAD_EVENT_TYPES`、`THREADS_TEMPLATE`、`parseThreads`、`threadStatus`、`isClosed`、`appendThreads`、`appendEvents`、`renderThreadBlock`、`pickActiveThreads`、`renderThreadLine`、常量（`ACTIVE_THREAD_LIMIT = 6`、`ACTIVE_THREAD_CHARS = 1200`、`THREAD_PLAN_LIMIT = 8`、`THREAD_EVENT_LIMIT = 5`）。
-- `model/project.ts`：`threadsPath`、`readThreads()`（没有文件返回空）。
-- `model/pipeline.ts`：`FINALIZE_CALLS` 按 §3（本 Task 只改常量与说明，测试跟着改）。
-- 测试 `tests/unit/model/threadsFile.test.js`：几种手写格式都认、认不出的行不崩；状态取最大章号、同章取后写的；追加线保留原文（CRLF、BOM、作者自加的行）；追加事件插对位置、没有 `- 事件：` 时补；挑线的候选条件、排序、6 条与 1200 字、放不下跳过接着试；一行的截短。
+- `model/project.ts`：`threadsPath`、`readThreads()`（沒有檔案返回空）。
+- `model/pipeline.ts`：`FINALIZE_CALLS` 按 §3（本 Task 只改常量與說明，測試跟著改）。
+- 測試 `tests/unit/model/threadsFile.test.js`：幾種手寫格式都認、認不出的行不崩；狀態取最大章號、同章取後寫的；追加線保留原文（CRLF、BOM、作者自加的行）；追加事件插對位置、沒有 `- 事件：` 時補；挑線的候選條件、排序、6 條與 1200 字、放不下跳過接著試；一行的截短。
 
-### Task 3：排叙事线（commit 3）
+### Task 3：排敘事線（commit 3）
 
 - `workspace/kind.ts`、`handlers/index.ts`、`workspace/index.ts`（`writeThreads`）；`runtime/errorLog.ts`。
-- Create `src/core/features/threadsPrompt.ts`（两段系统提示，注明出处）与 `src/core/features/threads.ts` 的 `generateThreads(project)`、`parseThreadPlans`。
-- `protocol/in.ts` 的 `ProjectAction` 加 `generateThreads`；`controller/project.ts` 分派；`tools/novel/run.ts` 加动作；`list.ts` / `search.ts` / `naming.ts` 的说明。
-- 测试（集成）`tests/integration/features/threads.test.js`：确认框写着 1 次与档位；追加到文件末尾、同名跳过、已有的不动；先校验后取 8 条；区间越界的丢；一条都不合格挂红 ❗ 且不写文件；没有细纲时不调模型。`runTool.test.js`：`generateThreads` 转发并记账。
+- Create `src/core/features/threadsPrompt.ts`（兩段系統提示，註明出處）與 `src/core/features/threads.ts` 的 `generateThreads(project)`、`parseThreadPlans`。
+- `protocol/in.ts` 的 `ProjectAction` 加 `generateThreads`；`controller/project.ts` 分派；`tools/novel/run.ts` 加動作；`list.ts` / `search.ts` / `naming.ts` 的說明。
+- 測試（整合）`tests/integration/features/threads.test.js`：確認框寫著 1 次與檔位；追加到檔案末尾、同名跳過、已有的不動；先校驗後取 8 條；區間越界的丟；一條都不合格掛紅 ❗ 且不寫檔案；沒有細綱時不調模型。`runTool.test.js`：`generateThreads` 轉發並記賬。
 
 ### Task 4：定稿第三步（commit 4）
 
 - `features/threads.ts` 的 `recordThreadEvents(project, chapter, { run, budget, signal })`、`parseThreadEvents`。
-- `features/finalize.ts`：第三步、`FinalizeOptions.threads`（runner）、`onStep('threads')`、`FinalizeOutcome.threads` / `threadsError`、`describeFinalize` 说事件与丢弃；`finalizeChapterTask` 三步进度。
-- `features/pipelineBatch.ts`：写完即定稿时第三步走 `plotSummary` 档的池。
-- 测试（集成）：有线时 3 次调用、事件追加到对的线下、证据找不到 / 太短 / 线认不出的丢弃并写进提示；没有线或都收了时不调；重新定稿不重复记；这一步失败挂黄 ❗、摘要与角色状态照样在；`finalize.test.js`、`writeBatch.test.js`、`serialBatch.test.js`、`pipeline.test.js` 里跟着变的次数。
+- `features/finalize.ts`：第三步、`FinalizeOptions.threads`（runner）、`onStep('threads')`、`FinalizeOutcome.threads` / `threadsError`、`describeFinalize` 說事件與丟棄；`finalizeChapterTask` 三步進度。
+- `features/pipelineBatch.ts`：寫完即定稿時第三步走 `plotSummary` 檔的池。
+- 測試（整合）：有線時 3 次呼叫、事件追加到對的線下、證據找不到 / 太短 / 線認不出的丟棄並寫進提示；沒有線或都收了時不調；重新定稿不重複記；這一步失敗掛黃 ❗、摘要與角色狀態照樣在；`finalize.test.js`、`writeBatch.test.js`、`serialBatch.test.js`、`pipeline.test.js` 裡跟著變的次數。
 
-### Task 5：`threads` 层（commit 5）
+### Task 5：`threads` 層（commit 5）
 
-- `context/types.ts`：层 `threads`、条目种类 `thread`。`context/layers/` 新函数、`layers/index.ts` 注册、`focus.ts` 若要读细纲原文、`recipes.ts` 正文配方 P1、`builder.ts` 的小节。
-- 测试 `tests/integration/context/threads.test.js`：候选与排序进了消息、顺序对；6 条与 1200 字的丢弃说明；计划中且没到区间的不带；收了的不带；没有文件时这一层为空；续写、审稿、修稿不带。
+- `context/types.ts`：層 `threads`、條目種類 `thread`。`context/layers/` 新函式、`layers/index.ts` 註冊、`focus.ts` 若要讀細綱原文、`recipes.ts` 正文配方 P1、`builder.ts` 的小節。
+- 測試 `tests/integration/context/threads.test.js`：候選與排序進了訊息、順序對；6 條與 1200 字的丟棄說明；計劃中且沒到區間的不帶；收了的不帶；沒有檔案時這一層為空；續寫、審稿、修稿不帶。
 
-### Task 6：工程页（commit 6）
+### Task 6：工程頁（commit 6）
 
 - `views/projectView.ts`、`protocol/views.ts`；`media/src/view/project/groups.ts` 的 `buildMetaRows`。
-- DOM 测试 `tests/dom/view/projectTree.test.js`：三种说明、两种按钮文字都发 `projectAction generateThreads`、没有细纲时不给按钮、右键菜单；`projectTreeReads.test.js`：`threads.md` 只读一次。
+- DOM 測試 `tests/dom/view/projectTree.test.js`：三種說明、兩種按鈕文字都發 `projectAction generateThreads`、沒有細綱時不給按鈕、右鍵選單；`projectTreeReads.test.js`：`threads.md` 只讀一次。
 
-### Task 7：验收用例（commit 7）
+### Task 7：驗收用例（commit 7）
 
-`tests/integration/features/threadsFlow.test.js`：从排好前 5 章细纲的工程起，工程页「排叙事线」→ 「批量写章」第 1–3 章、写完即定稿，假模型按脚本应答。断言：
+`tests/integration/features/threadsFlow.test.js`：從排好前 5 章細綱的工程起，工程頁「排敘事線」→ 「批次寫章」第 1–3 章、寫完即定稿，假模型按指令碼應答。斷言：
 
-- `threads.md` 里有排出的线，第 1、2 章定稿各给对的线追加了带证据的事件，一条伪造证据的事件被丢弃；
-- **第 3 章写正文那一次的装配里**有「# 进行中的叙事线」，带着第 2 章那条事件的证据，计划中、没到区间的那条不在里面；
-- 作者手改过的一行（意图）在三次定稿之后原样还在；
-- 总调用次数 ≤ 确认框报的上限。
+- `threads.md` 裡有排出的線，第 1、2 章定稿各給對的線追加了帶證據的事件，一條偽造證據的事件被丟棄；
+- **第 3 章寫正文那一次的裝配裡**有「# 進行中的敘事線」，帶著第 2 章那條事件的證據，計劃中、沒到區間的那條不在裡面；
+- 作者手改過的一行（意圖）在三次定稿之後原樣還在；
+- 總呼叫次數 ≤ 確認框報的上限。
 
-### Task 8：文档（commit 8）
+### Task 8：文件（commit 8）
 
-- 根 README：目录结构、工程页「文风与摘要」组、定稿那几段（三步与次数）、上下文装配表（P1 加叙事线）、模型分档表的说明。
-- AGENTS.md：开头的链路补「`threads.md`（叙事线，可选）」；第 4 条不动（没写死次数）；第 19 条例外清单加「定稿时把本章推进了哪几条叙事线追加进 `threads.md`（只追加、证据逐字校验）」。
-- 模块 README：model、context（七期那张层表）、features、workspace（种类表）、tools、views、media、tests。
+- 根 README：目錄結構、工程頁「文風與摘要」組、定稿那幾段（三步與次數）、上下文裝配表（P1 加敘事線）、模型分檔表的說明。
+- AGENTS.md：開頭的鏈路補「`threads.md`（敘事線，可選）」；第 4 條不動（沒寫死次數）；第 19 條例外清單加「定稿時把本章推進了哪幾條敘事線追加進 `threads.md`（只追加、證據逐字校驗）」。
+- 模組 README：model、context（七期那張層表）、features、workspace（種類表）、tools、views、media、tests。
 
 ---
 
-## 验收
+## 驗收
 
-- `npm run typecheck`、`npm run test:node`、`npm run test:e2e` 全绿。
-- Task 7 通过。
-- 独立版打开一个排好细纲的工程：「文风与摘要」组有「叙事线 · 未生成」和「从细纲排出」；点了弹确认框写着 1 次调用。
+- `npm run typecheck`、`npm run test:node`、`npm run test:e2e` 全綠。
+- Task 7 通過。
+- 獨立版開啟一個排好細綱的工程：「文風與摘要」組有「敘事線 · 未生成」和「從細綱排出」；點了彈確認框寫著 1 次呼叫。
 
-## 给接手 agent 的提示词
+## 給接手 agent 的提示詞
 
-> 你在 `~/workspace/novelForge` 的 `refactor/blueprint-pipeline` 分支上做「七期：叙事线」。先读 `docs/design/plans/2026-10-01-blueprint-pipeline-phase7.md` 全文、根目录 AGENTS.md、总计划的 §1 #22 与 §2.3、四期计划的 §1、§3、§4。上游源码在 `~/workspace/AI-Novel-Writer`，移植的提示词在注释里注明出处。按 Task 2→8 顺序做，每个 Task 一个 commit（中文正文，结尾带 Co-Authored-By 行），不要推送。每个 commit 前跑 `npm run typecheck`；Task 4、Task 7 结束时跑 `npm run test:node`，Task 8 再跑 `npm run test:e2e`（Bun 在 `~/.bun/bin`）。这一期不调真实模型。遇到计划里没写到、又会改变产品行为的决定，停下来问。
+> 你在 `~/workspace/novelForge` 的 `refactor/blueprint-pipeline` 分支上做「七期：敘事線」。先讀 `docs/design/plans/2026-10-01-blueprint-pipeline-phase7.md` 全文、根目錄 AGENTS.md、總計劃的 §1 #22 與 §2.3、四期計劃的 §1、§3、§4。上游原始碼在 `~/workspace/AI-Novel-Writer`，移植的提示詞在註釋裡註明出處。按 Task 2→8 順序做，每個 Task 一個 commit（中文正文，結尾帶 Co-Authored-By 行），不要推送。每個 commit 前跑 `npm run typecheck`；Task 4、Task 7 結束時跑 `npm run test:node`，Task 8 再跑 `npm run test:e2e`（Bun 在 `~/.bun/bin`）。這一期不調真實模型。遇到計劃裡沒寫到、又會改變產品行為的決定，停下來問。

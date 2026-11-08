@@ -1,14 +1,14 @@
 /**
- * 切换分段格式（`setParagraphStyle`，内置编辑器「编辑 → 段落格式」）的后端一半。
+ * 切換分段格式（`setParagraphStyle`，內建編輯器「編輯 → 段落格式」）的後端一半。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 只改 `config.md` frontmatter 的这一个键，别的字节一个不动 | 作者手排的配置不该因为点了一下菜单就被整份重渲染（第 3 条） |
- * | 正文一个字节不动 | 切格式只是换个设置；要把已写的正文排成新格式，是作者自己点「一键排版」 |
- * | 写完 `pushState`：`state` 与工程树都带新值 | 编辑器的回车、菜单上的勾跟着它走（前端无状态） |
- * | 没有 `config.md` 时新建一份最小的，「小说配置」仍算没填、主按钮与架构那一行的 ●/○ 都不变 | 第 20 条：只推一个下一步，不能因为多了一个文件就跳过「生成小说配置」 |
- * | 之后重写配置（生成链落盘）把它带过去 | 绝不静默丢掉作者的设置 |
- * | 认不出的值、还不是小说工程：不写 | 第 1 条；写一份 config.md 也不会让它变成工程 |
+ * | 只改 `config.md` frontmatter 的這一個鍵，別的位元組一個不動 | 作者手排的配置不該因為點了一下選單就被整份重渲染（第 3 條） |
+ * | 正文一個位元組不動 | 切格式只是換個設定；要把已寫的正文排成新格式，是作者自己點「一鍵排版」 |
+ * | 寫完 `pushState`：`state` 與工程樹都帶新值 | 編輯器的回車、選單上的勾跟著它走（前端無狀態） |
+ * | 沒有 `config.md` 時新建一份最小的，「小說配置」仍算沒填、主按鈕與架構那一行的 ●/○ 都不變 | 第 20 條：只推一個下一步，不能因為多了一個檔案就跳過「生成小說配置」 |
+ * | 之後重寫配置（生成鏈落盤）把它帶過去 | 絕不靜默丟掉作者的設定 |
+ * | 認不出的值、還不是小說工程：不寫 | 第 1 條；寫一份 config.md 也不會讓它變成工程 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -23,7 +23,7 @@ const { cleanup } = require('../../helpers/teardown');
 
 const CONFIG = '.novelwarden/config.md';
 const CHAPTER = 'chapters/001-雨夜.md';
-const CHAPTER_TEXT = '# 雨夜\n\n他推开门。\n她笑了。\n';
+const CHAPTER_TEXT = '# 雨夜\n\n他推開門。\n她笑了。\n';
 
 let bundle;
 let fakeHost;
@@ -38,7 +38,7 @@ async function setStyle(style) {
   await controller.handle({ type: 'setParagraphStyle', style });
 }
 
-/** 工程页的架构那一行（小说配置）与全书下一步，外加对话页主按钮在全书那一档给的。 */
+/** 工程頁的架構那一行（小說配置）與全書下一步，外加對話頁主按鈕在全書那一檔給的。 */
 async function bookView() {
   t.project.invalidate();
   const tree = await bundle.projectView.buildProjectTree(t.project);
@@ -64,7 +64,7 @@ before(async () => {
   const settings = makeSettings({ contextWindow: 100000 });
   fakeHost = makeFakeHost({ name: 'standalone', settings: () => settings });
   bundle.host.initHost(fakeHost.host);
-  t = await makeTempProject(bundle.project, { prefix: 'paragraph-style', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'paragraph-style', title: '青雲劍錄' });
   t.write(CHAPTER, CHAPTER_TEXT);
   controller = new bundle.controller.ChatController(t.project);
   controller.attach({ kind: 'sidebar', post: (m) => posted.push(m), reveal() {} });
@@ -75,51 +75,51 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('setParagraphStyle：只改 config.md 的这一个键', () => {
+describe('setParagraphStyle：只改 config.md 的這一個鍵', () => {
   let before;
 
-  test('新工程的配置模板：只多出 paragraphStyle 这一行，别的字节一个不动', async () => {
+  test('新工程的配置模板：只多出 paragraphStyle 這一行，別的位元組一個不動', async () => {
     before = t.read(CONFIG);
     await setStyle('indent');
     const after = t.read(CONFIG);
     assert.equal(after.replace(/^paragraphStyle: indent\r?\n/m, ''), before);
-    assert.match(after, /^---\r?\n[\s\S]*^paragraphStyle: indent\r?\n---/m, 'frontmatter 里多了这一行');
+    assert.match(after, /^---\r?\n[\s\S]*^paragraphStyle: indent\r?\n---/m, 'frontmatter 裡多了這一行');
   });
 
-  test('正文一个字节不动', () => {
+  test('正文一個位元組不動', () => {
     assert.equal(t.read(CHAPTER), CHAPTER_TEXT);
   });
 
-  test('写完推 state，带着新值', () => {
+  test('寫完推 state，帶著新值', () => {
     assert.equal(lastOf('state')?.state.paragraphStyle, 'indent');
   });
 
-  test('工程树也带着新值', async () => {
+  test('工程樹也帶著新值', async () => {
     posted = [];
     await controller.handle({ type: 'switchTab', tab: 'project' });
     assert.equal(lastOf('project')?.tree.paragraphStyle, 'indent');
   });
 
-  test('再切一次：只换值', async () => {
+  test('再切一次：只換值', async () => {
     await setStyle('both');
     assert.equal(t.read(CONFIG), before.replace(/^(---\r?\n[\s\S]*?)(---)/m, '$1paragraphStyle: both\n$2'));
-    assert.equal(lastOf('project')?.tree.paragraphStyle, 'both', '在工程页签上时工程树跟着推');
+    assert.equal(lastOf('project')?.tree.paragraphStyle, 'both', '在工程頁簽上時工程樹跟著推');
   });
 
-  test('已经是这个值：不写', async () => {
+  test('已經是這個值：不寫', async () => {
     const stat = fs.statSync(t.rel(CONFIG)).mtimeMs;
     await new Promise((r) => setTimeout(r, 20));
     await setStyle('both');
     assert.equal(fs.statSync(t.rel(CONFIG)).mtimeMs, stat);
   });
 
-  test('认不出的值：忽略，不写', async () => {
+  test('認不出的值：忽略，不寫', async () => {
     const text = t.read(CONFIG);
     await setStyle('tab');
     assert.equal(t.read(CONFIG), text);
   });
 
-  test('之后重写配置（生成链的落盘）把它带过去', async () => {
+  test('之後重寫配置（生成鏈的落盤）把它帶過去', async () => {
     const ws = new bundle.workspace.Workspace(t.project);
     await ws.write(
       CONFIG,
@@ -132,7 +132,7 @@ describe('setParagraphStyle：只改 config.md 的这一个键', () => {
   });
 });
 
-describe('setParagraphStyle：没有 config.md 时', () => {
+describe('setParagraphStyle：沒有 config.md 時', () => {
   let beforeView;
 
   before(async () => {
@@ -141,30 +141,30 @@ describe('setParagraphStyle：没有 config.md 时', () => {
     await setStyle('indent');
   });
 
-  test('新建一份最小的：只有这一段 frontmatter', () => {
+  test('新建一份最小的：只有這一段 frontmatter', () => {
     assert.equal(t.read(CONFIG), '---\nparagraphStyle: indent\n---\n');
   });
 
-  test('「小说配置」仍算没填（工程页架构那一行的 ●/○ 不变）', async () => {
+  test('「小說配置」仍算沒填（工程頁架構那一行的 ●/○ 不變）', async () => {
     const view = await bookView();
     assert.equal(beforeView.configFilled, false);
     assert.equal(view.configFilled, false);
   });
 
-  test('主按钮不变：工程页与对话页都还是同一步', async () => {
+  test('主按鈕不變：工程頁與對話頁都還是同一步', async () => {
     const view = await bookView();
     assert.equal(view.next, beforeView.next);
     assert.equal(view.chat, beforeView.chat);
-    assert.ok(view.next, '全书那一档有下一步');
-    assert.notEqual(view.next, '生成故事前提', '没有把配置当成填过而跳到下一件');
+    assert.ok(view.next, '全書那一檔有下一步');
+    assert.notEqual(view.next, '生成故事前提', '沒有把配置當成填過而跳到下一件');
   });
 
-  test('工程树带着新值', async () => {
+  test('工程樹帶著新值', async () => {
     assert.equal((await bookView()).paragraphStyle, 'indent');
   });
 });
 
-describe('setParagraphStyle：还不是小说工程', () => {
+describe('setParagraphStyle：還不是小說工程', () => {
   let dir;
   let bare;
 
@@ -182,8 +182,8 @@ describe('setParagraphStyle：还不是小说工程', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  test('不写任何文件，说一句为什么', () => {
+  test('不寫任何檔案，說一句為什麼', () => {
     assert.equal(fs.existsSync(path.join(dir, '.novelwarden')), false);
-    assert.ok(fakeHost.toasts.some((m) => /还不是小说工程/.test(m)), fakeHost.toasts.join('\n'));
+    assert.ok(fakeHost.toasts.some((m) => /還不是小說工程/.test(m)), fakeHost.toasts.join('\n'));
   });
 });

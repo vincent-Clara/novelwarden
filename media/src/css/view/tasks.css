@@ -1,6 +1,6 @@
-/* 长任务进度条。 */
+/* 長任務進度條。 */
 
-/* 页头的进度块（W8）：在标签栏 / 侧栏顶上，所有页签都看得见。没有任务时整块 hidden，页面回到原样。 */
+/* 頁頭的進度塊（W8）：在標籤欄 / 側欄頂上，所有頁籤都看得見。沒有任務時整塊 hidden，頁面回到原樣。 */
 .tasks {
   display: flex;
   flex-direction: column;
@@ -54,7 +54,7 @@
   transition: width 200ms ease;
 }
 
-/* 不知道总量时来回扫，表明还活着。 */
+/* 不知道總量時來回掃，表明還活著。 */
 .task-bar.indeterminate .task-fill {
   position: absolute;
   transition: none;
@@ -74,7 +74,7 @@
   white-space: nowrap;
 }
 
-/* 「写完这一章就停」点过之后换成一句说明：不再能点第二下。 */
+/* 「寫完這一章就停」點過之後換成一句說明：不再能點第二下。 */
 .task-stopping {
   font-style: italic;
 }

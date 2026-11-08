@@ -1,12 +1,12 @@
 /**
- * 工程页上从前调模型不先问的三处，现在都先弹确认框（2026-10-23 作者要的）：报次数、为这一次挑模型。
+ * 工程頁上從前調模型不先問的三處，現在都先彈確認框（2026-10-23 作者要的）：報次數、為這一次挑模型。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 重建全文大纲：章章都定稿过也先问，报批数与次数；取消零调用、全文大纲不动 | 第 4 条：不偷偷烧 token。从前只有有没定稿的章时才问（⚑9） |
- * | 提取文风：第一次（style.md 还是模板）也先问，按钮是「开始提取」；已有内容时是「覆盖」 | 从前只有覆盖时才问 |
- * | 提取角色卡：挑完章先问；取消零调用 | 从前挑完章就调 |
- * | 换了模型，这一次只用它 | 确认框的规矩（docs/design/plans/2026-10-20-call-choice.md） |
+ * | 重建全文大綱：章章都定稿過也先問，報批數與次數；取消零呼叫、全文大綱不動 | 第 4 條：不偷偷燒 token。從前只有有沒定稿的章時才問（⚑9） |
+ * | 提取文風：第一次（style.md 還是模板）也先問，按鈕是「開始提取」；已有內容時是「覆蓋」 | 從前只有覆蓋時才問 |
+ * | 提取角色卡：挑完章先問；取消零呼叫 | 從前挑完章就調 |
+ * | 換了模型，這一次只用它 | 確認框的規矩（docs/design/plans/2026-10-20-call-choice.md） |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,17 +27,17 @@ const CH = (no) => `chapters/00${no}-第${no}章.md`;
 const GLOBAL = '.novelwarden/summaries/global.md';
 const STYLE = '.novelwarden/style.md';
 
-/** 文风那一次要提示词规定的小节齐全才算完整（照着系统提示词里的 `## ` 回）；别的一律给一段话。 */
+/** 文風那一次要提示詞規定的小節齊全才算完整（照著系統提示詞裡的 `## ` 回）；別的一律給一段話。 */
 function reply(messages) {
   const system = messages[0]?.content ?? '';
-  if (system.includes('文风')) {
+  if (system.includes('文風')) {
     const heads = system.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('## '));
-    return heads.map((head) => `${head}\n\n${head.slice(3)}的说明。`).join('\n\n');
+    return heads.map((head) => `${head}\n\n${head.slice(3)}的說明。`).join('\n\n');
   }
   if (system.includes('角色')) {
-    return JSON.stringify([{ name: '林昭', 身份: '孤儿' }]);
+    return JSON.stringify([{ name: '林昭', 身份: '孤兒' }]);
   }
-  return '林昭从青崖镇一路查到天机阁。';
+  return '林昭從青崖鎮一路查到天機閣。';
 }
 
 const refsUsed = () => [...new Set(fake.calls.map((m) => m.ref))];
@@ -63,13 +63,13 @@ before(async () => {
   });
   bundle.host.initHost(h.host);
   fake = installFakeProvider(bundle.registry, { reply });
-  t = await makeTempProject(bundle.project, { prefix: 'project-confirms', title: '确认框测试' });
+  t = await makeTempProject(bundle.project, { prefix: 'project-confirms', title: '確認框測試' });
   project = t.project;
   for (let no = 1; no <= N; no++) {
-    t.write(CH(no), `# 第${no}章\n\n林昭在第${no}章走进青崖镇，沈氏在柜台后看着他。\n`);
+    t.write(CH(no), `# 第${no}章\n\n林昭在第${no}章走進青崖鎮，沈氏在櫃檯後看著他。\n`);
   }
   project.invalidate();
-  // 四章都定稿过：细纲记下的 sourceHash 对得上正文。
+  // 四章都定稿過：細綱記下的 sourceHash 對得上正文。
   for (const ch of await project.listChapters()) {
     t.write(
       `.novelwarden/summaries/00${ch.order}-第${ch.order}章.md`,
@@ -83,10 +83,10 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-describe('重建全文大纲：章章都定稿过也先问', () => {
+describe('重建全文大綱：章章都定稿過也先問', () => {
   let global;
 
-  test('取消：不调模型，全文大纲一个字不动', async () => {
+  test('取消：不調模型，全文大綱一個字不動', async () => {
     global = t.has(GLOBAL) ? t.read(GLOBAL) : undefined;
     h.expect();
     fake.reset();
@@ -95,14 +95,14 @@ describe('重建全文大纲：章章都定稿过也先问', () => {
     assert.equal(t.has(GLOBAL) ? t.read(GLOBAL) : undefined, global);
   });
 
-  test('确认框报批数与次数：4 章分 2 批、再合并一次，共 3 次；不带详细度下拉框', () => {
+  test('確認框報批數與次數：4 章分 2 批、再合併一次，共 3 次；不帶詳細度下拉框', () => {
     const [c] = h.confirms;
     assert.deepEqual(c.actions, ['重建']);
-    assert.ok(c.message.includes('4 章同步过的细纲分 2 批归纳，再合并成一份') && c.message.includes('预计 3 次调用'), c.message);
+    assert.ok(c.message.includes('4 章同步過的細綱分 2 批歸納，再合併成一份') && c.message.includes('預計 3 次呼叫'), c.message);
     assert.equal(c.call.contextDetail, undefined, JSON.stringify(c.call));
   });
 
-  test('换一个模型点「重建」：3 次都用它，写出全文大纲', async () => {
+  test('換一個模型點「重建」：3 次都用它，寫出全文大綱', async () => {
     h.expect({ action: '重建', choice: { model: 'fake/strong' } });
     fake.reset();
     await bundle.summarize.rebuildGlobalSummary(project);
@@ -112,8 +112,8 @@ describe('重建全文大纲：章章都定稿过也先问', () => {
   });
 });
 
-describe('提取文风：第一次也先问', () => {
-  test('挑完样章、在确认框上取消：不调模型，style.md 不写', async () => {
+describe('提取文風：第一次也先問', () => {
+  test('挑完樣章、在確認框上取消：不調模型，style.md 不寫', async () => {
     const before = t.has(STYLE) ? t.read(STYLE) : undefined;
     h.expect('1,2');
     fake.reset();
@@ -122,45 +122,45 @@ describe('提取文风：第一次也先问', () => {
     assert.equal(t.has(STYLE) ? t.read(STYLE) : undefined, before);
   });
 
-  test('确认框说读哪几章、报次数；按钮是「开始提取」，没有覆盖的话', () => {
+  test('確認框說讀哪幾章、報次數；按鈕是「開始提取」，沒有覆蓋的話', () => {
     const [c] = h.confirms;
-    assert.deepEqual(c.actions, ['开始提取']);
-    assert.ok(c.message.includes('读第 1、2 章正文') && c.message.includes('预计 1 次调用，最多 3 次'), c.message);
+    assert.deepEqual(c.actions, ['開始提取']);
+    assert.ok(c.message.includes('讀第 1、2 章正文') && c.message.includes('預計 1 次呼叫，最多 3 次'), c.message);
     assert.equal(c.detail, undefined);
   });
 
-  test('点「开始提取」：写进 style.md', async () => {
-    h.expect('1,2', '开始提取');
+  test('點「開始提取」：寫進 style.md', async () => {
+    h.expect('1,2', '開始提取');
     fake.reset();
     await bundle.style.extractStyle(project);
     assert.equal(fake.callCount(), 1);
-    assert.match(t.read(STYLE), /叙事视角的说明/);
+    assert.match(t.read(STYLE), /敘事視角的說明/);
   });
 
-  test('已有内容再提取：按钮是「覆盖」，说清会盖掉', async () => {
+  test('已有內容再提取：按鈕是「覆蓋」，說清會蓋掉', async () => {
     h.expect('1', undefined);
     fake.reset();
     await bundle.style.extractStyle(project);
     const [c] = h.confirms;
-    assert.deepEqual(c.actions, ['覆盖']);
-    assert.match(c.detail, /会覆盖当前内容/);
+    assert.deepEqual(c.actions, ['覆蓋']);
+    assert.match(c.detail, /會覆蓋當前內容/);
     assert.equal(fake.callCount(), 0);
   });
 });
 
-describe('提取角色卡：挑完章先问', () => {
-  test('在确认框上取消：不调模型', async () => {
+describe('提取角色卡：挑完章先問', () => {
+  test('在確認框上取消：不調模型', async () => {
     h.expect('3,4');
     fake.reset();
     await bundle.characters.extractCharacters(project);
     assert.equal(fake.callCount(), 0);
     const [c] = h.confirms;
-    assert.deepEqual(c.actions, ['开始提取']);
-    assert.ok(c.message.includes('读第 3、4 章正文'), c.message);
+    assert.deepEqual(c.actions, ['開始提取']);
+    assert.ok(c.message.includes('讀第 3、4 章正文'), c.message);
   });
 
-  test('换一个模型点「开始提取」：只用它', async () => {
-    h.expect('3,4', { action: '开始提取', choice: { model: 'fake/strong' } });
+  test('換一個模型點「開始提取」：只用它', async () => {
+    h.expect('3,4', { action: '開始提取', choice: { model: 'fake/strong' } });
     fake.reset();
     await bundle.characters.extractCharacters(project);
     assert.equal(fake.callCount(), 1);

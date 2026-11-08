@@ -1,10 +1,10 @@
 /**
- * 调模型之前的那一问（第 4 条的确认框）：按钮之外，让作者为**这一次**挑模型与上下文详细度
+ * 調模型之前的那一問（第 4 條的確認框）：按鈕之外，讓作者為**這一次**挑模型與上下文詳細度
  * （docs/design/plans/2026-10-20-call-choice.md）。
  *
- * 每个调模型之前的确认框都经这里问，于是两个下拉框的选项、缺省与「按分档时每项活交给谁」只拼一处。
- * 问完的活由调用方跑在 `withCallChoice(answer.choice, …)` 里（runtime/callScope.ts）——**确认框之前读的
- * `config` 不能带进去**，作者的选择在那之后才有。
+ * 每個調模型之前的確認框都經這裡問，於是兩個下拉框的選項、預設與「按分檔時每項活交給誰」只拼一處。
+ * 問完的活由呼叫方跑在 `withCallChoice(answer.choice, …)` 裡（runtime/callScope.ts）——**確認框之前讀的
+ * `config` 不能帶進去**，作者的選擇在那之後才有。
  */
 import { readConfig } from '../config';
 import { getHost } from '../host';
@@ -13,20 +13,20 @@ import { listModelChoices } from '../model/providers';
 import { describeTaskModels, LlmTask } from '../model/tiers';
 import { scoped } from '../runtime/logger';
 
-const log = scoped('确认框');
+const log = scoped('確認框');
 
 export interface CallAsk {
   message: string;
   actions: string[];
-  /** 补充说明：调几次、跳过哪些、会改什么。这活交给哪个模型不必写——下拉框下面列着。 */
+  /** 補充說明：調幾次、跳過哪些、會改什麼。這活交給哪個模型不必寫——下拉框下面列著。 */
   detail?: string;
-  /** 这一次会用到的任务：「按分档」下面逐项列它们各交给谁。 */
+  /** 這一次會用到的任務：「按分檔」下面逐項列它們各交給誰。 */
   tasks: LlmTask[];
-  /** 这一次的上下文看不看详细度。不看就不给作者那个下拉框——调了也白调。 */
+  /** 這一次的上下文看不看詳細度。不看就不給作者那個下拉框——調了也白調。 */
   contextDetail: boolean;
   /**
-   * 打开时的缺省。缺席取当前这一次（嵌套的那一问跟着外面那一次），再缺席取设置。
-   * 工程页表单已经问过、后端还要再问一次时（批量写章补建角色卡）传表单上的选择。
+   * 開啟時的預設。缺席取當前這一次（巢狀的那一問跟著外面那一次），再缺席取設定。
+   * 工程頁表單已經問過、後端還要再問一次時（批次寫章補建角色卡）傳表單上的選擇。
    */
   preset?: CallChoice;
 }
@@ -34,11 +34,11 @@ export interface CallAsk {
 export async function askCall(ask: CallAsk): Promise<CallAnswer | undefined> {
   const host = getHost();
   const config = readConfig();
-  // 「按分档」那几行说的是不钉模型时谁干活：外面那一次钉了模型也照分档说。
+  // 「按分檔」那幾行說的是不釘模型時誰幹活：外面那一次釘了模型也照分檔說。
   const tiered = { ...config, pinnedModel: undefined };
-  // 转写不跟这一次挑的模型走（model/tiers.ts），单列一行、一直显示。
+  // 轉寫不跟這一次挑的模型走（model/tiers.ts），單列一行、一直顯示。
   const tasks = [...new Set(ask.tasks)];
-  const fixed = tasks.filter((task) => task === 'transcribe').map((task) => `${describeTaskModels(tiered, task)}（不跟这一次挑的模型）`);
+  const fixed = tasks.filter((task) => task === 'transcribe').map((task) => `${describeTaskModels(tiered, task)}（不跟這一次挑的模型）`);
   const answer = await host.confirmCall(ask.message, ask.actions, {
     detail: ask.detail,
     call: {

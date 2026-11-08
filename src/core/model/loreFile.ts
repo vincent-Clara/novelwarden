@@ -1,32 +1,33 @@
+import { traditionalLabel } from './labels';
 /**
- * 设定的格式定义：细纲「设定」一节的一行一条、条目的一句话简介与分类、怎么认「同一个东西」。
+ * 設定的格式定義：細綱「設定」一節的一行一條、條目的一句話簡介與分類、怎麼認「同一個東西」。
  *
- * **纯函数、零 I/O**，与 plotFile.ts / threadFile.ts 同类；条目的读写在 model/project.ts，
- * 名录（谁出现在哪几章、哪些还没建条目）在 views/lore.ts。
+ * **純函式、零 I/O**，與 plotFile.ts / threadFile.ts 同類；條目的讀寫在 model/project.ts，
+ * 名錄（誰出現在哪幾章、哪些還沒建條目）在 views/lore.ts。
  *
- * ## 两处存储，各管一件事
+ * ## 兩處儲存，各管一件事
  *
- * - **每章出现了哪些设定** → 那一章细纲的「设定」一节（`Plot.lore`）。写之前是计划（这一章打算用到、
- *   要引入哪些），定稿后是实际（正文里真出现的，以及这一章新确立的定义或规则）。名录只认定稿过的，
- *   和出场人物同一个道理（第 14 条）。会变的状态（谁拿走了、毁了没）不在这里记——照旧进连续性事实，
- *   名录按条目的名字去那里认，不保留两份。
- * - **每个东西是什么** → `lore/<分类>/<名>.md`，一条一份，作者可以手改。
+ * - **每章出現了哪些設定** → 那一章細綱的「設定」一節（`Plot.lore`）。寫之前是計劃（這一章打算用到、
+ *   要引入哪些），定稿後是實際（正文裡真出現的，以及這一章新確立的定義或規則）。名錄只認定稿過的，
+ *   和出場人物同一個道理（第 14 條）。會變的狀態（誰拿走了、毀了沒）不在這裡記——照舊進連續性事實，
+ *   名錄按條目的名字去那裡認，不保留兩份。
+ * - **每個東西是什麼** → `lore/<分類>/<名>.md`，一條一份，作者可以手改。
  *
- * ## 分类就是目录
+ * ## 分類就是目錄
  *
- * 条目所在目录相对 `lore/` 的路径就是它的分类，可以多层（`宗门/正道/青云宗.md` 的分类是
- * `宗门/正道`），根目录下的是「未分类」。**没有固定的分类表**：每本书自己的目录树就是它的分类表
- * （作者定案：每本书的分类不一样）。不另设字段，作者把文件拖到别的目录就是改分类，不会出现
- * 「字段说 A、目录说 B」两份真相。「设定」一节里的 `〔分类〕` 只是给还没建条目的名字定去向用的建议。
+ * 條目所在目錄相對 `lore/` 的路徑就是它的分類，可以多層（`宗门/正道/青云宗.md` 的分類是
+ * `宗門/正道`），根目錄下的是「未分類」。**沒有固定的分類表**：每本書自己的目錄樹就是它的分類表
+ * （作者定案：每本書的分類不一樣）。不另設欄位，作者把檔案拖到別的目錄就是改分類，不會出現
+ * 「欄位說 A、目錄說 B」兩份真相。「設定」一節裡的 `〔分類〕` 只是給還沒建條目的名字定去向用的建議。
  */
 import { attachEvidence } from './continuity';
 import { hasContent } from './markdown';
 import type { LoreEntry } from './types';
 
-/** 「设定」一节的小节名。 */
+/** 「設定」一節的小節名。 */
 export const PLOT_LORE_KEY = '设定';
 
-/** 「设定」一节一行的长度上限（字）与最多几行。提示词、解码与解析共用这一份。 */
+/** 「設定」一節一行的長度上限（字）與最多幾行。提示詞、解碼與解析共用這一份。 */
 export const LORE_LINE_LIMITS = {
   lines: 12,
   name: 32,
@@ -35,9 +36,9 @@ export const LORE_LINE_LIMITS = {
 } as const;
 
 /**
- * 条目的字数上限（新增第 27 条：设定条目不能无限膨胀）。正文三节只是机器写入时的格式，
- * 作者写成什么样都照读；整合、建条目的提示词按这几个数做减法。`body` 指明面三节合计，
- * 「暗设」另算（完善设定，2026-10-19）。
+ * 條目的字數上限（新增第 27 條：設定條目不能無限膨脹）。正文三節只是機器寫入時的格式，
+ * 作者寫成什麼樣都照讀；整合、建條目的提示詞按這幾個數做減法。`body` 指明面三節合計，
+ * 「暗設」另算（完善設定，2026-10-19）。
  */
 export const LORE_ENTRY_LIMITS = {
   brief: 40,
@@ -48,13 +49,13 @@ export const LORE_ENTRY_LIMITS = {
   暗设: 200,
 } as const;
 
-/** 机器写条目正文时用的三节（明面）。 */
+/** 機器寫條目正文時用的三節（明面）。 */
 export const LORE_BODY_KEYS = ['概要', '规则与边界', '现状'] as const;
 
 /**
- * 展开一条设定（完善设定，2026-10-19）交回来的那几样的上限：关键词几个、建议拆出几条子条目、附几条还没定的
- * 问题、一条问题多长。提示词（context/loreExpandPrompt.ts）与解码（features/loreExpand.ts）共用。条目本身的
- * 字数照 {@link LORE_ENTRY_LIMITS}（第 27 条）。
+ * 展開一條設定（完善設定，2026-10-19）交回來的那幾樣的上限：關鍵詞幾個、建議拆出幾條子條目、附幾條還沒定的
+ * 問題、一條問題多長。提示詞（context/loreExpandPrompt.ts）與解碼（features/loreExpand.ts）共用。條目本身的
+ * 字數照 {@link LORE_ENTRY_LIMITS}（第 27 條）。
  */
 export const LORE_EXPAND_LIMITS = {
   keywords: 8,
@@ -64,39 +65,39 @@ export const LORE_EXPAND_LIMITS = {
 } as const;
 
 /**
- * 落定设定（完善设定二期）一次最多写几条。讨论里定下的东西再多，一次也只落这么多——多出来的丢掉、写进说明，
- * 下一轮接着落。关键词与问题的上限同 {@link LORE_EXPAND_LIMITS}，条目字数同 {@link LORE_ENTRY_LIMITS}（第 27 条）。
+ * 落定設定（完善設定二期）一次最多寫幾條。討論裡定下的東西再多，一次也只落這麼多——多出來的丟掉、寫進說明，
+ * 下一輪接著落。關鍵詞與問題的上限同 {@link LORE_EXPAND_LIMITS}，條目字數同 {@link LORE_ENTRY_LIMITS}（第 27 條）。
  */
 export const LORE_SETTLE_LIMITS = {
   entries: 12,
 } as const;
 
 /**
- * 可选的第四节：读者还不知道的真相（完善设定，2026-10-19）。规划时（设定 / 大纲 / 细纲）带，
- * 写正文时不带——揭开靠那一章的细纲。以它开头的二级标题都认（`## 暗设`、`## 暗设（未揭示）`）。
+ * 可選的第四節：讀者還不知道的真相（完善設定，2026-10-19）。規劃時（設定 / 大綱 / 細綱）帶，
+ * 寫正文時不帶——揭開靠那一章的細綱。以它開頭的二級標題都認（`## 暗設`、`## 暗設（未揭示）`）。
  */
 export const LORE_HIDDEN_KEY = '暗设';
 
 /**
- * 规划时（设定 / 大纲 / 细纲）暗设进上下文用的标题（不带 `## `）：作者写的是 `## 暗设` 还是 `## 暗设（未揭示）`，
- * 一律换成这一个，让模型知道这一节是读者还不知道的事。装配（context/layers/render.ts 的 `loreBodyFor`）与
- * 细纲、大纲的提示词（context/prompts.ts）共用，提示词指的就是上下文里写着的那个标题。
+ * 規劃時（設定 / 大綱 / 細綱）暗設進上下文用的標題（不帶 `## `）：作者寫的是 `## 暗設` 還是 `## 暗設（未揭示）`，
+ * 一律換成這一個，讓模型知道這一節是讀者還不知道的事。裝配（context/layers/render.ts 的 `loreBodyFor`）與
+ * 細綱、大綱的提示詞（context/prompts.ts）共用，提示詞指的就是上下文裡寫著的那個標題。
  */
-export const LORE_HIDDEN_MARK = `${LORE_HIDDEN_KEY}（读者还不知道）`;
+export const LORE_HIDDEN_MARK = `${traditionalLabel(LORE_HIDDEN_KEY)}（讀者還不知道）`;
 
 /**
- * 工程页「新建设定」写进正文的那段占位的开头。认「还只有一句话」的条目（{@link loreThin}）
- * 要把它当空的，所以写的地方（features/characters.ts）与认的地方共用这一份。
+ * 工程頁「新建設定」寫進正文的那段佔位的開頭。認「還只有一句話」的條目（{@link loreThin}）
+ * 要把它當空的，所以寫的地方（features/characters.ts）與認的地方共用這一份。
  */
-export const LORE_PLACEHOLDER_PREFIX = '（在这里写这条设定';
+export const LORE_PLACEHOLDER_PREFIX = '（在這裡寫這條設定';
 
-const HIDDEN_HEADING = new RegExp(`^##(?!#)\\s*${LORE_HIDDEN_KEY}`, 'u');
+const HIDDEN_HEADING = new RegExp(`^##(?!#)\\s*(?:${LORE_HIDDEN_KEY}|${traditionalLabel(LORE_HIDDEN_KEY)})`, 'u');
 const ANY_HEADING = /^#{1,2}(?!#)\s*\S/u;
 
 /**
- * 把条目正文拆成明面与暗设。暗设 = 以「暗设」开头的二级标题，到下一个一、二级标题或文末为止；
- * 有几节都收（按出现顺序接起来）。`visible` 是去掉这些节之后的正文，`hidden` 是暗设的内容（不含标题）。
- * 作者写成别的标题就当明面（第 1 条：认不出照常读）。**绝不抛。**
+ * 把條目正文拆成明面與暗設。暗設 = 以「暗設」開頭的二級標題，到下一個一、二級標題或文末為止；
+ * 有幾節都收（按出現順序接起來）。`visible` 是去掉這些節之後的正文，`hidden` 是暗設的內容（不含標題）。
+ * 作者寫成別的標題就當明面（第 1 條：認不出照常讀）。**絕不拋。**
  */
 export function splitLoreHidden(body: string): { visible: string; hidden: string } {
   const visible: string[] = [];
@@ -116,15 +117,15 @@ export function splitLoreHidden(body: string): { visible: string; hidden: string
   return { visible: tidy(visible), hidden: tidy(hidden) };
 }
 
-/** 去掉首尾空行、把连着的空行并成一行。 */
+/** 去掉首尾空行、把連著的空行併成一行。 */
 function tidy(lines: string[]): string {
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
- * 条目是不是「还只有一句话」（待完善）。三种：明面正文是空的（`empty`，含只剩一句话 `brief` 的）、
- * 是「新建设定」留下的占位（`placeholder`）、三节都只写着「（未交代）」（`untold`，设定清单起步时
- * 没写到的节）。都不是返回 `undefined`。**不按字数猜**——作者写了两行就是作者认为够了。
+ * 條目是不是「還只有一句話」（待完善）。三種：明面正文是空的（`empty`，含只剩一句話 `brief` 的）、
+ * 是「新建設定」留下的佔位（`placeholder`）、三節都只寫著「（未交代）」（`untold`，設定清單起步時
+ * 沒寫到的節）。都不是返回 `undefined`。**不按字數猜**——作者寫了兩行就是作者認為夠了。
  */
 export type LoreThinKind = 'empty' | 'placeholder' | 'untold';
 
@@ -149,28 +150,28 @@ export function loreThin(entry: Pick<LoreEntry, 'body'>): LoreThinKind | undefin
 const UNTOLD = /^[（(]\s*未交代\s*[)）]$/u;
 
 /**
- * 架构 · 设定清单起步时一条正文三节合计最多几字：那是写之前排的，现状多半还没交代，写到了再从定稿里
- * 整合（整合时的上限是 {@link LORE_ENTRY_LIMITS}.body）。提示词与解码共用。
+ * 架構 · 設定清單起步時一條正文三節合計最多幾字：那是寫之前排的，現狀多半還沒交代，寫到了再從定稿裡
+ * 整合（整合時的上限是 {@link LORE_ENTRY_LIMITS}.body）。提示詞與解碼共用。
  */
 export const LORE_LIST_BODY_MAX = 300;
 
-/** 「设定」一节的一行：`- 名〔分类〕：本章确立的定义或规则`。 */
+/** 「設定」一節的一行：`- 名〔分類〕：本章確立的定義或規則`。 */
 export interface LoreLine {
   name: string;
-  /** 分类路径（`宗门/正道`），没写是空串。 */
+  /** 分類路徑（`宗門/正道`），沒寫是空串。 */
   category: string;
-  /** 冒号后面那句；只是出现、没有新东西时是空串。 */
+  /** 冒號後面那句；只是出現、沒有新東西時是空串。 */
   note: string;
 }
 
 const LIST_MARKER = /^\s*(?:[-*·•]|\d+[.、)．])\s*/u;
-const NOTHING = /^[（(]?\s*(?:无|暂无|没有|本章无)\s*[)）]?$/u;
+const NOTHING = /^[（(]?\s*(?:(?:无|無)|(?:暂|暫)(?:无|無)|(?:没|沒)有|本章(?:无|無))\s*[)）]?$/u;
 const BRACKETED = /^(.+?)\s*[〔【[]\s*([^〕】\]]*?)\s*[〕】\]]\s*(?:[：:]\s*(.*))?$/u;
 
 /**
- * 读回「设定」一节。**绝不抛**（第 1 条）：作者会手改，`〔〕` 写成 `【】` `[]`、没写分类、冒号全角半角
- * 都认；认不出分类的整行就是名字（有冒号就切出说明）。同一个名字（归一后）只留第一行。
- * 空行、占位文字与「（无）」跳过。
+ * 讀回「設定」一節。**絕不拋**（第 1 條）：作者會手改，`〔〕` 寫成 `【】` `[]`、沒寫分類、冒號全形半形
+ * 都認；認不出分類的整行就是名字（有冒號就切出說明）。同一個名字（歸一後）只留第一行。
+ * 空行、佔位文字與「（無）」跳過。
  */
 export function parseLoreLines(text: string): LoreLine[] {
   const out: LoreLine[] = [];
@@ -204,17 +205,17 @@ export function parseLoreLines(text: string): LoreLine[] {
   return out;
 }
 
-/** 渲染「设定」一节。一行也没有时写「（无）」——标题在，表示这一章记过、只是没有设定。 */
+/** 渲染「設定」一節。一行也沒有時寫「（無）」——標題在，表示這一章記過、只是沒有設定。 */
 export function renderLoreLines(lines: readonly LoreLine[]): string {
   if (lines.length === 0) {
-    return '（无）';
+    return '（無）';
   }
   return lines
     .map((l) => `- ${l.name}${l.category ? `〔${l.category}〕` : ''}${l.note ? `：${l.note}` : ''}`)
     .join('\n');
 }
 
-/** 一行按上限截短，分类规范成 `a/b`。 */
+/** 一行按上限截短，分類規範成 `a/b`。 */
 export function clipLine(line: LoreLine): LoreLine {
   return {
     name: oneLine(line.name).slice(0, LORE_LINE_LIMITS.name),
@@ -224,8 +225,8 @@ export function clipLine(line: LoreLine): LoreLine {
 }
 
 /**
- * 分类路径的规范写法：反斜杠、全角斜杠都当 `/`，每一段去掉首尾空白，空段丢掉。
- * 「未分类」与根目录是同一件事，写成空串。
+ * 分類路徑的規範寫法：反斜槓、全形斜槓都當 `/`，每一段去掉首尾空白，空段丟掉。
+ * 「未分類」與根目錄是同一件事，寫成空串。
  */
 export function normalizeLoreCategory(value: string): string {
   const parts = (value ?? '')
@@ -233,29 +234,29 @@ export function normalizeLoreCategory(value: string): string {
     .split('/')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (parts.length === 1 && parts[0] === '未分类') {
+  if (parts.length === 1 && parts[0] === '未分类' || value === '未分類') {
     return '';
   }
   return parts.join('/');
 }
 
-/** 条目的分类：slug（去掉扩展名的相对路径）的目录部分，根目录下是空串。 */
+/** 條目的分類：slug（去掉副檔名的相對路徑）的目錄部分，根目錄下是空串。 */
 export function loreCategoryOfSlug(slug: string): string {
   const at = slug.lastIndexOf('/');
   return at > 0 ? slug.slice(0, at) : '';
 }
 
 /**
- * 认「同一个东西」用的写法：小写，去掉空白、标点与符号。`青崖镇` 与 `「青崖镇」`、
- * `Qing Ya` 与 `qingya` 算同一个。
+ * 認「同一個東西」用的寫法：小寫，去掉空白、標點與符號。`青崖鎮` 與 `「青崖鎮」`、
+ * `Qing Ya` 與 `qingya` 算同一個。
  */
 export function normalizeLoreName(value: string): string {
   return (value ?? '').toLocaleLowerCase('zh-Hans-CN').replace(/[\s\p{P}\p{S}]/gu, '');
 }
 
 /**
- * 条目的一句话：frontmatter 的 `brief`，没写就取正文第一句（跳过小标题、列表记号与「暗设」那一节——
- * 一句话会进写正文的上下文），截到 {@link LORE_ENTRY_LIMITS}.brief 字。名录那一行与上下文里「一行带」都用它。
+ * 條目的一句話：frontmatter 的 `brief`，沒寫就取正文第一句（跳過小標題、列表記號與「暗設」那一節——
+ * 一句話會進寫正文的上下文），截到 {@link LORE_ENTRY_LIMITS}.brief 字。名錄那一行與上下文裡「一行帶」都用它。
  */
 export function loreBrief(entry: Pick<LoreEntry, 'brief' | 'body'>): string {
   const brief = oneLine(entry.brief ?? '');
@@ -273,14 +274,14 @@ export function loreBrief(entry: Pick<LoreEntry, 'brief' | 'body'>): string {
   return '';
 }
 
-/** 名字表：一个名字（归一后）→ 条目。 */
+/** 名字表：一個名字（歸一後）→ 條目。 */
 export interface LoreLookup {
   find(name: string): LoreEntry | undefined;
 }
 
 /**
- * 建「名字 → 条目」表。**两趟**：先登记全部条目的标题，再登记关键词，关键词抢不走别人的标题
- * （与 views/cast.ts 的角色卡一样）。同一个键先到先得。
+ * 建「名字 → 條目」表。**兩趟**：先登記全部條目的標題，再登記關鍵詞，關鍵詞搶不走別人的標題
+ * （與 views/cast.ts 的角色卡一樣）。同一個鍵先到先得。
  */
 export function createLoreLookup(entries: readonly LoreEntry[]): LoreLookup {
   const byKey = new Map<string, LoreEntry>();
@@ -302,9 +303,9 @@ export function createLoreLookup(entries: readonly LoreEntry[]): LoreLookup {
 }
 
 /**
- * 一段文字有没有提到这个条目：标题或任一关键词（至少两个字）作为子串出现，不分大小写。
- * 返回命中的那个词，没提到是 undefined。展开一条设定找用到它的句子、记设定时挑已有条目用它；连续性事实认条目、
- * 上下文关键词命中要看别的名字，用 {@link loreMentionsIn}。
+ * 一段文字有沒有提到這個條目：標題或任一關鍵詞（至少兩個字）作為子串出現，不分大小寫。
+ * 返回命中的那個詞，沒提到是 undefined。展開一條設定找用到它的句子、記設定時挑已有條目用它；連續性事實認條目、
+ * 上下文關鍵詞命中要看別的名字，用 {@link loreMentionsIn}。
  */
 export function loreMentionIn(text: string, entry: Pick<LoreEntry, 'title' | 'keywords'>): string | undefined {
   const haystack = (text ?? '').toLocaleLowerCase('zh-Hans-CN');
@@ -318,14 +319,14 @@ export function loreMentionIn(text: string, entry: Pick<LoreEntry, 'title' | 'ke
 }
 
 /**
- * 一段文字提到了哪几个条目，**最长匹配**（2026-10-25）：与 {@link loreMentionIn} 一样按标题或关键词（至少两个字）认，
- * 但一个词**每一处**都落在一个更长的别人的名字里时不算——「潜入圣地秘境」里的「秘境」不算提到「秘境」那一条，
- * 「这个秘境」「秘境的规矩」照算。别人的名字是别的条目的标题与关键词，再加 `names`（名录里记着、还没建条目的名字，
- * 本章细纲「设定」一节点的名字）。
+ * 一段文字提到了哪幾個條目，**最長匹配**（2026-10-25）：與 {@link loreMentionIn} 一樣按標題或關鍵詞（至少兩個字）認，
+ * 但一個詞**每一處**都落在一個更長的別人的名字裡時不算——「潛入聖地秘境」裡的「秘境」不算提到「秘境」那一條，
+ * 「這個秘境」「秘境的規矩」照算。別人的名字是別的條目的標題與關鍵詞，再加 `names`（名錄裡記著、還沒建條目的名字，
+ * 本章細綱「設定」一節點的名字）。
  *
- * 从前一律按子串认：写到后面，上位概念（「秘境」「魔法」）一提具体的东西就整条进上下文，挤掉具体那几条；整合时
- * 连续性事实只要带这两个字就挂到上位概念名下，各个具体秘境的规则一条条并进去。装配器的关键词命中、名录认连续性事实
- * 用它；返回条目 → 命中的那个词，按 `entries` 的顺序。
+ * 從前一律按子串認：寫到後面，上位概念（「秘境」「魔法」）一提具體的東西就整條進上下文，擠掉具體那幾條；整合時
+ * 連續性事實只要帶這兩個字就掛到上位概念名下，各個具體秘境的規則一條條並進去。裝配器的關鍵詞命中、名錄認連續性事實
+ * 用它；返回條目 → 命中的那個詞，按 `entries` 的順序。
  */
 export function loreMentionsIn<T extends Pick<LoreEntry, 'title' | 'keywords'>>(
   text: string,
@@ -337,7 +338,7 @@ export function loreMentionsIn<T extends Pick<LoreEntry, 'title' | 'keywords'>>(
   if (!haystack.trim()) {
     return out;
   }
-  /** 文字里每一处名字：从哪到哪、是哪一条的（名录里另记着的名字没有 `owner`）。 */
+  /** 文字裡每一處名字：從哪到哪、是哪一條的（名錄裡另記著的名字沒有 `owner`）。 */
   const spans: { start: number; end: number; owner?: T; word: string }[] = [];
   const find = (word: string, owner?: T): void => {
     const w = (word ?? '').trim();
@@ -372,13 +373,13 @@ export function loreMentionsIn<T extends Pick<LoreEntry, 'title' | 'keywords'>>(
 }
 
 /**
- * 机器写进条目的关键词过一遍（建条目、整合、设定清单）：**人名不要**（角色卡上的名字与别称——
- * 真跑时模型把「沈怀山」写成了「伪人」的关键词，写正文时一提到这个人就把「伪人」整条带进来），
- * **别的条目的标题不要**（「青羊镇」与「沈家老宅」互相写进对方的关键词，提到一个就命中两条），
- * **名录里另记着的名字不要**（`recorded`：定稿时单独记下、还没建条目的。「魔法体系」把「寒冰锁」收成
- * 关键词，往后各章记下的「寒冰锁」都被认成「魔法体系」，它永远建不出自己的条目——旧的整本重扫就是
- * 这样把几十个法术并进了一条），一个字的不要（子串命中会到处撞），与本条标题重复的去掉。
- * 作者手写的关键词不经过这里：作者认定两个名字是同一个东西，自己加。
+ * 機器寫進條目的關鍵詞過一遍（建條目、整合、設定清單）：**人名不要**（角色卡上的名字與別稱——
+ * 真跑時模型把「沈懷山」寫成了「偽人」的關鍵詞，寫正文時一提到這個人就把「偽人」整條帶進來），
+ * **別的條目的標題不要**（「青羊鎮」與「沈家老宅」互相寫進對方的關鍵詞，提到一個就命中兩條），
+ * **名錄裡另記著的名字不要**（`recorded`：定稿時單獨記下、還沒建條目的。「魔法體系」把「寒冰鎖」收成
+ * 關鍵詞，往後各章記下的「寒冰鎖」都被認成「魔法體系」，它永遠建不出自己的條目——舊的整本重掃就是
+ * 這樣把幾十個法術並進了一條），一個字的不要（子串命中會到處撞），與本條標題重複的去掉。
+ * 作者手寫的關鍵詞不經過這裡：作者認定兩個名字是同一個東西，自己加。
  */
 export function cleanLoreKeywords(
   title: string,
@@ -407,12 +408,12 @@ function oneLine(value: string): string {
   return (value ?? '').replace(/\s+/g, ' ').trim();
 }
 
-// ---------------------------------------------------------------- 模型给的「设定」
+// ---------------------------------------------------------------- 模型給的「設定」
 
 /**
- * 模型输出里的「设定」字段 → 一行一条。写法五花八门都收（第 1 条）：
- * `[{name, category, fact}]`（`title` / `note` / `说明` 也认）、`["名〔分类〕：说明"]`、整段多行字符串。
- * 定稿、单独记设定、排细纲（`settings`）三处共用。
+ * 模型輸出裡的「設定」欄位 → 一行一條。寫法五花八門都收（第 1 條）：
+ * `[{name, category, fact}]`（`title` / `note` / `说明` 也認）、`["名〔分類〕：說明"]`、整段多行字串。
+ * 定稿、單獨記設定、排細綱（`settings`）三處共用。
  */
 export function loreLinesFromJson(value: unknown): LoreLine[] {
   if (typeof value === 'string') {
@@ -446,20 +447,20 @@ export function loreLinesFromJson(value: unknown): LoreLine[] {
   return out;
 }
 
-/** 校验时丢掉或改动的一行，写进日志（第 2 条）。 */
+/** 校驗時丟掉或改動的一行，寫進日誌（第 2 條）。 */
 export interface LoreLineIssue {
   name: string;
   why: string;
 }
 
 /**
- * 定稿与单独记设定写进「设定」一节之前的校验，**不调模型**：
+ * 定稿與單獨記設定寫進「設定」一節之前的校驗，**不調模型**：
  *
- * - 名字（已有条目时它的标题或任一关键词）必须**逐字出现在正文里**，否则整行丢——「设定」一节是名录的
- *   唯一来源，模型编出来的名字会变成一条凭空的「未建条目」；
- * - 是角色卡上的人（名字或别名）就丢：人不是设定；
- * - 认得出已有条目的，名字换成条目的标题、分类换成条目所在的目录（已建条目以实际目录为准）；
- * - 说明要在正文里找得到依据（与连续性事实同一套 `attachEvidence`），找不到就清空说明、留下名字；
+ * - 名字（已有條目時它的標題或任一關鍵詞）必須**逐字出現在正文裡**，否則整行丟——「設定」一節是名錄的
+ *   唯一來源，模型編出來的名字會變成一條憑空的「未建條目」；
+ * - 是角色卡上的人（名字或別名）就丟：人不是設定；
+ * - 認得出已有條目的，名字換成條目的標題、分類換成條目所在的目錄（已建條目以實際目錄為準）；
+ * - 說明要在正文裡找得到依據（與連續性事實同一套 `attachEvidence`），找不到就清空說明、留下名字；
  * - 最多 {@link LORE_LINE_LIMITS}.lines 行。
  */
 export function verifyLoreLines(
@@ -486,7 +487,7 @@ export function verifyLoreLines(
     const entry = lookup.find(line.name);
     const words = entry ? [line.name, entry.title, ...entry.keywords] : [line.name];
     if (!words.some((w) => w.trim() && content.includes(w.trim()))) {
-      dropped.push({ name: line.name, why: '正文里没有这个名字' });
+      dropped.push({ name: line.name, why: '正文裡沒有這個名字' });
       continue;
     }
     const name = entry?.title ?? line.name;
@@ -496,11 +497,11 @@ export function verifyLoreLines(
     }
     let note = line.note;
     if (note && attachEvidence([note], content, words).facts.length === 0) {
-      cleared.push({ name, why: `说明在正文里找不到依据：${note}` });
+      cleared.push({ name, why: `說明在正文裡找不到依據：${note}` });
       note = '';
     }
     if (kept.length >= LORE_LINE_LIMITS.lines) {
-      dropped.push({ name, why: `超过 ${LORE_LINE_LIMITS.lines} 行` });
+      dropped.push({ name, why: `超過 ${LORE_LINE_LIMITS.lines} 行` });
       continue;
     }
     seen.add(dedupe);

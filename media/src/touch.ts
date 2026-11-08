@@ -1,13 +1,13 @@
 /**
- * 触屏的能力探测——**不看 UA、不问是哪个壳**（见 [../../src/shells/README.md](../../src/shells/README.md)），只看指针本身：
+ * 觸屏的能力探測——**不看 UA、不問是哪個殼**（見 [../../src/shells/README.md](../../src/shells/README.md)），只看指標本身：
  *
- * - {@link lastPointerWasTouch}：最近一次指针（按下 / 移进 / 移动）是不是手指。手指点一下之后 Chromium 会补发一串兼容的
- *   鼠标事件（`mouseover` → `mousemove` → `mousedown` → `mouseup` → `click`），悬停浮窗靠它分清「鼠标停在这儿」与「手指点了
- *   一下」——后者不该当成悬停去弹浮窗（弹出来也没有「移开」可收）。长按弹的 `contextmenu` 之前同样有一下手指的 `pointerdown`，
- *   右键菜单靠它认出「这是长按」，在最前面加几项「看一眼」（见 `view/menu.ts` 的 `onTouchPeek`）。
- * - 同一台机器可以既有鼠标又有触屏（触屏笔记本），所以按**这一次**的指针认，不按整台设备的 `(hover: none)` 认。
+ * - {@link lastPointerWasTouch}：最近一次指標（按下 / 移進 / 移動）是不是手指。手指點一下之後 Chromium 會補發一串相容的
+ *   滑鼠事件（`mouseover` → `mousemove` → `mousedown` → `mouseup` → `click`），懸停浮窗靠它分清「滑鼠停在這兒」與「手指點了
+ *   一下」——後者不該當成懸停去彈浮窗（彈出來也沒有「移開」可收）。長按彈的 `contextmenu` 之前同樣有一下手指的 `pointerdown`，
+ *   右鍵選單靠它認出「這是長按」，在最前面加幾項「看一眼」（見 `view/menu.ts` 的 `onTouchPeek`）。
+ * - 同一臺機器可以既有滑鼠又有觸屏（觸屏筆記本），所以按**這一次**的指標認，不按整臺裝置的 `(hover: none)` 認。
  *
- * 两个产物（view.js、editor.js）各打包一份、各装一次监听，互不相干：它只是一个记事的变量，不在产物之间传东西。
+ * 兩個產物（view.js、editor.js）各打包一份、各裝一次監聽，互不相干：它只是一個記事的變數，不在產物之間傳東西。
  */
 
 let lastType = '';
@@ -20,7 +20,7 @@ function note(e: Event): void {
   }
 }
 
-/** 装上记事的监听（捕获阶段，谁都拦不住）。重复调用无害。 */
+/** 裝上記事的監聽（捕獲階段，誰都攔不住）。重複呼叫無害。 */
 export function trackPointer(): void {
   if (installed) {
     return;
@@ -31,12 +31,12 @@ export function trackPointer(): void {
   }
 }
 
-/** 最近一次指针是手指。触控笔算不是（笔能悬停）。 */
+/** 最近一次指標是手指。觸控筆算不是（筆能懸停）。 */
 export function lastPointerWasTouch(): boolean {
   return lastType === 'touch';
 }
 
-/** 这个事件是手指发起的：事件自己带 `pointerType` 就看它（Chromium 的 `click` / `contextmenu` 是 PointerEvent），否则看最近一次指针。 */
+/** 這個事件是手指發起的：事件自己帶 `pointerType` 就看它（Chromium 的 `click` / `contextmenu` 是 PointerEvent），否則看最近一次指標。 */
 export function isTouchEvent(e: Event): boolean {
   const type = (e as PointerEvent).pointerType;
   if (typeof type === 'string' && type) {
@@ -46,18 +46,18 @@ export function isTouchEvent(e: Event): boolean {
 }
 
 /**
- * 切页、打开文件时**别替用户把焦点放进输入框**：手机上程序一聚焦输入框就顶起软键盘、盖住半屏，想看的东西反倒看不见
- * （Android 实机上一载入就弹——对话页签自动聚焦输入框；点一下编辑器页签也弹）。想打字的人自己会点进去。
- * 这一次是手指点的就算；页面刚载入、还没有指针的时候只能看整台设备的主指针能不能悬停（手机、平板不能）。
- * 只管「顺手放焦点」的那几处；作者明确要打字的（弹窗里的输入框、挑了命令之后的对话输入框、「预览」切回「编辑」）照旧聚焦。
+ * 切頁、開啟檔案時**別替使用者把焦點放進輸入框**：手機上程式一聚焦輸入框就頂起軟鍵盤、蓋住半屏，想看的東西反倒看不見
+ * （Android 實機上一載入就彈——對話頁籤自動聚焦輸入框；點一下編輯器頁籤也彈）。想打字的人自己會點進去。
+ * 這一次是手指點的就算；頁面剛載入、還沒有指標的時候只能看整臺裝置的主指標能不能懸停（手機、平板不能）。
+ * 只管「順手放焦點」的那幾處；作者明確要打字的（彈窗裡的輸入框、挑了命令之後的對話輸入框、「預覽」切回「編輯」）照舊聚焦。
  */
 export function avoidSoftKeyboard(): boolean {
   return lastPointerWasTouch() || touchDevice();
 }
 
 /**
- * 整台设备的主要指针不能悬停（手机、平板），与样式里的 `(hover: none)` 同一条。只在桌面上管用的入口（「退出」关不掉手机浏览器的
- * 标签页，「打开日志目录」开在服务端那台机器上）在这种设备上不列。
+ * 整臺裝置的主要指標不能懸停（手機、平板），與樣式裡的 `(hover: none)` 同一條。只在桌面上管用的入口（「退出」關不掉手機瀏覽器的
+ * 標籤頁，「開啟日誌目錄」開在服務端那臺機器上）在這種裝置上不列。
  */
 export function touchDevice(): boolean {
   return !!window.matchMedia?.('(hover: none)').matches;

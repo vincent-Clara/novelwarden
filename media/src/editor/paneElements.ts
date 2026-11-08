@@ -1,15 +1,15 @@
 /**
- * 一块编辑区的类型，以及它那些 DOM 节点的引用。
+ * 一塊編輯區的型別，以及它那些 DOM 節點的引用。
  *
- * 两块编辑区（正文 / 草稿）是同一个 `createPane` 工厂的两个实例：主区绑页面上
- * 固定 id 的节点，草稿区在首次用到时克隆同样的结构现造。把「哪些节点」这件事
- * 收在这里，pane.ts 就只关心行为。
+ * 兩塊編輯區（正文 / 草稿）是同一個 `createPane` 工廠的兩個例項：主區綁頁面上
+ * 固定 id 的節點，草稿區在首次用到時克隆同樣的結構現造。把「哪些節點」這件事
+ * 收在這裡，pane.ts 就只關心行為。
  */
 import { byId, el, spacer } from '../dom';
 import type { ArtifactKind, EditorFileLabel, EditorPane } from '../protocol';
 import type { EditHistory } from './history';
 
-/** 一块编辑区里所有需要操作的节点。 */
+/** 一塊編輯區裡所有需要操作的節點。 */
 export interface PaneRefs {
   root: HTMLElement;
   tabs: HTMLElement;
@@ -35,10 +35,10 @@ export interface PaneRefs {
 }
 
 /**
- * 编辑器里的一份文件。
+ * 編輯器裡的一份檔案。
  *
- * `text` 是磁盘基线，`draft` 是编辑器里的当前内容，两者不等即为脏；
- * `hash` 是保存时的乐观锁基线，磁盘上变了就报冲突而不是覆盖。
+ * `text` 是磁碟基線，`draft` 是編輯器裡的當前內容，兩者不等即為髒；
+ * `hash` 是儲存時的樂觀鎖基線，磁碟上變了就報衝突而不是覆蓋。
  */
 export interface OpenFile {
   path: string;
@@ -46,65 +46,65 @@ export interface OpenFile {
   text: string;
   hash: string;
   draft: string;
-  /** 这份文件是某章正文时，它草稿的路径（后端给，前端不自己判断什么算章节）。 */
+  /** 這份檔案是某章正文時，它草稿的路徑（後端給，前端不自己判斷什麼算章節）。 */
   draftPath?: string;
   /**
-   * 这份文件在工程里是什么（后端 `kindOfPath` 给的）。`chapter` / `draft` 是正文（`api.ts` 的
-   * `isProse`），其余是角色卡、细纲、设定等。后端没给（没打开工程、旧数据）时当非正文。
+   * 這份檔案在工程裡是什麼（後端 `kindOfPath` 給的）。`chapter` / `draft` 是正文（`api.ts` 的
+   * `isProse`），其餘是角色卡、細綱、設定等。後端沒給（沒開啟工程、舊資料）時當非正文。
    */
   kind?: ArtifactKind;
   /**
-   * 标签与工具栏上怎么称呼它（后端 `views/editorLabel.ts` 算的：类型短标记、去掉扩展名的名字、面包屑）。
-   * 没给（没打开工程）时标签写文件名、工具栏写原始路径。
+   * 標籤與工具欄上怎麼稱呼它（後端 `views/editorLabel.ts` 算的：型別短標記、去掉副檔名的名字、麵包屑）。
+   * 沒給（沒開啟工程）時標籤寫檔名、工具欄寫原始路徑。
    */
   label?: EditorFileLabel;
   /**
-   * 临时标签（单击打开的，名字斜体）：每块编辑区最多一个，下一次单击打开别的文件时它的位置被换掉。
-   * 编辑、保存、双击标签、在工程页 / 文件页双击那一行、「固定」，或被别的路子正常打开一次，就转正。
-   * **有未保存修改的标签永远不是临时的**（一改就转正），所以换掉它从来不会丢字。
+   * 臨時標籤（單擊開啟的，名字斜體）：每塊編輯區最多一個，下一次單擊開啟別的檔案時它的位置被換掉。
+   * 編輯、儲存、雙擊標籤、在工程頁 / 檔案頁雙擊那一行、「固定」，或被別的路子正常開啟一次，就轉正。
+   * **有未儲存修改的標籤永遠不是臨時的**（一改就轉正），所以換掉它從來不會丟字。
    */
   preview?: boolean;
   /**
-   * 这一份此刻在 Markdown 预览里（不是在编辑）。**每个标签各记各的**：切走再切回来照旧，搬到另一块、改名搬家、刷新恢复
-   * 都跟着（⚑ 刷新也记）。只对 `.md` / `.markdown` 有意义。别和上面的 `preview`（临时标签）混了。
+   * 這一份此刻在 Markdown 預覽裡（不是在編輯）。**每個標籤各記各的**：切走再切回來照舊，搬到另一塊、改名搬家、重新整理恢復
+   * 都跟著（⚑ 重新整理也記）。只對 `.md` / `.markdown` 有意義。別和上面的 `preview`（臨時標籤）混了。
    */
   markdownPreview?: boolean;
-  /** 在预览里时切走那一刻预览的滚动位置，切回来放回去。 */
+  /** 在預覽裡時切走那一刻預覽的滾動位置，切回來放回去。 */
   previewScrollTop?: number;
   caret: number;
   scrollTop: number;
   /**
-   * 这份文件自己的撤销历史（`history.ts`）。切标签不丢，关标签随文件一起丢，刷新不恢复；
-   * 搬到另一块编辑区 / 改名时跟着搬（见 `CarriedDraft`）。
+   * 這份檔案自己的撤銷歷史（`history.ts`）。切標籤不丟，關標籤隨檔案一起丟，重新整理不恢復；
+   * 搬到另一塊編輯區 / 改名時跟著搬（見 `CarriedDraft`）。
    */
   history: EditHistory;
   /**
-   * 磁盘上已经没有这份了（被删、被改名；`editorDiskGone`）。编辑器里的内容还在；保存时先问要不要在原路径
-   * 重建，自动保存跳过它；磁盘上又出现了（核对磁盘时）就清掉。
+   * 磁碟上已經沒有這份了（被刪、被改名；`editorDiskGone`）。編輯器裡的內容還在；儲存時先問要不要在原路徑
+   * 重建，自動儲存跳過它；磁碟上又出現了（核對磁碟時）就清掉。
    */
   gone?: boolean;
 }
 
-/** 冲突时暂存的磁盘版本，供「用磁盘版本覆盖」使用。 */
+/** 衝突時暫存的磁碟版本，供「用磁碟版本覆蓋」使用。 */
 export interface Conflict {
   text: string;
   hash: string;
 }
 
 /**
- * 从另一块编辑区（或刷新前的 localStorage）带过来的未保存内容。
+ * 從另一塊編輯區（或重新整理前的 localStorage）帶過來的未儲存內容。
  *
- * `moved` 表示文件刚改名/搬家——那时 hash 基线必然变了，草稿照贴；
- * 其余情况（刷新恢复）仍要求磁盘没变过，否则拿旧内容盖新内容就是
- * 另一种静默覆盖。
+ * `moved` 表示檔案剛改名/搬家——那時 hash 基線必然變了，草稿照貼；
+ * 其餘情況（重新整理恢復）仍要求磁碟沒變過，否則拿舊內容蓋新內容就是
+ * 另一種靜默覆蓋。
  *
- * `history` / `historyText`：搬家时连撤销历史一起带上（刷新恢复没有）。只有接上之后的内容与
- * 搬走时（`historyText`）一字不差才接——否则那份差异对不上位置。
+ * `history` / `historyText`：搬家時連撤銷歷史一起帶上（重新整理恢復沒有）。只有接上之後的內容與
+ * 搬走時（`historyText`）一字不差才接——否則那份差異對不上位置。
  *
- * `preview`：搬走时是不是临时标签（刷新恢复、改名搬家时照旧）。`markdownPreview`：搬走时是不是在 Markdown 预览里（同样照旧）。
+ * `preview`：搬走時是不是臨時標籤（重新整理恢復、改名搬家時照舊）。`markdownPreview`：搬走時是不是在 Markdown 預覽裡（同樣照舊）。
  *
- * `local`：标签右键「移到另一侧」——就在页面里从一块搬到另一块，接手的那一块收到的文件就是搬走时的
- * 基线（不经后端重读），所以连冲突条、见过的磁盘新版、「磁盘上没了」与光标位置一起接上。
+ * `local`：標籤右鍵「移到另一側」——就在頁面裡從一塊搬到另一塊，接手的那一塊收到的檔案就是搬走時的
+ * 基線（不經後端重讀），所以連衝突條、見過的磁碟新版、「磁碟上沒了」與游標位置一起接上。
  */
 export interface CarriedDraft {
   hash?: string;
@@ -122,7 +122,7 @@ export interface CarriedDraft {
   scrollTop?: number;
 }
 
-/** 从页面上固定的 id 收集主区的节点引用。 */
+/** 從頁面上固定的 id 收集主區的節點引用。 */
 export function mainRefs(root: HTMLElement): PaneRefs {
   return {
     root,
@@ -150,10 +150,10 @@ export function mainRefs(root: HTMLElement): PaneRefs {
 }
 
 /**
- * 现造一块编辑区的 DOM，结构与 html.ts 里的主区一致。
+ * 現造一塊編輯區的 DOM，結構與 html.ts 裡的主區一致。
  *
- * 草稿区的结构不写进 html.ts：同一套四十行的 DOM 要在两个地方对齐，
- * 迟早会分叉。这里克隆一份，引用直接握在手里——**不给 id**，省得与主区撞车。
+ * 草稿區的結構不寫進 html.ts：同一套四十行的 DOM 要在兩個地方對齊，
+ * 遲早會分叉。這裡克隆一份，引用直接握在手裡——**不給 id**，省得與主區撞車。
  */
 export function createPaneElements(welcomeText: string): PaneRefs {
   const root = el('section', 'wb-editor wb-editor-draft');
@@ -161,26 +161,26 @@ export function createPaneElements(welcomeText: string): PaneRefs {
 
   const toolbar = el('div', 'ed-toolbar hidden');
   const path = el('span', 'ed-path');
-  const previewBtn = el('button', 'chip-btn', '预览');
-  previewBtn.title = '预览 Markdown';
-  const plotBtn = el('button', 'chip-btn hidden', '细纲');
-  plotBtn.title = '打开这一章的细纲（并排；还没有就按模板建一份）';
+  const previewBtn = el('button', 'chip-btn', '預覽');
+  previewBtn.title = '預覽 Markdown';
+  const plotBtn = el('button', 'chip-btn hidden', '細綱');
+  plotBtn.title = '開啟這一章的細綱（並排；還沒有就按模板建一份）';
   const draftBtn = el('button', 'chip-btn hidden', '草稿');
-  const revertBtn = el('button', 'chip-btn', '还原');
-  revertBtn.title = '放弃修改，重新从磁盘读取';
-  const externalBtn = el('button', 'chip-btn ed-external-btn', '外部打开');
-  externalBtn.title = '用系统默认程序打开';
-  const saveBtn = el('button', 'primary', '保存');
-  saveBtn.title = '保存（Ctrl+S）';
+  const revertBtn = el('button', 'chip-btn', '還原');
+  revertBtn.title = '放棄修改，重新從磁碟讀取';
+  const externalBtn = el('button', 'chip-btn ed-external-btn', '外部開啟');
+  externalBtn.title = '用系統預設程式開啟';
+  const saveBtn = el('button', 'primary', '儲存');
+  saveBtn.title = '儲存（Ctrl+S）';
   toolbar.append(path, previewBtn, plotBtn, draftBtn, revertBtn, externalBtn, saveBtn);
 
   const conflict = el('div', 'ed-conflict hidden');
   const conflictText = el('span', 'ed-conflict-text');
-  const conflictTake = el('button', 'chip-btn', '用磁盘版本覆盖编辑器');
-  const conflictForce = el('button', 'chip-btn', '用编辑器内容强制保存');
+  const conflictTake = el('button', 'chip-btn', '用磁碟版本覆蓋編輯器');
+  const conflictForce = el('button', 'chip-btn', '用編輯器內容強制儲存');
   conflict.append(conflictText, conflictTake, conflictForce);
 
-  // 查找替换条不在这里：两块编辑区都由 find.ts 第一次用到时现造（DOM 只在那里生成一份）。
+  // 查詢替換條不在這裡：兩塊編輯區都由 find.ts 第一次用到時現造（DOM 只在那裡生成一份）。
   const stage = el('div', 'ed-stage');
   const welcome = el('div', 'ed-welcome');
   welcome.appendChild(el('h2', undefined, welcomeText));
@@ -206,5 +206,5 @@ export function createPaneElements(welcomeText: string): PaneRefs {
   };
 }
 
-/** pane 的 id 与协议里的 `EditorPane` 是同一套取值。 */
+/** pane 的 id 與協議裡的 `EditorPane` 是同一套取值。 */
 export type PaneId = EditorPane;

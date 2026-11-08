@@ -1,27 +1,27 @@
 /**
- * 工程页「叙事线」页签（叙事线重做第 8 个提交）：一条线一行，最后一行是「未归属的伏笔」。一行的说法由后端给
- * （`views/threads.ts`，后端那一半在 tests/unit/views/threads.test.js），这里钉前端怎么摆、怎么点。
+ * 工程頁「敘事線」頁籤（敘事線重做第 8 個提交）：一條線一行，最後一行是「未歸屬的伏筆」。一行的說法由後端給
+ * （`views/threads.ts`，後端那一半在 tests/unit/views/threads.test.js），這裡釘前端怎麼擺、怎麼點。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 第五个页签，排在「设定」后面；「文风与摘要」里那一行计数没了 | 章节、角色、设定各占一页，叙事线同一个思路 |
- * | 一条线一行，照后端排好的顺序；名字 · 种类 · 状态 · 最近第 N 章 · 几条伏笔没收，⚠ 另起一格 | 一眼看出各条线走到哪、哪条要管 |
- * | 最后一行是「未归属的伏笔 · N 条」；没有就不画 | 挂不上线的伏笔有个地方看 |
- * | 点一行打开那条线的文件，右键「打开」，没有删除 / 改名 | 一条线就是一份 Markdown，作者直接改 |
- * | 右键「标为收束…」「标为放弃…」发 closeThread / abandonThread（带线的文件）：进行中两样都有，计划中只有放弃，收束了的都没有 | 同步漏报了收束的线由作者补一笔（2026-10-24）；后端先问 |
- * | 当前进度作者改过的黄 ❗ 挂在那一行；排线失败的红 ❗ 挂在标题旁 | 失败留在出错的东西身上（第 16 条） |
- * | 标题旁「从大纲排出 / 从大纲补充」发 generateThreads、不折叠这一组；没有情节大纲不给 | 按钮不直接花钱，后端先弹确认框 |
- * | 一条线都没有时说清先做什么 | 空页签不该只剩一个标题 |
- * | 叙事线落后于定稿（四期）：最上面一句「⚠ 第 a–b 章还没判」；标题旁与右键「从正文补记」发 backfillThreads，补记在跑时不给 | 拆进来的书、补记停在半路的书一眼看出差多少、从哪补 |
- * | 时间线单独一组排在叙事线前面：对账、按月分段（最后一段展开）、一章一行；右键改时间与重推；标题旁补推、重推 | 2026-10-24 重做：作者要它独立成组，能改能重推 |
- * | 时间线组没有「历法与起点」那一行：在组标题的悬停里，改走右键（起点建议那条 ⚠ 右键「填为起点」）；插件形态点一章、点 ⚠ 打开时间线文件，不开正文 | 同日时间线总览：作者嫌点了就弹设置、点章开正文反人类（独立版打开时间线总览，见 tests/dom/standalone/timelineOverview.test.js） |
- * | 「故事架构」组仍是 x/6 | 叙事线是可选的，不挡路 |
+ * | 第五個頁籤，排在「設定」後面；「文風與摘要」裡那一行計數沒了 | 章節、角色、設定各佔一頁，敘事線同一個思路 |
+ * | 一條線一行，照後端排好的順序；名字 · 種類 · 狀態 · 最近第 N 章 · 幾條伏筆沒收，⚠ 另起一格 | 一眼看出各條線走到哪、哪條要管 |
+ * | 最後一行是「未歸屬的伏筆 · N 條」；沒有就不畫 | 掛不上線的伏筆有個地方看 |
+ * | 點一行開啟那條線的檔案，右鍵「開啟」，沒有刪除 / 改名 | 一條線就是一份 Markdown，作者直接改 |
+ * | 右鍵「標為收束…」「標為放棄…」發 closeThread / abandonThread（帶線的檔案）：進行中兩樣都有，計劃中只有放棄，收束了的都沒有 | 同步漏報了收束的線由作者補一筆（2026-10-24）；後端先問 |
+ * | 當前進度作者改過的黃 ❗ 掛在那一行；排線失敗的紅 ❗ 掛在標題旁 | 失敗留在出錯的東西身上（第 16 條） |
+ * | 標題旁「從大綱排出 / 從大綱補充」發 generateThreads、不折疊這一組；沒有情節大綱不給 | 按鈕不直接花錢，後端先彈確認框 |
+ * | 一條線都沒有時說清先做什麼 | 空頁籤不該只剩一個標題 |
+ * | 敘事線落後於定稿（四期）：最上面一句「⚠ 第 a–b 章還沒判」；標題旁與右鍵「從正文補記」發 backfillThreads，補記在跑時不給 | 拆進來的書、補記停在半路的書一眼看出差多少、從哪補 |
+ * | 時間線單獨一組排在敘事線前面：對賬、按月分段（最後一段展開）、一章一行；右鍵改時間與重推；標題旁補推、重推 | 2026-10-24 重做：作者要它獨立成組，能改能重推 |
+ * | 時間線組沒有「曆法與起點」那一行：在組標題的懸停裡，改走右鍵（起點建議那條 ⚠ 右鍵「填為起點」）；外掛形態點一章、點 ⚠ 開啟時間線檔案，不開正文 | 同日時間線總覽：作者嫌點了就彈設定、點章開正文反人類（獨立版開啟時間線總覽，見 tests/dom/standalone/timelineOverview.test.js） |
+ * | 「故事架構」組仍是 x/6 | 敘事線是可選的，不擋路 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, JSDOM_SKIP, sampleTree } = require('../../helpers/dom');
 
-describe('工程页 · 叙事线页签', { skip: JSDOM_SKIP }, () => {
+describe('工程頁 · 敘事線頁籤', { skip: JSDOM_SKIP }, () => {
   let ui;
   const panel = () => ui.doc.querySelector('#projectBody [data-project-panel="threads"]');
   const group = () => panel().querySelector('.group');
@@ -36,137 +36,137 @@ describe('工程页 · 叙事线页签', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'project', tree: sampleTree() });
   });
 
-  test('第五个页签「叙事线」，排在「设定」后面；页里只有「叙事线」一组', () => {
+  test('第五個頁籤「敘事線」，排在「設定」後面；頁裡只有「敘事線」一組', () => {
     const tabs = [...ui.doc.querySelectorAll('#projectTabs [data-project-tab]')].map((b) => b.textContent);
-    assert.deepEqual(tabs, ['概览', '章节', '角色', '设定', '叙事线']);
-    assert.deepEqual([...panel().querySelectorAll('.group-name')].map((n) => n.textContent), ['叙事线']);
+    assert.deepEqual(tabs, ['概覽', '章節', '角色', '設定', '敘事線']);
+    assert.deepEqual([...panel().querySelectorAll('.group-name')].map((n) => n.textContent), ['敘事線']);
   });
 
-  test('「文风与摘要」里不再有叙事线那一行', () => {
+  test('「文風與摘要」裡不再有敘事線那一行', () => {
     const overview = ui.doc.querySelector('#projectBody [data-project-panel="overview"]');
-    const meta = [...overview.querySelectorAll('.group')].find((g) => g.querySelector('.group-name')?.textContent === '文风与摘要');
-    assert.ok(![...meta.querySelectorAll('.row-label')].some((n) => n.textContent === '叙事线'));
+    const meta = [...overview.querySelectorAll('.group')].find((g) => g.querySelector('.group-name')?.textContent === '文風與摘要');
+    assert.ok(![...meta.querySelectorAll('.row-label')].some((n) => n.textContent === '敘事線'));
   });
 
-  test('一条线一行，照后端排好的顺序；最后一行是「未归属的伏笔」', () => {
-    assert.deepEqual(labels(), ['青崖旧案', '林昭与沈氏', '李叔的旧账', '守卫的选择', '未归属的伏笔']);
+  test('一條線一行，照後端排好的順序；最後一行是「未歸屬的伏筆」', () => {
+    assert.deepEqual(labels(), ['青崖舊案', '林昭與沈氏', '李叔的舊賬', '守衛的選擇', '未歸屬的伏筆']);
   });
 
-  test('一行：种类 · 状态 · 最近第 N 章 · 几条伏笔没收', () => {
-    const row = rowOf('青崖旧案');
-    assert.equal(row.querySelector('.row-detail').textContent, '主线 · 进行中 · 最近第 3 章 · 1 条伏笔没收');
+  test('一行：種類 · 狀態 · 最近第 N 章 · 幾條伏筆沒收', () => {
+    const row = rowOf('青崖舊案');
+    assert.equal(row.querySelector('.row-detail').textContent, '主線 · 進行中 · 最近第 3 章 · 1 條伏筆沒收');
     assert.deepEqual(warningsOf(row), []);
     assert.equal(row.querySelector('.dot').textContent, '●');
   });
 
-  test('有问题的另起几格 ⚠', () => {
-    assert.deepEqual(warningsOf(rowOf('林昭与沈氏')), ['⚠ 1 条伏笔逾期', '⚠ 过了计划收束的第 2 章']);
+  test('有問題的另起幾格 ⚠', () => {
+    assert.deepEqual(warningsOf(rowOf('林昭與沈氏')), ['⚠ 1 條伏筆逾期', '⚠ 過了計劃收束的第 2 章']);
   });
 
-  test('还没推进过的写计划区间、空心点；收束了的打勾、压暗', () => {
-    assert.equal(rowOf('李叔的旧账').querySelector('.row-detail').textContent, '支线 · 计划中 · 计划第 6–12 章');
-    assert.equal(rowOf('李叔的旧账').querySelector('.dot').textContent, '○');
-    assert.equal(rowOf('守卫的选择').querySelector('.dot').textContent, '✓');
-    assert.ok(rowOf('守卫的选择').classList.contains('row-thread-closed'));
-    assert.ok(!rowOf('青崖旧案').classList.contains('row-thread-closed'));
+  test('還沒推進過的寫計劃區間、空心點；收束了的打勾、壓暗', () => {
+    assert.equal(rowOf('李叔的舊賬').querySelector('.row-detail').textContent, '支線 · 計劃中 · 計劃第 6–12 章');
+    assert.equal(rowOf('李叔的舊賬').querySelector('.dot').textContent, '○');
+    assert.equal(rowOf('守衛的選擇').querySelector('.dot').textContent, '✓');
+    assert.ok(rowOf('守衛的選擇').classList.contains('row-thread-closed'));
+    assert.ok(!rowOf('青崖舊案').classList.contains('row-thread-closed'));
   });
 
-  test('「未归属的伏笔 · 2 条」', () => {
-    assert.equal(rowOf('未归属的伏笔').querySelector('.row-detail').textContent, '2 条');
+  test('「未歸屬的伏筆 · 2 條」', () => {
+    assert.equal(rowOf('未歸屬的伏筆').querySelector('.row-detail').textContent, '2 條');
   });
 
-  test('悬停名字看意图与当前进度', () => {
-    const title = rowOf('青崖旧案').querySelector('.row-label').title;
-    assert.ok(title.includes('意图：查清七年前那场火') && title.includes('.novelwarden/threads/青崖旧案.md'), title);
+  test('懸停名字看意圖與當前進度', () => {
+    const title = rowOf('青崖舊案').querySelector('.row-label').title;
+    assert.ok(title.includes('意圖：查清七年前那場火') && title.includes('.novelwarden/threads/青崖舊案.md'), title);
   });
 
-  test('点一行打开那条线的文件', () => {
+  test('點一行開啟那條線的檔案', () => {
     ui.sent.length = 0;
-    ui.clickEl(rowOf('林昭与沈氏').querySelector('.row-label'));
-    assert.equal(ui.last('openFile')?.path, '.novelwarden/threads/林昭与沈氏.md', JSON.stringify(ui.sent));
-    ui.clickEl(rowOf('未归属的伏笔').querySelector('.row-label'));
+    ui.clickEl(rowOf('林昭與沈氏').querySelector('.row-label'));
+    assert.equal(ui.last('openFile')?.path, '.novelwarden/threads/林昭與沈氏.md', JSON.stringify(ui.sent));
+    ui.clickEl(rowOf('未歸屬的伏筆').querySelector('.row-label'));
     assert.equal(ui.last('openFile')?.path, '.novelwarden/threads/未归属的伏笔.md', JSON.stringify(ui.sent));
   });
 
-  test('右键「打开」，没有删除 / 改名 / 移动', () => {
-    const items = ui.itemsOf(ui.rightClick(rowOf('青崖旧案')));
-    assert.ok(items.includes('打开'), JSON.stringify(items));
-    assert.ok(!items.some((x) => /删除|重命名|移动/.test(x)), JSON.stringify(items));
+  test('右鍵「開啟」，沒有刪除 / 改名 / 移動', () => {
+    const items = ui.itemsOf(ui.rightClick(rowOf('青崖舊案')));
+    assert.ok(items.includes('開啟'), JSON.stringify(items));
+    assert.ok(!items.some((x) => /刪除|重新命名|移動/.test(x)), JSON.stringify(items));
     ui.closeMenu();
     ui.sent.length = 0;
-    ui.pick(ui.rightClick(rowOf('青崖旧案')), '打开');
-    assert.equal(ui.last('openFile')?.path, '.novelwarden/threads/青崖旧案.md', JSON.stringify(ui.sent));
+    ui.pick(ui.rightClick(rowOf('青崖舊案')), '開啟');
+    assert.equal(ui.last('openFile')?.path, '.novelwarden/threads/青崖舊案.md', JSON.stringify(ui.sent));
   });
 
-  test('右键「标为收束…」「标为放弃…」：进行中两样都有，计划中只有放弃，收束了的都没有', () => {
+  test('右鍵「標為收束…」「標為放棄…」：進行中兩樣都有，計劃中只有放棄，收束了的都沒有', () => {
     const itemsOf = (name) => {
       const items = ui.itemsOf(ui.rightClick(rowOf(name)));
       ui.closeMenu();
-      return items.filter((x) => x.startsWith('标为'));
+      return items.filter((x) => x.startsWith('標為'));
     };
-    assert.deepEqual(itemsOf('青崖旧案'), ['标为收束…', '标为放弃…']);
-    assert.deepEqual(itemsOf('李叔的旧账'), ['标为放弃…']);
-    assert.deepEqual(itemsOf('守卫的选择'), []);
-    assert.deepEqual(itemsOf('未归属的伏笔'), []);
+    assert.deepEqual(itemsOf('青崖舊案'), ['標為收束…', '標為放棄…']);
+    assert.deepEqual(itemsOf('李叔的舊賬'), ['標為放棄…']);
+    assert.deepEqual(itemsOf('守衛的選擇'), []);
+    assert.deepEqual(itemsOf('未歸屬的伏筆'), []);
     ui.sent.length = 0;
-    ui.pick(ui.rightClick(rowOf('青崖旧案')), '标为收束…');
+    ui.pick(ui.rightClick(rowOf('青崖舊案')), '標為收束…');
     assert.deepEqual(
       { action: ui.last('projectAction')?.action, relPath: ui.last('projectAction')?.relPath },
-      { action: 'closeThread', relPath: '.novelwarden/threads/青崖旧案.md' }
+      { action: 'closeThread', relPath: '.novelwarden/threads/青崖舊案.md' }
     );
-    ui.pick(ui.rightClick(rowOf('李叔的旧账')), '标为放弃…');
+    ui.pick(ui.rightClick(rowOf('李叔的舊賬')), '標為放棄…');
     assert.equal(ui.last('projectAction')?.action, 'abandonThread');
   });
 
-  test('组标题：几条 · 几条进行中', () => {
-    assert.equal(group().querySelector('.group-head .meta').textContent, '4 条 · 2 条进行中');
+  test('組標題：幾條 · 幾條進行中', () => {
+    assert.equal(group().querySelector('.group-head .meta').textContent, '4 條 · 2 條進行中');
   });
 
-  test('标题旁「从大纲补充」发 generateThreads，不折叠这一组', () => {
-    assert.equal(headBtn()?.textContent, '从大纲补充');
+  test('標題旁「從大綱補充」發 generateThreads，不折疊這一組', () => {
+    assert.equal(headBtn()?.textContent, '從大綱補充');
     ui.sent.length = 0;
     ui.clickEl(headBtn());
     assert.equal(ui.last('projectAction')?.action, 'generateThreads', JSON.stringify(ui.sent));
-    assert.equal(labels().length, 5, '点按钮把组折起来了');
+    assert.equal(labels().length, 5, '點按鈕把組折起來了');
   });
 
-  test('标题与页里空白处右键「从大纲补充叙事线」', () => {
+  test('標題與頁裡空白處右鍵「從大綱補充敘事線」', () => {
     ui.sent.length = 0;
-    ui.pick(ui.rightClick(group().querySelector('.group-head')), '从大纲补充叙事线');
+    ui.pick(ui.rightClick(group().querySelector('.group-head')), '從大綱補充敘事線');
     assert.equal(ui.last('projectAction')?.action, 'generateThreads', JSON.stringify(ui.sent));
     ui.sent.length = 0;
-    ui.pick(ui.rightClick(panel()), '从大纲补充叙事线');
+    ui.pick(ui.rightClick(panel()), '從大綱補充敘事線');
     assert.equal(ui.last('projectAction')?.action, 'generateThreads', JSON.stringify(ui.sent));
   });
 
-  test('当前进度作者改过的黄 ❗ 挂在那一行；排线失败的红 ❗ 挂在标题旁', () => {
+  test('當前進度作者改過的黃 ❗ 掛在那一行；排線失敗的紅 ❗ 掛在標題旁', () => {
     const tree = sampleTree();
     tree.failures = {
-      '.novelwarden/threads/林昭与沈氏.md': [
-        { at: '2026-10-20T00:00:00Z', severity: 'warn', op: 'threadProgress', message: '第 3 章给出了新的「当前进度」，这一节你改过，没有覆盖' },
+      '.novelwarden/threads/林昭與沈氏.md': [
+        { at: '2026-10-20T00:00:00Z', severity: 'warn', op: 'threadProgress', message: '第 3 章給出了新的「當前進度」，這一節你改過，沒有覆蓋' },
       ],
-      '.novelwarden/threads': [{ at: '2026-10-20T00:00:00Z', severity: 'error', op: 'threads', message: '排叙事线失败：超时' }],
+      '.novelwarden/threads': [{ at: '2026-10-20T00:00:00Z', severity: 'error', op: 'threads', message: '排敘事線失敗：超時' }],
     };
     ui.post({ type: 'project', tree });
-    assert.ok(rowOf('林昭与沈氏').querySelector('.row-failure.is-warn'));
-    assert.equal(rowOf('青崖旧案').querySelector('.row-failure'), null);
+    assert.ok(rowOf('林昭與沈氏').querySelector('.row-failure.is-warn'));
+    assert.equal(rowOf('青崖舊案').querySelector('.row-failure'), null);
     const mark = group().querySelector('.group-head .threads-head .row-failure.is-error');
     assert.ok(mark, group().querySelector('.group-head').outerHTML);
     assert.equal(mark.dataset.failureKey, '.novelwarden/threads');
   });
 
-  test('一条线都没有：「从大纲排出」，空行说清点哪里；没有「未归属的伏笔」就不画', () => {
+  test('一條線都沒有：「從大綱排出」，空行說清點哪裡；沒有「未歸屬的伏筆」就不畫', () => {
     ui.post({ type: 'project', tree: { ...sampleTree(), threads: { lines: [], current: 0 } } });
-    assert.equal(headBtn()?.textContent, '从大纲排出');
-    assert.equal(group().querySelector('.group-head .meta').textContent, '还没有');
+    assert.equal(headBtn()?.textContent, '從大綱排出');
+    assert.equal(group().querySelector('.group-head .meta').textContent, '還沒有');
     assert.deepEqual(labels(), []);
-    assert.match(panel().querySelector('.row-empty').textContent, /点标题旁的「从大纲排出」/);
+    assert.match(panel().querySelector('.row-empty').textContent, /點標題旁的「從大綱排出」/);
     const items = ui.itemsOf(ui.rightClick(panel()));
-    assert.ok(items.includes('从大纲排出叙事线'), JSON.stringify(items));
+    assert.ok(items.includes('從大綱排出敘事線'), JSON.stringify(items));
     ui.closeMenu();
   });
 
-  test('还没有情节大纲：不给按钮，空行说清先排大纲；右键也没有排线', () => {
+  test('還沒有情節大綱：不給按鈕，空行說清先排大綱；右鍵也沒有排線', () => {
     const tree = sampleTree();
     ui.post({
       type: 'project',
@@ -177,66 +177,66 @@ describe('工程页 · 叙事线页签', { skip: JSDOM_SKIP }, () => {
       },
     });
     assert.equal(headBtn(), null);
-    assert.match(panel().querySelector('.row-empty').textContent, /先排出情节大纲/);
+    assert.match(panel().querySelector('.row-empty').textContent, /先排出情節大綱/);
     const items = ui.itemsOf(ui.rightClick(panel()));
-    assert.ok(!items.some((x) => x.includes('叙事线')), JSON.stringify(items));
+    assert.ok(!items.some((x) => x.includes('敘事線')), JSON.stringify(items));
     ui.closeMenu();
   });
 
-  // 四期：定稿了、叙事线还没判的章。
-  describe('叙事线落后于定稿', () => {
+  // 四期：定稿了、敘事線還沒判的章。
+  describe('敘事線落後於定稿', () => {
     const lagged = () => {
       const tree = sampleTree();
-      return { ...tree, threads: { ...tree.threads, current: 60, through: 30, lag: { count: 30, text: '第 31–60 章还没判' } } };
+      return { ...tree, threads: { ...tree.threads, current: 60, through: 30, lag: { count: 30, text: '第 31–60 章還沒判' } } };
     };
     const backfillBtn = () => group().querySelector('.group-head .threads-head .threads-backfill-btn');
 
-    test('页里最上面一句「⚠ 第 31–60 章还没判」，说清状态按判到的那一章算；线照样一条一行', () => {
+    test('頁裡最上面一句「⚠ 第 31–60 章還沒判」，說清狀態按判到的那一章算；線照樣一條一行', () => {
       ui.post({ type: 'project', tree: lagged() });
       const lag = panel().querySelector('.threads-lag');
       assert.ok(lag, panel().innerHTML.slice(0, 500));
-      assert.match(lag.textContent, /^⚠ 第 31–60 章还没判：这几章同步了，叙事线还没记上。线断了几章、伏笔逾期都按判到的第 30 章算/);
-      assert.ok(lag.textContent.includes('「从正文补记」'), lag.textContent);
+      assert.match(lag.textContent, /^⚠ 第 31–60 章還沒判：這幾章同步了，敘事線還沒記上。線斷了幾章、伏筆逾期都按判到的第 30 章算/);
+      assert.ok(lag.textContent.includes('「從正文補記」'), lag.textContent);
       assert.equal(panel().querySelector('.group-body').firstElementChild, lag);
       assert.equal(labels().length, 5);
     });
 
-    test('标题旁「从正文补记」发 backfillThreads，排在「从大纲补充」前面、不折叠这一组；右键标题与空白处也有', () => {
+    test('標題旁「從正文補記」發 backfillThreads，排在「從大綱補充」前面、不折疊這一組；右鍵標題與空白處也有', () => {
       ui.post({ type: 'project', tree: lagged() });
-      assert.equal(backfillBtn()?.textContent, '从正文补记');
+      assert.equal(backfillBtn()?.textContent, '從正文補記');
       assert.equal(headBtn(), backfillBtn());
       ui.sent.length = 0;
       ui.clickEl(backfillBtn());
       assert.equal(ui.last('projectAction')?.action, 'backfillThreads', JSON.stringify(ui.sent));
-      assert.equal(labels().length, 5, '点按钮把组折起来了');
+      assert.equal(labels().length, 5, '點按鈕把組折起來了');
       ui.sent.length = 0;
-      ui.pick(ui.rightClick(group().querySelector('.group-head')), '从已写正文补记叙事线');
+      ui.pick(ui.rightClick(group().querySelector('.group-head')), '從已寫正文補記敘事線');
       assert.equal(ui.last('projectAction')?.action, 'backfillThreads', JSON.stringify(ui.sent));
       ui.sent.length = 0;
-      ui.pick(ui.rightClick(panel()), '从已写正文补记叙事线');
+      ui.pick(ui.rightClick(panel()), '從已寫正文補記敘事線');
       assert.equal(ui.last('projectAction')?.action, 'backfillThreads', JSON.stringify(ui.sent));
     });
 
-    test('补记在跑：不给按钮（点第二次只会撞上已有任务）', () => {
-      ui.post({ type: 'tasks', tasks: [{ id: 't1', title: '从已写正文补记叙事线', message: '第 31 章', current: 0, total: 30, elapsedMs: 0 }] });
+    test('補記在跑：不給按鈕（點第二次只會撞上已有任務）', () => {
+      ui.post({ type: 'tasks', tasks: [{ id: 't1', title: '從已寫正文補記敘事線', message: '第 31 章', current: 0, total: 30, elapsedMs: 0 }] });
       ui.post({ type: 'project', tree: lagged() });
       assert.equal(backfillBtn(), null);
       ui.post({ type: 'tasks', tasks: [] });
     });
 
-    test('不落后：没有那一句，也没有「从正文补记」', () => {
+    test('不落後：沒有那一句，也沒有「從正文補記」', () => {
       ui.post({ type: 'project', tree: sampleTree() });
       assert.equal(panel().querySelector('.threads-lag'), null);
       assert.equal(backfillBtn(), null);
       const items = ui.itemsOf(ui.rightClick(panel()));
-      assert.ok(!items.includes('从已写正文补记叙事线'), JSON.stringify(items));
+      assert.ok(!items.includes('從已寫正文補記敘事線'), JSON.stringify(items));
       ui.closeMenu();
     });
   });
 
-  // 故事时间（2026-10-24；同日重做成叙事线页签里单独一组，设计稿 2026-10-24-story-timeline-rework.md「五」；同日时间线总览，
-  // docs/design/plans/2026-10-24-timeline-page.md「二」）。这里是插件形态（只有 view.js，没有时间线总览）。
-  describe('时间线一组', () => {
+  // 故事時間（2026-10-24；同日重做成敘事線頁籤裡單獨一組，設計稿 2026-10-24-story-timeline-rework.md「五」；同日時間線總覽，
+  // docs/design/plans/2026-10-24-timeline-page.md「二」）。這裡是外掛形態（只有 view.js，沒有時間線總覽）。
+  describe('時間線一組', () => {
     const TL = '.novelwarden/threads/时间线.md';
     const chapter = (no, patch = {}) => ({
       no,
@@ -245,7 +245,7 @@ describe('工程页 · 叙事线页签', { skip: JSDOM_SKIP }, () => {
       state: 'evidence',
       when: `三月十${no} 清晨`,
       delta: '+1 天',
-      note: '依据「次日」',
+      note: '依據「次日」',
       tip: `第 ${no} 章 · 三月十${no} 清晨`,
       value: '+1 天',
       machine: true,
@@ -260,14 +260,14 @@ describe('工程页 · 叙事线页签', { skip: JSDOM_SKIP }, () => {
           timeline: {
             relPath: TL,
             exists: true,
-            label: '推到第 5 章 · 故事第 12 天（三月十八 夜里）',
-            calendar: { text: '简单历 · 起点 三月初七（第 1 章那一天）', tip: '右键改历法与起点。', calendarName: '简单历', start: '三月初七' },
-            issues: [{ text: '第 4 章：前面推下来是三月十一，正文写三月十四（差 3 天），已按正文对齐', chapter: 4 }],
+            label: '推到第 5 章 · 故事第 12 天（三月十八 夜裡）',
+            calendar: { text: '簡單歷 · 起點 三月初七（第 1 章那一天）', tip: '右鍵改曆法與起點。', calendarName: '简单历', start: '三月初七' },
+            issues: [{ text: '第 4 章：前面推下來是三月十一，正文寫三月十四（差 3 天），已按正文對齊', chapter: 4 }],
             segments: [
               { key: 'timeline:二月', label: '二月', detail: '第 1–2 章 · 2 天', chapters: [chapter(1), chapter(2)] },
-              { key: 'timeline:三月', label: '三月', detail: '第 3–5 章 · 4 天', chapters: [chapter(3), chapter(4, { state: 'dated', note: '正文写明三月十四', issue: true }), chapter(5, { state: 'unknown', machine: true })] },
+              { key: 'timeline:三月', label: '三月', detail: '第 3–5 章 · 4 天', chapters: [chapter(3), chapter(4, { state: 'dated', note: '正文寫明三月十四', issue: true }), chapter(5, { state: 'unknown', machine: true })] },
             ],
-            missing: { count: 2, text: '第 6–7 章还没推出来' },
+            missing: { count: 2, text: '第 6–7 章還沒推出來' },
             machine: 4,
             last: 7,
             ...patch,
@@ -276,52 +276,52 @@ describe('工程页 · 叙事线页签', { skip: JSDOM_SKIP }, () => {
       };
     };
     const groups = () => [...panel().querySelectorAll('.group')];
-    const tlGroup = () => groups().find((g) => g.querySelector('.group-name')?.textContent === '时间线');
+    const tlGroup = () => groups().find((g) => g.querySelector('.group-name')?.textContent === '時間線');
     const tlRows = () => [...tlGroup().querySelectorAll('.row, .timeline-issue')];
     const chapterRow = (no) => tlGroup().querySelector(`.row-time-chapter[data-chapter="${no}"]`);
     const headBtn = (cls) => tlGroup().querySelector(`.group-head .threads-head .${cls}`);
 
-    test('单独一组，排在叙事线组前面；叙事线组里没有时间线那一行；组标题后面是推到哪、故事第几天', () => {
+    test('單獨一組，排在敘事線組前面；敘事線組裡沒有時間線那一行；組標題後面是推到哪、故事第幾天', () => {
       ui.post({ type: 'project', tree: withTimeline() });
-      assert.deepEqual(groups().map((g) => g.querySelector('.group-name').textContent), ['时间线', '叙事线']);
-      assert.ok(!labels().includes('时间线'));
-      assert.match(tlGroup().querySelector('.group-head').textContent, /推到第 5 章 · 故事第 12 天（三月十八 夜里）/);
+      assert.deepEqual(groups().map((g) => g.querySelector('.group-name').textContent), ['時間線', '敘事線']);
+      assert.ok(!labels().includes('時間線'));
+      assert.match(tlGroup().querySelector('.group-head').textContent, /推到第 5 章 · 故事第 12 天（三月十八 夜裡）/);
     });
 
-    test('没有「历法与起点」那一行：在组标题的悬停里；组标题右键「改历法与起点…」；起点建议那条 ⚠ 右键「填为起点」带上那一天', () => {
+    test('沒有「曆法與起點」那一行：在組標題的懸停裡；組標題右鍵「改曆法與起點…」；起點建議那條 ⚠ 右鍵「填為起點」帶上那一天', () => {
       ui.post({ type: 'project', tree: withTimeline() });
       assert.equal(tlGroup().querySelector('.row-timeline-calendar'), null);
       assert.ok(!tlRows().some((r) => r.textContent.includes('第 1 章那一天')));
-      assert.equal(tlGroup().querySelector('.group-toggle').title, '简单历 · 起点 三月初七（第 1 章那一天）\n右键改历法与起点。');
+      assert.equal(tlGroup().querySelector('.group-toggle').title, '簡單歷 · 起點 三月初七（第 1 章那一天）\n右鍵改曆法與起點。');
       ui.sent.length = 0;
-      ui.pick(ui.rightClick(tlGroup().querySelector('.group-head')), '改历法与起点…');
+      ui.pick(ui.rightClick(tlGroup().querySelector('.group-head')), '改曆法與起點…');
       assert.deepEqual([ui.last('projectAction')?.action, ui.last('projectAction')?.name], ['setTimelineStart', undefined]);
       const tree = withTimeline({
-        calendar: { text: '简单历 · 没填起点，只显示第几天', tip: '', calendarName: '简单历', start: '', suggestion: { start: '三月初五', note: '第 2 章写了「三月初七」' } },
-        issues: [{ text: '没填起点：第 2 章写了「三月初七」，第 1 章是三月初五（右键填为起点）', start: true }],
+        calendar: { text: '簡單歷 · 沒填起點，只顯示第幾天', tip: '', calendarName: '简单历', start: '', suggestion: { start: '三月初五', note: '第 2 章寫了「三月初七」' } },
+        issues: [{ text: '沒填起點：第 2 章寫了「三月初七」，第 1 章是三月初五（右鍵填為起點）', start: true }],
       });
       ui.post({ type: 'project', tree });
       ui.sent.length = 0;
       const issue = tlGroup().querySelector('.timeline-issue');
-      ui.pick(ui.rightClick(issue), '填为起点「三月初五」（第 2 章写了「三月初七」）');
+      ui.pick(ui.rightClick(issue), '填為起點「三月初五」（第 2 章寫了「三月初七」）');
       assert.deepEqual([ui.last('projectAction')?.action, ui.last('projectAction')?.name], ['setTimelineStart', '三月初五']);
-      // 组标题右键也有。
+      // 組標題右鍵也有。
       const items = ui.itemsOf(ui.rightClick(tlGroup().querySelector('.group-head')));
-      assert.ok(items.includes('填为起点「三月初五」（第 2 章写了「三月初七」）'), JSON.stringify(items));
+      assert.ok(items.includes('填為起點「三月初五」（第 2 章寫了「三月初七」）'), JSON.stringify(items));
       ui.closeMenu();
     });
 
-    test('对账一条一行（⚠），点了打开时间线文件（插件形态没有时间线总览）；章行上对账报了的另挂一格 ⚠', () => {
+    test('對賬一條一行（⚠），點了開啟時間線檔案（外掛形態沒有時間線總覽）；章行上對賬報了的另掛一格 ⚠', () => {
       ui.post({ type: 'project', tree: withTimeline() });
       const issue = tlGroup().querySelector('.timeline-issue');
-      assert.equal(issue.textContent, '⚠ 第 4 章：前面推下来是三月十一，正文写三月十四（差 3 天），已按正文对齐');
+      assert.equal(issue.textContent, '⚠ 第 4 章：前面推下來是三月十一，正文寫三月十四（差 3 天），已按正文對齊');
       ui.sent.length = 0;
       ui.clickEl(issue);
       assert.equal(ui.last('openFile')?.path, TL);
-      assert.deepEqual(warningsOf(chapterRow(4)), ['⚠ 对不上']);
+      assert.deepEqual(warningsOf(chapterRow(4)), ['⚠ 對不上']);
     });
 
-    test('按段画：最后一段默认展开、其余收起；点段头折起、展开', () => {
+    test('按段畫：最後一段預設展開、其餘收起；點段頭折起、展開', () => {
       ui.post({ type: 'project', tree: withTimeline() });
       const heads = () => [...tlGroup().querySelectorAll('.row-timeline-segment')];
       assert.deepEqual(heads().map((h) => h.textContent), ['▸二月第 1–2 章 · 2 天', '▾三月第 3–5 章 · 4 天']);
@@ -331,7 +331,7 @@ describe('工程页 · 叙事线页签', { skip: JSDOM_SKIP }, () => {
       assert.ok(chapterRow(1));
       ui.clickEl(heads()[1]);
       assert.equal(chapterRow(3), null);
-      // 重推树不把作者的折叠换掉。
+      // 重推樹不把作者的摺疊換掉。
       ui.post({ type: 'project', tree: withTimeline() });
       assert.ok(chapterRow(1));
       assert.equal(chapterRow(3), null);
@@ -339,71 +339,71 @@ describe('工程页 · 叙事线页签', { skip: JSDOM_SKIP }, () => {
       ui.clickEl(heads()[1]);
     });
 
-    test('一章一行：状态点、章号章名、那一天 · 比上一章 · 依据；点了打开时间线文件，不开正文（打开正文在右键）', () => {
+    test('一章一行：狀態點、章號章名、那一天 · 比上一章 · 依據；點了開啟時間線檔案，不開正文（開啟正文在右鍵）', () => {
       ui.post({ type: 'project', tree: withTimeline() });
       const row = chapterRow(4);
       assert.equal(row.querySelector('.dot').textContent, '◆');
       assert.equal(chapterRow(5).querySelector('.dot').textContent, '?');
       assert.equal(row.querySelector('.row-label').textContent, '第 4 章 第4章');
-      assert.equal(row.querySelector('.row-detail').textContent, '三月十4 清晨 · +1 天 · 正文写明三月十四');
+      assert.equal(row.querySelector('.row-detail').textContent, '三月十4 清晨 · +1 天 · 正文寫明三月十四');
       ui.sent.length = 0;
       ui.clickEl(row.querySelector('.row-label'));
       assert.equal(ui.last('openFile')?.path, TL);
-      ui.pick(ui.rightClick(row), '打开这一章');
+      ui.pick(ui.rightClick(row), '開啟這一章');
       assert.equal(ui.last('openFile')?.path, 'chapters/04.md');
     });
 
-    test('右键一章：改时间（带章号）、重推这一章、从这一章起重推（到最后一章）', () => {
+    test('右鍵一章：改時間（帶章號）、重推這一章、從這一章起重推（到最後一章）', () => {
       ui.post({ type: 'project', tree: withTimeline() });
       ui.sent.length = 0;
-      ui.pick(ui.rightClick(chapterRow(4)), '改时间…');
+      ui.pick(ui.rightClick(chapterRow(4)), '改時間…');
       assert.deepEqual([ui.last('projectAction')?.action, ui.last('projectAction')?.name], ['editTimeline', '4']);
-      ui.pick(ui.rightClick(chapterRow(4)), '重推这一章');
+      ui.pick(ui.rightClick(chapterRow(4)), '重推這一章');
       assert.deepEqual({ ...ui.last('projectAction')?.range }, { from: 4, to: 4 });
-      ui.pick(ui.rightClick(chapterRow(4)), '从这一章起重推（到第 7 章）');
+      ui.pick(ui.rightClick(chapterRow(4)), '從這一章起重推（到第 7 章）');
       assert.deepEqual([ui.last('projectAction')?.action, { ...ui.last('projectAction')?.range }], ['refreshTimeline', { from: 4, to: 7 }]);
-      // 你定的那一行：不给「重推这一章」（机器不动它）。
+      // 你定的那一行：不給「重推這一章」（機器不動它）。
       ui.post({ type: 'project', tree: withTimeline({ segments: [{ key: 'timeline:三月', label: '三月', detail: '', chapters: [chapter(3, { state: 'anchor', machine: false })] }] }) });
       const items = ui.itemsOf(ui.rightClick(chapterRow(3)));
-      assert.ok(items.includes('改时间…') && !items.includes('重推这一章'), JSON.stringify(items));
+      assert.ok(items.includes('改時間…') && !items.includes('重推這一章'), JSON.stringify(items));
       ui.closeMenu();
     });
 
-    test('标题旁「补推时间」「重推」：发 backfillTimeline / refreshTimeline（全部）、不折叠这一组；有一样在跑时两样都不给', () => {
+    test('標題旁「補推時間」「重推」：發 backfillTimeline / refreshTimeline（全部）、不折疊這一組；有一樣在跑時兩樣都不給', () => {
       ui.post({ type: 'project', tree: withTimeline() });
-      assert.equal(headBtn('threads-time-btn')?.textContent, '补推时间');
+      assert.equal(headBtn('threads-time-btn')?.textContent, '補推時間');
       assert.equal(headBtn('threads-refresh-btn')?.textContent, '重推');
       ui.sent.length = 0;
       ui.clickEl(headBtn('threads-time-btn'));
       assert.equal(ui.last('projectAction')?.action, 'backfillTimeline', JSON.stringify(ui.sent));
       ui.clickEl(headBtn('threads-refresh-btn'));
       assert.deepEqual([ui.last('projectAction')?.action, ui.last('projectAction')?.range], ['refreshTimeline', undefined]);
-      assert.ok(chapterRow(3), '点按钮把组折起来了');
-      ui.post({ type: 'tasks', tasks: [{ id: 't1', title: '重推故事时间', message: '第 1–5 章', current: 0, total: 2, elapsedMs: 0 }] });
+      assert.ok(chapterRow(3), '點按鈕把組折起來了');
+      ui.post({ type: 'tasks', tasks: [{ id: 't1', title: '重推故事時間', message: '第 1–5 章', current: 0, total: 2, elapsedMs: 0 }] });
       ui.post({ type: 'project', tree: withTimeline() });
       assert.equal(headBtn('threads-time-btn'), null);
       assert.equal(headBtn('threads-refresh-btn'), null);
       ui.post({ type: 'tasks', tasks: [] });
     });
 
-    test('没有要补推、没有机器写的行：两颗都不给；补推失败的红 ❗ 挂在组标题旁', () => {
+    test('沒有要補推、沒有機器寫的行：兩顆都不給；補推失敗的紅 ❗ 掛在組標題旁', () => {
       const tree = withTimeline({ missing: undefined, machine: 0 });
-      tree.failures = { [TL]: [{ at: '2026-10-24T00:00:00Z', severity: 'error', op: 'timelineBackfill', message: '补推停在第 6 章' }] };
+      tree.failures = { [TL]: [{ at: '2026-10-24T00:00:00Z', severity: 'error', op: 'timelineBackfill', message: '補推停在第 6 章' }] };
       ui.post({ type: 'project', tree });
       assert.equal(headBtn('threads-time-btn'), null);
       assert.equal(headBtn('threads-refresh-btn'), null);
       assert.ok(tlGroup().querySelector('.group-head .row-failure.is-error'));
     });
 
-    test('没有时间线：整组不画', () => {
+    test('沒有時間線：整組不畫', () => {
       ui.post({ type: 'project', tree: sampleTree() });
       assert.equal(tlGroup(), undefined);
     });
   });
 
-  test('「故事架构」组标题仍是 x/6', () => {
+  test('「故事架構」組標題仍是 x/6', () => {
     ui.post({ type: 'project', tree: sampleTree() });
-    const head = [...ui.doc.querySelectorAll('#projectBody .group')].find((g) => g.querySelector('.group-name')?.textContent === '故事架构');
+    const head = [...ui.doc.querySelectorAll('#projectBody .group')].find((g) => g.querySelector('.group-name')?.textContent === '故事架構');
     assert.match(head.querySelector('.group-head').textContent, /5\/6/);
   });
 });

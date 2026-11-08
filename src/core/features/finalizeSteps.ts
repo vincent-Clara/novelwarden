@@ -1,21 +1,21 @@
 /**
- * 定稿的后三步：角色状态、叙事线、故事时间（见 finalize.ts 顶上那张图的第 2、3、4 步）。单章定稿（`finalizeChapter`）与
- * 工程页黄条上的「立即同步」（summarize.ts 的 `syncSummaries`）共用这一份。
+ * 定稿的後三步：角色狀態、敘事線、故事時間（見 finalize.ts 頂上那張圖的第 2、3、4 步）。單章定稿（`finalizeChapter`）與
+ * 工程頁黃條上的「立即同步」（summarize.ts 的 `syncSummaries`）共用這一份。
  *
- * 单放一个文件是为了 summarize.ts 与 finalize.ts 不互相 import：定稿的第一步就是 summarize.ts 的
- * `summarizeChapter`，而同步更新完细纲之后要接着走这两步。
+ * 單放一個檔案是為了 summarize.ts 與 finalize.ts 不互相 import：定稿的第一步就是 summarize.ts 的
+ * `summarizeChapter`，而同步更新完細綱之後要接著走這兩步。
  *
- * 两步的失败各算各的：细纲已经照正文更新好了，这两步没成只挂黄 ❗ 在章节上（第 16 条：部分完成），
- * 角色卡 / 叙事线停在上一次，下次重新定稿会再来一遍。叙事线那一步里认事件没成算整步没成；认出来之后当前进度或归并
- * 没成，认出来的照样记下，黄 ❗ 照样挂在章节上（说清是哪一段）。取消照样抛出去。
+ * 兩步的失敗各算各的：細綱已經照正文更新好了，這兩步沒成只掛黃 ❗ 在章節上（第 16 條：部分完成），
+ * 角色卡 / 敘事線停在上一次，下次重新定稿會再來一遍。敘事線那一步裡認事件沒成算整步沒成；認出來之後當前進度或歸併
+ * 沒成，認出來的照樣記下，黃 ❗ 照樣掛在章節上（說清是哪一段）。取消照樣拋出去。
  *
- * 认事件成了，这一章的叙事线就算判过：推 `project.json` 里的水位（叙事线重做四期，`recordThreads` 里的 `noteThreadsJudged`）。
- * 单章定稿、立即同步、写完即定稿都走这里，水位在连续时跟着往后推；没判成的那一章挡在水位前面，「从已写正文补记」从那里接着判。
+ * 認事件成了，這一章的敘事線就算判過：推 `project.json` 裡的水位（敘事線重做四期，`recordThreads` 裡的 `noteThreadsJudged`）。
+ * 單章定稿、立即同步、寫完即定稿都走這裡，水位在連續時跟著往後推；沒判成的那一章擋在水位前面，「從已寫正文補記」從那裡接著判。
  *
- * 故事时间（2026-10-24 重做）单独一步、单独一次（features/storyTime.ts 的 `recordChapterTime`），与叙事线各算各的：认事件没成不挡它，
- * 它没成只挂黄 ❗ 在章节上。用叙事线那一个模型（同是「定稿」档）。
+ * 故事時間（2026-10-24 重做）單獨一步、單獨一次（features/storyTime.ts 的 `recordChapterTime`），與敘事線各算各的：認事件沒成不擋它，
+ * 它沒成只掛黃 ❗ 在章節上。用敘事線那一個模型（同是「定稿」檔）。
  *
- * 角色状态与故事时间 2026-10-25 起改成转写（按格式写自然语言，转写模型照抄成 JSON），转写调用由调用方给（`transcribe`），几步共用。
+ * 角色狀態與故事時間 2026-10-25 起改成轉寫（按格式寫自然語言，轉寫模型照抄成 JSON），轉寫呼叫由呼叫方給（`transcribe`），幾步共用。
  */
 import { CancelledError, LlmProvider } from '../llm/provider';
 import { clearFailures, recordFailure } from '../runtime/errorLog';
@@ -30,30 +30,30 @@ import { TranscribeCall } from './transcribe';
 
 const log = scoped('同步');
 
-/** 调模型的那一下：单个模型直接调，分档池带 fallback。`ModelPool` 本身就长这样。 */
+/** 調模型的那一下：單個模型直接調，分檔池帶 fallback。`ModelPool` 本身就長這樣。 */
 export interface ModelRunner {
   run<T>(what: string, fn: (llm: LlmProvider) => Promise<T>): Promise<T>;
   readonly primaryBudget: { contextWindow: number; maxOutputTokens: number };
 }
 
 export interface StateAndThreadsOutcome {
-  /** 这三步实际调了几次模型（写 2–5 次：角色状态 0–1、叙事线 1–3、故事时间 1；加上转写的）。 */
+  /** 這三步實際調了幾次模型（寫 2–5 次：角色狀態 0–1、敘事線 1–3、故事時間 1；加上轉寫的）。 */
   calls: number;
   states?: StateUpdateOutcome;
-  /** 角色状态那一步没成（细纲照样算数）。 */
+  /** 角色狀態那一步沒成（細綱照樣算數）。 */
   stateError?: string;
   threads?: ThreadsOutcome;
-  /** 叙事线那一步（认事件）没成（细纲照样算数）。 */
+  /** 敘事線那一步（認事件）沒成（細綱照樣算數）。 */
   threadsError?: string;
-  /** 故事时间那一步写成了什么样（模型漏了这一章是 `missing`）。 */
+  /** 故事時間那一步寫成了什麼樣（模型漏了這一章是 `missing`）。 */
   time?: TimeResult;
-  /** 故事时间那一步没成（时间线没动）。 */
+  /** 故事時間那一步沒成（時間線沒動）。 */
   timeError?: string;
 }
 
 /**
- * 细纲照正文更新好之后：更新本章出场角色的当前状态，再认这一章在叙事线上发生了什么（认事件 / 当前进度 / 归并），最后推这一章的故事时间。
- * `cast` 是第一步交回来的出场人物（定稿后的细纲为准，第 14 条）。
+ * 細綱照正文更新好之後：更新本章出場角色的當前狀態，再認這一章在敘事線上發生了什麼（認事件 / 當前進度 / 歸併），最後推這一章的故事時間。
+ * `cast` 是第一步交回來的出場人物（定稿後的細綱為準，第 14 條）。
  */
 export async function updateStateAndThreads(
   project: NovelProject,
@@ -64,7 +64,7 @@ export async function updateStateAndThreads(
     threads: ModelRunner;
     signal?: AbortSignal;
     onStep?(step: 'state' | 'threads' | 'time'): void;
-    /** 转写那一次怎么调（2026-10-25 起）。缺省走「转写」那一档，那一档没有可用的模型时用叙事线那一个。 */
+    /** 轉寫那一次怎麼調（2026-10-25 起）。預設走「轉寫」那一檔，那一檔沒有可用的模型時用敘事線那一個。 */
     transcribe?: TranscribeCall;
   }
 ): Promise<StateAndThreadsOutcome> {
@@ -85,18 +85,18 @@ export async function updateStateAndThreads(
     if (err instanceof CancelledError || opts.signal?.aborted) {
       throw err;
     }
-    // 请求发出去了钱就花了：失败也记上（解析失败、网络错误都是发出去之后的事；没转成的带着写与转写的实数）。
+    // 請求發出去了錢就花了：失敗也記上（解析失敗、網路錯誤都是發出去之後的事；沒轉成的帶著寫與轉寫的實數）。
     outcome.calls += stateCallsOf(err);
     outcome.stateError = describeError(err);
-    log.warn(`第 ${chapter.order} 章的角色状态没更新成：${outcome.stateError}`, err);
+    log.warn(`第 ${chapter.order} 章的角色狀態沒更新成：${outcome.stateError}`, err);
     await recordFailure(project, {
       scope: '同步',
       targetKind: 'chapter',
       targetKey: chapter.relPath,
       severity: 'warn',
       op: STATE_OP,
-      message: `细纲已照正文更新，但角色状态没更新成：${outcome.stateError}`,
-      detail: '角色卡的当前状态停在上一次。重新同步这一章会再更新一遍。',
+      message: `細綱已照正文更新，但角色狀態沒更新成：${outcome.stateError}`,
+      detail: '角色卡的當前狀態停在上一次。重新同步這一章會再更新一遍。',
     });
   }
 
@@ -122,22 +122,22 @@ export async function updateStateAndThreads(
   return outcome;
 }
 
-/** {@link judgeChapterThreads} 的结果。 */
+/** {@link judgeChapterThreads} 的結果。 */
 export interface ThreadsStep {
-  /** 实际调了几次模型（认事件没成也算那 1 次：请求发出去了；写了、转写没成的连转写那几次）。 */
+  /** 實際調了幾次模型（認事件沒成也算那 1 次：請求發出去了；寫了、轉寫沒成的連轉寫那幾次）。 */
   calls: number;
   threads?: ThreadsOutcome;
-  /** 认事件没成（叙事线没动，这一章没判过）。 */
+  /** 認事件沒成（敘事線沒動，這一章沒判過）。 */
   threadsError?: string;
 }
 
 /**
- * 叙事线走一章（定稿第三步，写 1–3 次，2026-10-25 起每次写完再转写 1–2 次）：认事件 → 归并 → 当前进度（features/threads.ts 的 `recordThreads`）。认出来的落了盘，这一章
- * 就算判过、推水位（四期，在 `recordThreads` 里）；当前进度、归并没成或有几条线没写上，认出来的照样记下，黄 ❗ 挂在章节上（部分完成）；认事件没成，叙事线
- * 不动，黄 ❗ 挂在章节上（第 16 条）。整步都成了才清。取消照样抛出去。
+ * 敘事線走一章（定稿第三步，寫 1–3 次，2026-10-25 起每次寫完再轉寫 1–2 次）：認事件 → 歸併 → 當前進度（features/threads.ts 的 `recordThreads`）。認出來的落了盤，這一章
+ * 就算判過、推水位（四期，在 `recordThreads` 裡）；當前進度、歸併沒成或有幾條線沒寫上，認出來的照樣記下，黃 ❗ 掛在章節上（部分完成）；認事件沒成，敘事線
+ * 不動，黃 ❗ 掛在章節上（第 16 條）。整步都成了才清。取消照樣拋出去。
  *
- * 定稿（单章、立即同步、写完即定稿，`from: 'finalize'`）与从已写正文补记（`from: 'backfill'`，features/threadsBackfill.ts）共用这一份，
- * `from` 只换失败的说法：定稿时细纲已经更新好了，补记时细纲本来就在、只差叙事线。
+ * 定稿（單章、立即同步、寫完即定稿，`from: 'finalize'`）與從已寫正文補記（`from: 'backfill'`，features/threadsBackfill.ts）共用這一份，
+ * `from` 只換失敗的說法：定稿時細綱已經更新好了，補記時細綱本來就在、只差敘事線。
  */
 export async function judgeChapterThreads(
   project: NovelProject,
@@ -151,11 +151,11 @@ export async function judgeChapterThreads(
       budget: runner.primaryBudget,
       signal: opts.signal,
     });
-    // 认出来了，但当前进度或归并那一次没成、或有几条线的当前进度没写上：认出来的照样记下了，黄 ❗ 照样挂在章节上（部分完成）。
+    // 認出來了，但當前進度或歸併那一次沒成、或有幾條線的當前進度沒寫上：認出來的照樣記下了，黃 ❗ 照樣掛在章節上（部分完成）。
     const partial = [
-      th.progressError ? `当前进度没更新成（${th.progressError}）` : '',
-      th.unwritten.length > 0 ? `${th.unwritten.length} 条线的当前进度没写上（${th.unwritten.join('、')}）` : '',
-      th.mergeError ? `归并没判成（${th.mergeError}），新认出的照新的建了` : '',
+      th.progressError ? `當前進度沒更新成（${th.progressError}）` : '',
+      th.unwritten.length > 0 ? `${th.unwritten.length} 條線的當前進度沒寫上（${th.unwritten.join('、')}）` : '',
+      th.mergeError ? `歸併沒判成（${th.mergeError}），新認出的照新的建了` : '',
     ].filter(Boolean);
     if (partial.length > 0) {
       await recordFailure(project, {
@@ -164,8 +164,8 @@ export async function judgeChapterThreads(
         targetKey: chapter.relPath,
         severity: 'warn',
         op: THREADS_OP,
-        message: `叙事线记下了，但${partial.join('；')}`,
-        detail: '重新同步这一章会再来一遍。',
+        message: `敘事線記下了，但${partial.join('；')}`,
+        detail: '重新同步這一章會再來一遍。',
       });
     } else {
       await clearFailures(project, 'chapter', chapter.relPath, THREADS_OP);
@@ -176,7 +176,7 @@ export async function judgeChapterThreads(
       throw err;
     }
     const threadsError = describeError(err);
-    log.warn(`第 ${chapter.order} 章的叙事线没认成：${threadsError}`, err);
+    log.warn(`第 ${chapter.order} 章的敘事線沒認成：${threadsError}`, err);
     await recordFailure(
       project,
       opts.from === 'finalize'
@@ -186,8 +186,8 @@ export async function judgeChapterThreads(
             targetKey: chapter.relPath,
             severity: 'warn',
             op: THREADS_OP,
-            message: `细纲已照正文更新，但叙事线没认成：${threadsError}`,
-            detail: '叙事线没有改动。重新同步这一章会再判一遍。',
+            message: `細綱已照正文更新，但敘事線沒認成：${threadsError}`,
+            detail: '敘事線沒有改動。重新同步這一章會再判一遍。',
           }
         : {
             scope: '叙事线',
@@ -195,11 +195,11 @@ export async function judgeChapterThreads(
             targetKey: chapter.relPath,
             severity: 'warn',
             op: THREADS_OP,
-            message: `从已写正文补记叙事线没成：${threadsError}`,
-            detail: '叙事线没有改动，水位停在这一章前面。在叙事线页签再点一次「从正文补记」，会从这一章接着判；重新同步这一章也会判。',
+            message: `從已寫正文補記敘事線沒成：${threadsError}`,
+            detail: '敘事線沒有改動，水位停在這一章前面。在敘事線頁籤再點一次「從正文補記」，會從這一章接著判；重新同步這一章也會判。',
           }
     );
-    // 请求发出去了钱就花了：认事件没成也记一次；写了、转写没成的（2026-10-25 起）连转写那几次照实记。
+    // 請求發出去了錢就花了：認事件沒成也記一次；寫了、轉寫沒成的（2026-10-25 起）連轉寫那幾次照實記。
     return { calls: err instanceof ThreadsFindError ? err.calls : 1, threadsError };
   }
 }

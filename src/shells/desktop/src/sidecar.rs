@@ -1,20 +1,20 @@
-//! sidecar（`novelwarden` 单文件可执行）的生命周期。
+//! sidecar（`novelwarden` 單檔案可執行）的生命週期。
 //!
-//! ## 就绪信号为什么是 stdout 里那行 URL
+//! ## 就緒訊號為什麼是 stdout 裡那行 URL
 //!
-//! `src/standalone/server.ts` 在 `Bun.serve` 返回**之后**打一行
-//! `服务已启动：http://127.0.0.1:PORT/`。返回意味着 listen 已完成，所以这一行
-//! 既给出端口、又证明端口已经能连——不需要再轮询探活。
+//! `src/standalone/server.ts` 在 `Bun.serve` 返回**之後**打一行
+//! `服務已啟動：http://127.0.0.1:PORT/`。返回意味著 listen 已完成，所以這一行
+//! 既給出埠、又證明埠已經能連——不需要再輪詢探活。
 //!
-//! 这里刻意只匹配 URL 那一段，不匹配「服务已启动」这几个中文字：日志文案将来
-//! 改了不该把壳弄坏。
+//! 這裡刻意只匹配 URL 那一段，不匹配「服務已啟動」這幾個中文字：日誌文案將來
+//! 改了不該把殼弄壞。
 //!
-//! ## 为什么还要预挑端口
+//! ## 為什麼還要預挑埠
 //!
-//! sidecar 自己在端口被占时会顺延重试（`main.ts`），顺延之后的端口只有它知道。
-//! 预挑一个空闲端口传给它，是为了让「碰撞」几乎不发生；真发生了也不怕，
-//! 因为端口的**权威来源始终是 stdout 那行 URL**，不是我们挑的这个数。
-//! 预挑的值只用在一处：stdout 迟迟不来时的 TCP 兜底探测。
+//! sidecar 自己在埠被佔時會順延重試（`main.ts`），順延之後的埠只有它知道。
+//! 預挑一個空閒埠傳給它，是為了讓「碰撞」幾乎不發生；真發生了也不怕，
+//! 因為埠的**權威來源始終是 stdout 那行 URL**，不是我們挑的這個數。
+//! 預挑的值只用在一處：stdout 遲遲不來時的 TCP 兜底探測。
 
 use std::io::Write;
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -26,32 +26,32 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
-/// tauri.conf.json 里 `externalBin` 的末段，也是 scripts/build-sidecar.js 的 BASE。
+/// tauri.conf.json 裡 `externalBin` 的末段，也是 scripts/build-sidecar.js 的 BASE。
 const BIN: &str = "novelwarden";
 const URL_PREFIX: &str = "http://127.0.0.1:";
 
-/// 轮询间隔与两个阈值。
+/// 輪詢間隔與兩個閾值。
 const TICK: Duration = Duration::from_millis(100);
-/// 8 秒还没等到 stdout 就开始 TCP 兜底探测（管道缓冲异常之类）。
+/// 8 秒還沒等到 stdout 就開始 TCP 兜底探測（管道緩衝異常之類）。
 const PROBE_AFTER_TICKS: u32 = 80;
-/// 30 秒仍不就绪就认定失败——比 sidecar 自己顺延 20 次端口的最坏情况还宽。
+/// 30 秒仍不就緒就認定失敗——比 sidecar 自己順延 20 次埠的最壞情況還寬。
 const GIVE_UP_TICKS: u32 = 300;
 
-/// 持有正在跑的 sidecar 子进程。退出时从这里取。
+/// 持有正在跑的 sidecar 子程序。退出時從這裡取。
 #[derive(Default)]
 pub struct Sidecar {
     child: Mutex<Option<CommandChild>>,
 }
 
-/// 收掉当前 sidecar。**退出时必须调**：Windows 上留下孤儿进程会占着端口，
-/// 还会占着 `.novelwarden/novelwarden.db`（`src/core/runtime/db.ts` 里记过这个 EBUSY 坑）。
+/// 收掉當前 sidecar。**退出時必須調**：Windows 上留下孤兒程序會佔著埠，
+/// 還會佔著 `.novelwarden/novelwarden.db`（`src/core/runtime/db.ts` 裡記過這個 EBUSY 坑）。
 ///
-/// 幂等——没有在跑的子进程时什么都不做。
+/// 冪等——沒有在跑的子程序時什麼都不做。
 pub fn kill(app: &AppHandle) {
     let Some(state) = app.try_state::<Sidecar>() else {
         return;
     };
-    // 锁中毒也要把子进程收掉，所以不用 unwrap。
+    // 鎖中毒也要把子程序收掉，所以不用 unwrap。
     let mut guard = state.child.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(child) = guard.take() {
         let _ = child.kill();
@@ -66,15 +66,15 @@ fn log_path(app: &AppHandle) -> Option<PathBuf> {
     Some(log_dir(app)?.join("sidecar.log"))
 }
 
-/// 起一个 sidecar，等它就绪，返回该访问的 URL。
+/// 起一個 sidecar，等它就緒，返回該訪問的 URL。
 ///
-/// 会先收掉已有的 sidecar，所以失败后点「重试」直接调它即可。
+/// 會先收掉已有的 sidecar，所以失敗後點「重試」直接調它即可。
 pub async fn start(app: AppHandle) -> Result<String, String> {
     kill(&app);
 
     let port = free_port()?;
     let log = log_path(&app);
-    // 每次启动截断重来：这是「上次为什么起不来」的排查依据，不需要历史。
+    // 每次啟動截斷重來：這是「上次為什麼起不來」的排查依據，不需要歷史。
     if let Some(path) = &log {
         reset_log(path, port);
     }
@@ -82,21 +82,21 @@ pub async fn start(app: AppHandle) -> Result<String, String> {
     let (mut rx, child) = app
         .shell()
         .sidecar(BIN)
-        .map_err(|e| format!("找不到内置服务程序：{e}"))?
+        .map_err(|e| format!("找不到內建服務程式：{e}"))?
         .args([
             "--no-open".to_string(),
             "--port".to_string(),
             port.to_string(),
         ])
         .spawn()
-        .map_err(|e| format!("启动内置服务失败：{e}"))?;
+        .map_err(|e| format!("啟動內建服務失敗：{e}"))?;
 
     if let Some(state) = app.try_state::<Sidecar>() {
         let mut guard = state.child.lock().unwrap_or_else(|e| e.into_inner());
         *guard = Some(child);
     }
 
-    // sidecar 的 stdout/stderr 全量落盘，同时从里面捞就绪信号。
+    // sidecar 的 stdout/stderr 全量落盤，同時從裡面撈就緒訊號。
     let (tx, mut ready) = tokio::sync::mpsc::channel::<Result<String, String>>(4);
     let log_for_task = log.clone();
     tauri::async_runtime::spawn(async move {
@@ -114,7 +114,7 @@ pub async fn start(app: AppHandle) -> Result<String, String> {
                     }
                 }
                 CommandEvent::Error(message) => {
-                    append(&log_for_task, &format!("[壳] 子进程错误：{message}"));
+                    append(&log_for_task, &format!("[殼] 子程序錯誤：{message}"));
                     if !reported {
                         reported = true;
                         let _ = tx.send(Err(message)).await;
@@ -122,10 +122,10 @@ pub async fn start(app: AppHandle) -> Result<String, String> {
                 }
                 CommandEvent::Terminated(payload) => {
                     let message = format!(
-                        "内置服务退出（code={:?}, signal={:?}）",
+                        "內建服務退出（code={:?}, signal={:?}）",
                         payload.code, payload.signal
                     );
-                    append(&log_for_task, &format!("[壳] {message}"));
+                    append(&log_for_task, &format!("[殼] {message}"));
                     if !reported {
                         reported = true;
                         let _ = tx.send(Err(message)).await;
@@ -143,27 +143,27 @@ pub async fn start(app: AppHandle) -> Result<String, String> {
             Ok(Err(message)) => return Err(message),
             Err(_) => {}
         }
-        // stdout 没来但端口在听：按预挑的端口走，别干等着。
+        // stdout 沒來但埠在聽：按預挑的埠走，別乾等著。
         if tick >= PROBE_AFTER_TICKS && tick % 10 == 0 && port_alive(port) {
             append(
                 &log,
-                "[壳] 没等到 stdout 的就绪行，但端口已在监听，按预挑端口继续。",
+                "[殼] 沒等到 stdout 的就緒行，但埠已在監聽，按預挑埠繼續。",
             );
             return Ok(format!("{URL_PREFIX}{port}/"));
         }
         tokio::time::sleep(TICK).await;
     }
 
-    Err("内置服务 30 秒内没有就绪".to_string())
+    Err("內建服務 30 秒內沒有就緒".to_string())
 }
 
-/// 挑一个空闲端口：绑 0 号口让系统分配，取到号就放掉。
+/// 挑一個空閒埠：綁 0 號口讓系統分配，取到號就放掉。
 fn free_port() -> Result<u16, String> {
     let listener =
-        TcpListener::bind("127.0.0.1:0").map_err(|e| format!("挑不到空闲端口：{e}"))?;
+        TcpListener::bind("127.0.0.1:0").map_err(|e| format!("挑不到空閒埠：{e}"))?;
     let port = listener
         .local_addr()
-        .map_err(|e| format!("取不到端口号：{e}"))?
+        .map_err(|e| format!("取不到埠號：{e}"))?
         .port();
     drop(listener);
     Ok(port)
@@ -174,7 +174,7 @@ fn port_alive(port: u16) -> bool {
     TcpStream::connect_timeout(&addr, Duration::from_millis(300)).is_ok()
 }
 
-/// 从一行日志里抠出 `http://127.0.0.1:PORT/`。认不出返回 None。
+/// 從一行日誌裡摳出 `http://127.0.0.1:PORT/`。認不出返回 None。
 fn parse_url(line: &str) -> Option<String> {
     let at = line.find(URL_PREFIX)?;
     let digits: String = line[at + URL_PREFIX.len()..]
@@ -193,12 +193,12 @@ fn reset_log(path: &Path, port: u16) {
     }
     let _ = std::fs::write(
         path,
-        format!("[壳] 启动内置服务，预挑端口 {port}\n"),
+        format!("[殼] 啟動內建服務，預挑埠 {port}\n"),
     );
 }
 
-/// 追加一段 sidecar 输出。**所有错误都吞掉**——日志是排查手段，不该成为
-/// 新的失败源（与 src/core/runtime/db.ts 里对 SQLite 的态度一致）。
+/// 追加一段 sidecar 輸出。**所有錯誤都吞掉**——日誌是排查手段，不該成為
+/// 新的失敗源（與 src/core/runtime/db.ts 裡對 SQLite 的態度一致）。
 fn append(path: &Option<PathBuf>, text: &str) {
     let Some(path) = path else {
         return;

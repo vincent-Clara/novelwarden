@@ -1,52 +1,52 @@
 /**
- * 正文的分段格式与一键排版：工程级设置 `paragraphStyle`（`config.md` 的 frontmatter）的取值与说法、
- * 各格式的段分隔，以及两个排版用的纯函数——`formatProse`（按格式重排段落）与 `toFullWidthPunct`
- * （中文语境里的半角标点转全角）。
+ * 正文的分段格式與一鍵排版：工程級設定 `paragraphStyle`（`config.md` 的 frontmatter）的取值與說法、
+ * 各格式的段分隔，以及兩個排版用的純函式——`formatProse`（按格式重排段落）與 `toFullWidthPunct`
+ * （中文語境裡的半形標點轉全形）。
  *
- * **纯函数、零 import**：内置编辑器（`media/src/editor/`）直接打包它——回车插什么、一键排版排成
- * 什么样，与后端认的是同一份；日后生成链要按格式整理模型的输出也用这一份。
+ * **純函式、零 import**：內建編輯器（`media/src/editor/`）直接打包它——回車插什麼、一鍵排版排成
+ * 什麼樣，與後端認的是同一份；日後生成鏈要按格式整理模型的輸出也用這一份。
  *
- * ## 三种格式
+ * ## 三種格式
  *
- * | 值 | 中文 | 段与段之间 | 段首 |
+ * | 值 | 中文 | 段與段之間 | 段首 |
  * |---|---|---|---|
- * | `blank`（缺省） | 空行分段 | 空一行 | 不缩进 |
- * | `indent` | 段首缩进 | 不空行 | 两个全角空格 |
- * | `both` | 缩进加空行 | 空一行 | 两个全角空格 |
+ * | `blank`（預設） | 空行分段 | 空一行 | 不縮排 |
+ * | `indent` | 段首縮排 | 不空行 | 兩個全形空格 |
+ * | `both` | 縮排加空行 | 空一行 | 兩個全形空格 |
  *
- * 标题行（`#` 开头）与只有符号的场景分隔行（`* * *`、`※`、`◇◇◇`……）不缩进，但段与段之间照样按格式隔开。
+ * 標題行（`#` 開頭）與只有符號的場景分隔行（`* * *`、`※`、`◇◇◇`……）不縮排，但段與段之間照樣按格式隔開。
  */
 
-/** 三种分段格式。顺序即菜单里的顺序。 */
+/** 三種分段格式。順序即選單裡的順序。 */
 export const PARAGRAPH_STYLES = ['blank', 'indent', 'both'] as const;
 
 export type ParagraphStyle = (typeof PARAGRAPH_STYLES)[number];
 
-/** `config.md` 里没写（或写坏了）时用的格式：空行分段、段首不缩进。 */
+/** `config.md` 裡沒寫（或寫壞了）時用的格式：空行分段、段首不縮排。 */
 export const DEFAULT_PARAGRAPH_STYLE: ParagraphStyle = 'blank';
 
-/** 界面上的说法。作者在 frontmatter 里写这几个中文也认（`parseParagraphStyle`）。 */
+/** 介面上的說法。作者在 frontmatter 裡寫這幾個中文也認（`parseParagraphStyle`）。 */
 export const PARAGRAPH_STYLE_LABEL: Record<ParagraphStyle, string> = {
   blank: '空行分段',
-  indent: '段首缩进',
-  both: '缩进加空行',
+  indent: '段首縮排',
+  both: '縮排加空行',
 };
 
-/** 一句话说明，菜单项的提示用。 */
+/** 一句話說明，選單項的提示用。 */
 export const PARAGRAPH_STYLE_HINT: Record<ParagraphStyle, string> = {
-  blank: '段与段之间空一行，段首不缩进（网文常见）',
-  indent: '段首两个全角空格，段与段之间不空行（出版常见）',
-  both: '段首两个全角空格，段与段之间再空一行',
+  blank: '段與段之間空一行，段首不縮排（網文常見）',
+  indent: '段首兩個全形空格，段與段之間不空行（出版常見）',
+  both: '段首兩個全形空格，段與段之間再空一行',
 };
 
-/** 正文段首的缩进：两个全角空格。 */
+/** 正文段首的縮排：兩個全形空格。 */
 export const PROSE_INDENT = '　　';
 
 export function isParagraphStyle(value: unknown): value is ParagraphStyle {
   return typeof value === 'string' && (PARAGRAPH_STYLES as readonly string[]).includes(value);
 }
 
-/** 英文值（不分大小写）、中文说法都认，认不出就是 undefined（不猜）。 */
+/** 英文值（不分大小寫）、中文說法都認，認不出就是 undefined（不猜）。 */
 export function parseParagraphStyle(raw: string): ParagraphStyle | undefined {
   const s = raw.trim();
   if (!s) {
@@ -56,31 +56,31 @@ export function parseParagraphStyle(raw: string): ParagraphStyle | undefined {
   return PARAGRAPH_STYLES.find((v) => v === lower || PARAGRAPH_STYLE_LABEL[v] === s);
 }
 
-/** 段与段之间的换行：空一行的两种是 `\n\n`，段首缩进是 `\n`。 */
+/** 段與段之間的換行：空一行的兩種是 `\n\n`，段首縮排是 `\n`。 */
 export function paragraphGap(style: ParagraphStyle): string {
   return style === 'indent' ? '\n' : '\n\n';
 }
 
-/** 段首缩进：缩进的两种是两个全角空格，空行分段没有。 */
+/** 段首縮排：縮排的兩種是兩個全形空格，空行分段沒有。 */
 export function paragraphIndent(style: ParagraphStyle): string {
   return style === 'blank' ? '' : PROSE_INDENT;
 }
 
-/** 另起一段要插的字：段间换行 + 新一段的段首缩进（回车、Ctrl+Enter 用）。 */
+/** 另起一段要插的字：段間換行 + 新一段的段首縮排（回車、Ctrl+Enter 用）。 */
 export function paragraphBreak(style: ParagraphStyle): string {
   return paragraphGap(style) + paragraphIndent(style);
 }
 
-// ---------------------------------------------------------------- 一键排版
+// ---------------------------------------------------------------- 一鍵排版
 
-/** 标题行：去掉首尾空白后以 `#` 开头。不缩进。 */
+/** 標題行：去掉首尾空白後以 `#` 開頭。不縮排。 */
 export function isHeadingLine(line: string): boolean {
   return line.trim().startsWith('#');
 }
 
 /**
- * 只有符号的场景分隔行（`---`、`***`、`* * *`、`※`、`◇◇◇`、`＊＊＊`……）。不缩进。
- * 省略号与破折号**不在其列**：一行「……」或「——」多半是一句话（沉默、被打断），要当段落缩进。
+ * 只有符號的場景分隔行（`---`、`***`、`* * *`、`※`、`◇◇◇`、`＊＊＊`……）。不縮排。
+ * 省略號與破折號**不在其列**：一行「……」或「——」多半是一句話（沉默、被打斷），要當段落縮排。
  */
 const SCENE_BREAK = /^[\s\-*_=~#·•∙・＊※⁂◇◆○●◎□■△▲▽▼☆★♢♦◈❖✦✧✱❋＝－～]+$/u;
 
@@ -90,33 +90,33 @@ export function isSceneBreakLine(line: string): boolean {
 }
 
 /**
- * 顶部的 frontmatter：`---` 开头、`---` 收尾，中间每一行都像 YAML（`键: 值`、`  - 项`、`# 注释`、空行）。
- * 要求中间像 YAML，是为了不把开头就是场景分隔线 `---` 的正文误当成 frontmatter。
+ * 頂部的 frontmatter：`---` 開頭、`---` 收尾，中間每一行都像 YAML（`鍵: 值`、`  - 項`、`# 註釋`、空行）。
+ * 要求中間像 YAML，是為了不把開頭就是場景分隔線 `---` 的正文誤當成 frontmatter。
  */
 const FRONTMATTER = /^---\n(?:(?:[A-Za-z_][\w-]*\s*:.*|\s+-.*|\s*#.*|\s*)\n)*?---(?:\n|$)/;
 
 export interface LayoutOptions {
   /**
-   * 排的是一段节选（编辑器里选中的那几行）：不认 frontmatter、文末不补换行、
-   * 首尾的空行直接去掉（调用方已经把范围收到非空行上）。
+   * 排的是一段節選（編輯器裡選中的那幾行）：不認 frontmatter、文末不補換行、
+   * 首尾的空行直接去掉（呼叫方已經把範圍收到非空行上）。
    */
   fragment?: boolean;
 }
 
 export interface LayoutResult {
   text: string;
-  /** 改了几处：重排过的行数 + 改过的段间隔 + 文首文末的空白各算一处。没变就是 0。 */
+  /** 改了幾處：重排過的行數 + 改過的段間隔 + 文首文末的空白各算一處。沒變就是 0。 */
   changes: number;
 }
 
 /**
- * 按分段格式重排正文，并数出改了几处。
+ * 按分段格式重排正文，並數出改了幾處。
  *
- * - 顶部 frontmatter 原样保留；`\r\n` 当 `\n`。
- * - 每个非空行是一段：去掉首尾空白（半角 / 全角空格、不换行空格、制表符），段首按格式缩进。
- * - 标题行（`#` 开头）与场景分隔行只去首尾空白、不缩进。
- * - 段与段之间按格式隔开（空一行或不空行），原来空了几行都收成这一种。
- * - 文末恰好一个换行（`fragment` 时不补）。
+ * - 頂部 frontmatter 原樣保留；`\r\n` 當 `\n`。
+ * - 每個非空行是一段：去掉首尾空白（半形 / 全形空格、不換行空格、製表符），段首按格式縮排。
+ * - 標題行（`#` 開頭）與場景分隔行只去首尾空白、不縮排。
+ * - 段與段之間按格式隔開（空一行或不空行），原來空了幾行都收成這一種。
+ * - 文末恰好一個換行（`fragment` 時不補）。
  */
 export function layoutProse(input: string, style: ParagraphStyle, opts: LayoutOptions = {}): LayoutResult {
   let changes = input.includes('\r') ? 1 : 0;
@@ -133,9 +133,9 @@ export function layoutProse(input: string, style: ParagraphStyle, opts: LayoutOp
   const gap = paragraphGap(style);
   const indent = paragraphIndent(style);
   const blocks: string[] = [];
-  /** 这一行在 `text` 里从哪起。 */
+  /** 這一行在 `text` 裡從哪起。 */
   let pos = 0;
-  /** 上一段末尾的位置（还没有段时是文首）：它与这一段之间隔着的就是原来的段间隔。 */
+  /** 上一段末尾的位置（還沒有段時是文首）：它與這一段之間隔著的就是原來的段間隔。 */
   let prevEnd = 0;
   for (const line of text.split('\n')) {
     const start = pos;
@@ -150,7 +150,7 @@ export function layoutProse(input: string, style: ParagraphStyle, opts: LayoutOp
     }
     const between = text.slice(prevEnd, start);
     if (blocks.length === 0) {
-      // 文首的空行要去掉（节选的首尾空行不算：调用方已经把范围收到非空行上）。
+      // 文首的空行要去掉（節選的首尾空行不算：呼叫方已經把範圍收到非空行上）。
       if (between !== '' && !opts.fragment) {
         changes++;
       }
@@ -162,7 +162,7 @@ export function layoutProse(input: string, style: ParagraphStyle, opts: LayoutOp
   }
 
   if (blocks.length === 0) {
-    // 只有空白（或什么都没有）：排成空的。
+    // 只有空白（或什麼都沒有）：排成空的。
     if (text !== '' && !opts.fragment) {
       changes++;
     }
@@ -179,9 +179,9 @@ export function formatProse(text: string, style: ParagraphStyle, opts?: LayoutOp
   return layoutProse(text, style, opts).text;
 }
 
-// ---------------------------------------------------------------- 半角标点转全角
+// ---------------------------------------------------------------- 半形標點轉全形
 
-/** 一处替换：在原文 `at` 处把 `from` 换成 `to`。 */
+/** 一處替換：在原文 `at` 處把 `from` 換成 `to`。 */
 export interface PunctEdit {
   at: number;
   from: string;
@@ -190,17 +190,17 @@ export interface PunctEdit {
 
 export interface PunctResult {
   text: string;
-  /** 换了几处（一对引号算两处，`...` → `……` 算一处）。 */
+  /** 換了幾處（一對引號算兩處，`...` → `……` 算一處）。 */
   changes: number;
-  /** 每一处替换，按位置升序。调用方据此挪光标。 */
+  /** 每一處替換，按位置升序。呼叫方據此挪游標。 */
   edits: PunctEdit[];
 }
 
 const HAN = /\p{Script=Han}/u;
-/** 中文标点与引号：CJK 符号区、全角区、弯引号、省略号、破折号、间隔号。 */
+/** 中文標點與引號：CJK 符號區、全形區、彎引號、省略號、破折號、間隔號。 */
 const CN_PUNCT = /[　-〿＀-￯‘’“”…—·]/u;
 
-/** 算不算中文语境里的字：汉字、中文标点、弯引号。 */
+/** 算不算中文語境裡的字：漢字、中文標點、彎引號。 */
 function isChineseContext(ch: string | undefined): boolean {
   return !!ch && (HAN.test(ch) || CN_PUNCT.test(ch));
 }
@@ -215,7 +215,7 @@ const FULL_WIDTH: Record<string, string> = {
 };
 
 /**
- * 不该动的地方：顶部 frontmatter、Markdown 代码（围栏与行内）、网址、邮箱。标成 true 的下标原样照抄。
+ * 不該動的地方：頂部 frontmatter、Markdown 程式碼（圍欄與行內）、網址、郵箱。標成 true 的下標原樣照抄。
  */
 function protectedMask(text: string, fragment: boolean): Uint8Array {
   const mask = new Uint8Array(text.length);
@@ -226,7 +226,7 @@ function protectedMask(text: string, fragment: boolean): Uint8Array {
       mark(0, fm[0].length);
     }
   }
-  // 围栏代码块：``` 或 ~~~ 开头的行到下一个同样的行（没收尾就到文末）。
+  // 圍欄程式碼塊：``` 或 ~~~ 開頭的行到下一個同樣的行（沒收尾就到文末）。
   const fence = /^(```|~~~)[^\n]*\n[\s\S]*?(?:^\1[^\n]*$|(?![\s\S]))/gm;
   for (const m of text.matchAll(fence)) {
     mark(m.index!, m.index! + m[0].length);
@@ -234,7 +234,7 @@ function protectedMask(text: string, fragment: boolean): Uint8Array {
   for (const m of text.matchAll(/`[^`\n]+`/g)) {
     mark(m.index!, m.index! + m[0].length);
   }
-  // 网址与邮箱只认 ASCII（碰到汉字就断开），末尾跟着的标点算句子的、不算网址的（`见 https://a.com/x.` 那个句点要转）。
+  // 網址與郵箱只認 ASCII（碰到漢字就斷開），末尾跟著的標點算句子的、不算網址的（`見 https://a.com/x.` 那個句點要轉）。
   for (const re of [/\b(?:https?|ftp):\/\/[!-~]+/gi, /\bwww\.[!-~]+/gi, /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g]) {
     for (const m of text.matchAll(re)) {
       const url = m[0].replace(/[.,;:!?)\]'"]+$/, '');
@@ -245,20 +245,20 @@ function protectedMask(text: string, fragment: boolean): Uint8Array {
 }
 
 /**
- * 中文语境里的半角标点转全角，并列出每一处。
+ * 中文語境裡的半形標點轉全形，並列出每一處。
  *
- * - **前一个字是汉字（或中文标点、弯引号）时**，半角 `, . ? ! : ;` 转成全角。数字之间（`3.14`、
- *   `1,000`）、英文句子、`文件名.md` 这类（`.` 后面紧跟字母数字）不动。
- * - `...`（三个及以上）挨着中文时、`。。。` 一律转成 `……`。
- * - 汉字（或中文标点）之间的 `--` / `---` 转成 `——`。
- * - 一对半角括号：括号里有汉字，或里面没有英文字母且外面挨着汉字（`(1)第一条`），两边一起转成全角；
- *   `f(x)的` 这种不动。落单的括号不动。
- * - 直双引号：同一行里成对出现、每一对中间都有汉字时，按出现顺序转成 “”；落单、或某一对里没有
- *   汉字就不动。直单引号一律不动——英文的撇号（`don't`）会把配对搅乱。
- * - 顶部 frontmatter、Markdown 代码（围栏与行内）、网址、邮箱原样不动。
+ * - **前一個字是漢字（或中文標點、彎引號）時**，半形 `, . ? ! : ;` 轉成全形。數字之間（`3.14`、
+ *   `1,000`）、英文句子、`文件名.md` 這類（`.` 後面緊跟字母數字）不動。
+ * - `...`（三個及以上）挨著中文時、`。。。` 一律轉成 `……`。
+ * - 漢字（或中文標點）之間的 `--` / `---` 轉成 `——`。
+ * - 一對半形括號：括號裡有漢字，或裡面沒有英文字母且外面挨著漢字（`(1)第一條`），兩邊一起轉成全形；
+ *   `f(x)的` 這種不動。落單的括號不動。
+ * - 直雙引號：同一行裡成對出現、每一對中間都有漢字時，按出現順序轉成 “”；落單、或某一對裡沒有
+ *   漢字就不動。直單引號一律不動——英文的撇號（`don't`）會把配對攪亂。
+ * - 頂部 frontmatter、Markdown 程式碼（圍欄與行內）、網址、郵箱原樣不動。
  *
- * `range` 给了就只改这一段里的字（判语境照样看前后文）；`fragment` 表示 `text` 本身是一段节选，
- * 不认 frontmatter。
+ * `range` 給了就只改這一段裡的字（判語境照樣看前後文）；`fragment` 表示 `text` 本身是一段節選，
+ * 不認 frontmatter。
  */
 export function fullWidthPunct(
   text: string,
@@ -269,14 +269,14 @@ export function fullWidthPunct(
   const hi = opts.range ? Math.min(text.length, opts.range.end) : text.length;
   const inRange = (i: number) => i >= lo && i < hi && !mask[i];
 
-  /** 预先定好的单字替换：下标 → 新字（引号与括号要成对判，先算好）。 */
+  /** 預先定好的單字替換：下標 → 新字（引號與括號要成對判，先算好）。 */
   const preset = new Map<number, string>();
   presetQuotes(text, inRange, preset);
   presetBrackets(text, inRange, preset);
 
   const edits: PunctEdit[] = [];
   let out = '';
-  /** 输出里的上一个字：判语境要看替换之后的样子（`"你好",` 里的逗号跟在 ” 后面）。 */
+  /** 輸出裡的上一個字：判語境要看替換之後的樣子（`"你好",` 裡的逗號跟在 ” 後面）。 */
   const prevOut = () => out[out.length - 1];
   const put = (at: number, from: string, to: string) => {
     edits.push({ at, from, to });
@@ -297,7 +297,7 @@ export function fullWidthPunct(
       i++;
       continue;
     }
-    // 省略号：三个及以上的 . 或 。
+    // 省略號：三個及以上的 . 或 。
     if (ch === '.' || ch === '。') {
       let j = i;
       while (j < hi && text[j] === ch && !mask[j]) {
@@ -309,13 +309,13 @@ export function fullWidthPunct(
         continue;
       }
       if (j - i >= 2) {
-        // 两个点、或英文里的省略号：原样照抄，不拆开逐个判。
+        // 兩個點、或英文裡的省略號：原樣照抄，不拆開逐個判。
         out += text.slice(i, j);
         i = j;
         continue;
       }
     }
-    // 破折号：汉字之间的 -- / ---
+    // 破折號：漢字之間的 -- / ---
     if (ch === '-') {
       let j = i;
       while (j < hi && text[j] === '-' && !mask[j]) {
@@ -347,7 +347,7 @@ export function toFullWidthPunct(text: string, opts?: { range?: { start: number;
   return fullWidthPunct(text, opts).text;
 }
 
-/** 直双引号：一行里成对、每一对中间有汉字的，按顺序转成 “”。 */
+/** 直雙引號：一行裡成對、每一對中間有漢字的，按順序轉成 “”。 */
 function presetQuotes(text: string, ok: (i: number) => boolean, preset: Map<number, string>): void {
   let lineStart = 0;
   while (lineStart <= text.length) {
@@ -376,13 +376,13 @@ function presetQuotes(text: string, ok: (i: number) => boolean, preset: Map<numb
   }
 }
 
-/** 半角括号：成对的才转，判据见 {@link fullWidthPunct}。 */
+/** 半形括號：成對的才轉，判據見 {@link fullWidthPunct}。 */
 function presetBrackets(text: string, ok: (i: number) => boolean, preset: Map<number, string>): void {
   const stack: number[] = [];
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (ch === '\n') {
-      // 括号不跨行配对。
+      // 括號不跨行配對。
       stack.length = 0;
     } else if (ch === '(' && ok(i)) {
       stack.push(i);

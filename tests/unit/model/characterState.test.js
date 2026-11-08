@@ -1,11 +1,11 @@
 /**
- * 角色卡「当前状态」归谁（D15）与只动那一节的写法。
+ * 角色卡「當前狀態」歸誰（D15）與只動那一節的寫法。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 空的、指纹对得上 → 机器的 | 批量串行写十章，不能每章弹一次 diff |
- * | 改过、没记过指纹的非空内容 → 作者的 | 第 3 条：不静默覆盖（上游同一口径） |
- * | 只换那一节 | 整卡重渲染会抹掉作者自加的小节 |
+ * | 空的、指紋對得上 → 機器的 | 批次序列寫十章，不能每章彈一次 diff |
+ * | 改過、沒記過指紋的非空內容 → 作者的 | 第 3 條：不靜默覆蓋（上游同一口徑） |
+ * | 只換那一節 | 整卡重渲染會抹掉作者自加的小節 |
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -16,35 +16,35 @@ const md = loadModule('src/core/model/markdown.ts');
 
 const card = (当前状态, stateHash) => ({ sections: { 当前状态 }, stateHash });
 
-describe('characterState.ts · 归属', () => {
-  test('空的一节归机器', () => {
+describe('characterState.ts · 歸屬', () => {
+  test('空的一節歸機器', () => {
     assert.ok(state.stateOwnedByMachine(card('', undefined)));
     assert.ok(state.stateOwnedByMachine(card('  \n', 'whatever')));
   });
 
-  test('机器盖过章、没人动过 → 机器的', () => {
-    const stamped = state.stampState(card('在青崖镇的客栈养伤'), 3);
+  test('機器蓋過章、沒人動過 → 機器的', () => {
+    const stamped = state.stampState(card('在青崖鎮的客棧養傷'), 3);
     assert.equal(stamped.stateThrough, 3);
     assert.ok(state.stateOwnedByMachine(stamped));
   });
 
-  test('首尾空白不算改过', () => {
-    const stamped = state.stampState(card('在青崖镇的客栈养伤'), 3);
-    assert.ok(state.stateOwnedByMachine({ ...stamped, sections: { 当前状态: '\n在青崖镇的客栈养伤  \n' } }));
+  test('首尾空白不算改過', () => {
+    const stamped = state.stampState(card('在青崖鎮的客棧養傷'), 3);
+    assert.ok(state.stateOwnedByMachine({ ...stamped, sections: { 当前状态: '\n在青崖鎮的客棧養傷  \n' } }));
   });
 
-  test('作者改过一个字 → 作者的', () => {
-    const stamped = state.stampState(card('在青崖镇的客栈养伤'), 3);
-    assert.ok(!state.stateOwnedByMachine({ ...stamped, sections: { 当前状态: '在青崖镇的客栈养伤，伤口化脓' } }));
+  test('作者改過一個字 → 作者的', () => {
+    const stamped = state.stampState(card('在青崖鎮的客棧養傷'), 3);
+    assert.ok(!state.stateOwnedByMachine({ ...stamped, sections: { 当前状态: '在青崖鎮的客棧養傷，傷口化膿' } }));
   });
 
-  test('从没记过指纹、却有内容 → 作者的（手写的卡、换轴之前的卡）', () => {
-    assert.ok(!state.stateOwnedByMachine(card('在青崖镇', undefined)));
+  test('從沒記過指紋、卻有內容 → 作者的（手寫的卡、換軸之前的卡）', () => {
+    assert.ok(!state.stateOwnedByMachine(card('在青崖鎮', undefined)));
   });
 
-  test('「状态截至第 K 章」的说法', () => {
-    assert.equal(state.describeStateThrough(3), '状态截至第 3 章');
-    assert.equal(state.describeStateThrough(0), '开篇状态');
+  test('「狀態截至第 K 章」的說法', () => {
+    assert.equal(state.describeStateThrough(3), '狀態截至第 3 章');
+    assert.equal(state.describeStateThrough(0), '開篇狀態');
     assert.equal(state.describeStateThrough(undefined), '');
   });
 });
@@ -59,43 +59,43 @@ describe('markdown.ts · replaceSection', () => {
     '',
     '## 身份',
     '',
-    '孤儿',
+    '孤兒',
     '',
-    '## 当前状态',
+    '## 當前狀態',
     '',
-    '在客栈',
-    '### 细节',
-    '左臂有伤',
+    '在客棧',
+    '### 細節',
+    '左臂有傷',
     '',
-    '## 我的笔记',
+    '## 我的筆記',
     '',
-    '作者自己加的一节',
+    '作者自己加的一節',
     '',
   ].join('\n');
 
-  test('只换那一节（连同它下面的三级标题），其余原样', () => {
-    const out = md.replaceSection(CARD, '当前状态', '离开了青崖镇，往北去');
-    assert.match(out, /## 当前状态\n\n离开了青崖镇，往北去\n\n## 我的笔记/);
-    assert.match(out, /## 身份\n\n孤儿/);
-    assert.match(out, /作者自己加的一节/);
-    assert.doesNotMatch(out, /左臂有伤/);
+  test('只換那一節（連同它下面的三級標題），其餘原樣', () => {
+    const out = md.replaceSection(CARD, '当前状态', '離開了青崖鎮，往北去');
+    assert.match(out, /## 當前狀態\n\n離開了青崖鎮，往北去\n\n## 我的筆記/);
+    assert.match(out, /## 身份\n\n孤兒/);
+    assert.match(out, /作者自己加的一節/);
+    assert.doesNotMatch(out, /左臂有傷/);
   });
 
-  test('最后一节也换得了，结尾只留一个换行', () => {
-    const text = '# 林昭\n\n## 当前状态\n\n在客栈\n\n\n';
-    assert.equal(md.replaceSection(text, '当前状态', '往北去'), '# 林昭\n\n## 当前状态\n\n往北去\n');
+  test('最後一節也換得了，結尾只留一個換行', () => {
+    const text = '# 林昭\n\n## 當前狀態\n\n在客棧\n\n\n';
+    assert.equal(md.replaceSection(text, '当前状态', '往北去'), '# 林昭\n\n## 當前狀態\n\n往北去\n');
   });
 
-  test('没有这一节就追加在末尾', () => {
-    assert.equal(md.replaceSection('# 林昭\n\n## 身份\n\n孤儿\n', '当前状态', '往北去'), '# 林昭\n\n## 身份\n\n孤儿\n\n## 当前状态\n\n往北去\n');
+  test('沒有這一節就追加在末尾', () => {
+    assert.equal(md.replaceSection('# 林昭\n\n## 身份\n\n孤兒\n', '当前状态', '往北去'), '# 林昭\n\n## 身份\n\n孤兒\n\n## 當前狀態\n\n往北去\n');
   });
 
-  test('小节名按宽松规则认；CRLF 原样保留', () => {
-    const text = '# 林昭\r\n\r\n## 当前 状态：\r\n\r\n在客栈\r\n';
-    assert.equal(md.replaceSection(text, '当前状态', '往北去'), '# 林昭\r\n\r\n## 当前 状态：\r\n\r\n往北去\r\n');
+  test('小節名按寬鬆規則認；CRLF 原樣保留', () => {
+    const text = '# 林昭\r\n\r\n## 當前 狀態：\r\n\r\n在客棧\r\n';
+    assert.equal(md.replaceSection(text, '当前状态', '往北去'), '# 林昭\r\n\r\n## 當前 狀態：\r\n\r\n往北去\r\n');
   });
 
-  test('空值写占位文字，结构不塌', () => {
-    assert.match(md.replaceSection(CARD, '当前状态', ''), /## 当前状态\n\n（待补充）\n\n## 我的笔记/);
+  test('空值寫佔位文字，結構不塌', () => {
+    assert.match(md.replaceSection(CARD, '当前状态', ''), /## 當前狀態\n\n（待補充）\n\n## 我的筆記/);
   });
 });

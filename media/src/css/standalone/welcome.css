@@ -1,4 +1,4 @@
-/* Get Started 与无工程空态。只影响独立版（插件不加载 standalone.css）。 */
+/* Get Started 與無工程空態。隻影響獨立版（外掛不載入 standalone.css）。 */
 
 .nf-welcome {
   display: none;
@@ -12,7 +12,7 @@
   color: var(--vscode-foreground);
 }
 
-/* 上面「开始」「最近」两栏，「怎么上手」整宽排在下面、与上面左对齐（窄了就一栏一栏往下排）。 */
+/* 上面「開始」「最近」兩欄，「怎麼上手」整寬排在下面、與上面左對齊（窄了就一欄一欄往下排）。 */
 body.no-workspace #nfWelcome,
 body.show-welcome #nfWelcome {
   display: grid;
@@ -101,7 +101,7 @@ body.no-workspace #edWelcome {
   color: var(--vscode-descriptionForeground);
 }
 
-/* 「怎么上手」：占满上面两栏那么宽，一条一段。 */
+/* 「怎麼上手」：佔滿上面兩欄那麼寬，一條一段。 */
 .nf-welcome-col.nf-welcome-copy {
   grid-column: 1 / -1;
   max-width: 648px;
@@ -166,7 +166,7 @@ body.no-workspace .ws-empty {
   font-size: 13px;
 }
 
-/* 遮罩里的一句话 + 「打开文件夹…」（W12）。 */
+/* 遮罩裡的一句話 + 「開啟資料夾…」（W12）。 */
 .ws-empty-inner p {
   margin: 0 0 10px;
 }

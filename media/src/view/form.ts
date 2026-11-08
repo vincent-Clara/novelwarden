@@ -1,13 +1,13 @@
 /**
- * 通用表单弹窗（W3）。一句话、拆细纲两个弹窗都是它。
+ * 通用表單彈窗（W3）。一句話、拆細綱兩個彈窗都是它。
  *
- * 复用 `providerModal` 那一层遮罩：两种形态（插件 webview 与独立版）都装配了它
- * （`shells/shared/panes.ts`），于是这里一份代码两边都能用——不必像独立版的
- * `prompt.ts` 那样只在浏览器里出现。几个弹窗不会同时出现：它们都只在作者点了
- * 某个按钮之后才打开。
+ * 複用 `providerModal` 那一層遮罩：兩種形態（外掛 webview 與獨立版）都裝配了它
+ * （`shells/shared/panes.ts`），於是這裡一份程式碼兩邊都能用——不必像獨立版的
+ * `prompt.ts` 那樣只在瀏覽器裡出現。幾個彈窗不會同時出現：它們都只在作者點了
+ * 某個按鈕之後才開啟。
  *
- * 表单只收值、算说明、交出去；**发什么消息由调用方决定**（forms.ts）。前端无状态那条
- * 基本盘不变：提交之后弹窗就关，结果随后端下一次推送回来。
+ * 表單只收值、算說明、交出去；**發什麼訊息由呼叫方決定**（forms.ts）。前端無狀態那條
+ * 基本盤不變：提交之後彈窗就關，結果隨後端下一次推送回來。
  */
 import { el as mk, setHidden } from '../dom';
 import { primaryBtn, secondaryBtn } from './buttons';
@@ -21,12 +21,12 @@ export type FormField =
       value?: string;
       placeholder?: string;
       rows?: number;
-      /** 空着不许提交。 */
+      /** 空著不許提交。 */
       required?: boolean;
     }
   /**
-   * 一行字（新建一本书的书名、作者、放在哪）。单按 Enter 就提交。`browse` 在框右边多一颗按钮（「选…」开目录选择器），
-   * 选好了用 `set` 填回框里。
+   * 一行字（新建一本書的書名、作者、放在哪）。單按 Enter 就提交。`browse` 在框右邊多一顆按鈕（「選…」開目錄選擇器），
+   * 選好了用 `set` 填回框裡。
    */
   | {
       kind: 'text';
@@ -38,17 +38,17 @@ export type FormField =
       browse?: { label: string; run(current: string, set: (value: string) => void): void };
     }
   | { kind: 'number'; key: string; label: string; value?: number; min?: number; max?: number; step?: number }
-  /** 几选一（批量写章的模式、这一次用哪个模型）。值是字符串。 */
+  /** 幾選一（批次寫章的模式、這一次用哪個模型）。值是字串。 */
   | { kind: 'select'; key: string; label: string; value?: string; options: SelectOption[] };
 
-/** 下拉框的一项。`group` 相同的相邻几项收进一个 `optgroup`（模型按服务商分组，同对话页）。 */
+/** 下拉框的一項。`group` 相同的相鄰幾項收進一個 `optgroup`（模型按服務商分組，同對話頁）。 */
 export interface SelectOption {
   value: string;
   label: string;
   group?: string;
 }
 
-/** 一个下拉框。表单与独立版确认框（prompt.ts）共用：同一种下拉框只有一种画法。 */
+/** 一個下拉框。表單與獨立版確認框（prompt.ts）共用：同一種下拉框只有一種畫法。 */
 export function buildSelect(options: SelectOption[], value?: string): HTMLSelectElement {
   const sel = mk('select');
   let group: HTMLOptGroupElement | undefined;
@@ -72,26 +72,26 @@ export type FormValues = Record<string, string | number>;
 
 export interface FormSpec {
   title: string;
-  /** 字段上方的一句说明。 */
+  /** 欄位上方的一句說明。 */
   lead?: string;
-  /** 说明下面再列几行小字（导入写好的书：开头几章、丢掉了什么）。 */
+  /** 說明下面再列幾行小字（匯入寫好的書：開頭幾章、丟掉了什麼）。 */
   details?: string[];
   fields: FormField[];
   /**
-   * 实时说明：任何一个值变了就重算（全书字数、跳过几章、调用几次）。
-   * `ok: false` 时提交键禁用——说明里写着为什么。
+   * 實時說明：任何一個值變了就重算（全書字數、跳過幾章、呼叫幾次）。
+   * `ok: false` 時提交鍵禁用——說明裡寫著為什麼。
    */
   note?: (values: FormValues) => { text: string; ok?: boolean };
   submitLabel: string;
   /**
-   * 提交要点两下（按钮文案两段式，不叠弹窗）：返回第二下的字，第一下只把提交键换成它；
-   * 返回 undefined 就一下提交。任何一个值改了都退回第一段。批量写章「写完即定稿」用它（W9）。
+   * 提交要點兩下（按鈕文案兩段式，不疊彈窗）：返回第二下的字，第一下只把提交鍵換成它；
+   * 返回 undefined 就一下提交。任何一個值改了都退回第一段。批次寫章「寫完即定稿」用它（W9）。
    */
   confirm?: (values: FormValues) => string | undefined;
   onSubmit: (values: FormValues) => void;
 }
 
-/** 当前开着的那一个。关掉时置空，遮罩上的 × / Esc 都据此判断该不该由这里管。 */
+/** 當前開著的那一個。關掉時置空，遮罩上的 × / Esc 都據此判斷該不該由這裡管。 */
 let active: { close: () => void } | null = null;
 
 export function isFormOpen(): boolean {
@@ -136,7 +136,7 @@ export function openForm(spec: FormSpec): void {
       line.value = f.value ?? '';
       line.spellcheck = false;
       input = line;
-      // 一行字也占满一整行（路径常常很长）；带「选…」时框与按钮并排。
+      // 一行字也佔滿一整行（路徑常常很長）；帶「選…」時框與按鈕並排。
       if (f.browse) {
         const row = mk('div', 'field-row');
         row.appendChild(line);
@@ -159,7 +159,7 @@ export function openForm(spec: FormSpec): void {
       ta.placeholder = f.placeholder ?? '';
       ta.value = f.value ?? '';
       input = ta;
-      // 多行文本占满一整行，数字框并排放在下面。
+      // 多行文字佔滿一整行，數字框並排放在下面。
       form.appendChild(label);
     } else {
       const num = mk('input');
@@ -195,19 +195,19 @@ export function openForm(spec: FormSpec): void {
   const missing = (v: FormValues): string | undefined => {
     for (const f of spec.fields) {
       if ((f.kind === 'textarea' || f.kind === 'text') && f.required && !String(v[f.key]).trim()) {
-        return `「${f.label}」还空着。`;
+        return `「${f.label}」還空著。`;
       }
       if (f.kind === 'number') {
         const n = Number(v[f.key]);
         if (!Number.isFinite(n) || (f.min !== undefined && n < f.min) || (f.max !== undefined && n > f.max)) {
-          return `「${f.label}」要在 ${f.min ?? '—'}–${f.max ?? '—'} 之间。`;
+          return `「${f.label}」要在 ${f.min ?? '—'}–${f.max ?? '—'} 之間。`;
         }
       }
     }
     return undefined;
   };
 
-  /** 两段式提交：第一下之后记着第二下的字（{@link FormSpec.confirm}）。 */
+  /** 兩段式提交：第一下之後記著第二下的字（{@link FormSpec.confirm}）。 */
   let armed = false;
   const submit = primaryBtn(spec.submitLabel, () => trySubmit());
   const cancel = secondaryBtn('取消', () => close());
@@ -265,7 +265,7 @@ export function openForm(spec: FormSpec): void {
     refresh();
   });
   form.addEventListener('keydown', (e) => {
-    // Ctrl/⌘+Enter 提交：多行文本里单按 Enter 是换行。一行字的框里单按 Enter 就提交（输入法还在组字时那一下是选字）。
+    // Ctrl/⌘+Enter 提交：多行文字裡單按 Enter 是換行。一行字的框裡單按 Enter 就提交（輸入法還在組字時那一下是選字）。
     const inLine = (e.target as HTMLElement | null)?.matches?.('input[type="text"]') === true;
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || (inLine && !e.isComposing))) {
       e.preventDefault();
@@ -281,8 +281,8 @@ export function openForm(spec: FormSpec): void {
 }
 
 /**
- * 遮罩上的 × 与 Esc：只在表单开着时由这里关（点空白不关，免得误触丢了填到一半的内容）。服务商弹窗有它自己的一套
- * （settings/providerModal.ts），两边各自判断「是不是我开的」，互不干扰。
+ * 遮罩上的 × 與 Esc：只在表單開著時由這裡關（點空白不關，免得誤觸丟了填到一半的內容）。服務商彈窗有它自己的一套
+ * （settings/providerModal.ts），兩邊各自判斷「是不是我開的」，互不干擾。
  */
 export function installForm(): void {
   el.providerModalClose.addEventListener('click', () => closeForm());

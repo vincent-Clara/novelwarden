@@ -1,4 +1,4 @@
-/* 基础：变量、盒模型、body、通用排版。 */
+/* 基礎：變數、盒模型、body、通用排版。 */
 
 :root {
   --radius: 6px;
@@ -21,9 +21,9 @@ body {
   font-size: var(--vscode-font-size);
   color: var(--vscode-foreground);
   background: var(--vscode-sideBar-background, var(--vscode-editor-background));
-  /* 触摸长按弹出的原生 callout（复制/查询那一条）走的不是 contextmenu 事件，
-     JS 的 preventDefault 压不住它，只能在这里关。右键菜单一律由我们自己出
-     （见 view/menu.ts）。**不动 user-select**：那会连正文都选不中。 */
+  /* 觸控長按彈出的原生 callout（複製/查詢那一條）走的不是 contextmenu 事件，
+     JS 的 preventDefault 壓不住它，只能在這裡關。右鍵選單一律由我們自己出
+     （見 view/menu.ts）。**不動 user-select**：那會連正文都選不中。 */
   -webkit-touch-callout: none;
 }
 

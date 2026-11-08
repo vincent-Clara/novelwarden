@@ -1,5 +1,5 @@
 /**
- * 独立版 CLI：不带目录时 root 为空，不再把 cwd 当成工程。
+ * 獨立版 CLI：不帶目錄時 root 為空，不再把 cwd 當成工程。
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -9,11 +9,11 @@ const { loadModule } = require('../../helpers/load');
 const { parseArgs } = loadModule('src/shells/standalone/cli.ts');
 
 describe('parseArgs', () => {
-  test('无参数时 root 为 undefined', () => {
+  test('無引數時 root 為 undefined', () => {
     assert.equal(parseArgs([]).root, undefined);
   });
 
-  test('无参数时仍有默认端口并打开浏览器', () => {
+  test('無引數時仍有預設埠並開啟瀏覽器', () => {
     const opts = parseArgs([]);
     assert.equal(opts.port, 36800);
     assert.equal(opts.open, true);
@@ -21,24 +21,24 @@ describe('parseArgs', () => {
     assert.equal(opts.verbose, false);
   });
 
-  test('位置参数解析成绝对路径', () => {
+  test('位置引數解析成絕對路徑', () => {
     const opts = parseArgs(['sample-novel']);
     assert.equal(opts.root, path.resolve('sample-novel'));
   });
 
-  test('init 无目录时 root 是 cwd', () => {
+  test('init 無目錄時 root 是 cwd', () => {
     const opts = parseArgs(['init']);
     assert.equal(opts.init, true);
     assert.equal(opts.root, path.resolve('.'));
   });
 
-  test('init 带目录', () => {
+  test('init 帶目錄', () => {
     const opts = parseArgs(['init', '/tmp/book']);
     assert.equal(opts.init, true);
     assert.equal(opts.root, path.resolve('/tmp/book'));
   });
 
-  test('无 root 时仍认 --port / --no-open / --verbose', () => {
+  test('無 root 時仍認 --port / --no-open / --verbose', () => {
     const opts = parseArgs(['--port', '4000', '--no-open', '--verbose']);
     assert.equal(opts.root, undefined);
     assert.equal(opts.port, 4000);
@@ -46,14 +46,14 @@ describe('parseArgs', () => {
     assert.equal(opts.verbose, true);
   });
 
-  test('缺省只绑本机，--host 改监听地址', () => {
+  test('預設只綁本機，--host 改監聽地址', () => {
     assert.equal(parseArgs([]).host, '127.0.0.1');
     const opts = parseArgs(['--host', '0.0.0.0', '/books']);
     assert.equal(opts.host, '0.0.0.0');
     assert.equal(opts.root, path.resolve('/books'));
   });
 
-  test('--host 后面没给值时退回本机', () => {
+  test('--host 後面沒給值時退回本機', () => {
     assert.equal(parseArgs(['--host']).host, '127.0.0.1');
   });
 });

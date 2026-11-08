@@ -1,16 +1,16 @@
 /**
- * 冲突条上的「对比合并…」（放第一个，主要动作；原来那两颗「用磁盘版本覆盖编辑器」「用编辑器内容强制保存」
- * 留着）。从前保存撞上冲突只能整份二选一，看不到两边差在哪。
+ * 衝突條上的「對比合併…」（放第一個，主要動作；原來那兩顆「用磁碟版本覆蓋編輯器」「用編輯器內容強制儲存」
+ * 留著）。從前儲存撞上衝突只能整份二選一，看不到兩邊差在哪。
  *
- * 点下去把编辑器里的这一份发给后端（`mergeWithDisk`）；后端读磁盘上此刻的那一份，开合并视图（左边磁盘上的、
- * 右边编辑器里的，逐处挑、可以手改）。作者点「放回编辑器」之后后端回 `editorReplace`（带 `base`），
- * `replace.ts` 换内容（一步撤销）、把乐观锁基线换成磁盘那份、收起冲突条——这时它仍是未保存，照常 Ctrl+S，
- * 不必强制保存。放弃或关掉合并视图：什么都不变。
+ * 點下去把編輯器裡的這一份發給後端（`mergeWithDisk`）；後端讀磁碟上此刻的那一份，開合併檢視（左邊磁碟上的、
+ * 右邊編輯器裡的，逐處挑、可以手改）。作者點「放回編輯器」之後後端回 `editorReplace`（帶 `base`），
+ * `replace.ts` 換內容（一步撤銷）、把樂觀鎖基線換成磁碟那份、收起衝突條——這時它仍是未儲存，照常 Ctrl+S，
+ * 不必強制儲存。放棄或關掉合併檢視：什麼都不變。
  *
- * 按钮不写进 `page.ts` / `createPaneElements`：与「排版」按钮（`layout.ts`）同一个做法，每块编辑区第一次
- * 重画时插进它的冲突条（`.ed-conflict`，说明文字后面），两块编辑区走同一条路，`pane.ts` 不必知道它。
- * 冲突条显隐、说明文字仍归 `pane.ts`。磁盘上已经没有这一份（`OpenFile.gone`）时冲突条也亮着（说的是「被删或
- * 改名」），那时没有磁盘版本可合并，这颗藏起来。
+ * 按鈕不寫進 `page.ts` / `createPaneElements`：與「排版」按鈕（`layout.ts`）同一個做法，每塊編輯區第一次
+ * 重畫時插進它的衝突條（`.ed-conflict`，說明文字後面），兩塊編輯區走同一條路，`pane.ts` 不必知道它。
+ * 衝突條顯隱、說明文字仍歸 `pane.ts`。磁碟上已經沒有這一份（`OpenFile.gone`）時衝突條也亮著（說的是「被刪或
+ * 改名」），那時沒有磁碟版本可合併，這顆藏起來。
  */
 import { el } from '../dom';
 import type { InMessage } from '../protocol';
@@ -31,9 +31,9 @@ export function installConflictMerge(post: (msg: InMessage) => void): void {
       if (!bar) {
         return;
       }
-      btn = el('button', 'chip-btn ed-conflict-merge', '对比合并…');
+      btn = el('button', 'chip-btn ed-conflict-merge', '對比合併…');
       btn.type = 'button';
-      btn.title = '左边磁盘上的、右边编辑器里的，逐处挑、可以手改；放回编辑器之后照常保存';
+      btn.title = '左邊磁碟上的、右邊編輯器裡的，逐處挑、可以手改；放回編輯器之後照常儲存';
       btn.addEventListener('click', () => {
         const file = pane.activeFile();
         if (file && !file.gone) {
@@ -44,8 +44,8 @@ export function installConflictMerge(post: (msg: InMessage) => void): void {
       bar.insertBefore(btn, text ? text.nextSibling : bar.firstChild);
       buttons.set(pane, btn);
     }
-    // 磁盘上已经没有这一份（`OpenFile.gone`，冲突条这时说的是「被删或改名」）：没有磁盘版本可合并，藏起来——
-    // 与「用磁盘版本覆盖编辑器」同一个判法。
+    // 磁碟上已經沒有這一份（`OpenFile.gone`，衝突條這時說的是「被刪或改名」）：沒有磁碟版本可合併，藏起來——
+    // 與「用磁碟版本覆蓋編輯器」同一個判法。
     btn.classList.toggle('hidden', !!pane.activeFile()?.gone);
   });
 }

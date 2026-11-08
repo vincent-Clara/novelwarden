@@ -1,85 +1,85 @@
 /**
- * 一致性预检（五期）：写第 N 章之前，零调用地查一遍细纲有没有把已经死了的人排进本章。
+ * 一致性預檢（五期）：寫第 N 章之前，零呼叫地查一遍細綱有沒有把已經死了的人排進本章。
  *
- * **纯函数，零 import**。取数（细纲、角色卡）在 features/preflight.ts。
+ * **純函式，零 import**。取數（細綱、角色卡）在 features/preflight.ts。
  *
  * 移植自 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）`shared/consistency-preflight.ts` 的
- * `findBlueprintContinuityRisks`（:84-119）那一条规则：终态角色又被排进当前蓝图。上游那句
- * 「Findings are evidence, never a writing prohibition」照用——这里只亮一张卡，作者可以
- * 「仅本次忽略」照写（回忆、幻象、托梦都是正当的安排）。
+ * `findBlueprintContinuityRisks`（:84-119）那一條規則：終態角色又被排進當前藍圖。上游那句
+ * 「Findings are evidence, never a writing prohibition」照用——這裡只亮一張卡，作者可以
+ * 「僅本次忽略」照寫（回憶、幻象、託夢都是正當的安排）。
  *
- * ## 与上游不同的地方（五期计划 §8 ⚑）
+ * ## 與上游不同的地方（五期計劃 §8 ⚑）
  *
- * - **读角色卡的「当前状态」**（总计划 §1 #19），四期起这一节由定稿维护，写着「截至第 K 章」这个人
- *   在哪、怎么样。**卡上判不出来再读定稿事实**（{@link factTerminal}）：百章实验里 13 张卡有 8 张是写完
- *   才建的，钱执事第 10 章的摘要已记下「尸骨无存」，第 26 章的细纲照样排他出场，预检没拦——他没有卡。
- * - **只信写到本章之前的状态**：`stateThrough ≥ N`（状态已经更新到本章或更晚，重写早前的章时
- *   常见）不判——那个「已死亡」说的可能正是本章或之后发生的事。没记过 `stateThrough` 的手写卡照判。
- * - **判定按分句、看句首**：上游只认「名字紧挨着死亡 / 身亡 / 牺牲 / 去世」四个词，可卡上的
- *   状态写的是这个人自己，通常不带名字，照搬一条都认不出。这里一句以终态说法开头（可带主语与
- *   「已 / 已经 / 于第 k 章 / 被……」前缀）才算——「险些丧命」「假死脱身」「为已死的师父报仇」
- *   开头都不是终态，自然不算。宁可误报一条让作者点一下「仅本次忽略」，也别漏报。
+ * - **讀角色卡的「當前狀態」**（總計劃 §1 #19），四期起這一節由定稿維護，寫著「截至第 K 章」這個人
+ *   在哪、怎麼樣。**卡上判不出來再讀定稿事實**（{@link factTerminal}）：百章實驗裡 13 張卡有 8 張是寫完
+ *   才建的，錢執事第 10 章的摘要已記下「屍骨無存」，第 26 章的細綱照樣排他出場，預檢沒攔——他沒有卡。
+ * - **只信寫到本章之前的狀態**：`stateThrough ≥ N`（狀態已經更新到本章或更晚，重寫早前的章時
+ *   常見）不判——那個「已死亡」說的可能正是本章或之後發生的事。沒記過 `stateThrough` 的手寫卡照判。
+ * - **判定按分句、看句首**：上游只認「名字緊挨著死亡 / 身亡 / 犧牲 / 去世」四個詞，可卡上的
+ *   狀態寫的是這個人自己，通常不帶名字，照搬一條都認不出。這裡一句以終態說法開頭（可帶主語與
+ *   「已 / 已經 / 於第 k 章 / 被……」字首）才算——「險些喪命」「假死脫身」「為已死的師父報仇」
+ *   開頭都不是終態，自然不算。寧可誤報一條讓作者點一下「僅本次忽略」，也別漏報。
  */
 
-/** 预检要知道的一张卡。 */
+/** 預檢要知道的一張卡。 */
 export interface PreflightCard {
   name: string;
   aliases: readonly string[];
-  /** 「当前状态」一节的原文。 */
+  /** 「當前狀態」一節的原文。 */
   state: string;
-  /** 这一节写到第几章（0 = 开篇状态）。手写的卡没有。 */
+  /** 這一節寫到第幾章（0 = 開篇狀態）。手寫的卡沒有。 */
   stateThrough?: number;
   relPath?: string;
 }
 
-/** 一处风险：谁、卡上那一节（或哪一章的定稿事实）怎么写的、写到第几章、是哪一句判出来的。 */
+/** 一處風險：誰、卡上那一節（或哪一章的定稿事實）怎麼寫的、寫到第幾章、是哪一句判出來的。 */
 export interface PreflightRisk {
   name: string;
-  /** 判出来的那段原文：卡上「当前状态」一节，或那一条连续性事实。 */
+  /** 判出來的那段原文：卡上「當前狀態」一節，或那一條連續性事實。 */
   state: string;
   through?: number;
   clause: string;
   relPath?: string;
-  /** 从哪儿判出来的。缺席等于 `card`。 */
+  /** 從哪兒判出來的。缺席等於 `card`。 */
   source?: 'card' | 'fact';
-  /** `source: 'fact'` 时：那条事实是第几章定稿留下的。 */
+  /** `source: 'fact'` 時：那條事實是第幾章定稿留下的。 */
   chapter?: number;
 }
 
-/** 预检要知道的一章定稿事实（只要事实原句）。 */
+/** 預檢要知道的一章定稿事實（只要事實原句）。 */
 export interface PreflightFacts {
   no: number;
   relPath?: string;
   statements: readonly string[];
 }
 
-const NUM = '[0-9０-９一二三四五六七八九十百千两]+';
-/** 句首可以有的前缀：已经、于第 k 章、被确认…… */
+const NUM = '[0-9０-９一二三四五六七八九十百千兩]+';
+/** 句首可以有的字首：已經、於第 k 章、被確認…… */
 const LEAD =
-  `(?:早已|已经|已|当场|最终|终于|不幸|被确认(?:为)?|被证实(?:为)?|确认|证实|` +
-  `(?:(?:于|在)第?|第)\\s*${NUM}\\s*章(?:中|末|里|时)?)*`;
-/** 终态说法。刻意不收单字「死」：死守、死敌、死心、拼死都不是终态。 */
+  `(?:早已|已經|已|當場|最終|終於|不幸|被確認(?:為)?|被證實(?:為)?|確認|證實|` +
+  `(?:(?:於|在)第?|第)\\s*${NUM}\\s*章(?:中|末|裡|時)?)*`;
+/** 終態說法。刻意不收單字「死」：死守、死敵、死心、拼死都不是終態。 */
 const TERMINAL =
-  '(?:死亡|身亡|牺牲|去世|过世|亡故|病逝|病故|遇害|遇难|罹难|阵亡|战死|丧生|丧命|殒命|殒身|毙命|气绝|惨死|' +
-  '死了|死去|死于|自尽|自刎|被?处决|被?斩首|被[^，。；,;！!？?]{0,12}?(?:杀|害|刺|毒|打|斩|砍|击|射|烧|勒|吊|处|咬|砸|溺|捅)死|' +
-  // 修真、玄幻的说法（百章实验：「钱执事已被大阵吞噬，尸骨无存」没被认出来）。
-  '尸骨无存|魂飞魄散|形神俱灭|灰飞烟灭|身死道消|陨落|化作飞灰|化为飞灰|化作枯尸|化为枯尸|' +
-  '再无(?:半点|一丝)?生息|没了气息|没有了气息|彻底没了气息)';
-/** 「已死」「已经死」：单字「死」只在这两种前缀后面才算。 */
-const BARE_DEAD = '(?:早已|已经|已)死(?![守战敌士心罪期对磕撑扛咬拼])';
+  '(?:死亡|身亡|犧牲|去世|過世|亡故|病逝|病故|遇害|遇難|罹難|陣亡|戰死|喪生|喪命|殞命|殞身|斃命|氣絕|慘死|' +
+  '死了|死去|死於|自盡|自刎|被?處決|被?斬首|被[^，。；,;！!？?]{0,12}?(?:殺|害|刺|毒|打|斬|砍|擊|射|燒|勒|吊|處|咬|砸|溺|捅)死|' +
+  // 修真、玄幻的說法（百章實驗：「錢執事已被大陣吞噬，屍骨無存」沒被認出來）。
+  '屍骨無存|魂飛魄散|形神俱滅|灰飛煙滅|身死道消|隕落|化作飛灰|化為飛灰|化作枯屍|化為枯屍|' +
+  '再無(?:半點|一絲)?生息|沒了氣息|沒有了氣息|徹底沒了氣息)';
+/** 「已死」「已經死」：單字「死」只在這兩種字首後面才算。 */
+const BARE_DEAD = '(?:早已|已經|已)死(?![守戰敵士心罪期對磕撐扛咬拼])';
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * 这一节状态说的是不是「这个人已经死了」。返回判出来的那一句（给作者看）；不是终态时 undefined。
- * `names` 是这个人的名字与别名：状态里偶尔会以名字开头（「沈秋已于第五章身亡」）。
+ * 這一節狀態說的是不是「這個人已經死了」。返回判出來的那一句（給作者看）；不是終態時 undefined。
+ * `names` 是這個人的名字與別名：狀態裡偶爾會以名字開頭（「沈秋已於第五章身亡」）。
  */
 export function terminalClause(state: string, names: readonly string[] = []): string | undefined {
   const subjects = ['他', '她', '其', '此人', '本人', ...names.filter((n) => n.trim().length > 0).map(escapeRe)];
   const subject = `(?:${subjects.join('|')})?`;
-  // 终态说法后面跟着「的」是在修饰别的东西（「陨落的宗门」「死亡的阴影」），不是这个人死了。
+  // 終態說法後面跟著「的」是在修飾別的東西（「隕落的宗門」「死亡的陰影」），不是這個人死了。
   const re = new RegExp(`^${subject}\\s*${LEAD}\\s*(?:${TERMINAL}|${BARE_DEAD})(?![的之])`, 'u');
   for (const raw of (state ?? '').split(/[，,。；;！!？?\n（）()【】\[\]]/u)) {
     const clause = raw.replace(/^[\s\-*•·:：]+/u, '').trim();
@@ -91,15 +91,15 @@ export function terminalClause(state: string, names: readonly string[] = []): st
 }
 
 /**
- * 本章细纲 `characters[]` 里的人已经死了 → 一条风险。先看卡上的「当前状态」（按名字与别名认卡）；
- * 卡上没判出来、或者这个人根本没有卡，再看前面各章定稿留下的连续性事实（{@link factTerminal}）。
- * 一个人只报一条。
+ * 本章細綱 `characters[]` 裡的人已經死了 → 一條風險。先看卡上的「當前狀態」（按名字與別名認卡）；
+ * 卡上沒判出來、或者這個人根本沒有卡，再看前面各章定稿留下的連續性事實（{@link factTerminal}）。
+ * 一個人只報一條。
  */
 export function findPreflightRisks(input: {
   no: number;
   planned: readonly string[];
   cards: readonly PreflightCard[];
-  /** 本章之前定稿过的各章的连续性事实。没卡的人、卡上状态没跟上的人，靠它认出来。 */
+  /** 本章之前定稿過的各章的連續性事實。沒卡的人、卡上狀態沒跟上的人，靠它認出來。 */
   facts?: readonly PreflightFacts[];
 }): PreflightRisk[] {
   const out: PreflightRisk[] = [];
@@ -146,9 +146,9 @@ export function findPreflightRisks(input: {
 }
 
 /**
- * 定稿事实里判终态：**这个人做主语的最近一条事实说了算**。由近及远找以名字开头（后面不跟「的」）的
- * 那一句，从它起到这条事实结尾判终态——后面的分句沿用同一个主语（「钱执事已被大阵吞噬，尸骨无存」）。
- * 最近那条说他还在活动（假死、复活、托梦里现身之后又写了他在做事），就不算。
+ * 定稿事實裡判終態：**這個人做主語的最近一條事實說了算**。由近及遠找以名字開頭（後面不跟「的」）的
+ * 那一句，從它起到這條事實結尾判終態——後面的分句沿用同一個主語（「錢執事已被大陣吞噬，屍骨無存」）。
+ * 最近那條說他還在活動（假死、復活、託夢裡現身之後又寫了他在做事），就不算。
  */
 export function factTerminal(
   names: readonly string[],
@@ -173,7 +173,7 @@ export function factTerminal(
   return undefined;
 }
 
-/** 名字在哪个分句的句首做主语（后面不跟「的」）。没有就 undefined。 */
+/** 名字在哪個分句的句首做主語（後面不跟「的」）。沒有就 undefined。 */
 function subjectStart(statement: string, names: readonly string[]): number | undefined {
   const re = /[，,。；;！!？?\n（）()【】[\]]/gu;
   const starts = [0];
@@ -192,18 +192,18 @@ function subjectStart(statement: string, names: readonly string[]): number | und
   return undefined;
 }
 
-/** 「沈秋的当前状态（截至第 5 章）写着『已死亡』，本章细纲仍安排他出场。」卡片与日志共用。 */
+/** 「沈秋的當前狀態（截至第 5 章）寫著『已死亡』，本章細綱仍安排他出場。」卡片與日誌共用。 */
 export function describeRisk(r: PreflightRisk): string {
   if (r.source === 'fact') {
-    return `${r.name}在第 ${r.chapter} 章同步下来的事实里写着「${r.clause}」，本章细纲仍安排这个人出场`;
+    return `${r.name}在第 ${r.chapter} 章同步下來的事實裡寫著「${r.clause}」，本章細綱仍安排這個人出場`;
   }
-  const when = r.through === undefined ? '' : r.through <= 0 ? '（开篇状态）' : `（截至第 ${r.through} 章）`;
-  return `${r.name}的当前状态${when}写着「${r.clause}」，本章细纲仍安排这个人出场`;
+  const when = r.through === undefined ? '' : r.through <= 0 ? '（開篇狀態）' : `（截至第 ${r.through} 章）`;
+  return `${r.name}的當前狀態${when}寫著「${r.clause}」，本章細綱仍安排這個人出場`;
 }
 
 /**
- * 按细纲里记下的永久放行（`preflightOk`，五期补遗 §2）分开：作者说过「这一章里他出场是刻意的」那几个人
- * 不再算风险，单独列出来（写章卡片的说明里说一句「按你记下的安排放行」）。按卡上的名字认。
+ * 按細綱裡記下的永久放行（`preflightOk`，五期補遺 §2）分開：作者說過「這一章裡他出場是刻意的」那幾個人
+ * 不再算風險，單獨列出來（寫章卡片的說明裡說一句「按你記下的安排放行」）。按卡上的名字認。
  */
 export function splitExempt(
   risks: readonly PreflightRisk[],
@@ -222,10 +222,10 @@ export function splitExempt(
   return { risks: out, exempted };
 }
 
-/** 「沈秋：按你记下的安排放行（回忆里的一场）」。 */
+/** 「沈秋：按你記下的安排放行（回憶裡的一場）」。 */
 export function describeExempted(e: { risk: PreflightRisk; reason: string }): string {
-  return `一致性预检：${e.risk.name}按你记下的安排放行（${e.reason || '没写理由'}）。要撤销，删掉这一章细纲 preflightOk 里那一行`;
+  return `一致性預檢：${e.risk.name}按你記下的安排放行（${e.reason || '沒寫理由'}）。要撤銷，刪掉這一章細綱 preflightOk 裡那一行`;
 }
 
-/** 卡片上跟在警告后面的那一句建议（上游 suggestion 的说法）。 */
-export const PREFLIGHT_SUGGESTION = '调整细纲的出场角色，或者这本来就是回忆、幻象、托梦一类的刻意安排——那就仅本次忽略，照写。';
+/** 卡片上跟在警告後面的那一句建議（上游 suggestion 的說法）。 */
+export const PREFLIGHT_SUGGESTION = '調整細綱的出場角色，或者這本來就是回憶、幻象、託夢一類的刻意安排——那就僅本次忽略，照寫。';

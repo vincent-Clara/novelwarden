@@ -1,4 +1,4 @@
-/** 设置页里那几种表单控件。弹窗与主表单共用。 */
+/** 設定頁裡那幾種表單控制元件。彈窗與主表單共用。 */
 import { el as mk } from '../../dom';
 
 export function textField(
@@ -30,7 +30,7 @@ export function compactField(
   return wrap;
 }
 
-/** 数字输入。留空 / 填了非正数都当「用默认值」，回调收到 undefined。 */
+/** 數字輸入。留空 / 填了非正數都當「用預設值」，回呼收到 undefined。 */
 export function compactNumber(
   label: string,
   value: number | undefined,
@@ -54,7 +54,7 @@ export function compactNumber(
   return wrap;
 }
 
-/** 下拉选择。选项是 [值, 说法] 对，选中项按 value 匹配。 */
+/** 下拉選擇。選項是 [值, 說法] 對，選中項按 value 匹配。 */
 export function selectField(
   label: string,
   value: string,

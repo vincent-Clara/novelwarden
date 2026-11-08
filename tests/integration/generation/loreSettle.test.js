@@ -1,17 +1,17 @@
 /**
- * 落定设定（完善设定二期，设计稿 §4）：经对话页从一段讨论一路走到落盘。
+ * 落定設定（完善設定二期，設計稿 §4）：經對話頁從一段討論一路走到落盤。
  *
- * | 用例组 | 钉的是什么 |
+ * | 用例組 | 釘的是什麼 |
  * |---|---|
- * | 落定 | 在细纲层聊完、`/落定设定`：这一轮临时换到设定目录，落完回到原来那一章；命令记成「落定设定」 |
- * | 装配 | 系统提示是落定设定那一份；讨论作为多轮消息带着；讨论里提到的已有条目整条带（含暗设，标明读者还不知道），其余一行；合同是落定那一份 |
- * | 卡片 | 落到「设定名录」；会新建、会更新（按磁盘认）、还没定的都列出来；人名丢掉写进说明 |
- * | 落盘 | 新的直接建在分类目录、记作机器写的、水位 0；已有的关键词只增不减、记作机器写的、**水位不动**；一律先对比（只有一句话的也是）；问题不写进任何文件 |
- * | 放弃 | 覆盖审阅里放弃了那一条原样留着，别的照写 |
- * | 重来 | 会话已经回到原来的目标，重来一轮照样换过去再回来 |
- * | 拦下 | 一句都没聊过、输入框也空着：不调模型；解析不了：没有卡片、不写入、照样回到原来的目标；一条都没定下来：没有卡片，气泡里说清 |
- * | 按格式写、转写成 JSON | 2026-10-25 起按小标题写，转写模型照抄成 JSON：转写只带合同与原文，照抄的落盘；只写了「还没定的问题」的照样认成一条都没定 |
- * | 会话 | 存下的落定草稿读回来还是落定设定，不是设定清单 |
+ * | 落定 | 在細綱層聊完、`/落定設定`：這一輪臨時換到設定目錄，落完回到原來那一章；命令記成「落定設定」 |
+ * | 裝配 | 系統提示是落定設定那一份；討論作為多輪訊息帶著；討論裡提到的已有條目整條帶（含暗設，標明讀者還不知道），其餘一行；合同是落定那一份 |
+ * | 卡片 | 落到「設定名錄」；會新建、會更新（按磁碟認）、還沒定的都列出來；人名丟掉寫進說明 |
+ * | 落盤 | 新的直接建在分類目錄、記作機器寫的、水位 0；已有的關鍵詞只增不減、記作機器寫的、**水位不動**；一律先對比（只有一句話的也是）；問題不寫進任何檔案 |
+ * | 放棄 | 覆蓋審閱裡放棄了那一條原樣留著，別的照寫 |
+ * | 重來 | 會話已經回到原來的目標，重來一輪照樣換過去再回來 |
+ * | 攔下 | 一句都沒聊過、輸入框也空著：不調模型；解析不了：沒有卡片、不寫入、照樣回到原來的目標；一條都沒定下來：沒有卡片，氣泡裡說清 |
+ * | 按格式寫、轉寫成 JSON | 2026-10-25 起按小標題寫，轉寫模型照抄成 JSON：轉寫只帶合同與原文，照抄的落盤；只寫了「還沒定的問題」的照樣認成一條都沒定 |
+ * | 會話 | 存下的落定草稿讀回來還是落定設定，不是設定清單 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -35,12 +35,12 @@ let gates;
 const pad3 = (n) => String(n).padStart(3, '0');
 const CH = (no) => `chapters/${pad3(no)}-第${no}章.md`;
 const PLOT = (no) => `.novelwarden/summaries/${pad3(no)}-第${no}章.md`;
-const TJG = '.novelwarden/lore/宗门/天机阁.md';
-const JCL = '.novelwarden/lore/地域/九层楼.md';
+const TJG = '.novelwarden/lore/宗門/天機閣.md';
+const JCL = '.novelwarden/lore/地域/九層樓.md';
 const GS = '.novelwarden/lore/地域/鬼市.md';
 const LORE_DIR = { kind: 'setting', doc: 'lore' };
 const PLOT3 = { kind: 'plot', plotRelPath: PLOT(3) };
-const QUESTION = '鬼市开在哪座城下？';
+const QUESTION = '鬼市開在哪座城下？';
 
 function entry(title, { keywords = [title], brief = '', body = '', through } = {}) {
   return [
@@ -72,13 +72,13 @@ function plotText(no, { hash, synopsis = '往下查。', lore = '' } = {}) {
     '',
     synopsis,
     '',
-    '## 关键事件',
+    '## 關鍵事件',
     '',
-    '- 有事发生',
+    '- 有事發生',
     '',
-    '## 设定',
+    '## 設定',
     '',
-    lore || '（无）',
+    lore || '（無）',
     '',
   ].join('\n');
 }
@@ -86,22 +86,22 @@ function plotText(no, { hash, synopsis = '往下查。', lore = '' } = {}) {
 const SETTLED = {
   entries: [
     {
-      title: '天机阁',
-      category: '宗门',
-      keywords: ['天机楼', '林昭'],
-      brief: '江湖上卖消息的楼阁',
+      title: '天機閣',
+      category: '宗門',
+      keywords: ['天機樓', '林昭'],
+      brief: '江湖上賣訊息的樓閣',
       body: {
-        概要: '作者写的：七层楼，立在青崖镇北。',
-        规则与边界: '一问一价；问阁主身世的一律不答。',
-        现状: '阁主闭关，二当家打理。',
-        暗设: '作者写的：阁主是前朝太子。二当家也知道。',
+        概要: '作者寫的：七層樓，立在青崖鎮北。',
+        规则与边界: '一問一價；問閣主身世的一律不答。',
+        现状: '閣主閉關，二當家打理。',
+        暗设: '作者寫的：閣主是前朝太子。二當家也知道。',
       },
     },
-    { title: '九层楼', category: '地域', keywords: [], brief: '天机阁的藏书楼', body: { 概要: '九层，每层一个守楼人。', 规则与边界: '（未交代）', 现状: '（未交代）', 暗设: '' } },
-    { title: '鬼市', category: '地域', keywords: ['夜市'], brief: '城下的夜市', body: { 概要: '子时开张的夜市。', 规则与边界: '只收现银。', 现状: '（未交代）', 暗设: '鬼市主人是天机阁二当家。' } },
+    { title: '九層樓', category: '地域', keywords: [], brief: '天機閣的藏書樓', body: { 概要: '九層，每層一個守樓人。', 规则与边界: '（未交代）', 现状: '（未交代）', 暗设: '' } },
+    { title: '鬼市', category: '地域', keywords: ['夜市'], brief: '城下的夜市', body: { 概要: '子時開張的夜市。', 规则与边界: '只收現銀。', 现状: '（未交代）', 暗设: '鬼市主人是天機閣二當家。' } },
     { title: '阿昭', category: '', keywords: [], brief: '人', body: { 概要: '人。', 规则与边界: '', 现状: '', 暗设: '' } },
   ],
-  questions: [QUESTION, '二当家知不知道阁主的身世？'],
+  questions: [QUESTION, '二當家知不知道閣主的身世？'],
 };
 
 function attach() {
@@ -121,13 +121,13 @@ function attach() {
 
 const payload = (over) => ({ text: '', targetNo: 3, attachments: [], excludedIds: [], ...over });
 
-/** 在第 3 章细纲上讨论一句（模型答 `reply`）。 */
+/** 在第 3 章細綱上討論一句（模型答 `reply`）。 */
 async function discuss(text, reply) {
   fake.reset([{ text: reply, stop: 'end' }]);
   await controller.handle({ type: 'send', payload: payload({ text, stage: 'plot', capability: 'discuss', target: PLOT3 }) });
 }
 
-/** `/落定设定`：模型答 `answer`（字符串或一串）。 */
+/** `/落定設定`：模型答 `answer`（字串或一串）。 */
 async function settle(answer, text = '') {
   posted.length = 0;
   gates = [];
@@ -168,31 +168,31 @@ before(async () => {
   fake = installFakeProvider(bundle.registry, {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
-  t = await makeTempProject(bundle.project, { prefix: 'loreSettle', title: '天机录' });
+  t = await makeTempProject(bundle.project, { prefix: 'loreSettle', title: '天機錄' });
   project = t.project;
-  t.write('.novelwarden/config.md', '---\ngenre: 武侠\ntotalChapters: 30\nwordsPerChapter: 400\n---\n\n# 小说配置\n\n## 核心梗概\n\n林昭查旧案。\n');
-  t.write('.novelwarden/world.md', '# 世界观\n\n## 规则与漏洞\n\n江湖消息都从天机阁买。\n');
-  t.write('.novelwarden/characters/林昭.md', '---\nname: 林昭\naliases: [阿昭]\ntags: [主角]\n---\n\n# 林昭\n\n## 身份\n\n孤儿。\n');
-  // 作者写过的：明面、暗设都有，整合到了第 1 章。
+  t.write('.novelwarden/config.md', '---\ngenre: 武俠\ntotalChapters: 30\nwordsPerChapter: 400\n---\n\n# 小說配置\n\n## 核心梗概\n\n林昭查舊案。\n');
+  t.write('.novelwarden/world.md', '# 世界觀\n\n## 規則與漏洞\n\n江湖訊息都從天機閣買。\n');
+  t.write('.novelwarden/characters/林昭.md', '---\nname: 林昭\naliases: [阿昭]\ntags: [主角]\n---\n\n# 林昭\n\n## 身份\n\n孤兒。\n');
+  // 作者寫過的：明面、暗設都有，整合到了第 1 章。
   t.write(
     TJG,
-    entry('天机阁', {
-      keywords: ['天机阁', '阁里'],
-      brief: '卖消息的楼',
-      body: '## 概要\n作者写的：七层楼。\n\n## 暗设\n作者写的：阁主是前朝太子。',
+    entry('天機閣', {
+      keywords: ['天機閣', '閣裡'],
+      brief: '賣訊息的樓',
+      body: '## 概要\n作者寫的：七層樓。\n\n## 暗設\n作者寫的：閣主是前朝太子。',
       through: 1,
     })
   );
-  // 只有一句话（细纲带出来的空条目）。
-  t.write(JCL, entry('九层楼', { brief: '天机阁的藏书楼' }));
-  t.write('.novelwarden/lore/宗门/青云宗.md', entry('青云宗', { brief: '正道第一宗', body: '## 概要\n剑修。' }));
+  // 只有一句話（細綱帶出來的空條目）。
+  t.write(JCL, entry('九層樓', { brief: '天機閣的藏書樓' }));
+  t.write('.novelwarden/lore/宗門/青雲宗.md', entry('青雲宗', { brief: '正道第一宗', body: '## 概要\n劍修。' }));
   fs.mkdirSync(path.join(t.dir, '.novelwarden/lore/地域'), { recursive: true });
 
   t.write(CH(1), '# 第1章\n\n第1章的正文。\n');
   project.invalidate();
   const chapters = await project.listChapters();
-  t.write(PLOT(1), plotText(1, { hash: chapters[0].contentHash, lore: '- 天机阁〔宗门〕：一问一价' }));
-  t.write(PLOT(3), plotText(3, { synopsis: '林昭夜入九层楼。' }));
+  t.write(PLOT(1), plotText(1, { hash: chapters[0].contentHash, lore: '- 天機閣〔宗門〕：一問一價' }));
+  t.write(PLOT(3), plotText(3, { synopsis: '林昭夜入九層樓。' }));
   project.invalidate();
   controller = new bundle.controller.ChatController(project);
   attach();
@@ -204,13 +204,13 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('拦下：一句都没聊过', () => {
-  test('输入框也空着：不调模型、不记一轮，说清为什么', async () => {
+describe('攔下：一句都沒聊過', () => {
+  test('輸入框也空著：不調模型、不記一輪，說清為什麼', async () => {
     const before0 = controller.current.turns.length;
     await settle(SETTLED);
     assert.equal(fake.callCount(), 0);
     assert.equal(controller.current.turns.length, before0);
-    assert.ok(toasts().some((m) => m.includes('这个对话里还没有讨论')), toasts().join('|'));
+    assert.ok(toasts().some((m) => m.includes('這個對話裡還沒有討論')), toasts().join('|'));
     assert.deepEqual(controller.current.target, PLOT3);
   });
 });
@@ -219,15 +219,15 @@ describe('落定', () => {
   let gate;
   let built;
   before(async () => {
-    await discuss('天机阁要立规矩：一问一价，问阁主身世的不答。再加一个鬼市，子时开张。', '好的。天机阁的阁规就这么定；鬼市只收现银。');
+    await discuss('天機閣要立規矩：一問一價，問閣主身世的不答。再加一個鬼市，子時開張。', '好的。天機閣的閣規就這麼定；鬼市只收現銀。');
     gate = await settle(SETTLED);
     built = fake.calls[0];
   });
 
-  test('一次调用；命令记成「落定设定」；落完回到第 3 章的细纲', () => {
+  test('一次呼叫；命令記成「落定設定」；落完回到第 3 章的細綱', () => {
     assert.equal(fake.callCount(), 1);
     const userTurn = controller.current.turns.filter((x) => x.role === 'user').at(-1);
-    assert.equal(userTurn.command, '落定设定');
+    assert.equal(userTurn.command, '落定設定');
     assert.equal(userTurn.settleLore, true);
     assert.deepEqual(controller.current.target, PLOT3);
     assert.equal(controller.current.stage, 'plot');
@@ -236,71 +236,71 @@ describe('落定', () => {
     assert.deepEqual(sessions.at(-1).session.target, PLOT3);
   });
 
-  test('装配：系统提示是落定设定那一份；讨论作为多轮消息带着', () => {
+  test('裝配：系統提示是落定設定那一份；討論作為多輪訊息帶著', () => {
     const system = built[0].content;
-    assert.ok(system.includes('这一次只把讨论里已经定下来的设定落成条目'), system.slice(0, 300));
-    assert.ok(!system.includes('你和作者刚讨论完这一章'), system);
-    assert.ok(built.some((m) => m.role === 'user' && m.content.startsWith('天机阁要立规矩')), JSON.stringify(built.map((m) => m.role)));
-    assert.ok(built.some((m) => m.role === 'assistant' && m.content.includes('鬼市只收现银')));
+    assert.ok(system.includes('這一次只把討論裡已經定下來的設定落成條目'), system.slice(0, 300));
+    assert.ok(!system.includes('你和作者剛討論完這一章'), system);
+    assert.ok(built.some((m) => m.role === 'user' && m.content.startsWith('天機閣要立規矩')), JSON.stringify(built.map((m) => m.role)));
+    assert.ok(built.some((m) => m.role === 'assistant' && m.content.includes('鬼市只收現銀')));
   });
 
-  test('装配：讨论里提到的已有条目整条带（含暗设），没提到的一行；合同是落定那一份', () => {
+  test('裝配：討論裡提到的已有條目整條帶（含暗設），沒提到的一行；合同是落定那一份', () => {
     const user = built[built.length - 1].content;
-    assert.ok(user.includes('作者写的：七层楼。'), user.slice(0, 2000));
-    assert.ok(user.includes('暗设（读者还不知道）') && user.includes('作者写的：阁主是前朝太子。'), user.slice(0, 2000));
-    assert.ok(user.includes('- 青云宗〔宗门〕：正道第一宗'), user.slice(0, 2000));
-    // 2026-10-25 起按小标题写，不写 JSON（JSON 合同挪给转写那一步）。
-    assert.ok(user.includes('【落定格式】') && user.includes('不写 JSON') && !user.includes('{"entries"'), user.slice(-1500));
-    assert.ok(!user.includes('【设定清单格式】'));
+    assert.ok(user.includes('作者寫的：七層樓。'), user.slice(0, 2000));
+    assert.ok(user.includes('暗設（讀者還不知道）') && user.includes('作者寫的：閣主是前朝太子。'), user.slice(0, 2000));
+    assert.ok(user.includes('- 青雲宗〔宗門〕：正道第一宗'), user.slice(0, 2000));
+    // 2026-10-25 起按小標題寫，不寫 JSON（JSON 合同挪給轉寫那一步）。
+    assert.ok(user.includes('【落定格式】') && user.includes('不寫 JSON') && !user.includes('{"entries"'), user.slice(-1500));
+    assert.ok(!user.includes('【設定清單格式】'));
   });
 
-  test('装配明细：命中的来源写的是「讨论里提到」', () => {
+  test('裝配明細：命中的來源寫的是「討論裡提到」', () => {
     const turn = controller.current.turns.filter((x) => x.role === 'assistant').at(-1);
-    const item = turn.context.items.find((i) => i.label === '设定 · 天机阁');
+    const item = turn.context.items.find((i) => i.label === '設定 · 天機閣');
     assert.equal(item.status, 'included');
-    assert.ok(item.note.includes('讨论里提到「天机阁」'), item.note);
+    assert.ok(item.note.includes('討論裡提到「天機閣」'), item.note);
   });
 
-  test('卡片：落到设定名录；会新建、会更新、还没定的都列出来；人名丢掉写进说明', () => {
+  test('卡片：落到設定名錄；會新建、會更新、還沒定的都列出來；人名丟掉寫進說明', () => {
     assert.ok(gate, toasts().join('|'));
-    assert.ok(gate.title.includes('「设定名录」') && gate.title.includes('写入'), gate.title);
-    assert.ok(gate.detail.includes('落定设定 · 3 条（改已有的 2 条）'), gate.detail);
-    assert.ok(gate.detail.includes('会新建设定条目：鬼市'), gate.detail);
-    assert.ok(gate.detail.includes('会更新设定条目：天机阁、九层楼'), gate.detail);
-    assert.ok(gate.detail.includes('还没定的') && gate.detail.includes(`1. ${QUESTION}`), gate.detail);
+    assert.ok(gate.title.includes('「設定名錄」') && gate.title.includes('寫入'), gate.title);
+    assert.ok(gate.detail.includes('落定設定 · 3 條（改已有的 2 條）'), gate.detail);
+    assert.ok(gate.detail.includes('會新建設定條目：鬼市'), gate.detail);
+    assert.ok(gate.detail.includes('會更新設定條目：天機閣、九層樓'), gate.detail);
+    assert.ok(gate.detail.includes('還沒定的') && gate.detail.includes(`1. ${QUESTION}`), gate.detail);
     assert.ok(gate.detail.includes('「阿昭」是角色卡上的人'), gate.detail);
   });
 
-  test('已有的一律先对比：写过内容的、只有一句话的都是', () => {
+  test('已有的一律先對比：寫過內容的、只有一句話的都是', () => {
     assert.deepEqual(h.reviewed.map((r) => r.relPath), [TJG, JCL]);
-    assert.deepEqual(h.reviewed.map((r) => r.name), ['设定「天机阁」', '设定「九层楼」']);
+    assert.deepEqual(h.reviewed.map((r) => r.name), ['設定「天機閣」', '設定「九層樓」']);
   });
 
-  test('新的：建在分类目录，记作机器写的，水位 0', async () => {
+  test('新的：建在分類目錄，記作機器寫的，水位 0', async () => {
     const e = (await listLore()).find((x) => x.relPath === GS);
     assert.ok(e, (await listLore()).map((x) => x.relPath).join(','));
     assert.equal(e.title, '鬼市');
     assert.deepEqual(e.keywords, ['鬼市', '夜市']);
     assert.equal(e.brief, '城下的夜市');
-    assert.ok(e.body.includes('子时开张的夜市。') && e.body.endsWith('## 暗设\n鬼市主人是天机阁二当家。'), e.body);
+    assert.ok(e.body.includes('子時開張的夜市。') && e.body.endsWith('## 暗設\n鬼市主人是天機閣二當家。'), e.body);
     assert.equal(e.updatedThrough, 0);
     assert.ok(bundle.lore.loreOwnedByMachine(e));
   });
 
-  test('已有的：正文换成合并后的，关键词只增不减（人名不收），记作机器写的，水位不动', async () => {
+  test('已有的：正文換成合併後的，關鍵詞只增不減（人名不收），記作機器寫的，水位不動', async () => {
     const e = (await listLore()).find((x) => x.relPath === TJG);
-    assert.equal(e.brief, '江湖上卖消息的楼阁');
-    assert.deepEqual(e.keywords, ['天机阁', '阁里', '天机楼']);
-    assert.ok(e.body.includes('一问一价；问阁主身世的一律不答。') && e.body.includes('二当家也知道。'), e.body);
+    assert.equal(e.brief, '江湖上賣訊息的樓閣');
+    assert.deepEqual(e.keywords, ['天機閣', '閣裡', '天機樓']);
+    assert.ok(e.body.includes('一問一價；問閣主身世的一律不答。') && e.body.includes('二當家也知道。'), e.body);
     assert.equal(e.updatedThrough, 1);
     assert.equal(e.bodyHash, bundle.fs.hash(e.body.trim()));
     const j = (await listLore()).find((x) => x.relPath === JCL);
-    assert.ok(j.body.includes('九层，每层一个守楼人。'), j.body);
+    assert.ok(j.body.includes('九層，每層一個守樓人。'), j.body);
     assert.equal(j.updatedThrough, undefined);
     assert.ok(!(await listLore()).some((x) => x.title === '阿昭'));
   });
 
-  test('还没定的问题不写进任何工程文件', () => {
+  test('還沒定的問題不寫進任何工程檔案', () => {
     const walk = (dir) =>
       fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(path.join(dir, d.name)) : [path.join(dir, d.name)]));
     const hits = walk(path.join(t.dir, '.novelwarden'))
@@ -309,30 +309,30 @@ describe('落定', () => {
     assert.deepEqual(hits, []);
   });
 
-  test('toast 说清建了哪几条、更新了哪几条', () => {
-    assert.ok(toasts().some((m) => m.includes('落定设定：新建 1 条设定条目（鬼市），更新 天机阁、九层楼')), toasts().join('|'));
+  test('toast 說清建了哪幾條、更新了哪幾條', () => {
+    assert.ok(toasts().some((m) => m.includes('落定設定：新建 1 條設定條目（鬼市），更新 天機閣、九層樓')), toasts().join('|'));
   });
 });
 
-describe('放弃与重来', () => {
+describe('放棄與重來', () => {
   after(() => h.setReviewVerdict('apply'));
 
-  test('覆盖审阅里放弃了那一条原样留着，别的照写', async () => {
+  test('覆蓋審閱裡放棄了那一條原樣留著，別的照寫', async () => {
     const before1 = read(TJG);
     h.setReviewVerdict('discard');
     await settle({
       entries: [
-        { ...SETTLED.entries[0], body: { ...SETTLED.entries[0].body, 现状: '天机阁被烧了。' } },
+        { ...SETTLED.entries[0], body: { ...SETTLED.entries[0].body, 现状: '天機閣被燒了。' } },
         { title: '黑水渡', category: '地域', keywords: [], brief: '鬼市的渡口', body: { 概要: '渡口。', 规则与边界: '', 现状: '', 暗设: '' } },
       ],
       questions: [],
-    }, '再定一个黑水渡');
+    }, '再定一個黑水渡');
     assert.equal(read(TJG), before1);
     assert.ok(fs.existsSync(path.join(t.dir, '.novelwarden/lore/地域/黑水渡.md')));
-    assert.ok(toasts().some((m) => m.includes('保留原样的 天机阁')), toasts().join('|'));
+    assert.ok(toasts().some((m) => m.includes('保留原樣的 天機閣')), toasts().join('|'));
   });
 
-  test('重来：会话已经回到第 3 章，照样换到设定目录跑一轮，再回来', async () => {
+  test('重來：會話已經回到第 3 章，照樣換到設定目錄跑一輪，再回來', async () => {
     const userTurn = controller.current.turns.filter((x) => x.role === 'user').at(-1);
     assert.equal(userTurn.settleLore, true);
     assert.deepEqual(controller.current.target, PLOT3);
@@ -341,105 +341,105 @@ describe('放弃与重来', () => {
     fake.reset([{ text: JSON.stringify({ entries: [], questions: [] }), stop: 'end' }]);
     await controller.handle({ type: 'retry', turnId: userTurn.id, payload: payload({ stage: 'plot', capability: 'discuss', target: PLOT3 }) });
     assert.equal(fake.callCount(), 1);
-    assert.ok(fake.calls[0][0].content.includes('这一次只把讨论里已经定下来的设定落成条目'));
+    assert.ok(fake.calls[0][0].content.includes('這一次只把討論裡已經定下來的設定落成條目'));
     assert.deepEqual(controller.current.target, PLOT3);
     assert.equal(controller.current.stage, 'plot');
   });
 });
 
-describe('拦下：解析不了、一条都没定', () => {
-  test('解析不了：没有卡片、不写入、失败说清；照样回到原来的目标', async () => {
+describe('攔下：解析不了、一條都沒定', () => {
+  test('解析不了：沒有卡片、不寫入、失敗說清；照樣回到原來的目標', async () => {
     const before2 = read(TJG);
-    const gate = await settle('我觉得天机阁还可以再想想……');
+    const gate = await settle('我覺得天機閣還可以再想想……');
     assert.equal(gate, undefined);
     assert.equal(read(TJG), before2);
     const turn = controller.current.turns.at(-1);
-    assert.ok(turn.error && turn.error.includes('落定设定解析不出来'), turn.error);
+    assert.ok(turn.error && turn.error.includes('落定設定解析不出來'), turn.error);
     assert.deepEqual(controller.current.target, PLOT3);
   });
 
-  // 2026-10-25 起语法修复那一次换成转写：坏了语法的 JSON 交给转写理顺，照抄的收下。
-  test('JSON 语法坏了交给转写理顺：一共 2 次', async () => {
-    const broken = '{"entries":[{"title":"乱葬岗","category":"地域","keywords":[],"brief":"城外" "body":{"概要":"城外的坟地。"}}],"questions":[]}';
-    const fixed = '{"entries":[{"title":"乱葬岗","category":"地域","keywords":[],"brief":"城外", "body":{"概要":"城外的坟地。"}}],"questions":[]}';
+  // 2026-10-25 起語法修復那一次換成轉寫：壞了語法的 JSON 交給轉寫理順，照抄的收下。
+  test('JSON 語法壞了交給轉寫理順：一共 2 次', async () => {
+    const broken = '{"entries":[{"title":"亂葬崗","category":"地域","keywords":[],"brief":"城外" "body":{"概要":"城外的墳地。"}}],"questions":[]}';
+    const fixed = '{"entries":[{"title":"亂葬崗","category":"地域","keywords":[],"brief":"城外", "body":{"概要":"城外的墳地。"}}],"questions":[]}';
     const gate = await settle([broken, fixed]);
     assert.equal(fake.callCount(), 2);
-    assert.ok(fake.calls[1][0].content.includes('格式转写员'), fake.calls[1][0].content);
-    assert.ok(gate.detail.includes('一共调了 2 次模型'), gate.detail);
-    assert.ok(fs.existsSync(path.join(t.dir, '.novelwarden/lore/地域/乱葬岗.md')));
+    assert.ok(fake.calls[1][0].content.includes('格式轉寫員'), fake.calls[1][0].content);
+    assert.ok(gate.detail.includes('一共調了 2 次模型'), gate.detail);
+    assert.ok(fs.existsSync(path.join(t.dir, '.novelwarden/lore/地域/亂葬崗.md')));
   });
 
-  test('一条都没定下来：没有卡片、不算失败，气泡里说清并列出还没定的', async () => {
+  test('一條都沒定下來：沒有卡片、不算失敗，氣泡裡說清並列出還沒定的', async () => {
     const gate = await settle({ entries: [], questions: [QUESTION] });
     assert.equal(gate, undefined);
     const turn = controller.current.turns.at(-1);
     assert.equal(turn.error, undefined);
-    assert.ok(turn.content.startsWith('讨论里还没有定下来的设定') && turn.content.includes(`1. ${QUESTION}`), turn.content);
+    assert.ok(turn.content.startsWith('討論裡還沒有定下來的設定') && turn.content.includes(`1. ${QUESTION}`), turn.content);
     assert.equal(turn.artifact, undefined);
   });
 });
 
-// 2026-10-25 起按小标题写，转写模型照抄成 JSON（features/transcribe.ts）。
-describe('按格式写、转写成 JSON', () => {
+// 2026-10-25 起按小標題寫，轉寫模型照抄成 JSON（features/transcribe.ts）。
+describe('按格式寫、轉寫成 JSON', () => {
   const PROSE = [
-    '## 乱石滩',
-    '### 分类',
+    '## 亂石灘',
+    '### 分類',
     '地域',
-    '### 关键词',
-    '石滩',
-    '### 一句话',
-    '城南河边的乱石滩',
+    '### 關鍵詞',
+    '石灘',
+    '### 一句話',
+    '城南河邊的亂石灘',
     '### 概要',
-    '城南河边的一片乱石滩，夜里有人在这里交易。',
-    '### 规则与边界',
-    '只认铜钱，不认银票。',
-    '### 现状',
+    '城南河邊的一片亂石灘，夜裡有人在這裡交易。',
+    '### 規則與邊界',
+    '只認銅錢，不認銀票。',
+    '### 現狀',
     '（未交代）',
-    '### 暗设',
-    '无',
-    '## 还没定的问题',
+    '### 暗設',
+    '無',
+    '## 還沒定的問題',
     `- ${QUESTION}`,
   ].join('\n');
   const COPIED = {
     entries: [
       {
-        title: '乱石滩',
+        title: '亂石灘',
         category: '地域',
-        keywords: ['石滩'],
-        brief: '城南河边的乱石滩',
-        body: { 概要: '城南河边的一片乱石滩，夜里有人在这里交易。', 规则与边界: '只认铜钱，不认银票。', 现状: '（未交代）', 暗设: '无' },
+        keywords: ['石灘'],
+        brief: '城南河邊的亂石灘',
+        body: { 概要: '城南河邊的一片亂石灘，夜裡有人在這裡交易。', 规则与边界: '只認銅錢，不認銀票。', 现状: '（未交代）', 暗设: '無' },
       },
     ],
     questions: [QUESTION],
   };
 
-  test('写一次、转一次：转写只带合同与原文，照抄的落盘', async () => {
+  test('寫一次、轉一次：轉寫只帶合同與原文，照抄的落盤', async () => {
     h.setReviewVerdict('apply');
     const gate = await settle([PROSE, COPIED]);
     assert.equal(fake.callCount(), 2);
     const system = fake.calls[1][0].content;
     const user = fake.calls[1][fake.calls[1].length - 1].content;
-    assert.ok(system.includes('格式转写员'), system);
-    assert.ok(user.includes('【落定设定 JSON 合同】') && user.includes('【原文】') && user.includes('只认铜钱，不认银票。'), user);
-    assert.ok(!user.includes('作者写的：七层楼。'), user);
+    assert.ok(system.includes('格式轉寫員'), system);
+    assert.ok(user.includes('【落定設定 JSON 合同】') && user.includes('【原文】') && user.includes('只認銅錢，不認銀票。'), user);
+    assert.ok(!user.includes('作者寫的：七層樓。'), user);
     assert.ok(gate, JSON.stringify(toasts()));
     assert.ok(gate.detail.includes(QUESTION), gate.detail);
-    const made = (await listLore()).find((e) => e.title === '乱石滩');
-    assert.ok(made && made.body.includes('只认铜钱，不认银票。'), JSON.stringify(made));
+    const made = (await listLore()).find((e) => e.title === '亂石灘');
+    assert.ok(made && made.body.includes('只認銅錢，不認銀票。'), JSON.stringify(made));
   });
 
-  test('只写了「还没定的问题」：照样认成一条都没定，气泡里说清', async () => {
-    const gate = await settle([`## 还没定的问题\n- ${QUESTION}`, { entries: [], questions: [QUESTION] }]);
+  test('只寫了「還沒定的問題」：照樣認成一條都沒定，氣泡裡說清', async () => {
+    const gate = await settle([`## 還沒定的問題\n- ${QUESTION}`, { entries: [], questions: [QUESTION] }]);
     assert.equal(gate, undefined);
     assert.equal(fake.callCount(), 2);
     const turn = controller.current.turns.at(-1);
     assert.equal(turn.error, undefined);
-    assert.ok(turn.content.startsWith('讨论里还没有定下来的设定') && turn.content.includes(`1. ${QUESTION}`), turn.content);
+    assert.ok(turn.content.startsWith('討論裡還沒有定下來的設定') && turn.content.includes(`1. ${QUESTION}`), turn.content);
   });
 });
 
-describe('会话', () => {
-  test('存下的落定草稿读回来还是落定设定，不是设定清单', async () => {
+describe('會話', () => {
+  test('存下的落定草稿讀回來還是落定設定，不是設定清單', async () => {
     const store = new bundle.session.SessionStore(project);
     const session = store.create({ target: LORE_DIR });
     session.stage = 'setting';
@@ -456,7 +456,7 @@ describe('会话', () => {
     assert.equal(art.settle, true);
   });
 
-  test('别的架构文档上记着 settle 的会话读回来是讨论', async () => {
+  test('別的架構檔案上記著 settle 的會話讀回來是討論', async () => {
     const store = new bundle.session.SessionStore(project);
     const session = store.create({ target: { kind: 'setting', doc: 'world' } });
     session.stage = 'setting';

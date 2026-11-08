@@ -1,9 +1,9 @@
 /**
- * 标题栏「视图」菜单里「统计」那一组（独立版）：状态栏字数那一格显示哪几项的开关，外加「重新开始计时」。
- * 接在 `viewMenu.ts` 的 `GROUPS` 里（一组一个函数）。
+ * 標題欄「檢視」選單裡「統計」那一組（獨立版）：狀態列字數那一格顯示哪幾項的開關，外加「重新開始計時」。
+ * 接在 `viewMenu.ts` 的 `GROUPS` 裡（一組一個函式）。
  *
- * 状态问编辑器（`nf-stats-query`，`editor/stats.ts` 回答），开关与重新开始计时经 `nf-stats-command` 交给它——
- * 那是编辑器的偏好，按浏览器记（`novelforge.editor.prefs` 的 `stats`）。编辑器没装时整组置灰。
+ * 狀態問編輯器（`nf-stats-query`，`editor/stats.ts` 回答），開關與重新開始計時經 `nf-stats-command` 交給它——
+ * 那是編輯器的偏好，按瀏覽器記（`novelforge.editor.prefs` 的 `stats`）。編輯器沒裝時整組置灰。
  */
 import { commandStats, queryStats } from '../globals';
 import type { MenuEntry } from './menubar';
@@ -12,34 +12,34 @@ export function statsMenuEntries(): MenuEntry[] {
   const status = queryStats();
   return [
     {
-      label: '统计',
+      label: '統計',
       disabled: !status.available,
-      detail: '内置编辑器状态栏上字数那一格除了全文 / 选中字数，还显示哪几项。点那一格看码字统计。',
+      detail: '內建編輯器狀態列上字數那一格除了全文 / 選中字數，還顯示哪幾項。點那一格看碼字統計。',
       submenu: [
         {
-          label: '状态栏显示距目标',
+          label: '狀態列顯示距目標',
           checked: status.goal,
-          detail: '开着某一章的正文时，显示本章字数与目标（细纲的目标字数，没写就是小说配置的每章字数）还差多少。',
+          detail: '開著某一章的正文時，顯示本章字數與目標（細綱的目標字數，沒寫就是小說配置的每章字數）還差多少。',
           run: () => commandStats('toggleGoal'),
         },
         {
-          label: '状态栏显示本次码字',
+          label: '狀態列顯示本次碼字',
           checked: status.session,
-          detail: '从打开这个页面（或重新开始计时）起，你在编辑器里亲手打进去的净字数。',
+          detail: '從開啟這個頁面（或重新開始計時）起，你在編輯器裡親手打進去的淨字數。',
           run: () => commandStats('toggleSession'),
         },
         {
-          label: '状态栏显示今日码字',
+          label: '狀態列顯示今日碼字',
           checked: status.today,
-          detail: '这个工程今天一共码了多少字（同一个浏览器里几个窗口、刷新前后都累计）。',
+          detail: '這個工程今天一共碼了多少字（同一個瀏覽器裡幾個視窗、重新整理前後都累計）。',
           run: () => commandStats('toggleToday'),
         },
       ],
     },
     {
-      label: '重新开始计时',
+      label: '重新開始計時',
       disabled: !status.available,
-      detail: '「本次码字」的字数与时长从现在起重新算；今日码字不受影响。',
+      detail: '「本次碼字」的字數與時長從現在起重新算；今日碼字不受影響。',
       run: () => commandStats('restart'),
     },
   ];

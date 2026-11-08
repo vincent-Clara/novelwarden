@@ -38,8 +38,8 @@
       "icons/icon.ico"
     ],
     "externalBin": ["binaries/novelwarden"],
-    "shortDescription": "长篇小说上下文管理",
-    "longDescription": "为长篇小说写作提供上下文注入、纲要扩写与角色/剧情整合总结的桌面应用。",
+    "shortDescription": "長篇小說上下文管理",
+    "longDescription": "為長篇小說寫作提供上下文注入、綱要擴寫與角色/劇情整合總結的桌面應用。",
     "linux": {
       "deb": {
         "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]

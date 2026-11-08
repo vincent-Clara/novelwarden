@@ -1,120 +1,120 @@
 /**
- * 「转到…」（Ctrl+P）的匹配与排序。**纯函数、零 DOM**：面板（`quickOpen.ts`）只管画与按键，
- * 认章号、打分、挑前几条、切高亮都在这里，单测见 `tests/unit/editor/quickOpenCore.test.js`。
+ * 「轉到…」（Ctrl+P）的匹配與排序。**純函式、零 DOM**：面板（`quickOpen.ts`）只管畫與按鍵，
+ * 認章號、打分、挑前幾條、切高亮都在這裡，單測見 `tests/unit/editor/quickOpenCore.test.js`。
  *
- * ## 打分（高的排前面，同分按类型 → 章号 → 索引里的先后）
+ * ## 打分（高的排前面，同分按型別 → 章號 → 索引裡的先後）
  *
- * | 档 | 分 | 说明 |
+ * | 檔 | 分 | 說明 |
  * |---|---|---|
- * | 章号直接命中 | 1000 | `12`、`第12章`、`第 12 章`、`第十二章`、`十二`、`一百零五`、`１２`（全角数字）都认（{@link parseChapterNo}） |
- * | 章号前缀 | 550–590 | 只打阿拉伯数字时，`12` 也列出第 120–129 章（边打边缩小） |
- * | 名字子串 | 340–500 | 标题 / 角色名 / 设定标题 / 文件名里有这几个字（连着）。开头就是、整个就是的再高一点 |
- * | 别名子串 | 比名字低 5 | 角色别名 |
- * | 名字模糊 | 140–200 | 这几个字按先后顺序都在（中间可以隔着别的字），隔得越少越高 |
- * | 别名模糊 | 比名字低 5 | |
- * | 路径子串 | 65–100 | 兜底：文件名、卷目录（`第一卷`）、整个相对路径 |
- * | 路径模糊 | 10–60 | |
+ * | 章號直接命中 | 1000 | `12`、`第12章`、`第 12 章`、`第十二章`、`十二`、`一百零五`、`１２`（全形數字）都認（{@link parseChapterNo}） |
+ * | 章號字首 | 550–590 | 只打阿拉伯數字時，`12` 也列出第 120–129 章（邊打邊縮小） |
+ * | 名字子串 | 340–500 | 標題 / 角色名 / 設定標題 / 檔名裡有這幾個字（連著）。開頭就是、整個就是的再高一點 |
+ * | 別名子串 | 比名字低 5 | 角色別名 |
+ * | 名字模糊 | 140–200 | 這幾個字按先後順序都在（中間可以隔著別的字），隔得越少越高 |
+ * | 別名模糊 | 比名字低 5 | |
+ * | 路徑子串 | 65–100 | 兜底：檔名、卷目錄（`第一卷`）、整個相對路徑 |
+ * | 路徑模糊 | 10–60 | |
  *
- * 中文按字（按码位切，不按 UTF-16）；英文不分大小写；查询里的空白不算。
+ * 中文按字（按碼位切，不按 UTF-16）；英文不分大小寫；查詢裡的空白不算。
  *
- * ## 性能
+ * ## 效能
  *
- * 索引到了先 {@link buildCatalog} 一次（小写、按字切好），之后每打一个字只是对每一条跑一遍子串 / 模糊
- * （名字几个字、路径几十个字）。挑前几条用定长的有序数组插入（{@link QUICK_OPEN_LIMIT} 条），不给几百章整个排序；
- * 面板也只画这几条。
+ * 索引到了先 {@link buildCatalog} 一次（小寫、按字切好），之後每打一個字只是對每一條跑一遍子串 / 模糊
+ * （名字幾個字、路徑幾十個字）。挑前幾條用定長的有序陣列插入（{@link QUICK_OPEN_LIMIT} 條），不給幾百章整個排序；
+ * 面板也只畫這幾條。
  */
 import type { QuickOpenDocKey, QuickOpenIndex } from '../protocol';
 
-/** 一次最多列几条。 */
+/** 一次最多列幾條。 */
 export const QUICK_OPEN_LIMIT = 50;
-/** 空输入时「最近打开的」最多列几条。 */
+/** 空輸入時「最近開啟的」最多列幾條。 */
 export const RECENT_SHOWN = 8;
-/** 空输入时在「最近打开的」后面再列前几章。 */
+/** 空輸入時在「最近開啟的」後面再列前幾章。 */
 export const LEAD_CHAPTERS = 10;
-/** localStorage 里最多记几条最近打开的。 */
+/** localStorage 裡最多記幾條最近開啟的。 */
 export const RECENT_KEPT = 20;
 
 export type QuickOpenKind = 'chapter' | 'character' | 'lore' | 'doc' | 'draft';
 
-/** 同分时的先后：章节、角色、设定、文档、草稿。 */
+/** 同分時的先後：章節、角色、設定、文件、草稿。 */
 const KIND_ORDER: Record<QuickOpenKind, number> = { chapter: 0, character: 1, lore: 2, doc: 3, draft: 4 };
 
 /**
- * 架构三件与情节大纲算「架构」（工程页「故事架构」那一组），叙事线一条线一项、名字是线名，标「叙事线」，
- * 其余几份叫「文档」。
+ * 架構三件與情節大綱算「架構」（工程頁「故事架構」那一組），敘事線一條線一項、名字是線名，標「敘事線」，
+ * 其餘幾份叫「文件」。
  */
 const DOC_BADGE: Record<QuickOpenDocKey, string> = {
-  config: '架构',
-  premise: '架构',
-  world: '架构',
-  outline: '架构',
-  style: '文档',
-  threads: '叙事线',
-  globalSummary: '文档',
+  config: '架構',
+  premise: '架構',
+  world: '架構',
+  outline: '架構',
+  style: '檔案',
+  threads: '敘事線',
+  globalSummary: '檔案',
 };
 
-/** 面板上的一条。 */
+/** 面板上的一條。 */
 export interface QuickOpenEntry {
-  /** 身份：章节是 `chapter:<章号>`，其余是 `file:<路径>`。最近打开的去重认它。 */
+  /** 身份：章節是 `chapter:<章號>`，其餘是 `file:<路徑>`。最近開啟的去重認它。 */
   key: string;
   kind: QuickOpenKind;
-  /** 类型标记（「章」「角色」「设定」「架构」「文档」「草稿」）。 */
+  /** 型別標記（「章」「角色」「設定」「架構」「文件」「草稿」）。 */
   badge: string;
-  /** 主名称：章节是标题（没有标题时「第 N 章」），角色是名字，其余是标题 / 文件名。 */
+  /** 主名稱：章節是標題（沒有標題時「第 N 章」），角色是名字，其餘是標題 / 檔名。 */
   name: string;
-  /** 一行小字：「第 12 章 · 第一卷 · 3200 字」/「别名 阿昭 / 小林」/ 路径。 */
+  /** 一行小字：「第 12 章 · 第一卷 · 3200 字」/「別名 阿昭 / 小林」/ 路徑。 */
   detail: string;
-  /** 打开的那个文件：章节是正文（没有正文时是细纲）。 */
+  /** 開啟的那個檔案：章節是正文（沒有正文時是細綱）。 */
   path: string;
-  /** 认得出这一条的全部路径（章节：正文与细纲），「最近打开的」按它认、路径兜底按它配。 */
+  /** 認得出這一條的全部路徑（章節：正文與細綱），「最近開啟的」按它認、路徑兜底按它配。 */
   paths: string[];
   no?: number;
   chapterPath?: string;
   plotPath?: string;
   aliases: string[];
-  /** `detail` 里每个别名的起点（别名命中时在小字里高亮）。 */
+  /** `detail` 裡每個別名的起點（別名命中時在小字裡高亮）。 */
   aliasAt: number[];
-  /** 「第 N 章」在 `detail` 里的长度（章号命中时高亮它；它总在开头）。 */
+  /** 「第 N 章」在 `detail` 裡的長度（章號命中時高亮它；它總在開頭）。 */
   noLabelLength: number;
-  /** 在索引里的先后（同分时最后一道比较）。 */
+  /** 在索引裡的先後（同分時最後一道比較）。 */
   order: number;
-  /** 搜索用：小写、按码位切好。章节的 `name` 只放标题（回落的「第 N 章」不参与名字匹配，章号另认）。 */
+  /** 搜尋用：小寫、按碼位切好。章節的 `name` 只放標題（回落的「第 N 章」不參與名字匹配，章號另認）。 */
   search: { name: string[]; aliases: string[][]; paths: string[][] };
 }
 
-/** 一份索引切好之后的样子。 */
+/** 一份索引切好之後的樣子。 */
 export interface QuickOpenCatalog {
   entries: QuickOpenEntry[];
-  /** 路径 → 那一条（章节的正文与细纲都指向同一章）。 */
+  /** 路徑 → 那一條（章節的正文與細綱都指向同一章）。 */
   byPath: Map<string, QuickOpenEntry>;
   initialized: boolean;
 }
 
-/** 一条结果。 */
+/** 一條結果。 */
 export interface QuickOpenHit {
   entry: QuickOpenEntry;
   score: number;
-  /** 主名称里要高亮的字（码位下标）。 */
+  /** 主名稱裡要高亮的字（碼位下標）。 */
   nameHits: number[];
-  /** 这一条显示的小字：一般是 `entry.detail`，按路径命中时换成命中的那个路径（让人看得出为什么列出来）。 */
+  /** 這一條顯示的小字：一般是 `entry.detail`，按路徑命中時換成命中的那個路徑（讓人看得出為什麼列出來）。 */
   detail: string;
-  /** 小字里要高亮的字（码位下标）。 */
+  /** 小字裡要高亮的字（碼位下標）。 */
   detailHits: number[];
-  /** 空输入时分的组。 */
+  /** 空輸入時分的組。 */
   group?: 'recent' | 'chapters';
 }
 
 export interface QuickOpenResult {
   hits: QuickOpenHit[];
-  /** 一共命中几条（超过上限时比 `hits` 多）。 */
+  /** 一共命中幾條（超過上限時比 `hits` 多）。 */
   total: number;
 }
 
-// ---------------------------------------------------------------- 索引 → 条目
+// ---------------------------------------------------------------- 索引 → 條目
 
 const chars = (text: string): string[] => Array.from(text.toLowerCase());
 
-/** 把后端给的索引切成面板上的条目。索引到了做一次，之后每打一个字只搜不切。 */
+/** 把後端給的索引切成面板上的條目。索引到了做一次，之後每打一個字只搜不切。 */
 export function buildCatalog(index: QuickOpenIndex): QuickOpenCatalog {
   const entries: QuickOpenEntry[] = [];
   const add = (e: Omit<QuickOpenEntry, 'order' | 'search' | 'aliasAt' | 'noLabelLength' | 'aliases'> & {
@@ -153,7 +153,7 @@ export function buildCatalog(index: QuickOpenIndex): QuickOpenCatalog {
       continue;
     }
     const noLabel = `第 ${ch.no} 章`;
-    const state = ch.chapterPath ? `${ch.words} 字` : '只有细纲';
+    const state = ch.chapterPath ? `${ch.words} 字` : '只有細綱';
     add({
       key: `chapter:${ch.no}`,
       kind: 'chapter',
@@ -174,7 +174,7 @@ export function buildCatalog(index: QuickOpenIndex): QuickOpenCatalog {
     let detail = c.path;
     const aliasAt: number[] = [];
     if (aliases.length > 0) {
-      detail = '别名 ';
+      detail = '別名 ';
       aliases.forEach((a, i) => {
         if (i > 0) {
           detail += ' / ';
@@ -186,10 +186,10 @@ export function buildCatalog(index: QuickOpenIndex): QuickOpenCatalog {
     add({ key: `file:${c.path}`, kind: 'character', badge: '角色', name: c.name, detail, path: c.path, paths: [c.path], aliases, aliasAt });
   }
   for (const l of index.lore ?? []) {
-    add({ key: `file:${l.path}`, kind: 'lore', badge: '设定', name: l.title, detail: l.path, path: l.path, paths: [l.path] });
+    add({ key: `file:${l.path}`, kind: 'lore', badge: '設定', name: l.title, detail: l.path, path: l.path, paths: [l.path] });
   }
   for (const d of index.docs ?? []) {
-    add({ key: `file:${d.path}`, kind: 'doc', badge: DOC_BADGE[d.key] ?? '文档', name: d.label, detail: d.path, path: d.path, paths: [d.path] });
+    add({ key: `file:${d.path}`, kind: 'doc', badge: DOC_BADGE[d.key] ?? '檔案', name: d.label, detail: d.path, path: d.path, paths: [d.path] });
   }
   for (const d of index.drafts ?? []) {
     add({ key: `file:${d.path}`, kind: 'draft', badge: '草稿', name: d.name, detail: d.path, path: d.path, paths: [d.path] });
@@ -206,26 +206,26 @@ export function buildCatalog(index: QuickOpenIndex): QuickOpenCatalog {
   return { entries, byPath, initialized: index.initialized !== false };
 }
 
-// ---------------------------------------------------------------- 章号
+// ---------------------------------------------------------------- 章號
 
 const CN_DIGIT: Record<string, number> = {
-  零: 0, 〇: 0, 一: 1, 壹: 1, 二: 2, 贰: 2, 两: 2, 三: 3, 叁: 3, 四: 4, 肆: 4,
-  五: 5, 伍: 5, 六: 6, 陆: 6, 七: 7, 柒: 7, 八: 8, 捌: 8, 九: 9, 玖: 9,
+  零: 0, 〇: 0, 一: 1, 壹: 1, 二: 2, 贰: 2, 貳: 2, 两: 2, 兩: 2, 三: 3, 叁: 3, 叄: 3, 四: 4, 肆: 4,
+  五: 5, 伍: 5, 六: 6, 陆: 6, 陸: 6, 七: 7, 柒: 7, 八: 8, 捌: 8, 九: 9, 玖: 9,
 };
 const CN_UNIT: Record<string, number> = { 十: 10, 拾: 10, 百: 100, 佰: 100, 千: 1000, 仟: 1000 };
-const CN_NUMERAL = /^[零〇一壹二贰两三叁四肆五伍六陆七柒八捌九玖十拾百佰千仟万]+$/;
+const CN_NUMERAL = /^[零〇一壹二贰两三叁四肆五伍六陆七柒八捌九玖十拾百佰千仟万貳兩叄陸萬]+$/;
 
 /**
- * 中文数字 → 数。认「十二」「二十」「一百零五」「一百一十二」「两百」「一千零一」「三万」这类常见写法，
- * 也认逐位写的「一〇五」「一二三」。认不出给 undefined。
+ * 中文數字 → 數。認「十二」「二十」「一百零五」「一百一十二」「兩百」「一千零一」「三萬」這類常見寫法，
+ * 也認逐位寫的「一〇五」「一二三」。認不出給 undefined。
  */
 export function parseChineseNumber(text: string): number | undefined {
   if (!text || !CN_NUMERAL.test(text)) {
     return undefined;
   }
-  const units = [...text].filter((c) => c in CN_UNIT || c === '万');
+  const units = [...text].filter((c) => c in CN_UNIT || (c === '万' || c === '萬'));
   if (units.length === 0) {
-    // 逐位写：一〇五 = 105。只有一个字就是那个数。
+    // 逐位寫：一〇五 = 105。只有一個字就是那個數。
     return Number([...text].map((c) => CN_DIGIT[c]).join(''));
   }
   let total = 0;
@@ -235,11 +235,11 @@ export function parseChineseNumber(text: string): number | undefined {
     if (c in CN_DIGIT) {
       digit = CN_DIGIT[c];
     } else if (c in CN_UNIT) {
-      // 「十二」的十前面没有数：当一。
+      // 「十二」的十前面沒有數：當一。
       section += (digit ?? 1) * CN_UNIT[c];
       digit = undefined;
     } else {
-      // 万
+      // 萬
       section += digit ?? 0;
       total += (section || 1) * 10000;
       section = 0;
@@ -250,14 +250,14 @@ export function parseChineseNumber(text: string): number | undefined {
 }
 
 /**
- * 查询是不是在找第几章：`12`、`012`、`第12章`、`第 12 章`、`12章`、`第十二章`、`十二`、`第一百零五回`、全角的 `１２`。
- * 不是就给 undefined（`第一卷`、`12a`、`三叔` 都不是）。
+ * 查詢是不是在找第幾章：`12`、`012`、`第12章`、`第 12 章`、`12章`、`第十二章`、`十二`、`第一百零五回`、全形的 `１２`。
+ * 不是就給 undefined（`第一卷`、`12a`、`三叔` 都不是）。
  */
 export function parseChapterNo(query: string): number | undefined {
   const q = query
     .replace(/\s+/g, '')
     .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
-  const m = /^第?([0-9]+|[零〇一壹二贰两三叁四肆五伍六陆七柒八捌九玖十拾百佰千仟万]+)[章回节]?$/.exec(q);
+  const m = /^第?([0-9]+|[零〇一壹二贰两三叁四肆五伍六陆七柒八捌九玖十拾百佰千仟万貳兩叄陸萬]+)[章回节節]?$/.exec(q);
   if (!m) {
     return undefined;
   }
@@ -265,19 +265,19 @@ export function parseChapterNo(query: string): number | undefined {
   return n !== undefined && Number.isSafeInteger(n) ? n : undefined;
 }
 
-// ---------------------------------------------------------------- 文本匹配
+// ---------------------------------------------------------------- 文字匹配
 
 interface CharMatch {
-  /** 连着的子串（true）还是按先后顺序的模糊（false）。 */
+  /** 連著的子串（true）還是按先後順序的模糊（false）。 */
   sub: boolean;
-  /** 第一个字的位置。 */
+  /** 第一個字的位置。 */
   first: number;
-  /** 模糊匹配时中间隔了几个字（子串是 0）。 */
+  /** 模糊匹配時中間隔了幾個字（子串是 0）。 */
   gaps: number;
   hits: number[];
 }
 
-/** `q` 在 `text` 里：先找连着的子串，找不到再按先后顺序找每一个字。都是码位数组、已经小写。 */
+/** `q` 在 `text` 裡：先找連著的子串，找不到再按先後順序找每一個字。都是碼位陣列、已經小寫。 */
 export function matchChars(text: readonly string[], q: readonly string[]): CharMatch | undefined {
   if (q.length === 0 || q.length > text.length) {
     return undefined;
@@ -304,7 +304,7 @@ export function matchChars(text: readonly string[], q: readonly string[]): CharM
   return { sub: false, first: hits[0], gaps: hits[hits.length - 1] - hits[0] + 1 - hits.length, hits };
 }
 
-/** 名字（标题、角色名、别名、文件名）这一档的分。 */
+/** 名字（標題、角色名、別名、檔名）這一檔的分。 */
 function nameScore(m: CharMatch, textLength: number, qLength: number): number {
   if (m.sub) {
     return 400 + (m.first === 0 ? 50 : 0) + (textLength === qLength ? 50 : 0) - Math.min(m.first, 40) - Math.min(textLength - qLength, 40) * 0.5;
@@ -312,7 +312,7 @@ function nameScore(m: CharMatch, textLength: number, qLength: number): number {
   return 200 - Math.min(m.gaps, 40) - Math.min(m.first, 40) * 0.5;
 }
 
-/** 路径兜底这一档的分。命中落在文件名里（最后一个 `/` 之后）的高一点。 */
+/** 路徑兜底這一檔的分。命中落在檔名裡（最後一個 `/` 之後）的高一點。 */
 function pathScore(m: CharMatch, text: readonly string[], qLength: number): number {
   const base = text.lastIndexOf('/') + 1;
   if (m.sub) {
@@ -321,7 +321,7 @@ function pathScore(m: CharMatch, text: readonly string[], qLength: number): numb
   return 60 - Math.min(m.gaps, 40) - Math.min(m.first, 40) * 0.25 - (m.first >= base ? 0 : 5);
 }
 
-/** 一条在这个查询下的得分与高亮；不命中给 undefined。 */
+/** 一條在這個查詢下的得分與高亮；不命中給 undefined。 */
 function scoreEntry(entry: QuickOpenEntry, q: string[], no: number | undefined, digits: string | undefined): QuickOpenHit | undefined {
   let best: QuickOpenHit | undefined;
   const offer = (hit: QuickOpenHit): void => {
@@ -359,7 +359,7 @@ function scoreEntry(entry: QuickOpenEntry, q: string[], no: number | undefined, 
       });
     }
   });
-  // 名字与别名已经命中了就不必再看路径：路径那一档的分高不过它们。
+  // 名字與別名已經命中了就不必再看路徑：路徑那一檔的分高不過它們。
   if (!best || best.score < 100) {
     entry.search.paths.forEach((p, i) => {
       const m = matchChars(p, q);
@@ -371,7 +371,7 @@ function scoreEntry(entry: QuickOpenEntry, q: string[], no: number | undefined, 
   return best;
 }
 
-/** a 排在 b 前面时为负。 */
+/** a 排在 b 前面時為負。 */
 function compareHits(a: QuickOpenHit, b: QuickOpenHit): number {
   return (
     b.score - a.score ||
@@ -381,7 +381,7 @@ function compareHits(a: QuickOpenHit, b: QuickOpenHit): number {
   );
 }
 
-/** 往定长的有序数组里插一条（超出上限的那条挤掉）。 */
+/** 往定長的有序陣列裡插一條（超出上限的那條擠掉）。 */
 function insertTop(top: QuickOpenHit[], hit: QuickOpenHit, limit: number): void {
   if (top.length >= limit && compareHits(hit, top[top.length - 1]) >= 0) {
     return;
@@ -403,19 +403,19 @@ function insertTop(top: QuickOpenHit[], hit: QuickOpenHit, limit: number): void 
 }
 
 export interface SearchOptions {
-  /** 最多列几条（缺省 {@link QUICK_OPEN_LIMIT}）。 */
+  /** 最多列幾條（預設 {@link QUICK_OPEN_LIMIT}）。 */
   limit?: number;
-  /** 最近打开过的路径，新的在前（空输入时用）。 */
+  /** 最近開啟過的路徑，新的在前（空輸入時用）。 */
   recent?: readonly string[];
-  /** 空输入时最近打开的最多列几条（缺省 {@link RECENT_SHOWN}）。 */
+  /** 空輸入時最近開啟的最多列幾條（預設 {@link RECENT_SHOWN}）。 */
   recentShown?: number;
-  /** 空输入时再列前几章（缺省 {@link LEAD_CHAPTERS}）。 */
+  /** 空輸入時再列前幾章（預設 {@link LEAD_CHAPTERS}）。 */
   leadChapters?: number;
 }
 
 /**
- * 搜一次。空输入时列「最近打开的」（按路径认回条目，认不出的——删了、不在索引里——跳过，同一章的正文与
- * 细纲只算一条），后面接前几章。
+ * 搜一次。空輸入時列「最近開啟的」（按路徑認回條目，認不出的——刪了、不在索引裡——跳過，同一章的正文與
+ * 細綱只算一條），後面接前幾章。
  */
 export function searchQuickOpen(catalog: QuickOpenCatalog, query: string, opts: SearchOptions = {}): QuickOpenResult {
   const limit = Math.max(1, opts.limit ?? QUICK_OPEN_LIMIT);
@@ -465,14 +465,14 @@ function emptyQuery(catalog: QuickOpenCatalog, opts: SearchOptions, limit: numbe
   return { hits, total: hits.length };
 }
 
-// ---------------------------------------------------------------- 最近打开的 / 高亮
+// ---------------------------------------------------------------- 最近開啟的 / 高亮
 
-/** 把刚打开的路径记到最前面（去重、只留 {@link RECENT_KEPT} 条）。 */
+/** 把剛開啟的路徑記到最前面（去重、只留 {@link RECENT_KEPT} 條）。 */
 export function pushRecent(list: readonly string[], path: string, max = RECENT_KEPT): string[] {
   return [path, ...list.filter((p) => p !== path)].slice(0, max);
 }
 
-/** 按高亮的下标（码位）把一段字切成几截，连着的高亮并成一截。 */
+/** 按高亮的下標（碼位）把一段字切成幾截，連著的高亮併成一截。 */
 export function highlightSegments(text: string, hits: readonly number[]): { text: string; hit: boolean }[] {
   const set = new Set(hits);
   const out: { text: string; hit: boolean }[] = [];

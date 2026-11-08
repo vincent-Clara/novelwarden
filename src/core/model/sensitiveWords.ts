@@ -1,46 +1,46 @@
 /**
- * 自定义敏感词表（`.novelwarden/sensitive.txt`）：发布平台不让出现的词，作者自己维护。**纯函数、绝不抛**
- * （第 1 条：作者会手改它，认不出的行跳过）；只 import 同样零 import 的 `manuscriptCheck.ts`，前端也能打包。
+ * 自定義敏感詞表（`.novelwarden/sensitive.txt`）：釋出平臺不讓出現的詞，作者自己維護。**純函式、絕不拋**
+ * （第 1 條：作者會手改它，認不出的行跳過）；只 import 同樣零 import 的 `manuscriptCheck.ts`，前端也能打包。
  *
- * 现在**只给内置编辑器的「写作体检」用**（后端读出来解析好，随 `checkTerms` 推给编辑器，正文里出现了就标出来，
- * 有替换词的在体检面板里可以一键替换）——不进生成链、不进装配器，模型看不到这份词表。
+ * 現在**只給內建編輯器的「寫作體檢」用**（後端讀出來解析好，隨 `checkTerms` 推給編輯器，正文裡出現了就標出來，
+ * 有替換詞的在體檢面板裡可以一鍵替換）——不進生成鏈、不進裝配器，模型看不到這份詞表。
  *
  * ## 格式（⚑）
  *
  * ```
- * # 井号开头的行是注释，空行不算
- * 某个词
- * 某个词 => 换成的词
+ * # 井號開頭的行是註釋，空行不算
+ * 某個詞
+ * 某個詞 => 換成的詞
  * ```
  *
- * - 一行一个词，前后的空白不算；词中间可以有空格（英文词组）。
- * - `=>` 后面是建议的替换词（左右空白不算）。只认半角的 `=>`，一行只能有一个。
- * - 英文不分大小写，全角字母当半角（匹配在 `manuscriptCheck.ts` 的 `locateTerms`，`foldCase`）。
- * - 认不出的行跳过，不报错：`=>` 前面没有词、后面没有替换词、一行两个 `=>`、词太长（超过 {@link SENSITIVE_TERM_MAX} 个字）、
- *   替换词与原词一字不差、与前面某一行是同一个词（不分大小写）。体检面板里提一句「第 N 行没看懂」。
+ * - 一行一個詞，前後的空白不算；詞中間可以有空格（英文片語）。
+ * - `=>` 後面是建議的替換詞（左右空白不算）。只認半形的 `=>`，一行只能有一個。
+ * - 英文不分大小寫，全形字母當半形（匹配在 `manuscriptCheck.ts` 的 `locateTerms`，`foldCase`）。
+ * - 認不出的行跳過，不報錯：`=>` 前面沒有詞、後面沒有替換詞、一行兩個 `=>`、詞太長（超過 {@link SENSITIVE_TERM_MAX} 個字）、
+ *   替換詞與原詞一字不差、與前面某一行是同一個詞（不分大小寫）。體檢面板裡提一句「第 N 行沒看懂」。
  *
- * 文件不在 = 没有敏感词。第一次在编辑器里点「编辑敏感词表…」时经网关新建一份 {@link SENSITIVE_TEMPLATE}。
+ * 檔案不在 = 沒有敏感詞。第一次在編輯器裡點「編輯敏感詞表…」時經閘道器新建一份 {@link SENSITIVE_TEMPLATE}。
  */
 import { foldLatin } from './manuscriptCheck';
 
-/** 文件名（在 `.novelwarden/` 下）。 */
+/** 檔名（在 `.novelwarden/` 下）。 */
 export const SENSITIVE_FILE_NAME = 'sensitive.txt';
 
-/** 一个词最多几个字（码位）：再长就是一句话了。 */
+/** 一個詞最多幾個字（碼位）：再長就是一句話了。 */
 export const SENSITIVE_TERM_MAX = 32;
 
-/** 词表里的一个词。`line` 是它在文件里的第几行（1 起）。 */
+/** 詞表裡的一個詞。`line` 是它在檔案裡的第幾行（1 起）。 */
 export interface SensitiveTerm {
   term: string;
-  /** 建议的替换词。没写就是只标出来。 */
+  /** 建議的替換詞。沒寫就是隻標出來。 */
   replacement?: string;
   line: number;
 }
 
-/** 没看懂、跳过的一行。 */
+/** 沒看懂、跳過的一行。 */
 export interface SensitiveBadLine {
   line: number;
-  /** 为什么没看懂（给人看的一句）。 */
+  /** 為什麼沒看懂（給人看的一句）。 */
   reason: string;
 }
 
@@ -49,7 +49,7 @@ export interface SensitiveList {
   bad: SensitiveBadLine[];
 }
 
-/** 解析词表。不是字符串（读不到）当空的。 */
+/** 解析詞表。不是字串（讀不到）當空的。 */
 export function parseSensitiveWords(text: string | undefined): SensitiveList {
   const terms: SensitiveTerm[] = [];
   const bad: SensitiveBadLine[] = [];
@@ -63,31 +63,31 @@ export function parseSensitiveWords(text: string | undefined): SensitiveList {
     }
     const parts = s.split('=>');
     if (parts.length > 2) {
-      bad.push({ line, reason: '一行只能有一个「=>」' });
+      bad.push({ line, reason: '一行只能有一個「=>」' });
       return;
     }
     const term = parts[0].trim();
     const replacement = parts.length === 2 ? parts[1].trim() : undefined;
     if (!term) {
-      bad.push({ line, reason: '「=>」前面没有词' });
+      bad.push({ line, reason: '「=>」前面沒有詞' });
       return;
     }
     if (replacement === '') {
-      bad.push({ line, reason: '「=>」后面没有替换词（不想替换就把「=>」删掉）' });
+      bad.push({ line, reason: '「=>」後面沒有替換詞（不想替換就把「=>」刪掉）' });
       return;
     }
     if (Array.from(term).length > SENSITIVE_TERM_MAX) {
-      bad.push({ line, reason: `太长了（一个词最多 ${SENSITIVE_TERM_MAX} 个字）` });
+      bad.push({ line, reason: `太長了（一個詞最多 ${SENSITIVE_TERM_MAX} 個字）` });
       return;
     }
     if (replacement !== undefined && replacement === term) {
-      bad.push({ line, reason: '替换词与原词一样' });
+      bad.push({ line, reason: '替換詞與原詞一樣' });
       return;
     }
     const key = foldLatin(term);
     const first = seen.get(key);
     if (first !== undefined) {
-      bad.push({ line, reason: `与第 ${first} 行是同一个词（英文不分大小写），只认第 ${first} 行` });
+      bad.push({ line, reason: `與第 ${first} 行是同一個詞（英文不分大小寫），只認第 ${first} 行` });
       return;
     }
     seen.set(key, line);
@@ -96,21 +96,21 @@ export function parseSensitiveWords(text: string | undefined): SensitiveList {
   return { terms, bad };
 }
 
-/** 第一次「编辑敏感词表…」时新建的那一份：全是注释，一个词都不生效。 */
+/** 第一次「編輯敏感詞表…」時新建的那一份：全是註釋，一個詞都不生效。 */
 export const SENSITIVE_TEMPLATE = [
-  '# 敏感词表：发布平台不让出现的词，自己维护，一行一个。',
+  '# 敏感詞表：釋出平臺不讓出現的詞，自己維護，一行一個。',
   '#',
-  '# 只用于内置编辑器的「体检」：正文（章节与草稿）里出现了就标出来、在状态栏「体检」那一格里数出来，',
-  '# 不会替你改字，也不会发给模型（写正文时模型看不到这份词表）。',
+  '# 只用於內建編輯器的「體檢」：正文（章節與草稿）裡出現了就標出來、在狀態列「體檢」那一格里數出來，',
+  '# 不會替你改字，也不會發給模型（寫正文時模型看不到這份詞表）。',
   '#',
-  '# 写法：',
-  '#   某个词                只标出来',
-  '#   某个词 => 换成的词     标出来，体检面板里可以「替换本处」或「本文件全部替换」',
-  '#   # 开头的行是注释，空行不算',
-  '# 英文不分大小写（全角字母当半角）。认不出的行会跳过，体检面板里会说是第几行。',
+  '# 寫法：',
+  '#   某個詞                只標出來',
+  '#   某個詞 => 換成的詞     標出來，體檢面板裡可以「替換本處」或「本檔案全部替換」',
+  '#   # 開頭的行是註釋，空行不算',
+  '# 英文不分大小寫（全形字母當半形）。認不出的行會跳過，體檢面板裡會說是第幾行。',
   '#',
   '# 例子（去掉行首的「# 」就生效）：',
-  '# 某某平台',
-  '# 赌博 => 博戏',
+  '# 某某平臺',
+  '# 賭博 => 博戲',
   '',
 ].join('\n');

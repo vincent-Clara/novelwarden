@@ -1,15 +1,15 @@
 /**
- * 上下文详细度（model/contextDetail.ts）在装配器里的落点：同一个工程、同一章，四级各装一次。
+ * 上下文詳細度（model/contextDetail.ts）在裝配器裡的落點：同一個工程、同一章，四級各裝一次。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 近章全文 0 / 1 / 2 / 3 章 | 级别越高带得越多，这是开关的全部意思 |
- * | 「精简」只带最近 5 章细纲，更早的合成**一条** dropped，说明写级别 | 第 2 条：不静默截断；也不拿九十几行「不带」淹掉明细 |
- * | 没写级别（老配置、手写的测试配置）= 「详细」 | 缺省第 3 级，与从前一样 |
- * | 「精简」不带定稿原文片段，出一条说明 | 第 2 条 |
- * | 「精简」上一章结尾不超过 1000 字、角色卡只带要点、叙事线 3 条 | 每一项都按级别 |
- * | 历史封顶随级别；落定细纲仍是 60% | settle 要沉淀的就是那段讨论 |
- * | 细纲阶段前后几章、前序细纲一览按级别 | 同上 |
+ * | 近章全文 0 / 1 / 2 / 3 章 | 級別越高帶得越多，這是開關的全部意思 |
+ * | 「精簡」只帶最近 5 章細綱，更早的合成**一條** dropped，說明寫級別 | 第 2 條：不靜默截斷；也不拿九十幾行「不帶」淹掉明細 |
+ * | 沒寫級別（老配置、手寫的測試配置）= 「詳細」 | 預設第 3 級，與從前一樣 |
+ * | 「精簡」不帶定稿原文片段，出一條說明 | 第 2 條 |
+ * | 「精簡」上一章結尾不超過 1000 字、角色卡只帶要點、敘事線 3 條 | 每一項都按級別 |
+ * | 歷史封頂隨級別；落定細綱仍是 60% | settle 要沉澱的就是那段討論 |
+ * | 細綱階段前後幾章、前序細綱一覽按級別 | 同上 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -38,19 +38,19 @@ const pad3 = (n) => String(n).padStart(3, '0');
 const CH = (no) => `chapters/${pad3(no)}-第${no}章.md`;
 const PLOT = (no) => `.novelwarden/summaries/${pad3(no)}-第${no}章.md`;
 
-/** 一章约 2000 字，十来段：上一章结尾要真被截。 */
+/** 一章約 2000 字，十來段：上一章結尾要真被截。 */
 function chapterText(no) {
-  const para = (k) => `第${no}章第${k}段，${'雨还在下，'.repeat(36)}林昭往井边走。`;
+  const para = (k) => `第${no}章第${k}段，${'雨還在下，'.repeat(36)}林昭往井邊走。`;
   return [
     `# 第${no}章`,
     '',
-    `林昭在第${no}章把第${no}块令牌塞进怀里。`,
+    `林昭在第${no}章把第${no}塊令牌塞進懷裡。`,
     '',
     ...Array.from({ length: 10 }, (_, k) => [para(k + 1), '']).flat(),
   ].join('\n');
 }
 
-/** 一份还没定稿的细纲（计划）。 */
+/** 一份還沒定稿的細綱（計劃）。 */
 function plotText(no) {
   return [
     '---',
@@ -65,25 +65,25 @@ function plotText(no) {
     '',
     '往下查。',
     '',
-    '## 出场人物',
+    '## 出場人物',
     '',
     '林昭',
     '',
-    '## 关键事件',
+    '## 關鍵事件',
     '',
-    `林昭在第${no}章去井边。`,
+    `林昭在第${no}章去井邊。`,
     '',
-    '## 看点',
+    '## 看點',
     '',
     '- 井底有人。',
     '',
   ].join('\n');
 }
 
-/** 五条都与第 13 章有关（区间盖住第 13 章），「精简」只带得下 3 条。一条线一个文件。 */
-const THREADS = ['玉佩', '名册', '大火', '师父', '来信'].map((name) => [
-  `.novelwarden/threads/${name}之谜.md`,
-  `---\nkind: 支线\nplan: 10-20\n---\n\n# ${name}之谜\n\n## 意图\n${name}的来历。\n`,
+/** 五條都與第 13 章有關（區間蓋住第 13 章），「精簡」只帶得下 3 條。一條線一個檔案。 */
+const THREADS = ['玉佩', '名冊', '大火', '師父', '來信'].map((name) => [
+  `.novelwarden/threads/${name}之謎.md`,
+  `---\nkind: 支線\nplan: 10-20\n---\n\n# ${name}之謎\n\n## 意圖\n${name}的來歷。\n`,
 ]);
 
 let bundle;
@@ -98,16 +98,16 @@ before(() => {
   bundle.host.initHost(makeFakeHost().host);
 });
 
-/** 第 1..12 章正文都写了、细纲都定稿了（sourceHash 对得上）；第 13 章的细纲还是计划。 */
+/** 第 1..12 章正文都寫了、細綱都定稿了（sourceHash 對得上）；第 13 章的細綱還是計劃。 */
 async function setupManuscript() {
-  const t = await makeTempProject(bundle.project, { prefix: 'contextDetail', title: '详细度测试' });
+  const t = await makeTempProject(bundle.project, { prefix: 'contextDetail', title: '詳細度測試' });
   for (let no = 1; no <= N; no++) {
     t.write(CH(no), chapterText(no));
   }
   t.write(PLOT(N + 1), plotText(N + 1));
   t.write(
     '.novelwarden/characters/林昭.md',
-    '---\nname: 林昭\ntags: [主角]\n---\n\n# 林昭\n\n## 身份\n\n孤儿\n\n## 外貌\n\n左眉有一道疤\n\n## 当前状态\n\n在查案\n'
+    '---\nname: 林昭\ntags: [主角]\n---\n\n# 林昭\n\n## 身份\n\n孤兒\n\n## 外貌\n\n左眉有一道疤\n\n## 當前狀態\n\n在查案\n'
   );
   for (const [rel, text] of THREADS) {
     t.write(rel, text);
@@ -118,7 +118,7 @@ async function setupManuscript() {
     const ch = chapters.find((c) => c.order === no);
     t.write(
       `.novelwarden/summaries/${pad3(no)}-第${no}章.md`,
-      `---\nno: ${no}\ntitle: 第${no}章\nsourceHash: ${ch.contentHash}\ncast: [林昭]\n---\n\n# 第${no}章 第${no}章\n\n## 梗概\n\n第${no}章的事。\n\n## 出场人物\n\n林昭\n\n## 连续性事实\n\n- 林昭收起第${no}块令牌 〔证据：「林昭在第${no}章把第${no}块令牌塞进怀里。」〕\n`
+      `---\nno: ${no}\ntitle: 第${no}章\nsourceHash: ${ch.contentHash}\ncast: [林昭]\n---\n\n# 第${no}章 第${no}章\n\n## 梗概\n\n第${no}章的事。\n\n## 出場人物\n\n林昭\n\n## 連續性事實\n\n- 林昭收起第${no}塊令牌 〔證據：「林昭在第${no}章把第${no}塊令牌塞進懷裡。」〕\n`
     );
   }
   t.project.invalidate();
@@ -135,7 +135,7 @@ function write13(t, extra = {}, request = {}) {
 
 const live = (b, kind) => b.items.filter((i) => i.kind === kind && (i.status === 'included' || i.status === 'degraded'));
 
-describe('上下文详细度 · 写第 13 章（前 12 章都定稿了）', () => {
+describe('上下文詳細度 · 寫第 13 章（前 12 章都定稿了）', () => {
   let t;
   const built = {};
 
@@ -148,7 +148,7 @@ describe('上下文详细度 · 写第 13 章（前 12 章都定稿了）', () =
   });
   after(() => cleanup(t.dir, bundle.db));
 
-  test('装配结果记着按哪一级装的；没写级别 = 3', () => {
+  test('裝配結果記著按哪一級裝的；沒寫級別 = 3', () => {
     assert.deepEqual([1, 2, 3, 4].map((d) => built[d].detail), [1, 2, 3, 4]);
     assert.equal(built.none.detail, 3);
   });
@@ -160,84 +160,84 @@ describe('上下文详细度 · 写第 13 章（前 12 章都定稿了）', () =
     );
   });
 
-  test('级别越高用量越大', () => {
+  test('級別越高用量越大', () => {
     const used = [1, 2, 3, 4].map((d) => built[d].usedTokens);
     assert.ok(used[0] < used[1] && used[1] < used[2] && used[2] < used[3], used.join(' < '));
   });
 
-  // 写正文只带前几章细纲（`plotPrev`，上文），条数随级别 1 / 2 / 3 / 5；更早的不带，也不一章一条说「不带」（2026-10-21）。
-  test('前几章细纲 1 / 2 / 3 / 5 章，都是紧挨着的那几章', () => {
+  // 寫正文只帶前幾章細綱（`plotPrev`，上文），條數隨級別 1 / 2 / 3 / 5；更早的不帶，也不一章一條說「不帶」（2026-10-21）。
+  test('前幾章細綱 1 / 2 / 3 / 5 章，都是緊挨著的那幾章', () => {
     assert.deepEqual(
       [1, 2, 3, 4].map((d) => live(built[d], 'plotSummary').map((i) => i.label.match(/第 (\d+) 章/)[1]).join(',')),
       ['12', '11,12', '10,11,12', '8,9,10,11,12']
     );
-    assert.ok(!built[4].items.some((i) => i.kind === 'plotSummary' && i.status === 'dropped'), '更早的不一章一条');
+    assert.ok(!built[4].items.some((i) => i.kind === 'plotSummary' && i.status === 'dropped'), '更早的不一章一條');
   });
 
-  test('「精简」不带定稿原文片段，出一条说明', () => {
+  test('「精簡」不帶定稿原文片段，出一條說明', () => {
     const ev = built[1].items.filter((i) => i.kind === 'evidence');
     assert.deepEqual(ev.map((i) => [i.id, i.status]), [['evidence:off', 'dropped']]);
-    assert.match(ev[0].note, /上下文详细度「精简」不带原文片段/);
-    assert.ok(live(built[3], 'evidence').length > 0, '缺省那一级照样带');
+    assert.match(ev[0].note, /上下文詳細度「精簡」不帶原文片段/);
+    assert.ok(live(built[3], 'evidence').length > 0, '預設那一級照樣帶');
   });
 
-  test('「精简」上一章结尾不超过 1000 字', () => {
+  test('「精簡」上一章結尾不超過 1000 字', () => {
     const tail = (b) => b.items.find((i) => i.kind === 'prevTail');
     const short = tail(built[1]).text.replace('……（前略）\n\n', '');
     assert.ok(short.length <= 1000, String(short.length));
-    // 「标准」起带了上一章全文，结尾片段被整章取代（去重），不再单独带。
+    // 「標準」起帶了上一章全文，結尾片段被整章取代（去重），不再單獨帶。
     assert.equal(tail(built[2]).status, 'dropped');
   });
 
-  test('「精简」角色卡只带要点，说明写级别', () => {
+  test('「精簡」角色卡只帶要點，說明寫級別', () => {
     const card = built[1].items.find((i) => i.id === 'character:林昭');
     assert.equal(card.status, 'degraded');
     assert.ok(!card.text.includes('左眉有一道疤'), card.text);
     assert.ok(card.text.includes('在查案'), card.text);
-    // 写正文时暗设不带（叙事线重做第 10 个提交），要点只剩身份 / 当前状态。
-    assert.match(card.note, /上下文详细度「精简」只带身份\/当前状态$/);
+    // 寫正文時暗設不帶（敘事線重做第 10 個提交），要點只剩身份 / 當前狀態。
+    assert.match(card.note, /上下文詳細度「精簡」只帶身份\/當前狀態$/);
     const full = built[3].items.find((i) => i.id === 'character:林昭');
     assert.equal(full.status, 'included');
     assert.ok(full.text.includes('左眉有一道疤'));
   });
 
-  test('叙事线：「精简」3 条，「详细」5 条全带', () => {
+  test('敘事線：「精簡」3 條，「詳細」5 條全帶', () => {
     assert.equal(live(built[1], 'thread').length, 3);
     const dropped = built[1].items.filter((i) => i.kind === 'thread' && i.status === 'dropped');
     assert.equal(dropped.length, 2);
-    assert.ok(dropped.every((i) => i.note === '叙事线一次只带 3 条，排在后面的没带'), dropped.map((i) => i.note).join('|'));
+    assert.ok(dropped.every((i) => i.note === '敘事線一次只帶 3 條，排在後面的沒帶'), dropped.map((i) => i.note).join('|'));
     assert.equal(live(built[3], 'thread').length, 5);
   });
 
-  test('续写那几轮的近章事实：「精简」最多 6 章', async () => {
-    const step = { kind: 'continuation', tail: '林昭往井边走。', written: 800, remaining: 400, recovery: false };
+  test('續寫那幾輪的近章事實：「精簡」最多 6 章', async () => {
+    const step = { kind: 'continuation', tail: '林昭往井邊走。', written: 800, remaining: 400, recovery: false };
     const cont = await write13(t, { contextDetail: 1 }, { step });
     assert.equal(live(cont, 'facts').length, 6);
     const contDefault = await write13(t, {}, { step });
     assert.equal(live(contDefault, 'facts').length, 12);
   });
 
-  test('测试的单项覆盖叠在级别那一行上', async () => {
+  test('測試的單項覆蓋疊在級別那一行上', async () => {
     const b = await write13(t, { contextDetail: 4, contextOverrides: { fullTextChapters: 0 } });
     assert.equal(live(b, 'manuscriptFull').length, 0);
-    assert.ok(live(b, 'evidence').length > 0, '其余照「完整」');
+    assert.ok(live(b, 'evidence').length > 0, '其餘照「完整」');
   });
 });
 
-describe('上下文详细度 · 历史封顶', () => {
+describe('上下文詳細度 · 歷史封頂', () => {
   let t;
   const many = [];
   before(async () => {
     t = await setupManuscript();
     for (let i = 1; i <= 40; i++) {
-      many.push({ id: `m${i}`, role: i % 2 === 1 ? 'user' : 'assistant', content: `第 ${i} 轮的内容。`.repeat(60), at: '2026-08-01T10:00:00Z' });
+      many.push({ id: `m${i}`, role: i % 2 === 1 ? 'user' : 'assistant', content: `第 ${i} 輪的內容。`.repeat(60), at: '2026-08-01T10:00:00Z' });
     }
   });
   after(() => cleanup(t.dir, bundle.db));
 
   const historyTokens = (b) => live(b, 'history').reduce((s, i) => s + i.tokens, 0);
 
-  test('「精简」历史不超过预算 15%，「完整」可以到 40%', async () => {
+  test('「精簡」歷史不超過預算 15%，「完整」可以到 40%', async () => {
     const small = await write13(t, { contextDetail: 1, contextWindow: 40000 }, { history: many });
     assert.ok(historyTokens(small) <= Math.floor(small.budget * 0.15) + 5, `${historyTokens(small)} / ${small.budget}`);
     const big = await write13(t, { contextDetail: 4, contextWindow: 40000 }, { history: many });
@@ -245,7 +245,7 @@ describe('上下文详细度 · 历史封顶', () => {
     assert.ok(historyTokens(big) <= Math.floor(big.budget * 0.4) + 5, `${historyTokens(big)} / ${big.budget}`);
   });
 
-  test('落定细纲不随级别：「精简」也照样能用到 15% 以上', async () => {
+  test('落定細綱不隨級別：「精簡」也照樣能用到 15% 以上', async () => {
     const settle = await bundle.builder.buildContext(
       t.project,
       { action: { stage: 'plot', capability: 'settle' }, target: { kind: 'plot', plotRelPath: PLOT(N + 1) }, ask: '', history: many },
@@ -255,11 +255,11 @@ describe('上下文详细度 · 历史封顶', () => {
   });
 });
 
-describe('上下文详细度 · 细纲阶段（第 36 章，前面 35 章、后面 2 章都排了细纲）', () => {
+describe('上下文詳細度 · 細綱階段（第 36 章，前面 35 章、後面 2 章都排了細綱）', () => {
   let t;
   const built = {};
   before(async () => {
-    t = await makeTempProject(bundle.project, { prefix: 'contextDetailPlot', title: '细纲测试' });
+    t = await makeTempProject(bundle.project, { prefix: 'contextDetailPlot', title: '細綱測試' });
     for (let no = 1; no <= 38; no++) {
       t.write(PLOT(no), plotText(no));
     }
@@ -274,14 +274,14 @@ describe('上下文详细度 · 细纲阶段（第 36 章，前面 35 章、后�
   });
   after(() => cleanup(t.dir, bundle.db));
 
-  /** 细纲条目的章号（`plot:<路径>`），本章自己除外。 */
+  /** 細綱條目的章號（`plot:<路徑>`），本章自己除外。 */
   const neighbours = (b) =>
     b.items
       .filter((i) => i.kind === 'plot' && i.status === 'included')
       .map((i) => Number(/summaries\/(\d+)/.exec(i.id)?.[1]))
       .filter((no) => no !== 36);
 
-  test('前后几章细纲：「精简」1 / 1，「详细」3 / 1，「完整」5 / 2', () => {
+  test('前後幾章細綱：「精簡」1 / 1，「詳細」3 / 1，「完整」5 / 2', () => {
     const count = (b) => {
       const nos = neighbours(b);
       return [nos.filter((n) => n < 36).length, nos.filter((n) => n > 36).length];
@@ -291,13 +291,13 @@ describe('上下文详细度 · 细纲阶段（第 36 章，前面 35 章、后�
     assert.deepEqual(count(built[4]), [5, 2]);
   });
 
-  // 2026-10-24 一览单独一组数（10 / 20 / 30 / 不限），不再与大纲的中段共用 30 / 50 / 100 / 不限。
-  test('前序细纲一览：「精简」只带最近 10 章、「详细」30 章并说明；「完整」不限', () => {
+  // 2026-10-24 一覽單獨一組數（10 / 20 / 30 / 不限），不再與大綱的中段共用 30 / 50 / 100 / 不限。
+  test('前序細綱一覽：「精簡」只帶最近 10 章、「詳細」30 章並說明；「完整」不限', () => {
     const list = (b) => b.items.find((i) => i.id === 'plotList');
     assert.match(list(built[1]).label, /（10 章）/);
-    assert.match(list(built[1]).note, /只带最近 10 章（上下文详细度「精简」）/);
+    assert.match(list(built[1]).note, /只帶最近 10 章（上下文詳細度「精簡」）/);
     assert.match(list(built[3]).label, /（30 章）/);
-    assert.match(list(built[3]).note, /只带最近 30 章（上下文详细度「详细」）/);
+    assert.match(list(built[3]).note, /只帶最近 30 章（上下文詳細度「詳細」）/);
     assert.match(list(built[4]).label, /（30 章）/);
     assert.equal(list(built[4]).note, undefined);
   });

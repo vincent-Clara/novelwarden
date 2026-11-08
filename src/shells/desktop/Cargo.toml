@@ -1,19 +1,19 @@
 [package]
 name = "novelwarden-desktop"
-# 不是这个应用的版本号。版本号只记在仓库根 package.json 一处：tauri.conf.json 的
-# `version` 指过去，安装包与 Windows 可执行的文件版本都从那里来，这里的值不被任何地方读。
+# 不是這個應用的版本號。版本號只記在倉庫根 package.json 一處：tauri.conf.json 的
+# `version` 指過去，安裝包與 Windows 可執行的檔案版本都從那裡來，這裡的值不被任何地方讀。
 version = "0.0.0"
-description = "Novelwarden 桌面壳"
+description = "Novelwarden 桌面殼"
 edition = "2021"
 rust-version = "1.77"
 license = "AGPL-3.0"
 
-# 这个 crate 只是一层壳：起 sidecar、等它就绪、把窗口导航过去、退出时收尸。
-# 业务逻辑全在 sidecar（src/standalone 编出来的单文件可执行）里，
-# 这里一行小说相关的代码都没有，也不该有。
+# 這個 crate 只是一層殼：起 sidecar、等它就緒、把視窗導航過去、退出時收屍。
+# 業務邏輯全在 sidecar（src/standalone 編出來的單檔案可執行）裡，
+# 這裡一行小說相關的程式碼都沒有，也不該有。
 #
-# 刻意没有 [lib]：桌面专用，不走 Tauri 的移动端入口。Android 需要的是另一套
-# 方案（core 跑在 webview 里），不会复用这个壳。
+# 刻意沒有 [lib]：桌面專用，不走 Tauri 的移動端入口。Android 需要的是另一套
+# 方案（core 跑在 webview 裡），不會複用這個殼。
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -22,15 +22,15 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
-# 双开两个实例会有两个 sidecar 同时写同一个工程目录。内置编辑器的保存有乐观锁
-# 兜底，但摘要/角色卡这类批量写没有，所以直接从源头挡掉。
+# 雙開兩個例項會有兩個 sidecar 同時寫同一個工程目錄。內建編輯器的儲存有樂觀鎖
+# 兜底，但摘要/角色卡這類批次寫沒有，所以直接從源頭擋掉。
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# 等 sidecar 就绪那个轮询循环要 sleep + mpsc。Tauri 本来就依赖 tokio，
-# 这里只是把它写明，不额外增加构建成本。
+# 等 sidecar 就緒那個輪詢迴圈要 sleep + mpsc。Tauri 本來就依賴 tokio，
+# 這裡只是把它寫明，不額外增加構建成本。
 tokio = { version = "1", features = ["time", "sync"] }
 
 [features]
-# `tauri build` 用它开启生产模式下的自定义协议。由 CLI 注入，别手动改。
+# `tauri build` 用它開啟生產模式下的自定義協議。由 CLI 注入，別手動改。
 custom-protocol = ["tauri/custom-protocol"]

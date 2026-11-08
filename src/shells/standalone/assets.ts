@@ -1,14 +1,14 @@
 import { MEDIA_ASSETS } from './mediaAssets';
 
-/** 版本号与资源表同在一个生成文件里，编译时写死（见 scripts/embed-media.js）。 */
+/** 版本號與資源表同在一個生成檔案裡，編譯時寫死（見 scripts/embed-media.js）。 */
 export { PRODUCT_VERSION } from './mediaAssets';
 
 /**
- * `/media/*` 路由的字节来源：全部取自内嵌资源表，不读磁盘——`bun build --compile`
- * 出来的单文件可执行没有外部资源可读。
+ * `/media/*` 路由的位元組來源：全部取自內嵌資源表，不讀磁碟——`bun build --compile`
+ * 出來的單檔案可執行沒有外部資源可讀。
  *
- * 与 [page.ts](page.ts) 分开是有意的：页面拼装不该因为要渲染一段 HTML 就依赖
- * 这个几十 MB 的生成文件（`mediaAssets.ts` 由 scripts/embed-media.js 生成）。
+ * 與 [page.ts](page.ts) 分開是有意的：頁面拼裝不該因為要渲染一段 HTML 就依賴
+ * 這個幾十 MB 的生成檔案（`mediaAssets.ts` 由 scripts/embed-media.js 生成）。
  */
 export function assetBytes(name: string): { mime: string; bytes: Uint8Array } | undefined {
   const asset = MEDIA_ASSETS[name];

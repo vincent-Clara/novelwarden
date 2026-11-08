@@ -1,91 +1,92 @@
+import { traditionalLabel } from '../model/labels';
 import { LORE_BODY_KEYS, LORE_ENTRY_LIMITS, LORE_EXPAND_LIMITS, LORE_HIDDEN_KEY, LORE_LINE_LIMITS } from '../model/loreFile';
 
 /**
- * 展开一条设定（完善设定，2026-10-19）：往前想细。系统提示里那一句做事原则与附在用户消息末尾的输出合同。
+ * 展開一條設定（完善設定，2026-10-19）：往前想細。系統提示裡那一句做事原則與附在使用者訊息末尾的輸出合同。
  *
- * **不借 `LORE_ENTRY_SYSTEM`**（features/lorePrompt.ts）：那一份是往回记的规矩，第 1 条就是「只写给出的记录里
- * 明确有的，不补完、不推测」。展开反过来——要为已排的情节补完、推想；只是定稿里写过的不推翻、作者写过的不删。
+ * **不借 `LORE_ENTRY_SYSTEM`**（features/lorePrompt.ts）：那一份是往回記的規矩，第 1 條就是「只寫給出的記錄裡
+ * 明確有的，不補完、不推測」。展開反過來——要為已排的情節補完、推想；只是定稿裡寫過的不推翻、作者寫過的不刪。
  *
- * 放在 context/ 而不是 features/：装配器（prompts.ts）要拼它，而 context/ 不依赖 features/（context/README.md）。
- * 解码在 features/loreExpand.ts，两边共用 `LORE_ENTRY_LIMITS` 与 `LORE_EXPAND_LIMITS`（第 27 条：字数上限
- * 是锚点，改提示词时别抹掉）。
+ * 放在 context/ 而不是 features/：裝配器（prompts.ts）要拼它，而 context/ 不依賴 features/（context/README.md）。
+ * 解碼在 features/loreExpand.ts，兩邊共用 `LORE_ENTRY_LIMITS` 與 `LORE_EXPAND_LIMITS`（第 27 條：字數上限
+ * 是錨點，改提示詞時別抹掉）。
  */
 
-/** 产出时那一句做事原则（`ethosOf` 在单条设定目标上接它）。 */
+/** 產出時那一句做事原則（`ethosOf` 在單條設定目標上接它）。 */
 export const LORE_EXPAND_ETHOS =
-  '这一次只管一条设定：把它往前想细，让已经排好的情节撑得住；定稿里已经写进正文的一个字都不推翻，这一条现有的具体内容一处都不丢，只补、只细化。';
+  '這一次只管一條設定：把它往前想細，讓已經排好的情節撐得住；定稿裡已經寫進正文的一個字都不推翻，這一條現有的具體內容一處都不丟，只補、只細化。';
 
 /**
- * 输出合同：要求 1–6 条与输出格式。2026-10-25 起改成转写：按小标题写自然语言（{@link loreExpandFormat}），JSON 由转写模型
+ * 輸出合同：要求 1–6 條與輸出格式。2026-10-25 起改成轉寫：按小標題寫自然語言（{@link loreExpandFormat}），JSON 由轉寫模型
  * 照抄（{@link loreExpandJsonContract}，generation/structured.ts 的 `completeLoreExpand`）。
  */
 export function loreExpandContract(): string {
   const L = LORE_ENTRY_LIMITS;
   return [
-    '请把上面「当前这一条设定」往前想细：照「已排细纲里用到它的地方」要它做的事，补全它是什么、怎么运转、现在是什么样子，以及读者还不知道的那一面。',
+    '請把上面「當前這一條設定」往前想細：照「已排細綱裡用到它的地方」要它做的事，補全它是什麼、怎麼運轉、現在是什麼樣子，以及讀者還不知道的那一面。',
     '',
     '【要求】',
-    '1. 为已排的情节服务：细纲里打算让它做什么，它就得撑得住；和剧情无关的百科不写。',
-    '2. 「定稿过的记录」里已经确立的不许改。「当前这一条设定」里现有的每一处具体内容（名字、规则、做得到与做不到的、已经发生的事）' +
-      '都是作者认过的，一处都不许丢：可以换说法、并句子；字数放不下先压缩措辞，再放不下就把整块拆进子条目。只补、只细化。',
-    `3. 字数：${LORE_BODY_KEYS.map((k) => `${k} ≤ ${L[k]} 字`).join('、')}，三节合计 ≤ ${L.body} 字；${LORE_HIDDEN_KEY} ≤ ${L[LORE_HIDDEN_KEY]} 字，不算进那 ${L.body} 字，没有就写「无」。做减法，不写逐章经过。`,
-    `4. 关键词 3–${LORE_EXPAND_LIMITS.keywords} 个，只放读者在正文里会看到的叫法（别称、简称）；人名不算。${LORE_HIDDEN_KEY}里的东西不进关键词，也不进一句话。`,
-    `5. 子条目：写不下、值得单独立一条的部分，≤ ${LORE_EXPAND_LIMITS.children} 条，只给名字、分类、一句话；已有的设定、人物不要拆。没有就写「无」。`,
-    `6. 还没定的问题：2–${LORE_EXPAND_LIMITS.questions} 条还没定、要作者拍板的问题（如「阁规是成文的还是口传的？」），每条 ≤ ${LORE_EXPAND_LIMITS.question} 字；不问已经定了的。`,
+    '1. 為已排的情節服務：細綱裡打算讓它做什麼，它就得撐得住；和劇情無關的百科不寫。',
+    '2. 「定稿過的記錄」裡已經確立的不許改。「當前這一條設定」裡現有的每一處具體內容（名字、規則、做得到與做不到的、已經發生的事）' +
+      '都是作者認過的，一處都不許丟：可以換說法、並句子；字數放不下先壓縮措辭，再放不下就把整塊拆進子條目。只補、只細化。',
+    `3. 字數：${LORE_BODY_KEYS.map((k) => `${traditionalLabel(k)} ≤ ${L[k]} 字`).join('、')}，三節合計 ≤ ${L.body} 字；${traditionalLabel(LORE_HIDDEN_KEY)} ≤ ${L[LORE_HIDDEN_KEY]} 字，不算進那 ${L.body} 字，沒有就寫「無」。做減法，不寫逐章經過。`,
+    `4. 關鍵詞 3–${LORE_EXPAND_LIMITS.keywords} 個，只放讀者在正文裡會看到的叫法（別稱、簡稱）；人名不算。${traditionalLabel(LORE_HIDDEN_KEY)}裡的東西不進關鍵詞，也不進一句話。`,
+    `5. 子條目：寫不下、值得單獨立一條的部分，≤ ${LORE_EXPAND_LIMITS.children} 條，只給名字、分類、一句話；已有的設定、人物不要拆。沒有就寫「無」。`,
+    `6. 還沒定的問題：2–${LORE_EXPAND_LIMITS.questions} 條還沒定、要作者拍板的問題（如「閣規是成文的還是口傳的？」），每條 ≤ ${LORE_EXPAND_LIMITS.question} 字；不問已經定了的。`,
     '',
     loreExpandFormat(),
   ].join('\n');
 }
 
-/** 展开的输出格式（2026-10-25 起改成转写）：八个小标题，各节写什么照原来的 JSON 合同搬过来。 */
+/** 展開的輸出格式（2026-10-25 起改成轉寫）：八個小標題，各節寫什麼照原來的 JSON 合同搬過來。 */
 function loreExpandFormat(): string {
   return [
-    '【展开格式】',
-    '按下面八个小标题依次写，一节以「## 小标题」开头，小标题一字不改，哪一节没有内容就写「无」：',
-    `- 一句话：说清它是什么（≤ ${LORE_ENTRY_LIMITS.brief} 字），只写读者看得到的那一面；`,
-    '- 关键词：写在一行里，用顿号隔开；',
-    '- 概要：它是什么、在哪、归谁；',
-    '- 规则与边界：怎么运转，能做到什么、做不到什么，代价与禁忌；',
-    '- 现状：以章号最大的定稿记录与已排的细纲为准，它现在的样子；',
-    `- ${LORE_HIDDEN_KEY}：读者还不知道的真相（真实身份、来历、规则背后的真正原因）；`,
-    `- 子条目：一条一行，写成「- 名字（分类）：一句话」；名字 ≤ ${LORE_LINE_LIMITS.name} 字，分类从本书的设定分类里挑（可以写子分类，如「宗门/正道」），一句话 ≤ ${LORE_ENTRY_LIMITS.brief} 字；`,
-    '- 还没定的问题：一条一行，行首写「- 」。',
-    '明面三节（概要、规则与边界、现状）还没交代的写「（未交代）」。',
-    '只写这一条的展开：不要开场白和解释，不用代码围栏，不写 JSON。',
+    '【展開格式】',
+    '按下面八個小標題依次寫，一節以「## 小標題」開頭，小標題一字不改，哪一節沒有內容就寫「無」：',
+    `- 一句話：說清它是什麼（≤ ${LORE_ENTRY_LIMITS.brief} 字），只寫讀者看得到的那一面；`,
+    '- 關鍵詞：寫在一行裡，用頓號隔開；',
+    '- 概要：它是什麼、在哪、歸誰；',
+    '- 規則與邊界：怎麼運轉，能做到什麼、做不到什麼，代價與禁忌；',
+    '- 現狀：以章號最大的定稿記錄與已排的細綱為準，它現在的樣子；',
+    `- ${traditionalLabel(LORE_HIDDEN_KEY)}：讀者還不知道的真相（真實身份、來歷、規則背後的真正原因）；`,
+    `- 子條目：一條一行，寫成「- 名字（分類）：一句話」；名字 ≤ ${LORE_LINE_LIMITS.name} 字，分類從本書的設定分類裡挑（可以寫子分類，如「宗門/正道」），一句話 ≤ ${LORE_ENTRY_LIMITS.brief} 字；`,
+    '- 還沒定的問題：一條一行，行首寫「- 」。',
+    '明面三節（概要、規則與邊界、現狀）還沒交代的寫「（未交代）」。',
+    '只寫這一條的展開：不要開場白和解釋，不用程式碼圍欄，不寫 JSON。',
     '【格式示例】',
-    '## 一句话',
+    '## 一句話',
     '……',
-    '## 关键词',
-    '〈别称〉、〈简称〉',
+    '## 關鍵詞',
+    '〈別稱〉、〈簡稱〉',
     '## 概要',
     '……',
-    '## 规则与边界',
+    '## 規則與邊界',
     '……',
-    '## 现状',
+    '## 現狀',
     '……',
-    `## ${LORE_HIDDEN_KEY}`,
+    `## ${traditionalLabel(LORE_HIDDEN_KEY)}`,
     '……',
-    '## 子条目',
-    '- 〈名字〉（〈分类〉）：……',
-    '## 还没定的问题',
+    '## 子條目',
+    '- 〈名字〉（〈分類〉）：……',
+    '## 還沒定的問題',
     '- ……',
   ].join('\n');
 }
 
 /**
- * 展开转写那一步的 JSON 合同（2026-10-25 起改成转写）：形状是 features/loreExpand.ts 的 `decodeLoreExpansion` 认的那一份，
- * 也是气泡里放的规范化结果的形状。
+ * 展開轉寫那一步的 JSON 合同（2026-10-25 起改成轉寫）：形狀是 features/loreExpand.ts 的 `decodeLoreExpansion` 認的那一份，
+ * 也是氣泡裡放的規範化結果的形狀。
  */
 export function loreExpandJsonContract(): string {
   return [
-    '【设定展开 JSON 合同】',
-    `只输出 {"brief":"…","keywords":["…"],"body":{"概要":"…","规则与边界":"…","现状":"…","${LORE_HIDDEN_KEY}":"…"},"children":[{"name":"…","category":"…","brief":"…"}],"questions":["…"]}：`,
-    '- brief：「一句话」一节；keywords：「关键词」一节，一个一项；',
-    `- body 的四个键（概要、规则与边界、现状、${LORE_HIDDEN_KEY}）：原文里同名的那四节，整节照抄（保留换行）；`,
-    '- children：「子条目」一节，一条一项：name 是名字，category 是括号里的分类，brief 是冒号后面那一句；',
-    '- questions：「还没定的问题」一节，一条一项，去掉行首的「- 」；',
-    '- 写「无」或没有这一节的：文字给 ""，列表给 []。',
-    '- 文字一律从原文照抄：不改写、不总结、不润色，不补原文没有的，也不删原文写了的。',
-    '只输出一个可由 JSON.parse 读取的 JSON 对象，不要解释、Markdown 或代码围栏。',
+    '【設定展開 JSON 合同】',
+    `只輸出 {"brief":"…","keywords":["…"],"body":{"概要":"…","规则与边界":"…","现状":"…","${traditionalLabel(LORE_HIDDEN_KEY)}":"…"},"children":[{"name":"…","category":"…","brief":"…"}],"questions":["…"]}：`,
+    '- brief：「一句話」一節；keywords：「關鍵詞」一節，一個一項；',
+    `- body 的四個鍵（概要、規則與邊界、現狀、${traditionalLabel(LORE_HIDDEN_KEY)}）：原文裡同名的那四節，整節照抄（保留換行）；`,
+    '- children：「子條目」一節，一條一項：name 是名字，category 是括號裡的分類，brief 是冒號後面那一句；',
+    '- questions：「還沒定的問題」一節，一條一項，去掉行首的「- 」；',
+    '- 寫「無」或沒有這一節的：文字給 ""，列表給 []。',
+    '- 文字一律從原文照抄：不改寫、不總結、不潤色，不補原文沒有的，也不刪原文寫了的。',
+    '只輸出一個可由 JSON.parse 讀取的 JSON 物件，不要解釋、Markdown 或程式碼圍欄。',
   ].join('\n');
 }

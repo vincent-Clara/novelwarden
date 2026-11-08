@@ -25,10 +25,10 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 内置服务端：Termux 编的 node（jniLibs 里的 libnode.so，见 scripts/fetch-node.sh）跑 assets/server.cjs
- * ——独立版打成的 node 单文件（scripts/build-android-server.js）。
- * Android 10+ 只允许执行 nativeLibraryDir 里的文件，所以 node 不能放进数据目录。
- * 只监听 127.0.0.1，但手机上任何 app 都能连回环地址（包括 /mcp），所以一律带每台设备随机生成的令牌。
+ * 內建服務端：Termux 編的 node（jniLibs 裡的 libnode.so，見 scripts/fetch-node.sh）跑 assets/server.cjs
+ * ——獨立版打成的 node 單檔案（scripts/build-android-server.js）。
+ * Android 10+ 只允許執行 nativeLibraryDir 裡的檔案，所以 node 不能放進資料目錄。
+ * 只監聽 127.0.0.1，但手機上任何 app 都能連回環地址（包括 /mcp），所以一律帶每臺裝置隨機生成的令牌。
  */
 final class LocalServer {
     static final class Status {
@@ -46,7 +46,7 @@ final class LocalServer {
     }
 
     private static final String TAG = "NovelForgeServer";
-    /** 与独立版缺省端口相同；被占用才随机 */
+    /** 與獨立版預設埠相同；被佔用才隨機 */
     private static final int PREFERRED_PORT = 36800;
     private static final long START_TIMEOUT_MS = 30_000;
 
@@ -55,7 +55,7 @@ final class LocalServer {
     private Process proc;
     private Status status;
     private File booksDir;
-    /** 最近的输出，启动失败时拿来当原因 */
+    /** 最近的輸出，啟動失敗時拿來當原因 */
     private final ArrayDeque<String> tail = new ArrayDeque<>();
 
     LocalServer(Context ctx, SharedPreferences prefs) {
@@ -63,14 +63,14 @@ final class LocalServer {
         this.prefs = prefs;
     }
 
-    /** 在跑、而且书的位置没变 */
+    /** 在跑、而且書的位置沒變 */
     synchronized boolean isRunning(File books) {
         return proc != null && proc.isAlive() && status != null && status.ok && books.equals(booksDir);
     }
 
     /**
-     * 启动并等到能连上（阻塞，别在主线程调）；已在跑、书的位置也没变就直接返回。
-     * @param books 放书的目录：node 的家目录，「新建一本书」「打开文件夹」都从这里起
+     * 啟動並等到能連上（阻塞，別在主執行緒調）；已在跑、書的位置也沒變就直接返回。
+     * @param books 放書的目錄：node 的家目錄，「新建一本書」「開啟資料夾」都從這裡起
      */
     synchronized Status start(File books) {
         if (isRunning(books)) return status;
@@ -82,9 +82,9 @@ final class LocalServer {
             File script = installServer();
             File nativeDir = new File(ctx.getApplicationInfo().nativeLibraryDir);
             File node = new File(nativeDir, "libnode.so");
-            if (!node.exists()) return status = new Status(url, token, false, "APK 里没有 node（libnode.so）");
+            if (!node.exists()) return status = new Status(url, token, false, "APK 裡沒有 node（libnode.so）");
 
-            // 目录名沿用旧名：app 私有目录里的配置与 API Key 不能因为改名丢一次。
+            // 目錄名沿用舊名：app 私有目錄裡的配置與 API Key 不能因為改名丟一次。
             File config = new File(ctx.getFilesDir(), "novelforge");
             File tmp = new File(ctx.getCacheDir(), "server-tmp");
             //noinspection ResultOfMethodCallIgnored
@@ -92,8 +92,8 @@ final class LocalServer {
             //noinspection ResultOfMethodCallIgnored
             books.mkdirs();
 
-            // --use-bundled-ca：Termux 版 node 默认去 Termux 目录找根证书，这里没有，调模型的 HTTPS 会失败。
-            // node:sqlite 每次开库都打一行 ExperimentalWarning，只会把日志刷满。
+            // --use-bundled-ca：Termux 版 node 預設去 Termux 目錄找根證書，這裡沒有，調模型的 HTTPS 會失敗。
+            // node:sqlite 每次開庫都打一行 ExperimentalWarning，只會把日誌刷滿。
             ProcessBuilder pb = new ProcessBuilder(node.getPath(), "--use-bundled-ca", "--disable-warning=ExperimentalWarning",
                     script.getPath(), "--port", String.valueOf(port), "--no-open")
                     .directory(books)
@@ -101,7 +101,7 @@ final class LocalServer {
             Map<String, String> env = pb.environment();
             env.put("LD_LIBRARY_PATH", nativeDir.getPath());
             env.put("HOME", books.getPath());
-            // 配置与 API Key 留在 app 私有目录，别跟着家目录落到别的 app 也读得到的地方（src/core/stores.ts）
+            // 配置與 API Key 留在 app 私有目錄，別跟著家目錄落到別的 app 也讀得到的地方（src/core/stores.ts）
             env.put("NOVELWARDEN_HOME", config.getPath());
             env.put("NOVELWARDEN_TOKEN", token);
             env.put("TMPDIR", tmp.getPath());
@@ -131,7 +131,7 @@ final class LocalServer {
         proc = null;
     }
 
-    /** 登录页不要令牌，它回 200 就是服务起来了 */
+    /** 登入頁不要令牌，它回 200 就是服務起來了 */
     private Status waitReady(String url, String token) {
         long deadline = System.currentTimeMillis() + START_TIMEOUT_MS;
         while (System.currentTimeMillis() < deadline) {
@@ -144,7 +144,7 @@ final class LocalServer {
                 c.disconnect();
                 if (code == 200) return new Status(url, token, true, null);
             } catch (IOException ignored) {
-                // 还没开始监听
+                // 還沒開始監聽
             }
             try {
                 Thread.sleep(200);
@@ -153,7 +153,7 @@ final class LocalServer {
                 break;
             }
         }
-        return new Status(url, token, false, "启动超时：" + lastOutput());
+        return new Status(url, token, false, "啟動超時：" + lastOutput());
     }
 
     private String token() {
@@ -181,7 +181,7 @@ final class LocalServer {
         }
     }
 
-    /** 把 assets/server.cjs 拷到 files/server/；APK 没更新过就沿用上次拷好的 */
+    /** 把 assets/server.cjs 拷到 files/server/；APK 沒更新過就沿用上次拷好的 */
     private File installServer() throws IOException {
         File dir = new File(ctx.getFilesDir(), "server");
         File script = new File(dir, "server.cjs");
@@ -199,12 +199,12 @@ final class LocalServer {
         try (InputStream in = ctx.getAssets().open("server.cjs"); OutputStream out = new FileOutputStream(part)) {
             for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
         }
-        if (!part.renameTo(script)) throw new IOException("写不进 " + script);
+        if (!part.renameTo(script)) throw new IOException("寫不進 " + script);
         prefs.edit().putLong("server_stamp", stamp).apply();
         return script;
     }
 
-    /** node 的输出进 logcat 和 files/server.log（覆盖写，只留本次运行） */
+    /** node 的輸出進 logcat 和 files/server.log（覆蓋寫，只留本次執行） */
     private void pumpOutput(InputStream in) {
         File log = new File(ctx.getFilesDir(), "server.log");
         synchronized (tail) {
@@ -222,7 +222,7 @@ final class LocalServer {
                     }
                 }
             } catch (IOException ignored) {
-                // 进程结束
+                // 程序結束
             }
         }, "server-log");
         t.setDaemon(true);
@@ -231,7 +231,7 @@ final class LocalServer {
 
     private String lastOutput() {
         synchronized (tail) {
-            return tail.isEmpty() ? "无输出" : String.join(" / ", tail);
+            return tail.isEmpty() ? "無輸出" : String.join(" / ", tail);
         }
     }
 }

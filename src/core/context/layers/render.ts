@@ -1,3 +1,4 @@
+import { traditionalLabel } from '../../model/labels';
 import { exists, readText } from '../../model/fs';
 import { takeLast } from '../../model/contextDetail';
 import { hasContent, stringifySections } from '../../model/markdown';
@@ -17,25 +18,25 @@ import { LORE_HIDDEN_MARK, PLOT_LORE_KEY, loreBrief, renderLoreLines, splitLoreH
 import type { Focus } from './focus';
 
 /**
- * 本章自己的细纲（`plotSelf`）。「设定」一节只在这里带：这一章打算引入什么、用到什么，写的人要知道；
- * 前几章细纲、细纲一览、全文大纲的输入都不带它，免得几十章的细纲一起变长。
+ * 本章自己的細綱（`plotSelf`）。「設定」一節只在這裡帶：這一章打算引入什麼、用到什麼，寫的人要知道；
+ * 前幾章細綱、細綱一覽、全文大綱的輸入都不帶它，免得幾十章的細綱一起變長。
  */
 export function renderPlot(plot: Plot): string {
-  const head = `【${plotLabel(plot.no, plot.title)} · 细纲】`;
-  const lore = plot.lore?.length ? `\n\n## ${PLOT_LORE_KEY}\n\n${renderLoreLines(plot.lore)}` : '';
-  return `${head}\n${renderPlotSections(plot) || '（尚未填写）'}${lore}`;
+  const head = `【${plotLabel(plot.no, plot.title)} · 細綱】`;
+  const lore = plot.lore?.length ? `\n\n## ${traditionalLabel(PLOT_LORE_KEY)}\n\n${renderLoreLines(plot.lore)}` : '';
+  return `${head}\n${renderPlotSections(plot) || '（尚未填寫）'}${lore}`;
 }
 
-/** 细纲有内容的那几节，`## 小节` 一节一段。一节都没填是空串。 */
+/** 細綱有內容的那幾節，`## 小節` 一節一段。一節都沒填是空串。 */
 export function renderPlotSections(plot: Plot): string {
   return stringifySections(plot.sections as unknown as Record<string, string>, PLOT_SECTION_KEYS as readonly string[]);
 }
 
 /**
- * 前后章只注入几节——够让排这一章的人知道上文停在哪个局面、下文要接到哪：
- * 上文给「梗概 / 关键事件 / 状态变更」（发生了什么、人物落在什么处境），下文给
- * 「梗概 / 关键事件」（要去哪、要发生什么）。其余几节是那一章自己的账，
- * 摊在这里只会挤掉本章的预算，还容易被误当成本章要处理的东西。
+ * 前後章只注入幾節——夠讓排這一章的人知道上文停在哪個局面、下文要接到哪：
+ * 上文給「梗概 / 關鍵事件 / 狀態變更」（發生了什麼、人物落在什麼處境），下文給
+ * 「梗概 / 關鍵事件」（要去哪、要發生什麼）。其餘幾節是那一章自己的賬，
+ * 攤在這裡只會擠掉本章的預算，還容易被誤當成本章要處理的東西。
  */
 export function renderPlotBrief(plot: Plot, relation: '上文' | '下文', tag?: string): string {
   const lines = [`【${plotLabel(plot.no, plot.title)} · ${relation}${tag ? ` · ${tag}` : ''}】`];
@@ -50,18 +51,18 @@ export function renderPlotBrief(plot: Plot, relation: '上文' | '下文', tag?:
 }
 
 /**
- * 「小节：内容」一行。内容是一条一行的列表（关键事件、看点……）时另起一行照原样列，
- * 不然第一条会挤在冒号后面（「关键事件：- 甲」）；只有一条就去掉列表记号接在冒号后面。
+ * 「小節：內容」一行。內容是一條一行的列表（關鍵事件、看點……）時另起一行照原樣列，
+ * 不然第一條會擠在冒號後面（「關鍵事件：- 甲」）；只有一條就去掉列表記號接在冒號後面。
  */
 export function labeledSection(key: string, value: string): string {
   const v = value.trim();
   if (v.includes('\n')) {
-    return `${key}：\n${v}`;
+    return `${traditionalLabel(key)}：\n${v}`;
   }
-  return `${key}：${sectionItems(v)[0] ?? v}`;
+  return `${traditionalLabel(key)}：${sectionItems(v)[0] ?? v}`;
 }
 
-/** 本层产物的文本，供设定关键词匹配。 */
+/** 本層產物的文字，供設定關鍵詞匹配。 */
 export function focusText(focus: Focus): string {
   const parts: string[] = [];
   if (focus.plot) {
@@ -70,30 +71,30 @@ export function focusText(focus: Focus): string {
   return parts.filter(Boolean).join('\n');
 }
 
-/** 设定名后面的 `〔分类〕`（分类就是目录，根目录下的不写）。 */
+/** 設定名後面的 `〔分類〕`（分類就是目錄，根目錄下的不寫）。 */
 function loreHead(entry: LoreEntry): string {
   return `${entry.title}${entry.category ? `〔${entry.category}〕` : ''}`;
 }
 
 /**
- * 写正文时去掉了一条设定（或一张角色卡）的暗设，明细里注的那一句（第 2 条）。lore 层、`characters` 层与 @ 引用共用。
+ * 寫正文時去掉了一條設定（或一張角色卡）的暗設，明細裡注的那一句（第 2 條）。lore 層、`characters` 層與 @ 引用共用。
  */
-export const LORE_HIDDEN_DROPPED_NOTE = '暗设没带：写正文不带读者还不知道的事，要让这一章揭开就写进本章细纲';
+export const LORE_HIDDEN_DROPPED_NOTE = '暗設沒帶：寫正文不帶讀者還不知道的事，要讓這一章揭開就寫進本章細綱';
 
 /**
- * 条目正文按场合处理「暗设」那一节（完善设定，2026-10-19）：
+ * 條目正文按場合處理「暗設」那一節（完善設定，2026-10-19）：
  *
- * - 写正文（`withHidden: false`）：只带明面（`splitLoreHidden` 的 `visible`）。写正文本来不需要知道真相，
- *   需要的铺垫细纲里已经写了；带上了，正文模型看见就容易说漏。`dropped` 告诉调用方有没有真去掉东西，
- *   去掉了要在明细里注一句（第 2 条）。
- * - 规划时（设定 / 大纲 / 细纲）：整份带，暗设挪到最后、标题换成 {@link LORE_HIDDEN_MARK}。
+ * - 寫正文（`withHidden: false`）：只帶明面（`splitLoreHidden` 的 `visible`）。寫正文字來不需要知道真相，
+ *   需要的鋪墊細綱裡已經寫了；帶上了，正文模型看見就容易說漏。`dropped` 告訴呼叫方有沒有真去掉東西，
+ *   去掉了要在明細裡注一句（第 2 條）。
+ * - 規劃時（設定 / 大綱 / 細綱）：整份帶，暗設挪到最後、標題換成 {@link LORE_HIDDEN_MARK}。
  *
- * 没有暗设的条目原样带（只是去掉首尾空白）。
+ * 沒有暗設的條目原樣帶（只是去掉首尾空白）。
  */
 export function loreBodyFor(body: string, withHidden: boolean): { text: string; dropped: boolean } {
   const { visible, hidden } = splitLoreHidden(body);
   if (!hidden) {
-    // 有个空的「## 暗设」标题时写正文也去掉它：一个空标题只会让模型去猜下面藏了什么。
+    // 有個空的「## 暗設」標題時寫正文也去掉它：一個空標題只會讓模型去猜下面藏了什麼。
     return { text: withHidden ? (body ?? '').trim() : visible, dropped: false };
   }
   if (!withHidden) {
@@ -103,17 +104,17 @@ export function loreBodyFor(body: string, withHidden: boolean): { text: string; 
 }
 
 /**
- * 整条带的设定：`【名〔分类〕】一句话`，下面是正文，最后是还没整合进条目的新事实（带章号）。
- * 尾巴是条目落后于正文时的那几句——没有它，模型拿到的是整合那时候的样子。
+ * 整條帶的設定：`【名〔分類〕】一句話`，下面是正文，最後是還沒整合進條目的新事實（帶章號）。
+ * 尾巴是條目落後於正文時的那幾句——沒有它，模型拿到的是整合那時候的樣子。
  *
- * `withHidden`：带不带「暗设」那一节（{@link loreBodyFor}）。写正文与续写不带，规划时带并标明。
+ * `withHidden`：帶不帶「暗設」那一節（{@link loreBodyFor}）。寫正文與續寫不帶，規劃時帶並標明。
  */
 export function renderLoreFull(
   entry: LoreEntry,
   tail: readonly { no: number; text: string }[],
   withHidden: boolean
 ): string {
-  // 没写 brief 时一句话就是正文第一句，下面整份正文还会再带一遍，标题行上不重复。
+  // 沒寫 brief 時一句話就是正文第一句，下面整份正文還會再帶一遍，標題行上不重複。
   const brief = entry.brief.trim() ? loreBrief(entry) : '';
   const lines = [`【${loreHead(entry)}】${brief}`];
   const body = loreBodyFor(entry.body, withHidden).text;
@@ -121,34 +122,34 @@ export function renderLoreFull(
     lines.push(body);
   }
   if (tail.length > 0) {
-    const since = entry.updatedThrough ? `第 ${entry.updatedThrough} 章之后` : '定稿里';
-    lines.push(`${since}新出现的（还没整合进这一条）：`, ...tail.map((f) => `- 第 ${f.no} 章：${f.text}`));
+    const since = entry.updatedThrough ? `第 ${entry.updatedThrough} 章之後` : '定稿裡';
+    lines.push(`${since}新出現的（還沒整合進這一條）：`, ...tail.map((f) => `- 第 ${f.no} 章：${f.text}`));
   }
   return lines.join('\n');
 }
 
-/** 只带一句话的设定：`- 名〔分类〕：一句话`。 */
+/** 只帶一句話的設定：`- 名〔分類〕：一句話`。 */
 export function renderLoreLine(entry: LoreEntry): string {
   const brief = loreBrief(entry);
   return `- ${loreHead(entry)}${brief ? `：${brief}` : ''}`;
 }
 
-/** 压成一行并截短：换行变空格，超过 `max` 字截断并补省略号。 */
+/** 壓成一行並截短：換行變空格，超過 `max` 字截斷並補省略號。 */
 export function clipLine(text: string, max: number): string {
   const one = (text ?? '').replace(/\s*\n+\s*/g, ' ').trim();
   const chars = Array.from(one);
   return chars.length > max ? `${chars.slice(0, max).join('')}…` : one;
 }
 
-/** 名字后面那对括号：性别与别名，「（女；又称 清河）」。两样都没有就是空串。叙事线的当前进度也拿它告诉模型谁是男是女。 */
+/** 名字後面那對括號：性別與別名，「（女；又稱 清河）」。兩樣都沒有就是空串。敘事線的當前進度也拿它告訴模型誰是男是女。 */
 export function cardNote(card: Pick<CharacterCard, 'gender' | 'aliases'>): string {
-  const parts = [card.gender, card.aliases.length > 0 ? `又称 ${card.aliases.join('、')}` : ''].filter(Boolean);
+  const parts = [card.gender, card.aliases.length > 0 ? `又稱 ${card.aliases.join('、')}` : ''].filter(Boolean);
   return parts.length > 0 ? `（${parts.join('；')}）` : '';
 }
 
 /**
- * 角色图谱一览里的一个人：名字、性别与别名、定位，下面缩进三行身份 / 关系 / 当前状态的开头。
- * 完整角色卡由 `characters` 层按需带（正文层）。
+ * 角色圖譜一覽裡的一個人：名字、性別與別名、定位，下面縮排三行身份 / 關係 / 當前狀態的開頭。
+ * 完整角色卡由 `characters` 層按需帶（正文層）。
  */
 export function renderRosterLine(card: CharacterCard): string {
   const tags = card.tags.length > 0 ? `［${card.tags.join('、')}］` : '';
@@ -165,49 +166,49 @@ export function renderRosterLine(card: CharacterCard): string {
 }
 
 /**
- * 角色卡「暗设」那一节写了什么（叙事线重做：原「未收伏笔」）。「无」也算没写：角色图谱的提示词让模型没有就写「无」，
- * 带进上下文只是一个空标题、写正文时还会白注一句「暗设没带」。
+ * 角色卡「暗設」那一節寫了什麼（敘事線重做：原「未收伏筆」）。「無」也算沒寫：角色圖譜的提示詞讓模型沒有就寫「無」，
+ * 帶進上下文只是一個空標題、寫正文時還會白注一句「暗設沒帶」。
  */
 export function cardHidden(card: Pick<CharacterCard, 'sections'>): string {
   const t = (card.sections[CHARACTER_HIDDEN_KEY] ?? '').trim();
-  return hasContent(t) && t !== '无' ? t : '';
+  return hasContent(t) && t !== '無' ? t : '';
 }
 
 /**
- * 一份文件（@ 引用的整张角色卡）里「暗设」那一节有没有字：空的、占位的、「无」都算没有。
- * 判法同 {@link cardHidden}，只是从原文里拆（`splitLoreHidden`，以「暗设」开头的二级标题）。
+ * 一份檔案（@ 引用的整張角色卡）裡「暗設」那一節有沒有字：空的、佔位的、「無」都算沒有。
+ * 判法同 {@link cardHidden}，只是從原文裡拆（`splitLoreHidden`，以「暗設」開頭的二級標題）。
  */
 export function hiddenTextIn(raw: string): string {
   const t = splitLoreHidden(raw).hidden.trim();
-  return hasContent(t) && t !== '无' ? t : '';
+  return hasContent(t) && t !== '無' ? t : '';
 }
 
 /**
- * 只带要点时带哪几节（`essentialOnly`）：{@link CHARACTER_ESSENTIAL_KEYS}，写正文时去掉「暗设」。明细里那句
- * 「只带身份/当前状态/暗设」也照它写。
+ * 只帶要點時帶哪幾節（`essentialOnly`）：{@link CHARACTER_ESSENTIAL_KEYS}，寫正文時去掉「暗設」。明細裡那句
+ * 「只帶身份/當前狀態/暗設」也照它寫。
  */
 export function essentialCardKeys(withHidden: boolean): (keyof CharacterSections)[] {
   return CHARACTER_ESSENTIAL_KEYS.filter((k) => withHidden || k !== CHARACTER_HIDDEN_KEY);
 }
 
 /**
- * 一张角色卡（`characters` 层）。`essentialOnly`：只带要点（{@link essentialCardKeys}，预算不足或上下文详细度「精简」）。
+ * 一張角色卡（`characters` 層）。`essentialOnly`：只帶要點（{@link essentialCardKeys}，預算不足或上下文詳細度「精簡」）。
  *
- * `withHidden`：带不带「暗设」那一节（叙事线重做，设计稿「六、角色卡」⚑ 定案 B）——与设定条目的暗设同一个口径
- * （第 27 条、{@link loreBodyFor}）：写正文（正文阶段的写、接着写、重写、讨论，审稿与修稿，续写）不带，揭开靠那一章的
- * 细纲；规划时（架构 / 大纲 / 细纲）整份带，放在最后、标题换成 {@link LORE_HIDDEN_MARK}，让模型知道这是读者还不知道的事。
+ * `withHidden`：帶不帶「暗設」那一節（敘事線重做，設計稿「六、角色卡」⚑ 定案 B）——與設定條目的暗設同一個口徑
+ * （第 27 條、{@link loreBodyFor}）：寫正文（正文階段的寫、接著寫、重寫、討論，審稿與修稿，續寫）不帶，揭開靠那一章的
+ * 細綱；規劃時（架構 / 大綱 / 細綱）整份帶，放在最後、標題換成 {@link LORE_HIDDEN_MARK}，讓模型知道這是讀者還不知道的事。
  */
 export function renderCharacter(card: CharacterCard, essentialOnly: boolean, withHidden: boolean): string {
   const keys = (essentialOnly ? essentialCardKeys(withHidden) : CHARACTER_SECTION_KEYS).filter((k) => k !== CHARACTER_HIDDEN_KEY);
-  // 性别跟着名字走，预算再紧只带三节时也在。
+  // 性別跟著名字走，預算再緊只帶三節時也在。
   const header = `【${card.name}${cardNote(card)}】`;
   const visible = stringifySections(card.sections as unknown as Record<string, string>, keys as readonly string[]);
   const hidden = withHidden ? cardHidden(card) : '';
   const body = [visible, hidden ? `## ${LORE_HIDDEN_MARK}\n\n${hidden}` : ''].filter(Boolean).join('\n\n');
-  return `${header}\n${body || '（暂无设定）'}`;
+  return `${header}\n${body || '（暫無設定）'}`;
 }
 
-/** 按字符数取结尾，并对齐到段落边界。 */
+/** 按字元數取結尾，並對齊到段落邊界。 */
 export function tailByChars(text: string, chars: number): string {
   if (text.length <= chars) {
     return text;
@@ -220,14 +221,14 @@ export function tailByChars(text: string, chars: number): string {
   return `……（前略）\n\n${slice.trimStart()}`;
 }
 
-/** 续写时带已写正文的最后多少字（AI-Novel-Writer 的 `CONTINUE_PROMPT_MAX_CHARS`）。 */
+/** 續寫時帶已寫正文的最後多少字（AI-Novel-Writer 的 `CONTINUE_PROMPT_MAX_CHARS`）。 */
 export const CONTINUE_TAIL_CHARS = 1600;
 
 /**
- * 已写正文的最后 {@link CONTINUE_TAIL_CHARS} 字，开头对齐到段落边界。
+ * 已寫正文的最後 {@link CONTINUE_TAIL_CHARS} 字，開頭對齊到段落邊界。
  *
- * 与 {@link tailByChars} 的差别是**不加「（前略）」**：这一段是要让模型从末尾接着写的，
- * 开头多一行说明，模型会以为那也是正文的一部分、跟着学。
+ * 與 {@link tailByChars} 的差別是**不加「（前略）」**：這一段是要讓模型從末尾接著寫的，
+ * 開頭多一行說明，模型會以為那也是正文的一部分、跟著學。
  */
 export function continuationTail(text: string, max = CONTINUE_TAIL_CHARS): string {
   const trimmed = text.trim();
@@ -240,19 +241,19 @@ export function continuationTail(text: string, max = CONTINUE_TAIL_CHARS): strin
 }
 
 export function isPlaceholder(text: string): boolean {
-  return /尚未生成|（待补充）/.test(text) && text.replace(/[#\s（）()]/g, '').length < 80;
+  return /尚未生成|（待(?:补|補)充）/.test(text) && text.replace(/[#\s（）()]/g, '').length < 80;
 }
 
 export const ATTACHMENT_NOTE: Record<Attachment['kind'], string> = {
-  selection: '编辑器选中片段',
-  file: '整文件引用',
-  chapter: '章节原文引用',
+  selection: '編輯器選中片段',
+  file: '整檔案引用',
+  chapter: '章節原文引用',
   character: '角色卡引用',
-  lore: '设定条目引用',
+  lore: '設定條目引用',
   summary: '摘要引用',
 };
 
-/** 选区使用快照，整文件引用每次读取最新内容。 */
+/** 選區使用快照，整檔案引用每次讀取最新內容。 */
 export async function resolveAttachment(project: NovelProject, att: Attachment): Promise<string> {
   if (att.text !== undefined) {
     return att.text;
@@ -260,7 +261,7 @@ export async function resolveAttachment(project: NovelProject, att: Attachment):
   if (!att.relPath) {
     return '';
   }
-  // 情节大纲没有文件：各章细纲梗概的汇总。
+  // 情節大綱沒有檔案：各章細綱梗概的彙總。
   if (att.relPath.replace(/\\/g, '/') === project.relPath(project.outlinePath)) {
     return (await project.readOutline()).trim();
   }
@@ -281,12 +282,12 @@ export interface CharacterHit {
 }
 
 /**
- * 计划出场、提及人物、近邻章人物与主角的有序并集。
+ * 計劃出場、提及人物、近鄰章人物與主角的有序並集。
  *
- * **第一条是本章细纲的 `characters[]`**（D13）：细纲里明写了这一章有谁，那比在
- * 用户那句话里做子串匹配准得多。还没定稿时那是计划出场，只在**这里**用——出场统计
- * 只认定稿过的细纲（第 14 条），两者混在一起会污染统计。之后才是这一轮的输入、前几章
- * （`castWindow`，上下文详细度，缺省 2）定稿过的出场人物与主角。
+ * **第一條是本章細綱的 `characters[]`**（D13）：細綱裡明寫了這一章有誰，那比在
+ * 使用者那句話裡做子串匹配準得多。還沒定稿時那是計劃出場，只在**這裡**用——出場統計
+ * 只認定稿過的細綱（第 14 條），兩者混在一起會汙染統計。之後才是這一輪的輸入、前幾章
+ * （`castWindow`，上下文詳細度，預設 2）定稿過的出場人物與主角。
  */
 export function selectCharacters(
   cards: CharacterCard[],
@@ -300,7 +301,7 @@ export function selectCharacters(
   for (const name of planned) {
     const card = cards.find((c) => c.name === name || c.aliases.includes(name));
     if (card && !hits.has(card.slug)) {
-      hits.set(card.slug, { card, reason: '本章细纲计划出场' });
+      hits.set(card.slug, { card, reason: '本章細綱計劃出場' });
     }
   }
 
@@ -310,12 +311,12 @@ export function selectCharacters(
     }
     const hit = matchesKeywords(ask, [card.name, ...card.aliases]);
     if (hit) {
-      hits.set(card.slug, { card, reason: `这一轮的要求里提到「${hit}」` });
+      hits.set(card.slug, { card, reason: `這一輪的要求裡提到「${hit}」` });
     }
   }
 
   for (const ref of takeLast(focus.previous, castWindow)) {
-    // 只认定稿过的细纲：没定稿的那一节写的是计划出场，不是这一章实际写到了谁。
+    // 只認定稿過的細綱：沒定稿的那一節寫的是計劃出場，不是這一章實際寫到了誰。
     const cast = ref.plot?.sourceHash ? ref.plot.sections.出场人物 : '';
     if (!cast.trim()) {
       continue;
@@ -325,7 +326,7 @@ export function selectCharacters(
         continue;
       }
       if (matchesKeywords(cast, [card.name, ...card.aliases])) {
-        hits.set(card.slug, { card, reason: `第 ${ref.no} 章出场` });
+        hits.set(card.slug, { card, reason: `第 ${ref.no} 章出場` });
       }
     }
   }
@@ -335,19 +336,19 @@ export function selectCharacters(
       continue;
     }
     if (isLeadCard(card)) {
-      hits.set(card.slug, { card, reason: '主角，始终注入' });
+      hits.set(card.slug, { card, reason: '主角，始終注入' });
     }
   }
 
   return [...hits.values()];
 }
 
-/** 主角（标签里有「主角」「主要人物」或 main）：角色卡层始终带，规划时角色图谱也始终给一段。 */
+/** 主角（標籤裡有「主角」「主要人物」或 main）：角色卡層始終帶，規劃時角色圖譜也始終給一段。 */
 export function isLeadCard(card: Pick<CharacterCard, 'tags'>): boolean {
   return card.tags.some((t) => /主角|主要人物|main/i.test(t));
 }
 
-/** 返回命中的关键词，未命中返回 undefined。 */
+/** 返回命中的關鍵詞，未命中返回 undefined。 */
 export function matchesKeywords(text: string, keywords: string[]): string | undefined {
   const haystack = text.toLowerCase();
   for (const kw of keywords) {

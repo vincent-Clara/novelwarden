@@ -1,25 +1,25 @@
 /**
- * 「转到…」（独立版内置编辑器的 Ctrl+P 快速打开）要的那份索引。
+ * 「轉到…」（獨立版內建編輯器的 Ctrl+P 快速開啟）要的那份索引。
  *
- * 面板打开时前端发 `requestQuickOpen`，后端回 `quickOpenIndex`（同一个 `requestId`）——**按需要，不常驻推送**：
- * 这份东西只在作者按下 Ctrl+P 的那一刻有用，塞进每次文件变动都全量重推的 `ProjectTree` / `ViewState`
- * 等于每保存一次就白推一遍。面板开着时工程变了不刷新，下次打开再要一份。
+ * 面板開啟時前端發 `requestQuickOpen`，後端回 `quickOpenIndex`（同一個 `requestId`）——**按需要，不常駐推送**：
+ * 這份東西只在作者按下 Ctrl+P 的那一刻有用，塞進每次檔案變動都全量重推的 `ProjectTree` / `ViewState`
+ * 等於每儲存一次就白推一遍。面板開著時工程變了不重新整理，下次開啟再要一份。
  *
- * 构建见 `views/quickOpen.ts`（读了哪些盘写在那里），匹配与排序是前端的纯函数（`media/src/editor/quickOpenCore.ts`）。
+ * 構建見 `views/quickOpen.ts`（讀了哪些盤寫在那裡），匹配與排序是前端的純函式（`media/src/editor/quickOpenCore.ts`）。
  */
 
-/** 一章（细纲号 = 章号，一个章号一条，与工程页的章节列表同一个口径）。 */
+/** 一章（細綱號 = 章號，一個章號一條，與工程頁的章節列表同一個口徑）。 */
 export interface QuickOpenChapter {
   no: number;
-  /** 细纲的标题优先，其次正文的（「第 9 章」这种回落标题不算标题，给空串）。 */
+  /** 細綱的標題優先，其次正文的（「第 9 章」這種回落標題不算標題，給空串）。 */
   title: string;
-  /** 所在的卷目录：正文（没有正文时是细纲）在章节根下的那段子目录，`第一卷`、`第一卷/上`；根下是空串。 */
+  /** 所在的卷目錄：正文（沒有正文時是細綱）在章節根下的那段子目錄，`第一卷`、`第一卷/上`；根下是空串。 */
   volume: string;
-  /** 正文路径。缺席 = 还没有正文。 */
+  /** 正文路徑。缺席 = 還沒有正文。 */
   chapterPath?: string;
-  /** 细纲路径（正文镜像的那一份，或者还没有正文时按号认的计划）。缺席 = 还没有细纲。 */
+  /** 細綱路徑（正文映象的那一份，或者還沒有正文時按號認的計劃）。缺席 = 還沒有細綱。 */
   plotPath?: string;
-  /** 正文字数（中文按字、英文按词，与工程页同一个数）。没有正文是 0。 */
+  /** 正文字數（中文按字、英文按詞，與工程頁同一個數）。沒有正文是 0。 */
   words: number;
 }
 
@@ -34,32 +34,32 @@ export interface QuickOpenLore {
   path: string;
 }
 
-/** 架构三件、情节大纲、文风、叙事线（一条线一项）、全文大纲。 */
+/** 架構三件、情節大綱、文風、敘事線（一條線一項）、全文大綱。 */
 export type QuickOpenDocKey = 'config' | 'premise' | 'world' | 'outline' | 'style' | 'threads' | 'globalSummary';
 
 export interface QuickOpenDoc {
   key: QuickOpenDocKey;
-  /** 「小说配置」「情节大纲」……由后端给，前端只渲染。 */
+  /** 「小說配置」「情節大綱」……由後端給，前端只渲染。 */
   label: string;
   path: string;
 }
 
 export interface QuickOpenDraft {
   path: string;
-  /** 文件名。 */
+  /** 檔名。 */
   name: string;
-  /** 文件名里的章号（草稿镜像正文的路径，文件名与正文同名）。认不出时缺席。 */
+  /** 檔名裡的章號（草稿映象正文的路徑，檔名與正文同名）。認不出時缺席。 */
   no?: number;
 }
 
 export interface QuickOpenIndex {
-  /** 还不是小说工程（没有 `.novelwarden/project.json`）时为 false，其余列表都是空的。 */
+  /** 還不是小說工程（沒有 `.novelwarden/project.json`）時為 false，其餘列表都是空的。 */
   initialized: boolean;
-  /** 按章号升序。 */
+  /** 按章號升序。 */
   chapters: QuickOpenChapter[];
   characters: QuickOpenCharacter[];
   lore: QuickOpenLore[];
-  /** 只列磁盘上有这份文件的。 */
+  /** 只列磁碟上有這份檔案的。 */
   docs: QuickOpenDoc[];
   drafts: QuickOpenDraft[];
 }

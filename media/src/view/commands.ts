@@ -1,35 +1,35 @@
 /**
- * `/` 命令面板：当前阶段能下的其它命令。
+ * `/` 命令面板：當前階段能下的其它命令。
  *
- * ## 为什么是命令而不是一排按钮
+ * ## 為什麼是命令而不是一排按鈕
  *
- * 改造前这里是七个平铺的能力按钮（讨论/扩展/挑刺/检查/拆分/生成/改写）。
- * 问题不是不好看，是**七个等重的按钮看不出该点哪个**——而在任何一个具体
- * 时刻，作者真正要按的只有一个（状态机算得出来，见 pipeline.ts 的下一步条），
- * 其余六个是「偶尔要用」。偶尔要用的东西该收进命令面板。
+ * 改造前這裡是七個平鋪的能力按鈕（討論/擴充套件/挑刺/檢查/拆分/生成/改寫）。
+ * 問題不是不好看，是**七個等重的按鈕看不出該點哪個**——而在任何一個具體
+ * 時刻，作者真正要按的只有一個（狀態機算得出來，見 pipeline.ts 的下一步條），
+ * 其餘六個是「偶爾要用」。偶爾要用的東西該收進命令面板。
  *
- * 而且那七个按钮是**单选器**：点「生成」什么都不发生，还得再输入一句话
- * 才能发送。挑一个命令与执行它之间隔着一次多余的操作。
+ * 而且那七個按鈕是**單選器**：點「生成」什麼都不發生，還得再輸入一句話
+ * 才能傳送。挑一個命令與執行它之間隔著一次多餘的操作。
  *
- * ## 交互：命令就打在输入框里（Cursor / Claude Code 那一套）
+ * ## 互動：命令就打在輸入框裡（Cursor / Claude Code 那一套）
  *
- * 从前面板是「输入框上方另起一块」，`/` 由 keydown 拦下来**不落进输入框**，
- * 过滤串自己攒在模块变量里。那等于在输入框旁边又造了一个隐形的输入框：
- * 光标在哪、退格退的是谁，全靠这里的状态猜；输入法（中文候选框）打的字更是
- * 一个都收不到。
+ * 從前面板是「輸入框上方另起一塊」，`/` 由 keydown 攔下來**不落進輸入框**，
+ * 過濾串自己攢在模組變數裡。那等於在輸入框旁邊又造了一個隱形的輸入框：
+ * 游標在哪、退格退的是誰，全靠這裡的狀態猜；輸入法（中文候選框）打的字更是
+ * 一個都收不到。
  *
- * 现在改成：
- * - **`/` 就是输入框里的一个普通字符**，面板只是浮在它上方的候选列表；
- * - 过滤串**从输入框的值算出来**（`slashQuery`），不再自己攒——中文、输入法、
- *   退格、粘贴、Ctrl+A 全都自动对；
- * - 面板只接管 ↑↓ / Enter / Tab / Esc 四种键，可打印字符一律放行给输入框。
+ * 現在改成：
+ * - **`/` 就是輸入框裡的一個普通字元**，面板只是浮在它上方的候選列表；
+ * - 過濾串**從輸入框的值算出來**（`slashQuery`），不再自己攢——中文、輸入法、
+ *   退格、貼上、Ctrl+A 全都自動對；
+ * - 面板只接管 ↑↓ / Enter / Tab / Esc 四種鍵，可列印字元一律放行給輸入框。
  *
- * 判据是「整个输入框只有一个 `/词`」（`/^\/\S*$/`）：`/` 在中文正文里是普通
- * 字符（日期、比值、网址），只要后面跟了空格或前面有别的字，就不是在下命令。
+ * 判據是「整個輸入框只有一個 `/詞`」（`/^\/\S*$/`）：`/` 在中文正文裡是普通
+ * 字元（日期、比值、網址），只要後面跟了空格或前面有別的字，就不是在下命令。
  *
- * 命令表来自 core 的 `commandsFor(stage, target)`（零 import 的纯函数，前端直接打包）。目标是单条设定时
- * 「生成」叫「展开这条设定」（`/展开`）。
- * 前端不自己维护一份——否则界面上会出现一个后端不认的命令，点了什么都不发生。
+ * 命令表來自 core 的 `commandsFor(stage, target)`（零 import 的純函式，前端直接打包）。目標是單條設定時
+ * 「生成」叫「展開這條設定」（`/展開`）。
+ * 前端不自己維護一份——否則介面上會出現一個後端不認的命令，點了什麼都不發生。
  */
 import { el as mk, clear, closestFrom } from '../dom';
 import { commandsFor } from '../protocol';
@@ -37,24 +37,24 @@ import type { StageCommand } from '../protocol';
 import { el } from './refs';
 import { store } from './store';
 
-/** 当前打开的面板。同时只允许一个。 */
+/** 當前開啟的面板。同時只允許一個。 */
 let panel: HTMLElement | null = null;
 let onPick: (cmd: StageCommand) => void = () => {};
 let items: StageCommand[] = [];
 let active = 0;
 /**
- * Esc 关过之后不该马上弹回来。
+ * Esc 關過之後不該馬上彈回來。
  *
- * 输入框里那个 `/` 还在（它是用户的字，我们不替他删），而面板是由输入框的值
- * 驱动的——不记一笔「他已经关过了」，下一次按键又会把它弹出来。
+ * 輸入框裡那個 `/` 還在（它是使用者的字，我們不替他刪），而面板是由輸入框的值
+ * 驅動的——不記一筆「他已經關過了」，下一次按鍵又會把它彈出來。
  */
 let dismissed = false;
 
 /**
- * 输入框当下的命令查询串；不在下命令时为 null。
+ * 輸入框當下的命令查詢串；不在下命令時為 null。
  *
- * 整个值必须只有一个 `/词`。这条判据同时管着「要不要开面板」与「挑中命令后
- * 要不要把这几个字从输入框里抹掉」，所以只在这里写一次。
+ * 整個值必須只有一個 `/詞`。這條判據同時管著「要不要開面板」與「挑中命令後
+ * 要不要把這幾個字從輸入框裡抹掉」，所以只在這裡寫一次。
  */
 export function slashQuery(value: string): string | null {
   const m = /^\/(\S*)$/.exec(value);
@@ -77,16 +77,16 @@ export function closeCommands(): void {
 }
 
 /**
- * 输入框的值变了：该开就开、该关就关、开着就重画。
+ * 輸入框的值變了：該開就開、該關就關、開著就重畫。
  *
- * 由 composer 的 `input` 监听转进来。**面板的开合是输入框内容的函数**，
- * 不是一串各自为政的 keydown 分支。
+ * 由 composer 的 `input` 監聽轉進來。**面板的開合是輸入框內容的函式**，
+ * 不是一串各自為政的 keydown 分支。
  */
 export function syncCommandPalette(): void {
   const q = slashQuery(el.input.value);
   if (q === null) {
-    // 已经不是在下命令了（删掉了 `/`、或往后打了别的字）——顺手把
-    // 「关过了」这一笔也清掉，下次打 `/` 才还能弹。
+    // 已經不是在下命令了（刪掉了 `/`、或往後打了別的字）——順手把
+    // 「關過了」這一筆也清掉，下次打 `/` 才還能彈。
     dismissed = false;
     closeCommands();
     return;
@@ -102,11 +102,11 @@ export function syncCommandPalette(): void {
 }
 
 /**
- * 「/ 命令」按钮：开则关，关则开。
+ * 「/ 命令」按鈕：開則關，關則開。
  *
- * 输入框为空时顺手把 `/` 打进去——按钮和键盘走的是同一条路，界面上不该
- * 出现「点按钮弹出来的面板」和「打 / 弹出来的面板」两种东西。输入框里已经
- * 有别的字时**不动那些字**：他正写着补充要求，挑个命令带上就好。
+ * 輸入框為空時順手把 `/` 打進去——按鈕和鍵盤走的是同一條路，介面上不該
+ * 出現「點按鈕彈出來的面板」和「打 / 彈出來的面板」兩種東西。輸入框裡已經
+ * 有別的字時**不動那些字**：他正寫著補充要求，挑個命令帶上就好。
  */
 export function toggleCommands(): void {
   if (panel) {
@@ -130,13 +130,13 @@ export function openCommands(): void {
 
   panel = mk('div', 'cmd-panel');
   panel.setAttribute('role', 'listbox');
-  // 挂在输入框那一格里（它是 position: relative），面板从输入框上沿往上浮。
-  // 命令的字留在输入框里，候选浮在正上方——视线不用离开正在打字的地方。
+  // 掛在輸入框那一格里（它是 position: relative），面板從輸入框上沿往上浮。
+  // 命令的字留在輸入框裡，候選浮在正上方——視線不用離開正在打字的地方。
   el.composerInput.appendChild(panel);
   el.cmdBtn.classList.add('active');
   redraw();
 
-  // 点别处收起。延到下一拍再挂，否则「点按钮打开」这一次点击自己就把它关了。
+  // 點別處收起。延到下一拍再掛，否則「點按鈕開啟」這一次點選自己就把它關了。
   setTimeout(() => document.addEventListener('click', onDocClick), 0);
 }
 
@@ -164,7 +164,7 @@ function redraw(): void {
 
   const head = mk('div', 'cmd-head');
   head.appendChild(mk('span', 'cmd-head-title', '命令'));
-  head.appendChild(mk('span', 'meta', items.length > 0 ? '↑↓ 选择 · Enter 确认' : '没有匹配的命令'));
+  head.appendChild(mk('span', 'meta', items.length > 0 ? '↑↓ 選擇 · Enter 確認' : '沒有匹配的命令'));
   panel.appendChild(head);
 
   items.forEach((cmd, i) => {
@@ -174,16 +174,16 @@ function redraw(): void {
     row.setAttribute('aria-selected', i === active ? 'true' : 'false');
 
     const line = mk('span', 'cmd-line');
-    // 名字前面带上斜杠：面板里挑的和输入框里打的是同一样东西。
+    // 名字前面帶上斜槓：面板裡挑的和輸入框裡打的是同一樣東西。
     line.appendChild(mk('span', 'cmd-label', `/${cmd.label}`));
-    // 面板里的命令几乎都会写文件（讨论不是命令，打字就是）——每条都标出来：点了会花钱，
-    // 而且会在磁盘上留下东西。**审稿是例外**：只出一份报告、不写文件（五期 D22），挂一样的
-    // 「写文件」会让作者以为点了它正文就被改了。
+    // 面板裡的命令幾乎都會寫檔案（討論不是命令，打字就是）——每條都標出來：點了會花錢，
+    // 而且會在磁碟上留下東西。**審稿是例外**：只出一份報告、不寫檔案（五期 D22），掛一樣的
+    // 「寫檔案」會讓作者以為點了它正文就被改了。
     if (cmd.capability === 'review') {
-      line.appendChild(mk('span', 'cmd-tag', '只出报告'));
+      line.appendChild(mk('span', 'cmd-tag', '只出報告'));
     } else {
       row.classList.add('cmd-writes');
-      line.appendChild(mk('span', 'cmd-tag', '写文件'));
+      line.appendChild(mk('span', 'cmd-tag', '寫檔案'));
     }
     row.appendChild(line);
     row.appendChild(mk('span', 'cmd-hint', cmd.hint));
@@ -199,7 +199,7 @@ function redraw(): void {
   });
 }
 
-/** 中文标签、ascii 全拼、拼音首字母都认，大小写不敏感。 */
+/** 中文標籤、ascii 全拼、拼音首字母都認，大小寫不敏感。 */
 function matching(all: StageCommand[], q: string): StageCommand[] {
   const needle = q.trim().toLowerCase();
   if (!needle) {
@@ -211,9 +211,9 @@ function matching(all: StageCommand[], q: string): StageCommand[] {
 }
 
 function pick(cmd: StageCommand): void {
-  // 命令那几个字是用来挑命令的，不是要发给模型的话——挑完就收走，
-  // 剩下的输入框留给补充要求。输入框里本来就是别人的正文时（按钮开的面板）
-  // 一个字都不动。
+  // 命令那幾個字是用來挑命令的，不是要發給模型的話——挑完就收走，
+  // 剩下的輸入框留給補充要求。輸入框裡本來就是別人的正文時（按鈕開的面板）
+  // 一個字都不動。
   if (slashQuery(el.input.value) !== null) {
     el.input.value = '';
   }
@@ -224,11 +224,11 @@ function pick(cmd: StageCommand): void {
 }
 
 /**
- * 面板开着时接管键盘。返回 true 表示这一下已被消费，输入框不该再处理。
+ * 面板開著時接管鍵盤。返回 true 表示這一下已被消費，輸入框不該再處理。
  *
- * 只认导航与确认那四种键：**可打印字符一律放行**给输入框，过滤串由
- * `syncCommandPalette` 从输入框的值重算。从前这里自己攒过滤串，于是
- * 输入法打的中文一个都收不到（composition 不发 keydown 的可打印键）。
+ * 只認導航與確認那四種鍵：**可列印字元一律放行**給輸入框，過濾串由
+ * `syncCommandPalette` 從輸入框的值重算。從前這裡自己攢過濾串，於是
+ * 輸入法打的中文一個都收不到（composition 不發 keydown 的可列印鍵）。
  */
 export function handleCommandKey(e: KeyboardEvent): boolean {
   if (!panel) {
@@ -249,7 +249,7 @@ export function handleCommandKey(e: KeyboardEvent): boolean {
       return true;
     case 'Tab':
     case 'Enter':
-      // 有候选就挑它；一个都没匹配上时 Enter 不该悄悄发一条 `/xxx` 出去。
+      // 有候選就挑它；一個都沒匹配上時 Enter 不該悄悄發一條 `/xxx` 出去。
       if (items[active]) {
         pick(items[active]);
       }
@@ -259,7 +259,7 @@ export function handleCommandKey(e: KeyboardEvent): boolean {
   }
 }
 
-/** 面板与「/ 命令」按钮在生成期间都该停手——两者都会发起新的一轮。 */
+/** 面板與「/ 命令」按鈕在生成期間都該停手——兩者都會發起新的一輪。 */
 export function setCommandsDisabled(disabled: boolean): void {
   el.cmdBtn.disabled = disabled;
   if (disabled) {

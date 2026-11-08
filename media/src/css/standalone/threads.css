@@ -1,11 +1,11 @@
 /*
- * 编辑区「叙事线总览」标签（叙事线重做三期，editor/threadsOverview.ts）：章 × 线的时间轴，挂在一块编辑区的 .ed-stage 上、
- * 盖住正文区（「版本」的对比标签同一个做法）。只有独立版有内置编辑器，所以在 standalone 这边。
+ * 編輯區「敘事線總覽」標籤（敘事線重做三期，editor/threadsOverview.ts）：章 × 線的時間軸，掛在一塊編輯區的 .ed-stage 上、
+ * 蓋住正文區（「版本」的對比標籤同一個做法）。只有獨立版有內建編輯器，所以在 standalone 這邊。
  *
- * - 左列（线名、伏笔名）与表头固定：.tov-scroll 是唯一的滚动容器，表头 sticky top、左列 sticky left、左上角两样都 sticky。
- * - 格子是稀疏的：一行只有有事件的那几章才有节点（.tov-cell），列的分隔线是 .tov-track 的背景。一列多宽来自 JS 写在
- *   .tov-scroll 上的 --tov-cell（与 threadsOverview.ts 的 CELL 同一个数），左列宽 --tov-name。
- * - 线的格子借流水线条的 .pstage-mark（view.css 里的空心 / 实心圆点），这里只放大一点、加 ◉ 与红圈两种。
+ * - 左列（線名、伏筆名）與表頭固定：.tov-scroll 是唯一的滾動容器，表頭 sticky top、左列 sticky left、左上角兩樣都 sticky。
+ * - 格子是稀疏的：一行只有有事件的那幾章才有節點（.tov-cell），列的分隔線是 .tov-track 的背景。一列多寬來自 JS 寫在
+ *   .tov-scroll 上的 --tov-cell（與 threadsOverview.ts 的 CELL 同一個數），左列寬 --tov-name。
+ * - 線的格子借流水線條的 .pstage-mark（view.css 裡的空心 / 實心圓點），這裡只放大一點、加 ◉ 與紅圈兩種。
  */
 
 .tov {
@@ -58,7 +58,7 @@
   opacity: 0.5;
 }
 
-/* ◉ 的那一圈画在外面（box-shadow），图例里给它让出地方。 */
+/* ◉ 的那一圈畫在外面（box-shadow），圖例裡給它讓出地方。 */
 .tov-legend-item .tov-mark-both {
   margin: 0 3px;
 }
@@ -87,7 +87,7 @@
   min-width: 100%;
 }
 
-/* ---- 表头 */
+/* ---- 表頭 */
 
 .tov-header {
   position: sticky;
@@ -160,7 +160,7 @@
   height: 24px;
 }
 
-/* 一列的章号：样子说这一章定稿没有——已定稿实字、底下一道绿；写了没定稿蓝；只有细纲淡；什么都没有更淡。 */
+/* 一列的章號：樣子說這一章定稿沒有——已定稿實字、底下一道綠；寫了沒定稿藍；只有細綱淡；什麼都沒有更淡。 */
 .tov-col {
   position: absolute;
   bottom: 0;
@@ -206,7 +206,7 @@
   font-weight: 700;
 }
 
-/* 定稿了、叙事线还没判（四期）：底下那道绿换成虚的，字压暗——这一列上的计划不算偏差。 */
+/* 定稿了、敘事線還沒判（四期）：底下那道綠換成虛的，字壓暗——這一列上的計劃不算偏差。 */
 .tov-col-unjudged {
   border-bottom-style: dashed;
   color: var(--vscode-descriptionForeground);
@@ -283,7 +283,7 @@
   color: var(--vscode-editorWarning-foreground, #cca700);
 }
 
-/* 收束了、收了的压暗——压的是字，不是整格：左列压在格子上面，整格半透明的话横着滚时底下的记号会透上来。 */
+/* 收束了、收了的壓暗——壓的是字，不是整格：左列壓在格子上面，整格半透明的話橫著滾時底下的記號會透上來。 */
 .tov-row-closed .tov-name > * {
   opacity: 0.6;
 }
@@ -292,7 +292,7 @@
   color: var(--vscode-errorForeground, #f14c4c);
 }
 
-/* 定位到的那一行（「在总览里看」）。左列那一格叠在编辑区底色上（选中色可能是半透明的，叠不上的话横着滚时底下的格子会透上来）。 */
+/* 定位到的那一行（「在總覽裡看」）。左列那一格疊在編輯區底色上（選中色可能是半透明的，疊不上的話橫著滾時底下的格子會透上來）。 */
 .tov-row.tov-focus .tov-name {
   background: linear-gradient(var(--tov-focus-bg), var(--tov-focus-bg)), var(--vscode-editor-background);
 }
@@ -301,7 +301,7 @@
   background-color: var(--tov-focus-bg);
 }
 
-/* 格子的轨道：列的分隔线是背景，一行只有有事件的那几章才有节点。 */
+/* 格子的軌道：列的分隔線是背景，一行只有有事件的那幾章才有節點。 */
 .tov-track {
   position: relative;
   flex: 0 0 auto;
@@ -313,7 +313,7 @@
   background-image: none;
 }
 
-/* 线的计划区间：一条淡底。 */
+/* 線的計劃區間：一條淡底。 */
 .tov-band {
   position: absolute;
   top: 5px;
@@ -339,7 +339,7 @@
   background: var(--vscode-list-hoverBackground);
 }
 
-/* ---- 记号 */
+/* ---- 記號 */
 
 .tov .pstage-mark {
   width: 9px;
@@ -349,21 +349,21 @@
   flex-basis: 9px;
 }
 
-/* ○ 只有计划：空心、不压暗。 */
+/* ○ 只有計劃：空心、不壓暗。 */
 .tov-mark-plan,
 .tov-fmark-plant.tov-fmark-plan {
   opacity: 1;
   color: var(--vscode-descriptionForeground);
 }
 
-/* ◉ 计划也发生了：实心 + 一圈。 */
+/* ◉ 計劃也發生了：實心 + 一圈。 */
 .tov-mark-both {
   box-shadow:
     0 0 0 1.5px var(--vscode-editor-background),
     0 0 0 3px var(--vscode-charts-green, #89d185);
 }
 
-/* 红圈：计划了、那一章也定稿了却没发生。 */
+/* 紅圈：計劃了、那一章也定稿了卻沒發生。 */
 .tov-mark-dev,
 .pstage-mark.tov-mark-dev {
   opacity: 1;
@@ -372,7 +372,7 @@
   border-width: 2px;
 }
 
-/* 伏笔：埋 ●（pstage-mark done）、收 ◆（转 45° 的方块）、弃 ✕；计划的空心。 */
+/* 伏筆：埋 ●（pstage-mark done）、收 ◆（轉 45° 的方塊）、棄 ✕；計劃的空心。 */
 .tov-fmark-resolve {
   display: block;
   width: 8px;
@@ -398,7 +398,7 @@
   color: var(--vscode-descriptionForeground);
 }
 
-/* 伏笔的连线：收了的实线、埋了没收的虚线、还没埋的淡虚线；逾期标红。画在格子底下。 */
+/* 伏筆的連線：收了的實線、埋了沒收的虛線、還沒埋的淡虛線；逾期標紅。畫在格子底下。 */
 .tov-span {
   position: absolute;
   top: 50%;
@@ -422,7 +422,7 @@
   opacity: 1;
 }
 
-/* 回收章：没收的伏笔在那一格一道竖线。 */
+/* 回收章：沒收的伏筆在那一格一道豎線。 */
 .tov-due {
   position: absolute;
   top: 5px;
@@ -434,7 +434,7 @@
   border-left-color: var(--vscode-errorForeground, #f14c4c);
 }
 
-/* 「定稿到第 N 章」：一条竖线，压在格子上、在左列与表头底下。 */
+/* 「定稿到第 N 章」：一條豎線，壓在格子上、在左列與表頭底下。 */
 .tov-now {
   position: absolute;
   top: 0;
@@ -445,7 +445,7 @@
   pointer-events: none;
 }
 
-/* 「叙事线判到第 M 章」（四期）：落后于定稿时另一条，同色虚线，与上面那条分得开。 */
+/* 「敘事線判到第 M 章」（四期）：落後於定稿時另一條，同色虛線，與上面那條分得開。 */
 .tov-judged {
   position: absolute;
   top: 0;
@@ -457,7 +457,7 @@
   pointer-events: none;
 }
 
-/* ---- 悬停浮窗 */
+/* ---- 懸停浮窗 */
 
 .tov-tip {
   position: fixed;
@@ -501,7 +501,7 @@
   color: var(--vscode-errorForeground, #f14c4c);
 }
 
-/* ---- 标签条上的特殊标签（不对应文件）：名字前一个小格子记号，没有脏标记那一格。 */
+/* ---- 標籤條上的特殊標籤（不對應檔案）：名字前一個小格子記號，沒有髒標記那一格。 */
 .ed-tab-special .ed-tab-name::before {
   content: '▦ ';
   opacity: 0.7;

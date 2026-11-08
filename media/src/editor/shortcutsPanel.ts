@@ -1,13 +1,13 @@
 /**
- * 「帮助 → 快捷键一览」与 `Ctrl+/`（⚑）：一个页内面板，按分组列出 `shortcuts.ts` 那张表——键（按平台写，Mac 上 ⌘ / ⌥）、
- * 做什么、在哪儿管用、补充说明（浏览器拦不住的那几个写在这里），顶上一个筛选框。
+ * 「幫助 → 快捷鍵一覽」與 `Ctrl+/`（⚑）：一個頁內面板，按分組列出 `shortcuts.ts` 那張表——鍵（按平臺寫，Mac 上 ⌘ / ⌥）、
+ * 做什麼、在哪兒管用、補充說明（瀏覽器攔不住的那幾個寫在這裡），頂上一個篩選框。
  *
- * 写法与样式照 `dialog.ts`：DOM 现造现拆、页面模板里没有它，外观复用 `css/view/modal.css` 那一套（`.modal-overlay` /
- * `.modal` / `.modal-head` / `.modal-body`），焦点进筛选框、关掉之后回到打开之前的地方。它是模态的（外面那一层是
- * `.modal-overlay`，`Ctrl+P` 之类开着时不开），但不是一问一答：不算 `isDialogOpen()`（不拦自动保存），开着时别的
- * 快捷键照常（筛选框里 `Ctrl+A` / `Ctrl+V` 要能用）。`Esc`、点外面那一层、×、再按一下 `Ctrl+/` 都关。
+ * 寫法與樣式照 `dialog.ts`：DOM 現造現拆、頁面模板裡沒有它，外觀複用 `css/view/modal.css` 那一套（`.modal-overlay` /
+ * `.modal` / `.modal-head` / `.modal-body`），焦點進篩選框、關掉之後回到開啟之前的地方。它是模態的（外面那一層是
+ * `.modal-overlay`，`Ctrl+P` 之類開著時不開），但不是一問一答：不算 `isDialogOpen()`（不攔自動儲存），開著時別的
+ * 快捷鍵照常（篩選框裡 `Ctrl+A` / `Ctrl+V` 要能用）。`Esc`、點外面那一層、×、再按一下 `Ctrl+/` 都關。
  *
- * 只在独立版：它在 editor.js 里，插件形态没有内置编辑器、也没有标题栏，`editor/index.ts` 探测不到 `#wbEditor` 就整个不装。
+ * 只在獨立版：它在 editor.js 裡，外掛形態沒有內建編輯器、也沒有標題欄，`editor/index.ts` 探測不到 `#wbEditor` 就整個不裝。
  */
 import { el } from '../dom';
 import { isImeComposing } from './api';
@@ -30,7 +30,7 @@ interface Panel {
 let panel: Panel | undefined;
 
 /**
- * 打开（开着就把焦点放回筛选框）。别的弹窗（`.modal-overlay`：设置里的服务商弹窗、表单、页内对话框）开着时不开，
+ * 開啟（開著就把焦點放回篩選框）。別的彈窗（`.modal-overlay`：設定裡的服務商彈窗、表單、頁內對話方塊）開著時不開，
  * 返回 false。
  */
 export function openShortcutsPanel(): boolean {
@@ -57,18 +57,18 @@ function buildPanel(): Panel {
   box.setAttribute('aria-labelledby', titleId);
 
   const head = el('div', 'modal-head');
-  const title = el('span', 'modal-title', '快捷键一览');
+  const title = el('span', 'modal-title', '快捷鍵一覽');
   title.id = titleId;
   const x = el('button', 'icon-btn ed-keys-x', '×');
   x.type = 'button';
-  x.title = '关闭（Esc）';
+  x.title = '關閉（Esc）';
   head.append(title, x);
 
   const body = el('div', 'modal-body');
   const input = el('input', 'ed-keys-filter');
   input.type = 'search';
-  input.placeholder = mac ? '筛选：按键或说明，比如 ⌘F、查找、预览' : '筛选：按键或说明，比如 Ctrl+F、查找、预览';
-  input.setAttribute('aria-label', '筛选快捷键');
+  input.placeholder = mac ? '篩選：按鍵或說明，比如 ⌘F、查詢、預覽' : '篩選：按鍵或說明，比如 Ctrl+F、查詢、預覽';
+  input.setAttribute('aria-label', '篩選快捷鍵');
   const list = el('div', 'ed-keys-list');
   const count = el('p', 'hint ed-keys-count');
   body.append(input, count, list);
@@ -79,7 +79,7 @@ function buildPanel(): Panel {
     const shown = filterShortcuts(SHORTCUTS, input.value);
     list.replaceChildren();
     if (shown.length === 0) {
-      list.appendChild(el('p', 'ed-keys-empty', '没有匹配的快捷键。'));
+      list.appendChild(el('p', 'ed-keys-empty', '沒有匹配的快捷鍵。'));
     }
     for (const { group, items } of groupShortcuts(shown)) {
       const section = el('section', 'ed-keys-group');
@@ -92,11 +92,11 @@ function buildPanel(): Panel {
       list.appendChild(section);
     }
     count.textContent = input.value.trim()
-      ? `找到 ${shown.length} 个（一共 ${SHORTCUTS.length} 个）`
-      : `一共 ${SHORTCUTS.length} 个。标着「浏览器多半拦不住」的，在浏览器里会被浏览器拿去，桌面版里管用。`;
+      ? `找到 ${shown.length} 個（一共 ${SHORTCUTS.length} 個）`
+      : `一共 ${SHORTCUTS.length} 個。標著「瀏覽器多半攔不住」的，在瀏覽器裡會被瀏覽器拿去，桌面版裡管用。`;
   };
   render();
-  // 组字中途不筛（拼音字母不算），上屏那一下再筛。
+  // 組字中途不篩（拼音字母不算），上屏那一下再篩。
   input.addEventListener('input', (e) => {
     if (!(e as InputEvent).isComposing) {
       render();
@@ -108,21 +108,21 @@ function buildPanel(): Panel {
     if (isImeComposing(e)) {
       return;
     }
-    // 开着时 Esc 只收这一个面板（不连带退出专注模式、不收查找条）；再按一下 Ctrl+/ 也是关。
+    // 開著時 Esc 只收這一個面板（不連帶退出專注模式、不收查詢條）；再按一下 Ctrl+/ 也是關。
     if (e.key === 'Escape' || matchesShortcut(e, 'shortcuts')) {
       e.preventDefault();
       e.stopPropagation();
       close();
     }
   };
-  // 点外面那一层（不是面板本身）就关。
+  // 點外面那一層（不是面板本身）就關。
   const onDown = (e: MouseEvent): void => {
     if (e.target === overlay) {
       e.preventDefault();
       close();
     }
   };
-  // Tab 不出面板：焦点被挪到外面去了就拉回筛选框。
+  // Tab 不出面板：焦點被挪到外面去了就拉回篩選框。
   const keepFocus = (e: FocusEvent): void => {
     if (!box.contains(e.target as Node)) {
       input.focus();
@@ -151,7 +151,7 @@ function buildPanel(): Panel {
   return { overlay, input };
 }
 
-/** 一行：键（几种按法各一个 `<kbd>`）、做什么（下面一行小字是补充说明）、在哪儿管用。 */
+/** 一行：鍵（幾種按法各一個 `<kbd>`）、做什麼（下面一行小字是補充說明）、在哪兒管用。 */
 function row(s: Shortcut, mac: boolean): HTMLElement {
   const line = el('div', 'ed-keys-row');
   line.dataset.id = s.id;
@@ -172,14 +172,14 @@ function row(s: Shortcut, mac: boolean): HTMLElement {
 
 let installed = false;
 
-/** 装上 `Ctrl+/` 与「帮助 → 快捷键一览」的编辑器那一半。`editor/index.ts` 调一次。 */
+/** 裝上 `Ctrl+/` 與「幫助 → 快捷鍵一覽」的編輯器那一半。`editor/index.ts` 調一次。 */
 export function installShortcutsPanel(): void {
   if (installed) {
     return;
   }
   installed = true;
 
-  // 哪里都认（对话输入框里也是：这个键在那里没有别的用处）；开着时由面板自己在捕获阶段接走、关掉。
+  // 哪裡都認（對話輸入框裡也是：這個鍵在那裡沒有別的用處）；開著時由面板自己在捕獲階段接走、關掉。
   document.addEventListener('keydown', (e) => {
     if (isImeComposing(e) || !matchesShortcut(e, 'shortcuts')) {
       return;

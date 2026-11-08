@@ -1,11 +1,11 @@
 /**
- * VS Code 远程风目录选择器。没有菜单栏（插件）就不装。
+ * VS Code 遠端風目錄選擇器。沒有選單欄（外掛）就不裝。
  *
- * 文件夹模式走 `listHostDir`；文件模式锁在当前工程，走 `listDir`（ephemeral，
- * 不冲掉资源管理器的关注集合）。选本机文件模式（`hostFile`，后端 `Host.pickHostFile` 推来的
- * `prompt kind: 'file'`）也走 `listHostDir`，只列目录与允许的扩展名，选定或取消都回 `promptResult`。
- * 欢迎页的「新建一本书」「导入写好的书」（2026-10-24）用 {@link pickHostPath}：选一个目录或一本 txt，选定交给回调，
- * 不经后端那一问。
+ * 資料夾模式走 `listHostDir`；檔案模式鎖在當前工程，走 `listDir`（ephemeral，
+ * 不沖掉資源管理器的關注集合）。選本機檔案模式（`hostFile`，後端 `Host.pickHostFile` 推來的
+ * `prompt kind: 'file'`）也走 `listHostDir`，只列目錄與允許的副檔名，選定或取消都回 `promptResult`。
+ * 歡迎頁的「新建一本書」「匯入寫好的書」（2026-10-24）用 {@link pickHostPath}：選一個目錄或一本 txt，選定交給回呼，
+ * 不經後端那一問。
  */
 import { el as mk } from '../dom';
 import type { DirListing, OutMessage } from '../protocol';
@@ -13,7 +13,7 @@ import { hasWorkspace, store, vscode } from './store';
 import { openProject } from './welcome';
 import { onMessage } from '../vscodeApi';
 
-/** `pickDir` / `pickFile`：{@link pickHostPath}，选定交给 `onPick`。 */
+/** `pickDir` / `pickFile`：{@link pickHostPath}，選定交給 `onPick`。 */
 type Intent = 'open' | 'file' | 'hostFile' | 'pickDir' | 'pickFile';
 
 interface PickerState {
@@ -24,7 +24,7 @@ interface PickerState {
   truncated: number;
   error?: string;
   selected?: string;
-  /** 选本机文件：后端在等的那个弹窗，与允许的扩展名（小写、不带点）。 */
+  /** 選本機檔案：後端在等的那個彈窗，與允許的副檔名（小寫、不帶點）。 */
   requestId?: string;
   extensions?: string[];
   title?: string;
@@ -52,8 +52,8 @@ export function installFolderPicker(): void {
     openPicker(e.detail.intent);
   });
 
-  // 捕获阶段先拿到 Esc、只关选择器：它可能是从表单上的「选…」开出来的（新建一本书的「放在」），表单的 Esc 也挂在
-  // document 上，不拦下的话一下 Esc 连表单带填了一半的字一起关掉。
+  // 捕獲階段先拿到 Esc、只關選擇器：它可能是從表單上的「選…」開出來的（新建一本書的「放在」），表單的 Esc 也掛在
+  // document 上，不攔下的話一下 Esc 連表單帶填了一半的字一起關掉。
   document.addEventListener(
     'keydown',
     (e) => {
@@ -96,15 +96,15 @@ export function openPicker(intent: Intent): void {
   if (intent === 'file') {
     vscode.postMessage({ type: 'listDir', dirs: [''], ephemeral: true });
   } else {
-    // 起点是这个窗口开着的工程，空窗口才落到家目录。
+    // 起點是這個視窗開著的工程，空視窗才落到家目錄。
     vscode.postMessage({ type: 'listHostDir', path: store.currentId || '~' });
   }
   pathInput.focus();
 }
 
 /**
- * 选本机文件：后端那头的 `pickHostFile` 在等，选定之外的一切关法（取消、×、Esc）都回一个
- * undefined，不能只把遮罩藏起来。
+ * 選本機檔案：後端那頭的 `pickHostFile` 在等，選定之外的一切關法（取消、×、Esc）都回一個
+ * undefined，不能只把遮罩藏起來。
  */
 export function openHostFilePicker(requestId: string, title: string, startDir: string, extensions: string[]): void {
   if (!wrap || !titleEl || !pathInput) {
@@ -133,8 +133,8 @@ export function openHostFilePicker(requestId: string, title: string, startDir: s
 }
 
 /**
- * 选一个本机目录（`dir`：确定的是当前所在的那一层）或一个文件（`file`：只列目录与 `extensions` 里的文件，点中一个再确定），
- * 选定交给 `onPick`；取消什么都不做。`start` 是从哪一层开始列，缺省家目录。没装选择器（插件）就什么都不做。
+ * 選一個本機目錄（`dir`：確定的是當前所在的那一層）或一個檔案（`file`：只列目錄與 `extensions` 裡的檔案，點中一個再確定），
+ * 選定交給 `onPick`；取消什麼都不做。`start` 是從哪一層開始列，預設家目錄。沒裝選擇器（外掛）就什麼都不做。
  */
 export function pickHostPath(opts: {
   kind: 'dir' | 'file';
@@ -168,7 +168,7 @@ export function pickHostPath(opts: {
   pathInput.focus();
 }
 
-/** 选的是文件（不是目录）：点中一行才能确定，只列允许的扩展名。 */
+/** 選的是檔案（不是目錄）：點中一行才能確定，只列允許的副檔名。 */
 function picksFile(intent: Intent): boolean {
   return intent === 'file' || intent === 'hostFile' || intent === 'pickFile';
 }
@@ -189,16 +189,16 @@ function allowed(name: string): boolean {
 
 function titleOf(intent: Intent): string {
   if (intent === 'file') {
-    return '打开文件';
+    return '開啟檔案';
   }
   if (intent === 'pickDir') {
-    return state?.title ?? '选择文件夹';
+    return state?.title ?? '選擇資料夾';
   }
   if (intent === 'hostFile' || intent === 'pickFile') {
     const exts = state?.extensions?.length ? `（${state.extensions.map((e) => `.${e}`).join(' / ')}）` : '';
-    return `${state?.title ?? '选择文件'}${exts}`;
+    return `${state?.title ?? '選擇檔案'}${exts}`;
   }
-  return '打开文件夹';
+  return '開啟資料夾';
 }
 
 function applyHostDir(msg: Extract<OutMessage, { type: 'hostDir' }>): void {
@@ -250,7 +250,7 @@ function renderList(roots?: boolean): void {
     listEl.appendChild(row(entry.name, entry.kind, entry.absPath, false));
   }
   if (state.truncated) {
-    listEl.appendChild(mk('div', 'nf-picker-more', `另有条目未列出（共 ${state.truncated}）`));
+    listEl.appendChild(mk('div', 'nf-picker-more', `另有條目未列出（共 ${state.truncated}）`));
   }
 }
 
@@ -347,7 +347,7 @@ function mkdir(): void {
   if (!state || state.intent === 'file') {
     return;
   }
-  const name = window.prompt('新建文件夹名称', '');
+  const name = window.prompt('新建資料夾名稱', '');
   if (!name?.trim()) {
     return;
   }
@@ -364,7 +364,7 @@ function jumpToTyped(): void {
     vscode.postMessage({ type: 'listDir', dirs: [rel], ephemeral: true });
     return;
   }
-  // 直接粘了一个文件的完整路径：扩展名对得上就当选定，读不读得到由后端说。
+  // 直接粘了一個檔案的完整路徑：副檔名對得上就當選定，讀不讀得到由後端說。
   const typedFile = typed && allowed(typed.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? '');
   if (state.intent === 'hostFile' && typedFile) {
     closePicker(typed);
@@ -400,13 +400,13 @@ function build(): HTMLElement {
   listEl = mk('div', 'nf-picker-list');
 
   const actions = mk('div', 'nf-picker-actions');
-  mkdirBtn = mk('button', 'chip-btn', '新建文件夹');
+  mkdirBtn = mk('button', 'chip-btn', '新建資料夾');
   mkdirBtn.type = 'button';
   mkdirBtn.addEventListener('click', mkdir);
   const cancel = mk('button', 'chip-btn', '取消');
   cancel.type = 'button';
   cancel.addEventListener('click', () => closePicker());
-  okBtn = mk('button', 'primary', '确定');
+  okBtn = mk('button', 'primary', '確定');
   okBtn.type = 'button';
   okBtn.addEventListener('click', confirm);
   actions.append(mkdirBtn, cancel, okBtn);

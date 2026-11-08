@@ -1,14 +1,14 @@
 /*
- * 独立版专属样式。只由 src/standalone/html.ts 引入，插件的 webview 不加载，
- * 因此这里可以自由重排布局，不影响插件形态。
+ * 獨立版專屬樣式。只由 src/standalone/html.ts 引入，外掛的 webview 不載入，
+ * 因此這裡可以自由重排佈局，不影響外掛形態。
  * 由 scripts/build-media.js 打包成 media/standalone.css。
  *
- * 两件事：
- * 1. 把 view.css 依赖的全部 --vscode-* 变量补齐（浏览器里没有 VS Code 注入的
- *    主题色），取值对齐 VS Code 的 Dark Modern / Light Modern；
- * 2. 把单列页面改成 VS Code 式工作台：标题栏 + 活动栏 + 侧栏 + 编辑区。
+ * 兩件事：
+ * 1. 把 view.css 依賴的全部 --vscode-* 變數補齊（瀏覽器裡沒有 VS Code 注入的
+ *    主題色），取值對齊 VS Code 的 Dark Modern / Light Modern；
+ * 2. 把單列頁面改成 VS Code 式工作臺：標題欄 + 活動欄 + 側欄 + 編輯區。
  *
- * 顺序有意义：theme 先定下变量，narrow 的媒体查询压在最后。
+ * 順序有意義：theme 先定下變數，narrow 的媒體查詢壓在最後。
  */
 
 @import './standalone/theme.css';
@@ -18,13 +18,13 @@
 @import './standalone/welcome.css';
 @import './standalone/picker.css';
 
-/* 内置编辑器与资源管理器（这两块 DOM 只有独立版才有） */
+/* 內建編輯器與資源管理器（這兩塊 DOM 只有獨立版才有） */
 @import './standalone/editor.css';
 @import './standalone/save.css';
 @import './standalone/highlight.css';
 @import './standalone/find.css';
 @import './standalone/preview.css';
-/* 正文排版那组变量（textarea、镜像层、预览共用）与外观面板；专注模式、打字机滚动、段落聚焦 */
+/* 正文排版那組變數（textarea、映象層、預覽共用）與外觀面板；專注模式、打字機滾動、段落聚焦 */
 @import './standalone/look.css';
 @import './standalone/focus.css';
 @import './standalone/explorer.css';
@@ -33,23 +33,23 @@
 @import './standalone/quickopen.css';
 @import './standalone/bookfind.css';
 @import './standalone/stats.css';
-/* 名词补全的候选框（Alt+/ 与边打边弹）、名词高亮（names 图层）与悬停浮窗。排在体检前面：names 图层与 check 图层的
-   选择器一样重，撞在同一段字上时靠先后让体检的下划线与淡底色盖过名字的 */
+/* 名詞補全的候選框（Alt+/ 與邊打邊彈）、名詞高亮（names 圖層）與懸停浮窗。排在體檢前面：names 圖層與 check 圖層的
+   選擇器一樣重，撞在同一段字上時靠先後讓體檢的下劃線與淡底色蓋過名字的 */
 @import './standalone/names.css';
-/* 写作体检：check 图层的颜色（深 / 浅 / 护眼三套）、状态栏「体检」那一格与面板 */
+/* 寫作體檢：check 圖層的顏色（深 / 淺 / 護眼三套）、狀態列「體檢」那一格與面板 */
 @import './standalone/check.css';
-/* 快捷键一览（「帮助 → 快捷键一览」与 Ctrl+/） */
+/* 快捷鍵一覽（「幫助 → 快捷鍵一覽」與 Ctrl+/） */
 @import './standalone/keys.css';
-/* 叙事线总览（编辑区里不对应文件的特殊标签：章 × 线的时间轴，叙事线重做三期） */
+/* 敘事線總覽（編輯區裡不對應檔案的特殊標籤：章 × 線的時間軸，敘事線重做三期） */
 @import './standalone/threads.css';
-/* 时间线总览（编辑区里另一个特殊标签：竖着按故事日子排，2026-10-24） */
+/* 時間線總覽（編輯區裡另一個特殊標籤：豎著按故事日子排，2026-10-24） */
 @import './standalone/timeline.css';
 
-/* 覆盖 view.css 的那几处 */
+/* 覆蓋 view.css 的那幾處 */
 @import './standalone/side-tweaks.css';
 @import './standalone/toast.css';
 @import './standalone/offline.css';
 
-/* 媒体查询放最后：触屏（hover: none / pointer: coarse）先，窄屏压在最后 */
+/* 媒體查詢放最後：觸屏（hover: none / pointer: coarse）先，窄屏壓在最後 */
 @import './standalone/touch.css';
 @import './standalone/narrow.css';

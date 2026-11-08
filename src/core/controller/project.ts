@@ -42,14 +42,14 @@ import { openChapter } from './files';
 
 const log = scoped('面板');
 
-/** 工程页与角色卡动作。字段只给 controller/ 同包用。 */
+/** 工程頁與角色卡動作。欄位只給 controller/ 同包用。 */
 
 /**
- * 工程页的按钮直调 core 流程，webview 不直接碰文件系统。
- * 插件的命令面板也复用同一批 core 流程，行为不会分叉。
+ * 工程頁的按鈕直調 core 流程，webview 不直接碰檔案系統。
+ * 外掛的命令面板也複用同一批 core 流程，行為不會分叉。
  *
- * `relPath` 是动作的作用对象（如要总结哪一章）；`dir` 是「在某个文件夹上点＋」
- * 时的落点目录，从工具栏点则不带，落在区根目录。
+ * `relPath` 是動作的作用物件（如要總結哪一章）；`dir` 是「在某個資料夾上點＋」
+ * 時的落點目錄，從工具欄點則不帶，落在區根目錄。
  */
 export async function projectAction(
   c: ChatController,
@@ -67,11 +67,11 @@ export async function projectAction(
     hostPath?: string;
   } = {}
 ): Promise<void> {
-  // refresh 每次切页/刷盘都来一趟，记了只会淹掉别的；其余动作都值得留痕。
+  // refresh 每次切頁/刷盤都來一趟，記了只會淹掉別的；其餘動作都值得留痕。
   if (action !== 'refresh') {
     log.info(
-      `工程页动作：${action}`,
-      [relPath ? `对象 ${relPath}` : '', dir ? `落点 ${dir}` : ''].filter(Boolean).join('｜') || undefined
+      `工程頁動作：${action}`,
+      [relPath ? `物件 ${relPath}` : '', dir ? `落點 ${dir}` : ''].filter(Boolean).join('｜') || undefined
     );
   }
   switch (action) {
@@ -79,20 +79,20 @@ export async function projectAction(
       await initProjectFlow(c.project, dirBaseName(c.project));
       break;
     case 'refresh':
-      break; // pushState 本身就是刷新
+      break; // pushState 本身就是重新整理
     case 'newPlot': {
       const rel = await newPlotFlow(c.project);
       if (rel) {
-        // 建完**进入这一章**，落在哪一层由状态机决定（空细纲 → 待写细纲 →
-        // 主按钮「写第 N 章细纲」）。走 selectPlot 而不是自己拼 target：
-        // 只有后端知道那一章处于什么状态，这与点章名同一条路。
+        // 建完**進入這一章**，落在哪一層由狀態機決定（空細綱 → 待寫細綱 →
+        // 主按鈕「寫第 N 章細綱」）。走 selectPlot 而不是自己拼 target：
+        // 只有後端知道那一章處於什麼狀態，這與點章名同一條路。
         await selectPlot(c, rel);
       }
       break;
     }
     case 'newChapter': {
-      // 手工新建一个章节文件。**不进创作页**——建它多半是作者要往里粘一段
-      // 现成的正文。工程页「章节」还空着时那颗「新建第 1 章」带 `open`：建完就打开，接着就能写。
+      // 手工新建一個章節檔案。**不進創作頁**——建它多半是作者要往裡粘一段
+      // 現成的正文。工程頁「章節」還空著時那顆「新建第 1 章」帶 `open`：建完就開啟，接著就能寫。
       const rel = await newChapterFlow(c.project, dir);
       if (rel && batch.open) {
         await openChapter(c, rel);
@@ -106,7 +106,7 @@ export async function projectAction(
       await newLore(c.project, dir, batch.name);
       break;
     case 'newFolder': {
-      // 落点目录决定建到哪个区；没给就问用户。
+      // 落點目錄決定建到哪個區；沒給就問使用者。
       const section = dir ? sectionOf(c.project, dir)?.section : await pickSection(c);
       if (!section) {
         break;
@@ -119,16 +119,16 @@ export async function projectAction(
       if (!relPath) {
         break;
       }
-      // 传进来的可能是细纲路径（从流水线那一侧点的），也可能是章节路径
-      // （从工程页那一行点的）。定稿读的是正文，所以统一解析成章节。
-      // 定稿 = 照正文更新细纲（带连续性事实）+ 出场角色的当前状态 + 叙事线（features/finalize.ts）。
+      // 傳進來的可能是細綱路徑（從流水線那一側點的），也可能是章節路徑
+      // （從工程頁那一行點的）。定稿讀的是正文，所以統一解析成章節。
+      // 定稿 = 照正文更新細綱（帶連續性事實）+ 出場角色的當前狀態 + 敘事線（features/finalize.ts）。
       const chapter = await chapterForSummary(c.project, relPath);
       if (!chapter) {
-        log.warn(`找不到 ${relPath} 对应的章节，可能还没写正文或刚被改名`);
-        getHost().toast('这一章还没有正文，无法同步。', 'error');
+        log.warn(`找不到 ${relPath} 對應的章節，可能還沒寫正文或剛被改名`);
+        getHost().toast('這一章還沒有正文，無法同步。', 'error');
         break;
       }
-      // 工程页章节右键先问这一次用哪个模型；其余入口用对话页选定的那个。
+      // 工程頁章節右鍵先問這一次用哪個模型；其餘入口用對話頁選定的那個。
       if (action === 'askFinalizeChapter') {
         await askFinalizeChapterTask(c.project, chapter);
       } else {
@@ -143,8 +143,8 @@ export async function projectAction(
       await rebuildGlobalSummary(c.project);
       break;
     case 'generatePlots':
-      // 区间与「弹窗已经问过」（`call`：作者在弹窗上挑的模型与详细度）来自工程页的拆细纲弹窗（W5）；
-      // 不带就是下一批 5 章，先问。`expandLore`：弹窗上「拆完展开本批新设定」（完善设定三期），拆完后端再问一次次数。
+      // 區間與「彈窗已經問過」（`call`：作者在彈窗上挑的模型與詳細度）來自工程頁的拆細綱彈窗（W5）；
+      // 不帶就是下一批 5 章，先問。`expandLore`：彈窗上「拆完展開本批新設定」（完善設定三期），拆完後端再問一次次數。
       await generatePlots(c.project, {
         range: normalizeRange(batch.range),
         call: normalizeCallChoice(batch.call),
@@ -155,7 +155,7 @@ export async function projectAction(
       await completeSettings(c.project);
       break;
     case 'writeManuscripts':
-      // 区间、模式与「弹窗已经问过」（`call`）来自批量写章弹窗（W9）；不带就是下一可写章起 3 章、只写正文，先问。
+      // 區間、模式與「彈窗已經問過」（`call`）來自批次寫章彈窗（W9）；不帶就是下一可寫章起 3 章、只寫正文，先問。
       await writeManuscripts(c.project, {
         range: normalizeRange(batch.range),
         mode: isWriteBatchMode(batch.mode) ? batch.mode : 'draft',
@@ -194,11 +194,11 @@ export async function projectAction(
       await backfillTimeline(c.project);
       break;
     case 'refreshTimeline':
-      // 区间来自时间线组：右键一章「重推这一章」「从这一章起重推」；标题旁「重推」不带（全部）。
+      // 區間來自時間線組：右鍵一章「重推這一章」「從這一章起重推」；標題旁「重推」不帶（全部）。
       await refreshTimeline(c.project, normalizeRange(batch.range) ?? {});
       break;
     case 'editTimeline': {
-      // 时间线组右键一章「改时间…」：章号放在 name 里（还没有正文的章也能改）。
+      // 時間線組右鍵一章「改時間…」：章號放在 name 裡（還沒有正文的章也能改）。
       const no = Number(batch.name);
       if (Number.isInteger(no) && no > 0) {
         await editTimelineEntry(c.project, no);
@@ -206,7 +206,7 @@ export async function projectAction(
       break;
     }
     case 'setTimelineStart':
-      // 时间线组第一行：点了改历法与起点；右键「填为起点」带倒推出来的那一天（name），直接填。
+      // 時間線組第一行：點了改曆法與起點；右鍵「填為起點」帶倒推出來的那一天（name），直接填。
       await setTimelineStart(c.project, batch.name);
       break;
     case 'closeThread':
@@ -216,7 +216,7 @@ export async function projectAction(
       }
       break;
     case 'importManuscript':
-      // 欢迎页「导入写好的书」建好工程之后带着那本 txt 的绝对路径来（表单上看过切分结果，不再问）；工程页右键不带。
+      // 歡迎頁「匯入寫好的書」建好工程之後帶著那本 txt 的絕對路徑來（表單上看過切分結果，不再問）；工程頁右鍵不帶。
       await importManuscript(c.project, batch.hostPath ? { hostPath: batch.hostPath } : {});
       break;
     case 'exportBook':
@@ -233,44 +233,44 @@ export async function projectAction(
       break;
   }
 
-  // 这些流程大多会改动磁盘，且不一定触发 watcher（比如刚初始化的空工程）。
-  // pushState 会顺带刷新当前页签。
+  // 這些流程大多會改動磁碟，且不一定觸發 watcher（比如剛初始化的空工程）。
+  // pushState 會順帶重新整理當前頁籤。
   await c.pushState();
 }
 
 /**
- * 内置编辑器「编辑 → 段落格式」：切换正文的分段格式。只改 `config.md` frontmatter 的
- * `paragraphStyle` 这一个键，正文一个字节不动（`Workspace.setParagraphStyle`）。
- * 还不是小说工程时不写——写一份 `config.md` 也不会让它变成工程，只会多出一个没人认的文件。
+ * 內建編輯器「編輯 → 段落格式」：切換正文的分段格式。只改 `config.md` frontmatter 的
+ * `paragraphStyle` 這一個鍵，正文一個位元組不動（`Workspace.setParagraphStyle`）。
+ * 還不是小說工程時不寫——寫一份 `config.md` 也不會讓它變成工程，只會多出一個沒人認的檔案。
  */
 export async function setParagraphStyle(c: ChatController, style: unknown): Promise<void> {
   if (!isParagraphStyle(style)) {
-    log.warn(`认不出的分段格式：${String(style)}，忽略`);
+    log.warn(`認不出的分段格式：${String(style)}，忽略`);
     return;
   }
   if (!(await c.project.isInitialized())) {
-    getHost().toast('还不是小说工程，先初始化工程再设段落格式。', 'error');
+    getHost().toast('還不是小說工程，先初始化工程再設段落格式。', 'error');
     return;
   }
   const rel = await c.workspace.setParagraphStyle(style);
   if (rel) {
-    log.info(`段落格式改为「${PARAGRAPH_STYLE_LABEL[style]}」`, rel);
+    log.info(`段落格式改為「${PARAGRAPH_STYLE_LABEL[style]}」`, rel);
   }
-  // 前端的勾与编辑器的回车都跟着 state / project 走。
+  // 前端的勾與編輯器的回車都跟著 state / project 走。
   await c.pushState();
 }
 
-/** 工具栏上的「＋ 文件夹」没有落点，先问建到哪个区。 */
+/** 工具欄上的「＋ 資料夾」沒有落點，先問建到哪個區。 */
 export async function pickSection(c: ChatController): Promise<Section | undefined> {
   return getHost().pick<Section>(
     sectionRoots(c.project).map((s) => ({ label: s.label, detail: `${s.root}/`, value: s.section })),
-    '在哪个区新建文件夹？'
+    '在哪個區新建資料夾？'
   );
 }
 
 /**
- * 角色卡动作。作用对象是**一个角色**（用名字标识），不是文件或章节，
- * 因此与 fileAction / projectAction 分开走。
+ * 角色卡動作。作用物件是**一個角色**（用名字標識），不是檔案或章節，
+ * 因此與 fileAction / projectAction 分開走。
  */
 export async function characterAction(
   c: ChatController,
@@ -278,12 +278,12 @@ export async function characterAction(
   name: string,
   relPath?: string
 ): Promise<void> {
-  log.info(`角色动作：${action} ${name}`, relPath);
+  log.info(`角色動作：${action} ${name}`, relPath);
   switch (action) {
     case 'updateCard':
     case 'rebuildCard':
       if (!relPath) {
-        log.warn(`${action} 缺少角色卡路径，忽略`);
+        log.warn(`${action} 缺少角色卡路徑，忽略`);
         break;
       }
       await updateCharacterCard(
@@ -311,7 +311,7 @@ export async function characterAction(
       await mergeDuplicateCharacterCards(c.project);
       break;
     case 'reviewState':
-      // 定稿时没覆盖的那一版（作者改过这张卡的当前状态，D15）：对比后决定用不用。
+      // 定稿時沒覆蓋的那一版（作者改過這張卡的當前狀態，D15）：對比後決定用不用。
       if (relPath) {
         await reviewCharacterState(c.project, relPath);
       }

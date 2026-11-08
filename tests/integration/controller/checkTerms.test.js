@@ -1,16 +1,16 @@
 /**
- * 内置编辑器「写作体检」的后端一半（`controller/check.ts` + `views/checkTerms.ts`）与敏感词表经网关的读写。
+ * 內建編輯器「寫作體檢」的後端一半（`controller/check.ts` + `views/checkTerms.ts`）與敏感詞表經閘道器的讀寫。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 连上就推一份 `checkTerms`（`init` 之后），哪个页签都推 | 编辑器不必等作者切到别的页 |
- * | 禁用词与写正文时（`planWriting`）用的**一模一样** | 同一个函数、同一份输入：编辑器里标的就是写完数的 |
- * | 内容没变的 `pushState` 不推；`style.md` 改了重推 | 作者每存一次盘就跑一次 `pushState` |
- * | 敏感词表新建 / 修改 / 删除各推一次，坏行带着行号 | 词表变了才推，面板里能说「第 N 行没看懂」 |
- * | 新连上的前端没变也推 | 它手上什么都没有 |
- * | 宿主没有内置编辑器（没有 `openInEditor`）不推 | 插件壳用不上，不为它多读文件 |
- * | 「编辑敏感词表…」：没有就经网关新建模板再打开；有了只打开、不盖掉；还不是小说工程只说一句 | 第 3 条：同名不覆盖 |
- * | `sensitive.txt` 是 `sensitive` 种类、经编辑器保存会留历史版本，不进上下文 | 作者手维护的词表改坏了要找得回来 |
+ * | 連上就推一份 `checkTerms`（`init` 之後），哪個頁籤都推 | 編輯器不必等作者切到別的頁 |
+ * | 禁用詞與寫正文時（`planWriting`）用的**一模一樣** | 同一個函式、同一份輸入：編輯器裡標的就是寫完數的 |
+ * | 內容沒變的 `pushState` 不推；`style.md` 改了重推 | 作者每存一次盤就跑一次 `pushState` |
+ * | 敏感詞表新建 / 修改 / 刪除各推一次，壞行帶著行號 | 詞表變了才推，面板裡能說「第 N 行沒看懂」 |
+ * | 新連上的前端沒變也推 | 它手上什麼都沒有 |
+ * | 宿主沒有內建編輯器（沒有 `openInEditor`）不推 | 外掛殼用不上，不為它多讀檔案 |
+ * | 「編輯敏感詞表…」：沒有就經閘道器新建模板再開啟；有了只開啟、不蓋掉；還不是小說工程只說一句 | 第 3 條：同名不覆蓋 |
+ * | `sensitive.txt` 是 `sensitive` 種類、經編輯器儲存會留歷史版本，不進上下文 | 作者手維護的詞表改壞了要找得回來 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,7 +27,7 @@ let t;
 let fake;
 let controller;
 let posted = [];
-/** 编辑器里打开过的路径（假宿主的 `openInEditor`）。 */
+/** 編輯器裡開啟過的路徑（假宿主的 `openInEditor`）。 */
 const openedInEditor = [];
 
 const all = (type) => posted.filter((m) => m.type === type);
@@ -53,13 +53,13 @@ before(async () => {
     overrides: { openInEditor: async (p) => openedInEditor.push(p) },
   });
   bundle.host.initHost(fake.host);
-  t = await makeTempProject(bundle.project, { prefix: 'check-terms', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'check-terms', title: '青雲劍錄' });
   t.write(
     '.novelwarden/config.md',
-    '---\ngenre: 仙侠\nsubGenre: 修真\n---\n# 小说配置\n\n## 全局要求\n\n- 严禁出现「手机」「电脑」，须用「玉简」\n'
+    '---\ngenre: 仙俠\nsubGenre: 修真\n---\n# 小說配置\n\n## 全域要求\n\n- 嚴禁出現「手機」「電腦」，須用「玉簡」\n'
   );
-  t.write('.novelwarden/style.md', '# 文风指南\n\n## 禁用词表\n\n- 不用「不禁」「顿时」\n');
-  t.write('.novelwarden/summaries/001-雨夜.md', '---\ntargetWords: 3000\n---\n# 第1章 雨夜\n\n## 关键事件\n\n- 出城\n');
+  t.write('.novelwarden/style.md', '# 文風指南\n\n## 禁用詞表\n\n- 不用「不禁」「頓時」\n');
+  t.write('.novelwarden/summaries/001-雨夜.md', '---\ntargetWords: 3000\n---\n# 第1章 雨夜\n\n## 關鍵事件\n\n- 出城\n');
   controller = new bundle.controller.ChatController(t.project);
   controller.attach({ kind: 'sidebar', post: (m) => posted.push(m), reveal() {} });
 });
@@ -69,28 +69,28 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('checkTerms：连上就推，与生成链同一份禁用词', () => {
+describe('checkTerms：連上就推，與生成鏈同一份禁用詞', () => {
   before(async () => {
     t.project.invalidate();
     posted = [];
     await controller.handle({ type: 'ready' });
   });
 
-  test('ready 之后推了一份，排在 init 后面', () => {
+  test('ready 之後推了一份，排在 init 後面', () => {
     const types = posted.map((m) => m.type);
     assert.ok(types.includes('checkTerms'), types.join(','));
     assert.ok(types.indexOf('init') < types.indexOf('checkTerms'), types.join(','));
   });
 
-  test('禁用词：文风禁用词表、全局要求里禁止的那一个分句、古代题材的现代说法', () => {
+  test('禁用詞：文風禁用詞表、全域要求裡禁止的那一個分句、古代題材的現代說法', () => {
     const banned = lastOf('checkTerms').terms.banned;
-    assert.deepEqual(banned.slice(0, 4), ['不禁', '顿时', '手机', '电脑']);
+    assert.deepEqual(banned.slice(0, 4), ['不禁', '頓時', '手機', '電腦']);
     assert.ok(banned.includes('能量'), banned.join('、'));
-    // 「须用『玉简』」是要用的词，不收。
-    assert.equal(banned.includes('玉简'), false);
+    // 「須用『玉簡』」是要用的詞，不收。
+    assert.equal(banned.includes('玉簡'), false);
   });
 
-  test('与写正文时 planWriting 用的一模一样（同一个函数、同一份输入）', async () => {
+  test('與寫正文時 planWriting 用的一模一樣（同一個函式、同一份輸入）', async () => {
     const plan = await bundle.generate.planWriting(t.project, {
       target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/001-雨夜.md' },
       targetNo: 1,
@@ -99,7 +99,7 @@ describe('checkTerms：连上就推，与生成链同一份禁用词', () => {
     assert.deepEqual(await bundle.checkTerms.readBannedTerms(t.project), plan.banned);
   });
 
-  test('还没有敏感词表：空的、说清不在、路径给出来', () => {
+  test('還沒有敏感詞表：空的、說清不在、路徑給出來', () => {
     const terms = lastOf('checkTerms').terms;
     assert.deepEqual(terms.sensitive, []);
     assert.equal(terms.sensitiveExists, false);
@@ -108,51 +108,51 @@ describe('checkTerms：连上就推，与生成链同一份禁用词', () => {
   });
 });
 
-describe('checkTerms：变了才推', () => {
-  test('什么都没变的 pushState 不推', async () => {
+describe('checkTerms：變了才推', () => {
+  test('什麼都沒變的 pushState 不推', async () => {
     posted = [];
     await controller.pushState();
     assert.equal(all('checkTerms').length, 0);
   });
 
-  test('style.md 的禁用词表改了：重推，带着新词', async () => {
-    t.write('.novelwarden/style.md', '# 文风指南\n\n## 禁用词表\n\n- 不用「不禁」「顿时」「霎时」\n');
+  test('style.md 的禁用詞表改了：重推，帶著新詞', async () => {
+    t.write('.novelwarden/style.md', '# 文風指南\n\n## 禁用詞表\n\n- 不用「不禁」「頓時」「霎時」\n');
     posted = [];
     await controller.pushState();
     assert.equal(all('checkTerms').length, 1);
-    assert.ok(lastOf('checkTerms').terms.banned.includes('霎时'));
+    assert.ok(lastOf('checkTerms').terms.banned.includes('霎時'));
   });
 
-  test('config.md 换成都市题材：现代说法不再算禁用词', async () => {
-    t.write('.novelwarden/config.md', '---\ngenre: 都市\n---\n# 小说配置\n');
+  test('config.md 換成都市題材：現代說法不再算禁用詞', async () => {
+    t.write('.novelwarden/config.md', '---\ngenre: 都市\n---\n# 小說配置\n');
     posted = [];
     await controller.pushState();
     assert.equal(all('checkTerms').length, 1);
     assert.equal(lastOf('checkTerms').terms.banned.includes('能量'), false);
   });
 
-  test('敏感词表新建：推一份，词与替换词都在、坏行带着行号与原因', async () => {
-    t.write(SENSITIVE, '# 注释\n赌博 => 博戏\nSB\n=> 没词\n');
+  test('敏感詞表新建：推一份，詞與替換詞都在、壞行帶著行號與原因', async () => {
+    t.write(SENSITIVE, '# 註釋\n賭博 => 博戲\nSB\n=> 沒詞\n');
     posted = [];
     await controller.pushState();
     const terms = lastOf('checkTerms').terms;
     assert.equal(all('checkTerms').length, 1);
     assert.equal(terms.sensitiveExists, true);
-    assert.deepEqual(terms.sensitive, [{ term: '赌博', replacement: '博戏' }, { term: 'SB' }]);
+    assert.deepEqual(terms.sensitive, [{ term: '賭博', replacement: '博戲' }, { term: 'SB' }]);
     assert.deepEqual(terms.sensitiveBad.map((b) => b.line), [4]);
-    assert.match(terms.sensitiveBad[0].reason, /前面没有词/);
+    assert.match(terms.sensitiveBad[0].reason, /前面沒有詞/);
   });
 
-  test('敏感词表改了：重推', async () => {
-    t.write(SENSITIVE, '赌博 => 博戏\n');
+  test('敏感詞表改了：重推', async () => {
+    t.write(SENSITIVE, '賭博 => 博戲\n');
     posted = [];
     await controller.pushState();
     assert.equal(all('checkTerms').length, 1);
-    assert.deepEqual(lastOf('checkTerms').terms.sensitive, [{ term: '赌博', replacement: '博戏' }]);
+    assert.deepEqual(lastOf('checkTerms').terms.sensitive, [{ term: '賭博', replacement: '博戲' }]);
     assert.deepEqual(lastOf('checkTerms').terms.sensitiveBad, []);
   });
 
-  test('敏感词表删了：重推，空的、说不在', async () => {
+  test('敏感詞表刪了：重推，空的、說不在', async () => {
     t.remove(SENSITIVE);
     posted = [];
     await controller.pushState();
@@ -161,17 +161,17 @@ describe('checkTerms：变了才推', () => {
     assert.equal(lastOf('checkTerms').terms.sensitiveExists, false);
   });
 
-  test('新连上的前端：没变也推一份', async () => {
+  test('新連上的前端：沒變也推一份', async () => {
     posted = [];
     await controller.handle({ type: 'ready' });
     assert.equal(all('checkTerms').length, 1);
   });
 
-  test('宿主没有内置编辑器（没有 openInEditor）：不推', async () => {
+  test('宿主沒有內建編輯器（沒有 openInEditor）：不推', async () => {
     const plain = makeFakeHost({ name: 'vscode', settings: () => makeSettings({ contextWindow: 100000 }) });
     bundle.host.initHost(plain.host);
     try {
-      t.write('.novelwarden/style.md', '# 文风指南\n\n## 禁用词表\n\n- 不用「刹那」\n');
+      t.write('.novelwarden/style.md', '# 文風指南\n\n## 禁用詞表\n\n- 不用「剎那」\n');
       posted = [];
       await controller.handle({ type: 'ready' });
       await controller.pushState();
@@ -182,37 +182,37 @@ describe('checkTerms：变了才推', () => {
   });
 });
 
-describe('编辑敏感词表…', () => {
+describe('編輯敏感詞表…', () => {
   before(() => {
     t.remove(SENSITIVE);
   });
 
-  test('没有：经网关新建一份带说明注释的模板，然后在编辑器里打开它', async () => {
+  test('沒有：經閘道器新建一份帶說明註釋的模板，然後在編輯器裡開啟它', async () => {
     openedInEditor.length = 0;
     posted = [];
     await controller.handle({ type: 'editSensitiveWords' });
     assert.equal(t.has(SENSITIVE), true);
     const text = t.read(SENSITIVE);
-    assert.match(text, /^# 敏感词表/);
+    assert.match(text, /^# 敏感詞表/);
     assert.match(text, /=>/);
     assert.deepEqual(openedInEditor, [SENSITIVE]);
   });
 
-  test('新建之后当场推一份词表（文件在了，一个词都还没生效）', () => {
+  test('新建之後當場推一份詞表（檔案在了，一個詞都還沒生效）', () => {
     const terms = lastOf('checkTerms').terms;
     assert.equal(terms.sensitiveExists, true);
     assert.deepEqual(terms.sensitive, []);
   });
 
-  test('已经有了：只打开，一个字都不改', async () => {
-    t.write(SENSITIVE, '赌博 => 博戏\n');
+  test('已經有了：只開啟，一個字都不改', async () => {
+    t.write(SENSITIVE, '賭博 => 博戲\n');
     openedInEditor.length = 0;
     await controller.handle({ type: 'editSensitiveWords' });
-    assert.equal(t.read(SENSITIVE), '赌博 => 博戏\n');
+    assert.equal(t.read(SENSITIVE), '賭博 => 博戲\n');
     assert.deepEqual(openedInEditor, [SENSITIVE]);
   });
 
-  test('还不是小说工程：不建文件、不打开，说一句为什么', async () => {
+  test('還不是小說工程：不建檔案、不開啟，說一句為什麼', async () => {
     const dir = makeTempDir('check-bare');
     const bare = new bundle.controller.ChatController(bundle.project.NovelProject.open(dir.dir));
     const out = [];
@@ -222,7 +222,7 @@ describe('编辑敏感词表…', () => {
       await bare.handle({ type: 'editSensitiveWords' });
       assert.equal(dir.has(SENSITIVE), false);
       assert.deepEqual(openedInEditor, []);
-      assert.match(out.find((m) => m.type === 'toast')?.message ?? '', /还不是小说工程/);
+      assert.match(out.find((m) => m.type === 'toast')?.message ?? '', /還不是小說工程/);
     } finally {
       bare.dispose();
       cleanup(dir.dir, bundle.db);
@@ -230,31 +230,31 @@ describe('编辑敏感词表…', () => {
   });
 });
 
-describe('sensitive.txt 经网关：种类、保存、历史版本', () => {
-  test('种类是 sensitive（不是 other）：链外、没有创作阶段', () => {
+describe('sensitive.txt 經閘道器：種類、儲存、歷史版本', () => {
+  test('種類是 sensitive（不是 other）：鏈外、沒有創作階段', () => {
     const k = bundle.kind.kindOfPath(t.project, SENSITIVE);
     assert.equal(k.kind, 'sensitive');
     assert.equal(k.stage, undefined);
     assert.equal(k.target, undefined);
   });
 
-  test('编辑器保存经网关（乐观锁），旧内容留一版历史', async () => {
+  test('編輯器儲存經閘道器（樂觀鎖），舊內容留一版歷史', async () => {
     const before = t.read(SENSITIVE);
     const baseHash = bundle.hash.hash(before);
     assert.equal(await bundle.history.historyUnavailable(t.project, SENSITIVE), undefined);
-    await bundle.fileEditing.writeFileFromEditor(t.dir, SENSITIVE, '赌博 => 博戏\n杀人\n', baseHash);
-    assert.equal(t.read(SENSITIVE), '赌博 => 博戏\n杀人\n');
+    await bundle.fileEditing.writeFileFromEditor(t.dir, SENSITIVE, '賭博 => 博戲\n殺人\n', baseHash);
+    assert.equal(t.read(SENSITIVE), '賭博 => 博戲\n殺人\n');
     const snaps = await bundle.history.listSnapshots(t.project, SENSITIVE);
     assert.equal(snaps.length, 1);
     assert.equal(await bundle.history.readSnapshot(t.project, SENSITIVE, snaps[0].id), before);
   });
 
-  test('磁盘上被别处改过：保存被拒、不覆盖（与别的文件同一套乐观锁）', async () => {
-    t.write(SENSITIVE, '别处改的\n');
+  test('磁碟上被別處改過：儲存被拒、不覆蓋（與別的檔案同一套樂觀鎖）', async () => {
+    t.write(SENSITIVE, '別處改的\n');
     await assert.rejects(
-      bundle.fileEditing.writeFileFromEditor(t.dir, SENSITIVE, '编辑器里的\n', bundle.hash.hash('赌博 => 博戏\n杀人\n')),
+      bundle.fileEditing.writeFileFromEditor(t.dir, SENSITIVE, '編輯器裡的\n', bundle.hash.hash('賭博 => 博戲\n殺人\n')),
       (err) => err.name === 'FileConflictError'
     );
-    assert.equal(t.read(SENSITIVE), '别处改的\n');
+    assert.equal(t.read(SENSITIVE), '別處改的\n');
   });
 });

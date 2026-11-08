@@ -1,81 +1,81 @@
-# core/mcp — 把工具端给外部 agent
+# core/mcp — 把工具端給外部 agent
 
-**多步的活交给外部 agent（Claude Code、Codex……），Novelwarden 只提供工具。**
+**多步的活交給外部 agent（Claude Code、Codex……），Novelwarden 只提供工具。**
 
-本项目不自带对话循环。上下文压缩、多步规划、权限模式、各家服务商的 tool calling 兼容——这些通用
-agent 做得更好，自己再做一份只是更弱的重复。真正值钱的不在循环里：创作质量来自分阶段装配
-（`generate` 内部那次调用），工程动作的不变量在 `features/` 里（`pipeline` / `summary` / `characters` 那几个工具转发过去）。
+本專案不自帶對話迴圈。上下文壓縮、多步規劃、許可權模式、各家服務商的 tool calling 相容——這些通用
+agent 做得更好，自己再做一份只是更弱的重複。真正值錢的不在迴圈裡：創作質量來自分階段裝配
+（`generate` 內部那次呼叫），工程動作的不變數在 `features/` 裡（`pipeline` / `summary` / `characters` 那幾個工具轉發過去）。
 
-所以这一层只做一件事：把 [`tools/`](../tools/README.md) 那套工具经 MCP 端出去，外部 agent 自带循环。
+所以這一層只做一件事：把 [`tools/`](../tools/README.md) 那套工具經 MCP 端出去，外部 agent 自帶迴圈。
 
-| 文件 | 职责 |
+| 檔案 | 職責 |
 |---|---|
-| [server.ts](server.ts) | ★ 协议：`initialize` / `ping` / `tools/list` / `tools/call` / `notifications/cancelled`，会话，状态简报 |
-| [http.ts](http.ts) | Streamable HTTP 传输：POST 回 JSON（`tools/call` 回 SSE 带进度保活）、会话头、DELETE、GET 405、Origin 校验。只用标准 `Request` / `Response` |
-| [instructions.ts](instructions.ts) | `initialize` 回给客户端的使用说明（只说怎么用工具，不写领域知识） |
-| [index.ts](index.ts) | `createNovelMcp(backend)`：工具清单 + 说明 + 传输，壳只给「当前工程的执行端」 |
+| [server.ts](server.ts) | ★ 協議：`initialize` / `ping` / `tools/list` / `tools/call` / `notifications/cancelled`，會話，狀態簡報 |
+| [http.ts](http.ts) | Streamable HTTP 傳輸：POST 回 JSON（`tools/call` 回 SSE 帶進度保活）、會話頭、DELETE、GET 405、Origin 校驗。只用標準 `Request` / `Response` |
+| [instructions.ts](instructions.ts) | `initialize` 回給客戶端的使用說明（只說怎麼用工具，不寫領域知識） |
+| [index.ts](index.ts) | `createNovelMcp(backend)`：工具清單 + 說明 + 傳輸，殼只給「當前工程的執行端」 |
 
-执行端在 [controller/mcp.ts](../controller/mcp.ts)：一次调用落到一个工程上，落到哪个由壳决定（`backend(project)`）。
+執行端在 [controller/mcp.ts](../controller/mcp.ts)：一次呼叫落到一個工程上，落到哪個由殼決定（`backend(project)`）。
 
-## 怎么接
+## 怎麼接
 
-独立版（含桌面版的 sidecar）启动时在同一个端口上挂 `/mcp`，日志里会打一行：
+獨立版（含桌面版的 sidecar）啟動時在同一個埠上掛 `/mcp`，日誌裡會打一行：
 
 ```
-MCP 已就绪：http://127.0.0.1:3000/mcp
+MCP 已就緒：http://127.0.0.1:3000/mcp
     claude mcp add --transport http novelwarden http://127.0.0.1:3000/mcp
 ```
 
-调用落在**最近操作的那个网页窗口开着的工程**上；地址带 `?project=<工程目录>`（每次请求都看地址，不必重新 initialize）就落到那个工程，它必须在某个窗口里开着。没打开工程时工具照样列得出来，调用回一句「先打开工程」。
-VS Code 壳还没接（要另起一个 HTTP 服务，等用得上再说）。
+呼叫落在**最近操作的那個網頁視窗開著的工程**上；地址帶 `?project=<工程目錄>`（每次請求都看地址，不必重新 initialize）就落到那個工程，它必須在某個視窗裡開著。沒開啟工程時工具照樣列得出來，呼叫回一句「先開啟工程」。
+VS Code 殼還沒接（要另起一個 HTTP 服務，等用得上再說）。
 
-## 分层
+## 分層
 
 ```
 外部 agent ──HTTP──▶ mcp/http.ts ──▶ mcp/server.ts ──McpBackend──▶ controller/mcp.ts ──▶ tools/（ToolRegistry）
-                                       （只懂协议）                    （生成位、对话页、两问）
+                                       （只懂協議）                    （生成位、對話頁、兩問）
 ```
 
-`mcp/` 只认 `tools/` 的契约（`ToolSpec`、`NOVEL_TOOLS`），**不认识 `Workspace` / `DraftStore` /
-`ChatController`**；`tools/` 一行都不 import `mcp/` 与 `controller/`。两条由
-[tests/contract/layerBoundary.test.js](../../../tests/contract/layerBoundary.test.js) 守着。
+`mcp/` 只認 `tools/` 的契約（`ToolSpec`、`NOVEL_TOOLS`），**不認識 `Workspace` / `DraftStore` /
+`ChatController`**；`tools/` 一行都不 import `mcp/` 與 `controller/`。兩條由
+[tests/contract/layerBoundary.test.js](../../../tests/contract/layerBoundary.test.js) 守著。
 
-## 四条约束
+## 四條約束
 
-### 1. 产物不回灌
+### 1. 產物不回灌
 
-`generate` 的返回里只有形状与 `draftId`，**没有正文**。正文照旧流进对话页那个 MCP 气泡里的工具卡片
-（`toolDelta`），外部 agent 看不到——它每走一步都重烧一遍上下文，三千字正文塞回去，十步之后就是
-三万字的重复账单。要看内容，等落盘之后 `read`。
+`generate` 的返回裡只有形狀與 `draftId`，**沒有正文**。正文照舊流進對話頁那個 MCP 氣泡裡的工具卡片
+（`toolDelta`），外部 agent 看不到——它每走一步都重燒一遍上下文，三千字正文塞回去，十步之後就是
+三萬字的重複賬單。要看內容，等落盤之後 `read`。
 
-### 2. 落盘前当场过一遍人（第 19 条）
+### 2. 落盤前當場過一遍人（第 19 條）
 
-`generate` 一产出，执行端就在 Novelwarden 的对话页里问一句写不写（与单步创作同一张卡片），
-**等作者答了才返回**，结论接在返回后面。这一问不交给宿主的权限配置：宿主那一层管的是「让不让调这个
-工具」，可以被设成全自动；这一问管的是「这份东西进不进磁盘」，任何情况下都在。
+`generate` 一產出，執行端就在 Novelwarden 的對話頁裡問一句寫不寫（與單步創作同一張卡片），
+**等作者答了才返回**，結論接在返回後面。這一問不交給宿主的許可權配置：宿主那一層管的是「讓不讓調這個
+工具」，可以被設成全自動；這一問管的是「這份東西進不進磁碟」，任何情況下都在。
 
-`always` 那一档（`edit`、装 / 绑技能、改技能文件）同理：下游没有 diff，动手前先在对话页问。
-覆盖已有内容走 workspace 的覆盖审阅，与这一层无关。
+`always` 那一檔（`edit`、裝 / 綁技能、改技能檔案）同理：下游沒有 diff，動手前先在對話頁問。
+覆蓋已有內容走 workspace 的覆蓋審閱，與這一層無關。
 
-### 3. 状态由状态机给（第 20 条）
+### 3. 狀態由狀態機給（第 20 條）
 
-MCP 没有「每回合往 system 里注入」这个口子，于是状态机给出的那份简报
-（[views/stateBrief.ts](../views/stateBrief.ts)）贴在工具结果末尾，**只在它变了的时候贴**：会话的第一次
-调用必贴，之后与上一次贴出去的那份逐字比。仍然没有 `status` 工具。
+MCP 沒有「每回合往 system 裡注入」這個口子，於是狀態機給出的那份簡報
+（[views/stateBrief.ts](../views/stateBrief.ts)）貼在工具結果末尾，**只在它變了的時候貼**：會話的第一次
+呼叫必貼，之後與上一次貼出去的那份逐字比。仍然沒有 `status` 工具。
 
-### 4. 与对话页共用一把生成锁
+### 4. 與對話頁共用一把生成鎖
 
-花钱或写盘的调用占的是与对话页单步创作同一个生成位（两条路都往对话页里流正文、挂卡片，同时跑会互相盖）。
-占不到就当场回 `isError`（「正在跑另一个生成任务」），不排队——排着的调用作者看不见，等它突然开始写盘时他早就忘了这回事。占到了就走 `runTask`：
-进度条上看得见、能停；停止会中断那一次调用。查询（`list` / `read` / `search`、查技能）不占锁、不进对话页。
+花錢或寫盤的呼叫佔的是與對話頁單步創作同一個生成位（兩條路都往對話頁裡流正文、掛卡片，同時跑會互相蓋）。
+佔不到就當場回 `isError`（「正在跑另一個生成任務」），不排隊——排著的呼叫作者看不見，等它突然開始寫盤時他早就忘了這回事。佔到了就走 `runTask`：
+進度條上看得見、能停；停止會中斷那一次呼叫。查詢（`list` / `read` / `search`、查技能）不佔鎖、不進對話頁。
 
-## 长调用
+## 長呼叫
 
-写一章可能跑几分钟，等作者点确认也算在里面。客户端两道上限都会撞上：等响应头（Claude Code 缺省 60 秒，
-报「The operation timed out.」）与等结果的空闲上限（HTTP 缺省 5 分钟，收到进度通知才重新计时）。
-所以 `tools/call` 在客户端收 `text/event-stream` 时回 SSE：响应头当场回，跑的期间每 15 秒发一条
-`notifications/progress`（请求没带 `progressToken` 就发 SSE 注释），跑完把回复当最后一个事件发出去。
-其余请求、以及只收 JSON 的客户端，照旧回整份 JSON。
-Bun 缺省 10 秒空闲就断连接，所以壳对 `/mcp` 的请求调 `server.timeout(req, 0)`。
+寫一章可能跑幾分鐘，等作者點確認也算在裡面。客戶端兩道上限都會撞上：等響應頭（Claude Code 預設 60 秒，
+報「The operation timed out.」）與等結果的空閒上限（HTTP 預設 5 分鐘，收到進度通知才重新計時）。
+所以 `tools/call` 在客戶端收 `text/event-stream` 時回 SSE：響應頭當場回，跑的期間每 15 秒發一條
+`notifications/progress`（請求沒帶 `progressToken` 就發 SSE 註釋），跑完把回覆當最後一個事件發出去。
+其餘請求、以及只收 JSON 的客戶端，照舊回整份 JSON。
+Bun 預設 10 秒空閒就斷連線，所以殼對 `/mcp` 的請求調 `server.timeout(req, 0)`。
 
-取消有两条路：客户端发 `notifications/cancelled`，或者连接断了——都会中断那一次调用。
+取消有兩條路：客戶端發 `notifications/cancelled`，或者連線斷了——都會中斷那一次呼叫。

@@ -1,33 +1,35 @@
+import { traditionalLabel } from './labels';
+import { canonicalLabel } from './labels';
 /**
- * 叙事线里的故事时间（2026-10-24，设计见 docs/design/plans/2026-10-24-story-timeline.md，同日重做见
- * docs/design/plans/2026-10-24-story-timeline-rework.md）：`threads/时间线.md` 一章一行，记这一章开头比上一章结尾晚多久。
+ * 敘事線裡的故事時間（2026-10-24，設計見 docs/design/plans/2026-10-24-story-timeline.md，同日重做見
+ * docs/design/plans/2026-10-24-story-timeline-rework.md）：`threads/时间线.md` 一章一行，記這一章開頭比上一章結尾晚多久。
  *
  * ```markdown
  * ---
- * calendar: 简单历          # 简单历（每月 30 天、一年 12 个月）/ 公历；缺席是简单历
- * start: 大衍三年三月初七     # 第 1 天是哪天；不填只显示「第几天」
+ * calendar: 簡單歷          # 簡單歷（每月 30 天、一年 12 個月）/ 公曆；缺席是簡單歷
+ * start: 大衍三年三月初七     # 第 1 天是哪天；不填只顯示「第幾天」
  * generatedBy: novelwarden
  * ---
  *
- * # 时间线
+ * # 時間線
  *
- * - 第 1 章：+0 天，傍晚 → 深夜〔依据：「连日大雨的第三天傍晚」〕
- * - 第 4 章：+1 天，清晨 → 夜里，历时 3 天〔依据：「次日清晨，雨停了」〕〔文中：八月十五（中秋），开头后 2 天「今夜便是中秋」〕
- * - 第 7 章：回忆，约二十年前〔推测：整章是回忆〕
- * - 第 9 章：+?〔推不出：正文没交代过了多久〕〔季节：冬「北风卷着碎雪」〕
- * - 第 12 章：八月十五，傍晚           ← 作者定的锚点
+ * - 第 1 章：+0 天，傍晚 → 深夜〔依據：「連日大雨的第三天傍晚」〕
+ * - 第 4 章：+1 天，清晨 → 夜裡，歷時 3 天〔依據：「次日清晨，雨停了」〕〔文中：八月十五（中秋），開頭後 2 天「今夜便是中秋」〕
+ * - 第 7 章：回憶，約二十年前〔推測：整章是回憶〕
+ * - 第 9 章：+?〔推不出：正文沒交代過了多久〕〔季節：冬「北風捲著碎雪」〕
+ * - 第 12 章：八月十五，傍晚           ← 作者定的錨點
  * ```
  *
- * ## 几条约定
+ * ## 幾條約定
  *
- * - **日期一律现算**（{@link computeTimeline}）：机器写的是相对量；作者把哪一行改成日期或「第 N 天」，哪一行就是锚点，后面机器推的
- *   章跟着顺延——文件里不写推算出来的日期，改一个锚点不会留下一串过期的日期。状态不落盘（第 18 条）。
- * - **正文写明的日子当校准点**（重做）：〔文中〕是正文明写的日期或节日，推算到那一章按它对齐，一路累加的误差在那里清零；优先级是
- *   作者的锚点 > 〔文中〕 > 累加。〔季节〕只拿来对账（{@link timelineIssues}）。
- * - **机器写的行机器能换，作者的行不动**（{@link upsertTimelineEntry}、{@link isMachineEntry}）：带〔依据〕〔推测〕〔推不出〕的是机器
- *   写的，同步与重推（`refresh`）照新推的换，补推（`fill`）只填空；作者写的一律不动（第 28 条）。
- * - **怎么手改都不崩**（第 1 条）：认不出的行原样留着，这一章当「没推」算；认不出的〔文中〕〔季节〕当没写。
- * - 纯函数、无 I/O：读在 `model/project.ts` 的 `readThreads`，写在网关（`Workspace.updateThread`）。
+ * - **日期一律現算**（{@link computeTimeline}）：機器寫的是相對量；作者把哪一行改成日期或「第 N 天」，哪一行就是錨點，後面機器推的
+ *   章跟著順延——檔案裡不寫推算出來的日期，改一個錨點不會留下一串過期的日期。狀態不落盤（第 18 條）。
+ * - **正文寫明的日子當校準點**（重做）：〔文中〕是正文明寫的日期或節日，推算到那一章按它對齊，一路累加的誤差在那裡清零；優先順序是
+ *   作者的錨點 > 〔文中〕 > 累加。〔季節〕只拿來對賬（{@link timelineIssues}）。
+ * - **機器寫的行機器能換，作者的行不動**（{@link upsertTimelineEntry}、{@link isMachineEntry}）：帶〔依據〕〔推測〕〔推不出〕的是機器
+ *   寫的，同步與重推（`refresh`）照新推的換，補推（`fill`）只填空；作者寫的一律不動（第 28 條）。
+ * - **怎麼手改都不崩**（第 1 條）：認不出的行原樣留著，這一章當「沒推」算；認不出的〔文中〕〔季節〕當沒寫。
+ * - 純函式、無 I/O：讀在 `model/project.ts` 的 `readThreads`，寫在閘道器（`Workspace.updateThread`）。
  */
 import { asString, parseMarkdown } from './markdown';
 import { QuoteIndex, indexText, normalizeQuote, quoteFound } from './review';
@@ -36,16 +38,16 @@ import { TIMELINE_NAME } from './threadFile';
 
 export { TIMELINE_NAME };
 
-/** 上下文里那一条的标签（context/layers/background.ts 登记、builder.ts 拿它单独成一节）。 */
-export const STORY_TIME_LABEL = '故事时间';
+/** 上下文裡那一條的標籤（context/layers/background.ts 登記、builder.ts 拿它單獨成一節）。 */
+export const STORY_TIME_LABEL = '故事時間';
 
-// ---------------------------------------------------------------- 类型
+// ---------------------------------------------------------------- 型別
 
-/** 历法（作者定的）：简单历每月 30 天、一年 12 个月；公历是真实的月份长短与闰年。不做农历。 */
+/** 曆法（作者定的）：簡單歷每月 30 天、一年 12 個月；公曆是真實的月份長短與閏年。不做農曆。 */
 export type TimelineCalendar = '简单历' | '公历';
 export const TIMELINE_CALENDARS: readonly TimelineCalendar[] = ['简单历', '公历'];
 
-/** 一行的值。`delta` 的单位已经换成天。 */
+/** 一行的值。`delta` 的單位已經換成天。 */
 export type TimelineValue =
   | { kind: 'delta'; days: number }
   | { kind: 'unknown' }
@@ -53,27 +55,27 @@ export type TimelineValue =
   | { kind: 'day'; day: number }
   | { kind: 'date'; text: string };
 
-/** 行尾的那一段：依据（原文）、推测（理由）、推不出（理由）。机器写的行都带它。 */
+/** 行尾的那一段：依據（原文）、推測（理由）、推不出（理由）。機器寫的行都帶它。 */
 export type TimelineBasisKind = '依据' | '推测' | '推不出';
 export const TIMELINE_BASIS_KINDS: readonly TimelineBasisKind[] = ['依据', '推测', '推不出'];
 
-/** 四季（〔季节〕那一段，只拿来对账）。 */
+/** 四季（〔季節〕那一段，只拿來對賬）。 */
 export type TimelineSeason = '春' | '夏' | '秋' | '冬';
 
 /**
- * 〔文中：八月十五（中秋），开头后 2 天「今夜便是中秋」〕（2026-10-24 重做）：正文明写本章某一天是几月几日或哪个节日。推算时拿它对齐
- * （{@link computeTimeline}）。`date` 与 `festival` 至少有一个；只有节日的，推算时按历法换成日子（{@link festivalDate}）。
+ * 〔文中：八月十五（中秋），開頭後 2 天「今夜便是中秋」〕（2026-10-24 重做）：正文明寫本章某一天是幾月幾日或哪個節日。推算時拿它對齊
+ * （{@link computeTimeline}）。`date` 與 `festival` 至少有一個；只有節日的，推算時按曆法換成日子（{@link festivalDate}）。
  */
 export interface TimelineDateMark {
   date?: string;
   festival?: string;
-  /** 那一天在本章开头之后第几天（开头当天是 0）。 */
+  /** 那一天在本章開頭之後第幾天（開頭當天是 0）。 */
   offset: number;
   /** 原文。 */
   quote?: string;
 }
 
-/** 〔季节：冬「北风卷着碎雪」〕：正文明写或明摆着的季节。 */
+/** 〔季節：冬「北風捲著碎雪」〕：正文明寫或明擺著的季節。 */
 export interface TimelineSeasonMark {
   season: TimelineSeason;
   quote?: string;
@@ -82,53 +84,53 @@ export interface TimelineSeasonMark {
 export interface TimelineEntry {
   chapter: number;
   value: TimelineValue;
-  /** 本章开头的时段（只显示）。 */
+  /** 本章開頭的時段（只顯示）。 */
   part?: string;
-  /** 本章结尾的时段（只显示；交给下一章判「当晚」「次日」用）。 */
+  /** 本章結尾的時段（只顯示；交給下一章判「當晚」「次日」用）。 */
   endPart?: string;
-  /** 本章跨了几天（1 = 同一天里写完）。 */
+  /** 本章跨了幾天（1 = 同一天裡寫完）。 */
   span: number;
   basis?: { kind: TimelineBasisKind; text: string };
   dateMark?: TimelineDateMark;
   seasonMark?: TimelineSeasonMark;
 }
 
-/** 一份时间线（`threads/时间线.md`）。 */
+/** 一份時間線（`threads/时间线.md`）。 */
 export interface Timeline {
   relPath: string;
-  /** 文件在不在（不在时 entries 是空的）。 */
+  /** 檔案在不在（不在時 entries 是空的）。 */
   exists: boolean;
   calendar: TimelineCalendar;
-  /** frontmatter 里 `start` 的原文（空串 = 没填）。 */
+  /** frontmatter 裡 `start` 的原文（空串 = 沒填）。 */
   startText: string;
-  /** 认出来的起点；没填、认不出时缺席（只显示第几天）。 */
+  /** 認出來的起點；沒填、認不出時缺席（只顯示第幾天）。 */
   start?: CalendarDate;
-  /** 一章一行（同一章写了两行认第一行），按文件里的先后。 */
+  /** 一章一行（同一章寫了兩行認第一行），按檔案裡的先後。 */
   entries: TimelineEntry[];
-  /** 认不出的行：`第 N 章` 认得出、值认不出的那几章（当「没推」算）。 */
+  /** 認不出的行：`第 N 章` 認得出、值認不出的那幾章（當「沒推」算）。 */
   bad: number[];
 }
 
-/** 文件里一行的样子：`- 第 N 章：值，开头时段 → 结尾时段，历时 M 天〔依据：「原文」〕〔文中：…〕〔季节：…〕`。 */
+/** 檔案裡一行的樣子：`- 第 N 章：值，開頭時段 → 結尾時段，歷時 M 天〔依據：「原文」〕〔文中：…〕〔季節：…〕`。 */
 const BULLET = /^\s*(?:[-*•·]|\d+[.)、])\s+/u;
 const LINE_HEAD = /^第\s*(\d+)\s*章\s*[:：·・\s]\s*/u;
 /**
- * 行尾一段的开头：`〔依据：`、`〔推测：`、`〔推不出：`、`〔文中：`、`〔季节：`；括号写成 `[]`、`【】`、`（）` 也认，「证据」当「依据」。
- * 几段从后往前一段一段剥（{@link splitTails}），先后不限。
+ * 行尾一段的開頭：`〔依據：`、`〔推測：`、`〔推不出：`、`〔文中：`、`〔季節：`；括號寫成 `[]`、`【】`、`（）` 也認，「證據」當「依據」。
+ * 幾段從後往前一段一段剝（{@link splitTails}），先後不限。
  */
-const TAIL_OPEN = /[〔\[【（(]\s*(依据|证据|推测|推不出|文中|季节)\s*[:：]?\s*/gu;
+const TAIL_OPEN = /[〔\[【（(]\s*(依(?:据|據)|(?:证|證)(?:据|據)|推(?:测|測)|推不出|文中|季(?:节|節))\s*[:：]?\s*/gu;
 const TAIL_CLOSE = /[〕\]】）)]\s*$/u;
 const QUOTES: [string, string][] = [['「', '」'], ['『', '』'], ['“', '”'], ['"', '"'], ["'", "'"]];
 /** 段尾的原文：`…「原文」`。 */
 const QUOTE_TAIL = /[「『“"]([^「『“"]*)[」』”"]\s*$/u;
-/** 时段一格写成 `开头 → 结尾`（`->` 也认）；只知道结尾写 `→ 夜里`。 */
+/** 時段一格寫成 `開頭 → 結尾`（`->` 也認）；只知道結尾寫 `→ 夜裡`。 */
 const PART_RANGE = /^(.*?)\s*(?:→|->|－>|—>|⟶)\s*(.+)$/u;
 
-/** 一行最长的依据、理由（字）。 */
+/** 一行最長的依據、理由（字）。 */
 export const TIME_BASIS_MAX = 120;
-/** 「多久以前」最长多少字。 */
+/** 「多久以前」最長多少字。 */
 const AGO_MAX = 20;
-/** 差值与跨度的上限（天）：约十万年，修仙跨几百年也够。 */
+/** 差值與跨度的上限（天）：約十萬年，修仙跨幾百年也夠。 */
 export const TIME_DAYS_MAX = 36_500_000;
 
 function unquote(s: string): string {
@@ -145,17 +147,17 @@ function cut(text: string, max: number): string {
   return [...text].slice(0, max).join('').trim();
 }
 
-// ---------------------------------------------------------------- 数字
+// ---------------------------------------------------------------- 數字
 
-const CN_DIGIT: Record<string, number> = { 零: 0, 〇: 0, '○': 0, 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+const CN_DIGIT: Record<string, number> = { 零: 0, 〇: 0, '○': 0, 一: 1, 二: 2, 两: 2, 兩: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
 const CN_DIGIT_CHARS = '零一二三四五六七八九';
 
-/** 全角数字换成半角。 */
+/** 全形數字換成半形。 */
 function asciiDigits(s: string): string {
   return s.replace(/[０-９]/gu, (c) => String.fromCharCode(c.charCodeAt(0) - 0xff10 + 0x30));
 }
 
-/** 阿拉伯数字或汉字数字（读法「一百零五」「廿一」「初七」，或逐位「二〇二六」）。认不出返回 undefined。 */
+/** 阿拉伯數字或漢字數字（讀法「一百零五」「廿一」「初七」，或逐位「二〇二六」）。認不出返回 undefined。 */
 export function parseNumber(raw: string): number | undefined {
   const s = asciiDigits(raw.trim()).replace(/^初/u, '');
   if (!s) {
@@ -167,7 +169,7 @@ export function parseNumber(raw: string): number | undefined {
   if (s === '元') {
     return 1;
   }
-  // 逐位写的（「二〇二六」）：没有十百千万。
+  // 逐位寫的（「二〇二六」）：沒有十百千萬。
   if ([...s].length > 1 && [...s].every((c) => c in CN_DIGIT)) {
     return Number([...s].map((c) => CN_DIGIT[c]).join(''));
   }
@@ -180,7 +182,7 @@ export function parseNumber(raw: string): number | undefined {
     } else if (c === '十' || c === '百' || c === '千') {
       section += (num < 0 ? 1 : num) * (c === '十' ? 10 : c === '百' ? 100 : 1000);
       num = -1;
-    } else if (c === '万') {
+    } else if ((c === '万' || c === '萬')) {
       total += (section + Math.max(num, 0)) * 10000;
       section = 0;
       num = -1;
@@ -194,10 +196,10 @@ export function parseNumber(raw: string): number | undefined {
   return total + section + Math.max(num, 0);
 }
 
-/** 汉字读法（1 → 一，14 → 十四，105 → 一百零五，-3 → 负三）。 */
+/** 漢字讀法（1 → 一，14 → 十四，105 → 一百零五，-3 → 負三）。 */
 export function cnNumber(n: number): string {
   if (n < 0) {
-    return `负${cnNumber(-n)}`;
+    return `負${cnNumber(-n)}`;
   }
   if (n === 0) {
     return '零';
@@ -228,14 +230,14 @@ export function cnNumber(n: number): string {
   if (n >= 10000) {
     const high = Math.floor(n / 10000);
     const low = n % 10000;
-    s = `${cnNumber(high)}万${low === 0 ? '' : `${low < 1000 ? '零' : ''}${under10000(low)}`}`;
+    s = `${cnNumber(high)}萬${low === 0 ? '' : `${low < 1000 ? '零' : ''}${under10000(low)}`}`;
   } else {
     s = under10000(n);
   }
   return s.startsWith('一十') ? s.slice(1) : s;
 }
 
-/** 农历式的日子：初一…初十、十一…十九、二十、廿一…廿九、三十。31 起写读法。 */
+/** 農曆式的日子：初一…初十、十一…十九、二十、廿一…廿九、三十。31 起寫讀法。 */
 function tradDay(d: number): string {
   if (d >= 1 && d <= 10) {
     return `初${d === 10 ? '十' : CN_DIGIT_CHARS[d]}`;
@@ -252,20 +254,20 @@ function tradDay(d: number): string {
   return cnNumber(d);
 }
 
-// ---------------------------------------------------------------- 历法
+// ---------------------------------------------------------------- 曆法
 
-/** 年、月、日的写法：输出照起点的样子写。 */
+/** 年、月、日的寫法：輸出照起點的樣子寫。 */
 export interface DateStyle {
-  /** 年号（「大衍」），没有是空串。 */
+  /** 年號（「大衍」），沒有是空串。 */
   era: string;
-  /** 起点写没写年份。 */
+  /** 起點寫沒寫年份。 */
   hasYear: boolean;
   year: 'num' | 'cn' | 'cnDigits';
   month: 'num' | 'cn' | 'trad';
   day: 'num' | 'cn' | 'trad' | 'iso' | 'slash';
 }
 
-/** 一个日子（年份没写时是 undefined）。 */
+/** 一個日子（年份沒寫時是 undefined）。 */
 export interface CalendarDate {
   y?: number;
   m: number;
@@ -275,14 +277,14 @@ export interface CalendarDate {
 
 const DATE_CN = new RegExp(
   '^(?<era>.*?)' +
-    '(?:(?<y>[0-9０-９〇零○一二两三四五六七八九十百千万]+|元)\\s*年)?\\s*' +
-    '(?<m>[0-9０-９]{1,2}|十[一二]|[一二两三四五六七八九十]|正|冬|腊|臘)\\s*月\\s*' +
-    '(?:(?<d>初[一二三四五六七八九十]|[0-9０-９]{1,2}|[一二两三四五六七八九十廿卅]{1,3})\\s*(?<suffix>[日号號])?)?$',
+    '(?:(?<y>[0-9０-９〇零○一二两兩三四五六七八九十百千千万萬]+|元)\\s*年)?\\s*' +
+    '(?<m>[0-9０-９]{1,2}|十[一二]|[一二两兩三四五六七八九十]|正|冬|腊|臘)\\s*月\\s*' +
+    '(?:(?<d>初[一二三四五六七八九十]|[0-9０-９]{1,2}|[一二兩三四五六七八九十廿卅]{1,3})\\s*(?<suffix>[日号號])?)?$',
   'u'
 );
 const DATE_ISO = /^(?<y>\d{1,6})(?<sep>[-/.])(?<m>\d{1,2})\k<sep>(?<d>\d{1,2})$/u;
 
-/** 认一个日子：`大衍三年三月初七`、`三月十四`、`2026年3月7日`、`2026-03-07`、`2026/3/7`。认不出返回 undefined。 */
+/** 認一個日子：`大衍三年三月初七`、`三月十四`、`2026年3月7日`、`2026-03-07`、`2026/3/7`。認不出返回 undefined。 */
 export function parseDate(raw: string): CalendarDate | undefined {
   const s = asciiDigits(raw.trim()).replace(/\s+/gu, '');
   if (!s) {
@@ -305,7 +307,7 @@ export function parseDate(raw: string): CalendarDate | undefined {
   const g = m.groups;
   const era = (g.era ?? '').trim();
   if (era && !g.y) {
-    // 「大衍三月」：年号后面没有年，认不准，不认。
+    // 「大衍三月」：年號後面沒有年，認不準，不認。
     return undefined;
   }
   const month = g.m === '正' ? 1 : g.m === '冬' ? 11 : g.m === '腊' || g.m === '臘' ? 12 : parseNumber(g.m);
@@ -324,7 +326,7 @@ export function parseDate(raw: string): CalendarDate | undefined {
       : g.suffix && !/^初|[廿卅]/u.test(g.d)
         ? 'cn'
         : 'trad';
-  const yearStyle: DateStyle['year'] = !g.y || /^[0-9]/u.test(g.y) ? 'num' : /^[〇零○一二两三四五六七八九]{2,}$/u.test(g.y) ? 'cnDigits' : 'cn';
+  const yearStyle: DateStyle['year'] = !g.y || /^[0-9]/u.test(g.y) ? 'num' : /^[〇零○一二两三四五六七八九兩]{2,}$/u.test(g.y) ? 'cnDigits' : 'cn';
   return {
     ...(year !== undefined ? { y: year } : {}),
     m: month,
@@ -333,11 +335,11 @@ export function parseDate(raw: string): CalendarDate | undefined {
   };
 }
 
-/** 公历没写年份时内部用的年（平年）：只拿来算月份长短。 */
+/** 公曆沒寫年份時內部用的年（平年）：只拿來算月份長短。 */
 const GREGORIAN_YEARLESS = 2001;
 const DAY_MS = 86_400_000;
 
-/** 这一天在这个历法下的序号（相邻两天差 1）。日期不存在（三月三十一、二月二十九）返回 undefined。 */
+/** 這一天在這個曆法下的序號（相鄰兩天差 1）。日期不存在（三月三十一、二月二十九）返回 undefined。 */
 function ordinalOf(cal: TimelineCalendar, y: number, m: number, d: number): number | undefined {
   if (!(m >= 1 && m <= 12 && d >= 1)) {
     return undefined;
@@ -363,12 +365,12 @@ function fromOrdinal(cal: TimelineCalendar, o: number): { y: number; m: number; 
   return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
 }
 
-/** 起点在这个历法下的序号。没写年份的：简单历当第 1 年，公历当一个平年。 */
+/** 起點在這個曆法下的序號。沒寫年份的：簡單歷當第 1 年，公曆當一個平年。 */
 function startOrdinal(cal: TimelineCalendar, start: CalendarDate): number | undefined {
   return ordinalOf(cal, start.y ?? (cal === '简单历' ? 1 : GREGORIAN_YEARLESS), start.m, start.d);
 }
 
-/** 一年几天（`+N 年` 换成天、半年）。 */
+/** 一年幾天（`+N 年` 換成天、半年）。 */
 function yearDays(cal: TimelineCalendar): number {
   return cal === '简单历' ? 360 : 365;
 }
@@ -388,7 +390,7 @@ function monthText(m: number, style: DateStyle): string {
     return `${m}月`;
   }
   if (style.month === 'trad' && (m === 1 || m === 11 || m === 12)) {
-    return m === 1 ? '正月' : m === 11 ? '冬月' : '腊月';
+    return m === 1 ? '正月' : m === 11 ? '冬月' : '臘月';
   }
   return `${cnNumber(m)}月`;
 }
@@ -404,7 +406,7 @@ function dayText(d: number, style: DateStyle): string {
   }
 }
 
-/** 起点没写年份时，跨年写「次年」「第三年」「前一年」。 */
+/** 起點沒寫年份時，跨年寫「次年」「第三年」「前一年」。 */
 function yearOffsetText(k: number, style: DateStyle): string {
   if (k === 0) {
     return '';
@@ -419,19 +421,19 @@ function yearOffsetText(k: number, style: DateStyle): string {
   return k === -1 ? '前一年' : `${n(-k)}年前`;
 }
 
-/** 一天的几种写法。 */
+/** 一天的幾種寫法。 */
 export interface DayLabel {
-  /** 全称：`大衍三年三月十四`、`次年三月十四`、`2026年3月14日`；没有起点是 `第 8 天`。 */
+  /** 全稱：`大衍三年三月十四`、`次年三月十四`、`2026年3月14日`；沒有起點是 `第 8 天`。 */
   full: string;
-  /** 总览那一格：`十四`、`14`；没有起点是 `8`。 */
+  /** 總覽那一格：`十四`、`14`；沒有起點是 `8`。 */
   short: string;
-  /** 月份带上那一段：`大衍三年三月`、`2026年3月`。没有起点时缺席。 */
+  /** 月份帶上那一段：`大衍三年三月`、`2026年3月`。沒有起點時缺席。 */
   month?: string;
-  /** 只有月：`三月`、`3月`（月份带上年份没变时只写它）。没有起点时缺席。 */
+  /** 只有月：`三月`、`3月`（月份帶上年份沒變時只寫它）。沒有起點時缺席。 */
   monthName?: string;
 }
 
-/** 故事第 `day` 天怎么写（第 1 天 = 起点）。 */
+/** 故事第 `day` 天怎麼寫（第 1 天 = 起點）。 */
 export function dayLabel(tl: Pick<Timeline, 'calendar' | 'start'>, day: number): DayLabel {
   const plain: DayLabel = { full: `第 ${day} 天`, short: String(day) };
   if (!tl.start) {
@@ -447,8 +449,8 @@ export function dayLabel(tl: Pick<Timeline, 'calendar' | 'start'>, day: number):
 }
 
 /**
- * 一个日子照 `style`（起点的写法）写出来。`yearPart` 是起点没写年份时的「次年」「第三年」（空串 = 起点那一年，只写月日）；
- * 起点写了年份时不传，照年号与年份写。
+ * 一個日子照 `style`（起點的寫法）寫出來。`yearPart` 是起點沒寫年份時的「次年」「第三年」（空串 = 起點那一年，只寫月日）；
+ * 起點寫了年份時不傳，照年號與年份寫。
  */
 function formatYmd(ymd: { y: number; m: number; d: number }, style: DateStyle, yearPart?: string): DayLabel & { month: string; monthName: string } {
   const { y, m, d } = ymd;
@@ -465,7 +467,7 @@ function formatYmd(ymd: { y: number; m: number; d: number }, style: DateStyle, y
 }
 
 /**
- * 锚点写的日子是故事第几天。没写年份的取 `after`（上一章结尾那一天）当天或之后最近的那一个。没有起点、日子不存在、认不出时
+ * 錨點寫的日子是故事第幾天。沒寫年份的取 `after`（上一章結尾那一天）當天或之後最近的那一個。沒有起點、日子不存在、認不出時
  * 返回 undefined。
  */
 export function dayOfDate(tl: Pick<Timeline, 'calendar' | 'start'>, text: string, after: number): number | undefined {
@@ -478,7 +480,7 @@ export function dayOfDate(tl: Pick<Timeline, 'calendar' | 'start'>, text: string
     return undefined;
   }
   if (date.y !== undefined) {
-    // 起点没写年份时，锚点写的年份当「第几年」（内部第 1 年就是起点那一年）。
+    // 起點沒寫年份時，錨點寫的年份當「第幾年」（內部第 1 年就是起點那一年）。
     const o = ordinalOf(tl.calendar, date.y, date.m, date.d);
     return o === undefined ? undefined : o - base + 1;
   }
@@ -489,7 +491,7 @@ export function dayOfDate(tl: Pick<Timeline, 'calendar' | 'start'>, text: string
       return o - base + 1;
     }
   }
-  // 二月二十九：往后找到有它的那一年（公历最多八年一遇）。
+  // 二月二十九：往後找到有它的那一年（公曆最多八年一遇）。
   for (let y = ref.y + 2; y <= ref.y + 8; y++) {
     const o = ordinalOf(tl.calendar, y, date.m, date.d);
     if (o !== undefined) {
@@ -500,8 +502,8 @@ export function dayOfDate(tl: Pick<Timeline, 'calendar' | 'start'>, text: string
 }
 
 /**
- * 正文写明的一天（〔文中〕）是故事第几天：没写年份的取**离 `estimate`（按前文推下来的那一天）最近**的那一个（⚑1：不取「之后最近」，
- * 前文推多了几天时那会跳到明年）；写了年份的就是那一天。没有起点、日子不存在时返回 undefined。
+ * 正文寫明的一天（〔文中〕）是故事第幾天：沒寫年份的取**離 `estimate`（按前文推下來的那一天）最近**的那一個（⚑1：不取「之後最近」，
+ * 前文推多了幾天時那會跳到明年）；寫了年份的就是那一天。沒有起點、日子不存在時返回 undefined。
  */
 export function dayNearest(tl: Pick<Timeline, 'calendar' | 'start'>, date: CalendarDate, estimate: number): number | undefined {
   if (!tl.start) {
@@ -516,7 +518,7 @@ export function dayNearest(tl: Pick<Timeline, 'calendar' | 'start'>, date: Calen
     return o === undefined ? undefined : o - base + 1;
   }
   const ref = fromOrdinal(tl.calendar, base + estimate - 1);
-  // 候选：前后一年里的这一天；只写了日的（m 是 0），前后一个月里的这一天。
+  // 候選：前後一年裡的這一天；只寫了日的（m 是 0），前後一個月裡的這一天。
   const candidates: { y: number; m: number }[] = [];
   if (date.m > 0) {
     for (let y = ref.y - 1; y <= ref.y + 1; y++) {
@@ -535,7 +537,7 @@ export function dayNearest(tl: Pick<Timeline, 'calendar' | 'start'>, date: Calen
       continue;
     }
     const day = o - base + 1;
-    // 一样近时取后面那一个（故事多半往前走）。
+    // 一樣近時取後面那一個（故事多半往前走）。
     if (best === undefined || Math.abs(day - estimate) < Math.abs(best - estimate) || (Math.abs(day - estimate) === Math.abs(best - estimate) && day > best)) {
       best = day;
     }
@@ -543,16 +545,16 @@ export function dayNearest(tl: Pick<Timeline, 'calendar' | 'start'>, date: Calen
   return best;
 }
 
-/** 故事第 `day` 天是几月（没有起点时 undefined）。 */
+/** 故事第 `day` 天是幾月（沒有起點時 undefined）。 */
 export function monthOfDay(tl: Pick<Timeline, 'calendar' | 'start'>, day: number): number | undefined {
   const base = tl.start ? startOrdinal(tl.calendar, tl.start) : undefined;
   return base === undefined ? undefined : fromOrdinal(tl.calendar, base + day - 1).m;
 }
 
-// ---------------------------------------------------------------- 节日与季节（2026-10-24 重做）
+// ---------------------------------------------------------------- 節日與季節（2026-10-24 重做）
 
 /**
- * 节日换成哪一天（⚑4）：简单历按农历口径；公历只认几个公历节日（农历节日在公历里年年不同，换不出）。节气（清明、冬至）年年漂，不换。
+ * 節日換成哪一天（⚑4）：簡單歷按農曆口徑；公曆只認幾個公曆節日（農曆節日在公曆裡年年不同，換不出）。節氣（清明、冬至）年年漂，不換。
  */
 const FESTIVALS: Record<TimelineCalendar, Record<string, [number, number]>> = {
   简单历: {
@@ -592,23 +594,23 @@ const FESTIVALS: Record<TimelineCalendar, Record<string, [number, number]>> = {
   },
 };
 
-/** 节日名去掉「节」「夜」这类尾巴：`中秋节` → `中秋`。 */
+/** 節日名去掉「節」「夜」這類尾巴：`中秋節` → `中秋`。 */
 function festivalKey(name: string): string {
   const s = name.trim().replace(/[「」『』“”"']/gu, '');
-  return s.replace(/(?:节|節)$/u, '').replace(/^(中秋|元宵|七夕|除夕)夜$/u, '$1');
+  return s.replace(/(?:(?:节|節)|節)$/u, '').replace(/^(中秋|元宵|七夕|除夕)夜$/u, '$1');
 }
 
-/** 节日是这个历法里的哪一天（月、日）。认不出、这个历法里换不出时 undefined。 */
+/** 節日是這個曆法裡的哪一天（月、日）。認不出、這個曆法裡換不出時 undefined。 */
 export function festivalDate(cal: TimelineCalendar, name: string): { m: number; d: number } | undefined {
-  const hit = FESTIVALS[cal][festivalKey(name)];
+  const hit = FESTIVALS[cal][canonicalLabel(festivalKey(name))];
   return hit ? { m: hit[0], d: hit[1] } : undefined;
 }
 
-const DAY_ONLY = /^(初[一二三四五六七八九十]|[0-9０-９]{1,2}|[一二两三四五六七八九十廿卅]{1,3})\s*[日号號]?$/u;
+const DAY_ONLY = /^(初[一二三四五六七八九十]|[0-9０-９]{1,2}|[一二两三四五六七八九十廿卅兩]{1,3})\s*[日号號]?$/u;
 
 /**
- * 〔文中〕的日期：认 {@link parseDate} 的几种写法，也认只写了日的（「二十一日」「十五」，古典小说里常见）——只写日的 `m` 是 0，推算时取
- * 离推算最近的那个月里的这一天（{@link dayNearest}）。
+ * 〔文中〕的日期：認 {@link parseDate} 的幾種寫法，也認只寫了日的（「二十一日」「十五」，古典小說裡常見）——只寫日的 `m` 是 0，推算時取
+ * 離推算最近的那個月裡的這一天（{@link dayNearest}）。
  */
 export function parseMarkDate(raw: string): CalendarDate | undefined {
   const full = parseDate(raw);
@@ -620,7 +622,7 @@ export function parseMarkDate(raw: string): CalendarDate | undefined {
   return d !== undefined && d >= 1 && d <= 31 ? { m: 0, d, style: { era: '', hasYear: false, year: 'num', month: 'cn', day: 'trad' } } : undefined;
 }
 
-/** 〔文中〕那一天：写了日期的认日期，只写了节日的按历法换。认不出返回 undefined。 */
+/** 〔文中〕那一天：寫了日期的認日期，只寫了節日的按曆法換。認不出返回 undefined。 */
 export function markDate(cal: TimelineCalendar, mark: TimelineDateMark): CalendarDate | undefined {
   if (mark.date) {
     const d = parseMarkDate(mark.date);
@@ -632,26 +634,26 @@ export function markDate(cal: TimelineCalendar, mark: TimelineDateMark): Calenda
   return f ? { m: f.m, d: f.d, style: { era: '', hasYear: false, year: 'num', month: 'cn', day: 'trad' } } : undefined;
 }
 
-/** 〔文中〕那一段怎么说：`八月十五（中秋）`、`中秋`。 */
+/** 〔文中〕那一段怎麼說：`八月十五（中秋）`、`中秋`。 */
 export function describeDateMark(mark: TimelineDateMark): string {
   return mark.date ? `${mark.date}${mark.festival ? `（${mark.festival}）` : ''}` : (mark.festival ?? '');
 }
 
 const SEASONS: readonly TimelineSeason[] = ['春', '夏', '秋', '冬'];
 
-/** 认季节：`春` / `春天` / `春季` / `冬日`……认不出返回 undefined。 */
+/** 認季節：`春` / `春天` / `春季` / `冬日`……認不出返回 undefined。 */
 export function parseSeason(raw: string): TimelineSeason | undefined {
   const m = /^\s*(春|夏|秋|冬)(?:天|季|日)?\s*$/u.exec(raw ?? '');
   return m ? (m[1] as TimelineSeason) : undefined;
 }
 
-/** 一个季节是哪几个月：简单历按农历口径（正月到三月是春），公历按 3–5 月是春。 */
+/** 一個季節是哪幾個月：簡單歷按農曆口徑（正月到三月是春），公曆按 3–5 月是春。 */
 function seasonMonths(cal: TimelineCalendar, season: TimelineSeason): number[] {
   const first = (cal === '简单历' ? 1 : 3) + SEASONS.indexOf(season) * 3;
   return [0, 1, 2].map((k) => ((first - 1 + k) % 12) + 1);
 }
 
-/** 这个月放不放得进这个季节：前后各宽一个月（季节交界处的「还冷」「已经热了」都算）。 */
+/** 這個月放不放得進這個季節：前後各寬一個月（季節交界處的「還冷」「已經熱了」都算）。 */
 export function monthFitsSeason(cal: TimelineCalendar, month: number, season: TimelineSeason): boolean {
   const months = seasonMonths(cal, season);
   const wide = new Set([((months[0] + 10) % 12) + 1, ...months, (months[2] % 12) + 1]);
@@ -660,9 +662,9 @@ export function monthFitsSeason(cal: TimelineCalendar, month: number, season: Ti
 
 // ---------------------------------------------------------------- 解析
 
-/** 认得出的时段（只显示）：一个短词。 */
+/** 認得出的時段（只顯示）：一個短詞。 */
 const PART_WORDS =
-  /^(?:凌晨|拂晓|黎明|破晓|清晨|早晨|早上|上午|晌午|中午|正午|午后|下午|傍晚|黄昏|入夜|夜里|夜间|晚上|夜晚|深夜|半夜|午夜|白天|夜|[一二三四五]更(?:天)?)$/u;
+  /^(?:凌晨|拂(?:晓|曉)|黎明|破(?:晓|曉)|清晨|早晨|早上|上午|晌午|中午|正午|午(?:后|後)|下午|傍晚|(?:黄|黃)昏|入夜|夜(?:里|裡)|夜(?:间|間)|晚上|夜晚|深夜|半夜|午夜|白天|夜|[一二三四五]更(?:天)?)$/u;
 
 const UNIT_DAYS: Record<string, (cal: TimelineCalendar) => number> = {
   天: () => 1,
@@ -674,16 +676,16 @@ const UNIT_DAYS: Record<string, (cal: TimelineCalendar) => number> = {
   年: (cal) => yearDays(cal),
 };
 
-const RELATIVE = /^([+＋\-－−])\s*(\?|？|[0-9０-９]+|[〇零一二两三四五六七八九十百千万]+|半)\s*(个)?\s*(天|日|周|星期|礼拜|月|年)?$/u;
-const SAME_DAY = /^(?:同日|当日|当天|同一天|同天)$/u;
+const RELATIVE = /^([+＋\-－−])\s*(\?|？|[0-9０-９]+|[〇零一二两三四五六七八九十百千万兩萬]+|半)\s*((?:个|個))?\s*(天|日|周|星期|(?:礼|禮)拜|月|年)?$/u;
+const SAME_DAY = /^(?:同日|(?:当|當)日|(?:当|當)天|同一天|同天)$/u;
 const NEXT_DAY = /^(?:次日|翌日|隔天|隔日|第二天|第二日)$/u;
 const DAY_ANCHOR = /^(?:故事)?第\s*([0-9０-９]+)\s*天$/u;
-const FLASHBACK = /^(?:回忆|倒叙|闪回|追忆)\s*(.*)$/u;
-const SPAN = /^(?:历时|共|跨)\s*([0-9０-９]+|[〇零一二两三四五六七八九十百千万]+|半)\s*(个)?\s*(天|日|周|星期|月|年)$/u;
+const FLASHBACK = /^(?:回(?:忆|憶)|倒(?:叙|敘)|(?:闪|閃)回|追(?:忆|憶))\s*(.*)$/u;
+const SPAN = /^(?:(?:历|歷)(?:时|時)|共|跨)\s*([0-9０-９]+|[〇零一二两三四五六七八九十百千万兩萬]+|半)\s*((?:个|個))?\s*(天|日|周|星期|月|年)$/u;
 
 /**
- * 认一行的值（不含时段、历时）。`cal` 用来把 `+N 年` 换成天。认不出返回 undefined。
- * 日期锚点在这里只认形状（能不能换成第几天要看起点与上一章，推算时再算）。
+ * 認一行的值（不含時段、歷時）。`cal` 用來把 `+N 年` 換成天。認不出返回 undefined。
+ * 日期錨點在這裡只認形狀（能不能換成第幾天要看起點與上一章，推算時再算）。
  */
 export function parseTimeValue(raw: string, cal: TimelineCalendar = '简单历'): TimelineValue | undefined {
   const s = raw.trim();
@@ -735,8 +737,8 @@ function spanOf(raw: string, cal: TimelineCalendar): number | undefined {
 }
 
 /**
- * 从行尾往前一段一段剥下 `〔标签：内容〕`（{@link TAIL_OPEN}）：每次找最后一个以已知标签开头、又一直到行尾才收口的那一段。
- * 认不出的括号（「（中秋）」这种）留在内容里。返回剥剩的前半截与剥下来的几段（从前往后）。
+ * 從行尾往前一段一段剝下 `〔標籤：內容〕`（{@link TAIL_OPEN}）：每次找最後一個以已知標籤開頭、又一直到行尾才收口的那一段。
+ * 認不出的括號（「（中秋）」這種）留在內容裡。返回剝剩的前半截與剝下來的幾段（從前往後）。
  */
 function splitTails(text: string): { rest: string; tails: { label: string; body: string }[] } {
   let rest = text;
@@ -762,7 +764,7 @@ function splitTails(text: string): { rest: string; tails: { label: string; body:
   return { rest, tails };
 }
 
-/** 一段的内容拆成「前面的字」与段尾的原文（`八月十五（中秋），开头后 2 天「今夜便是中秋」`）。 */
+/** 一段的內容拆成「前面的字」與段尾的原文（`八月十五（中秋），開頭後 2 天「今夜便是中秋」`）。 */
 function splitQuote(body: string): { head: string; quote?: string } {
   const m = QUOTE_TAIL.exec(body);
   if (!m) {
@@ -772,7 +774,7 @@ function splitQuote(body: string): { head: string; quote?: string } {
   return { head: body.slice(0, m.index).trim(), ...(quote ? { quote } : {}) };
 }
 
-/** 〔文中：…〕：`八月十五（中秋），开头后 2 天「原文」`、`中秋「原文」`。日期与节日都认不出时 undefined。 */
+/** 〔文中：…〕：`八月十五（中秋），開頭後 2 天「原文」`、`中秋「原文」`。日期與節日都認不出時 undefined。 */
 function parseDateMark(body: string): TimelineDateMark | undefined {
   const { head, quote } = splitQuote(body);
   const parts = head
@@ -796,17 +798,17 @@ function parseDateMark(body: string): TimelineDateMark | undefined {
   }
   let offset = 0;
   for (const p of parts.slice(1)) {
-    const k = /^(?:开头后|开头之后|本章第)\s*([0-9０-９]+|[〇零一二两三四五六七八九十百千万]+)\s*天$/u.exec(p);
+    const k = /^(?:(?:开|開)(?:头|頭)(?:后|後)|(?:开|開)(?:头|頭)之(?:后|後)|本章第)\s*([0-9０-９]+|[〇零一二两三四五六七八九十百千万兩萬]+)\s*天$/u.exec(p);
     const n = k ? parseNumber(k[1]) : undefined;
     if (n !== undefined) {
-      // 「本章第 3 天」是开头后 2 天。
+      // 「本章第 3 天」是開頭後 2 天。
       offset = /^本章第/u.test(p) ? Math.max(0, n - 1) : n;
     }
   }
   return { ...(date ? { date } : {}), ...(festival ? { festival } : {}), offset, ...(quote ? { quote } : {}) };
 }
 
-/** 〔季节：冬「原文」〕。 */
+/** 〔季節：冬「原文」〕。 */
 function parseSeasonMark(body: string): TimelineSeasonMark | undefined {
   const { head, quote } = splitQuote(body);
   const season = parseSeason(head);
@@ -814,8 +816,8 @@ function parseSeasonMark(body: string): TimelineSeasonMark | undefined {
 }
 
 /**
- * 认一行（项目符号已经去掉）。不是 `第 N 章` 开头的返回 undefined；`第 N 章` 认得出、值认不出的返回 `{ chapter, bad: true }`。
- * 行尾的〔文中〕〔季节〕认不出就当没写（只是辅助，第 1 条）。
+ * 認一行（專案符號已經去掉）。不是 `第 N 章` 開頭的返回 undefined；`第 N 章` 認得出、值認不出的返回 `{ chapter, bad: true }`。
+ * 行尾的〔文中〕〔季節〕認不出就當沒寫（只是輔助，第 1 條）。
  */
 export function parseTimelineLine(
   line: string,
@@ -836,10 +838,10 @@ export function parseTimelineLine(
   for (const tail of tails) {
     if (tail.label === '文中') {
       dateMark ??= parseDateMark(tail.body);
-    } else if (tail.label === '季节') {
+    } else if (canonicalLabel(tail.label) === '季节') {
       seasonMark ??= parseSeasonMark(tail.body);
     } else if (!basis) {
-      const kind: TimelineBasisKind = tail.label === '证据' ? '依据' : (tail.label as TimelineBasisKind);
+      const kind: TimelineBasisKind = canonicalLabel(tail.label) === '证据' ? '依据' : (canonicalLabel(tail.label) as TimelineBasisKind);
       basis = { kind, text: kind === '依据' ? unquote(tail.body) : tail.body.trim() };
     }
   }
@@ -884,10 +886,10 @@ export function parseTimelineLine(
 }
 
 function calendarOf(text: string): TimelineCalendar {
-  return /公历|阳历|西历|gregorian/iu.test(text) ? '公历' : '简单历';
+  return /公(?:历|曆)|(?:阳|陽)(?:历|曆)|西(?:历|曆)|gregorian/iu.test(text) ? '公历' : '简单历';
 }
 
-/** 读时间线。没有这份文件时传空串（`exists` 为 false）。怎么手改都不抛（第 1 条）。 */
+/** 讀時間線。沒有這份檔案時傳空串（`exists` 為 false）。怎麼手改都不拋（第 1 條）。 */
 export function parseTimelineFile(raw: string, relPath: string): Timeline {
   const text = raw ?? '';
   const { frontmatter, body } = parseMarkdown(text);
@@ -925,60 +927,60 @@ export function parseTimelineFile(raw: string, relPath: string): Timeline {
   };
 }
 
-/** 没有这份文件时的时间线（`readThreads` 给不出来时用）。 */
+/** 沒有這份檔案時的時間線（`readThreads` 給不出來時用）。 */
 export function emptyTimeline(relPath: string): Timeline {
   return { relPath, exists: false, calendar: '简单历', startText: '', entries: [], bad: [] };
 }
 
-// ---------------------------------------------------------------- 推算（现算，不落盘）
+// ---------------------------------------------------------------- 推算（現算，不落盤）
 
-/** 一章的样子。`dated`：开头照正文写明的日期（〔文中〕）对齐过（2026-10-24 重做）。 */
+/** 一章的樣子。`dated`：開頭照正文寫明的日期（〔文中〕）對齊過（2026-10-24 重做）。 */
 export type TimelineDayState = 'evidence' | 'guess' | 'unknown' | 'missing' | 'anchor' | 'dated' | 'flashback' | 'bad';
 
 export interface TimelineDay {
   chapter: number;
   state: TimelineDayState;
-  /** 开头是故事第几天（回忆的章缺席）。 */
+  /** 開頭是故事第幾天（回憶的章缺席）。 */
   start?: number;
-  /** 结尾是第几天（= 开头 + 跨度 − 1）。 */
+  /** 結尾是第幾天（= 開頭 + 跨度 − 1）。 */
   end?: number;
-  /** 比上一章结尾晚几天（第一章、回忆缺席）。 */
+  /** 比上一章結尾晚幾天（第一章、回憶缺席）。 */
   delta?: number;
   span: number;
   part?: string;
   endPart?: string;
-  /** 回忆：大约多久以前。 */
+  /** 回憶：大約多久以前。 */
   ago?: string;
   basis?: TimelineEntry['basis'];
   dateMark?: TimelineDateMark;
   seasonMark?: TimelineSeasonMark;
   /**
-   * 照〔文中〕对齐过：按前文推下来是第几天（`estimate`）、对齐差了几天（`drift` = 开头 − estimate）；`unknown`：这一行本来是 `+?`
-   * （差几天是预料之中的，对账不报，⚑2）。
+   * 照〔文中〕對齊過：按前文推下來是第幾天（`estimate`）、對齊差了幾天（`drift` = 開頭 − estimate）；`unknown`：這一行本來是 `+?`
+   * （差幾天是預料之中的，對賬不報，⚑2）。
    */
   aligned?: { estimate: number; drift: number; unknown?: true };
   /**
-   * 〔文中〕没拿来对齐、又和这一章对不上：正文写的是第几天（`day`），为什么没对齐（`why`）——作者的锚点（`anchor`）、第 1 章就是
-   * 起点（`start`），或者正文只写了日、没写月（`dayOnly`：月份可能差出去，只对账不对齐，试跑之后定的）。
+   * 〔文中〕沒拿來對齊、又和這一章對不上：正文寫的是第幾天（`day`），為什麼沒對齊（`why`）——作者的錨點（`anchor`）、第 1 章就是
+   * 起點（`start`），或者正文只寫了日、沒寫月（`dayOnly`：月份可能差出去，只對賬不對齊，試跑之後定的）。
    */
   conflict?: { day: number; why: 'anchor' | 'start' | 'dayOnly' };
 }
 
 export interface TimelineCalc {
-  /** 第 1 章到文件里出现过的最大章号（`upTo` 截过的），一章一项。 */
+  /** 第 1 章到檔案裡出現過的最大章號（`upTo` 截過的），一章一項。 */
   days: TimelineDay[];
-  /** 文件里写到第几章（认得出、认不出的行都算）。没有一行是 0。 */
+  /** 檔案裡寫到第幾章（認得出、認不出的行都算）。沒有一行是 0。 */
   last: number;
-  /** 故事里过了几天（走到的最远那一天，一般就是最后一章的结尾）。一行都没有是 0。 */
+  /** 故事裡過了幾天（走到的最遠那一天，一般就是最後一章的結尾）。一行都沒有是 0。 */
   elapsed: number;
 }
 
 /**
- * 从第 1 章往后推（设计稿「推算」）：没有这一行的、`+?` 的、认不出的按紧接上一章（开头 = 上一章结尾）算；锚点就是那一天；回忆
- * 不推进时间；第一章（第一个不是回忆的章）的相对值不算，开头是第 1 天。`upTo` 只推到第几章（写第 N 章时传 N − 1）。
+ * 從第 1 章往後推（設計稿「推算」）：沒有這一行的、`+?` 的、認不出的按緊接上一章（開頭 = 上一章結尾）算；錨點就是那一天；回憶
+ * 不推進時間；第一章（第一個不是回憶的章）的相對值不算，開頭是第 1 天。`upTo` 只推到第幾章（寫第 N 章時傳 N − 1）。
  *
- * 2026-10-24 重做多一步（docs/design/plans/2026-10-24-story-timeline-rework.md「二」）：有〔文中〕、填了起点时，按正文写明的那一天
- * 对齐（取离推算最近的那一个，⚑1），后面的章跟着顺延——一路累加的误差到这里清零。作者的锚点与第 1 章（就是起点）不对齐，对不上只记下来。
+ * 2026-10-24 重做多一步（docs/design/plans/2026-10-24-story-timeline-rework.md「二」）：有〔文中〕、填了起點時，按正文寫明的那一天
+ * 對齊（取離推算最近的那一個，⚑1），後面的章跟著順延——一路累加的誤差到這裡清零。作者的錨點與第 1 章（就是起點）不對齊，對不上只記下來。
  */
 export function computeTimeline(tl: Timeline, upTo?: number): TimelineCalc {
   const byNo = new Map(tl.entries.map((e) => [e.chapter, e]));
@@ -1010,7 +1012,7 @@ export function computeTimeline(tl: Timeline, upTo?: number): TimelineCalc {
       state = 'unknown';
     } else {
       start = started ? prevEnd + e.value.days : 1;
-      // 机器写的带依据或推测；没有那一段的、或者值改了却还挂着〔推不出〕的，是作者写的。
+      // 機器寫的帶依據或推測；沒有那一段的、或者值改了卻還掛著〔推不出〕的，是作者寫的。
       state = e.basis?.kind === '依据' ? 'evidence' : e.basis?.kind === '推测' ? 'guess' : 'anchor';
     }
     if (start === undefined) {
@@ -1055,41 +1057,41 @@ export function computeTimeline(tl: Timeline, upTo?: number): TimelineCalc {
     furthest = Math.max(furthest, end);
     started = true;
   }
-  // 故事里过了几天：走到的最远那一天（往回跳、照正文往回对齐的章不把它拉回去）。
+  // 故事裡過了幾天：走到的最遠那一天（往回跳、照正文往回對齊的章不把它拉回去）。
   return { days, last, elapsed: started ? furthest : 0 };
 }
 
-// ---------------------------------------------------------------- 对账（现算，0 次，2026-10-24 重做）
+// ---------------------------------------------------------------- 對賬（現算，0 次，2026-10-24 重做）
 
 export type TimelineIssueKind = 'drift' | 'conflict' | 'season' | 'backward' | 'unknownRun';
 
-/** 对账里的一条：只提醒、不拦，挂在工程页「时间线」组与总览上。 */
+/** 對賬裡的一條：只提醒、不攔，掛在工程頁「時間線」組與總覽上。 */
 export interface TimelineIssue {
   kind: TimelineIssueKind;
-  /** 哪一章（连着推不出的是第一章）。 */
+  /** 哪一章（連著推不出的是第一章）。 */
   chapter: number;
-  /** 连着推不出的最后一章。 */
+  /** 連著推不出的最後一章。 */
   to?: number;
   text: string;
 }
 
-/** 文中日期偏差到几天才进对账（⚑3：差 1 天多半是「深夜算不算第二天」）。 */
+/** 文中日期偏差到幾天才進對賬（⚑3：差 1 天多半是「深夜算不算第二天」）。 */
 export const TIME_DRIFT_WARN = 2;
-/** 连着几章推不出才报。 */
+/** 連著幾章推不出才報。 */
 export const TIME_UNKNOWN_RUN = 3;
-/** 一章跨了多久以上不查季节（跨了季节，查不出对错）。 */
+/** 一章跨了多久以上不查季節（跨了季節，查不出對錯）。 */
 const SEASON_CHECK_MAX_SPAN = 90;
 
 /**
- * 对账（设计稿「二 · 对账」）：文中日期对不上（对齐时差得多）、你定的和正文对不上、季节对不上、往回跳又没标回忆、连着推不出。
- * 按章号排。日期、季节两类要填了起点才查得了。
+ * 對賬（設計稿「二 · 對賬」）：文中日期對不上（對齊時差得多）、你定的和正文對不上、季節對不上、往回跳又沒標回憶、連著推不出。
+ * 按章號排。日期、季節兩類要填了起點才查得了。
  */
 export function timelineIssues(tl: Timeline, calc: TimelineCalc): TimelineIssue[] {
   const out: TimelineIssue[] = [];
   let run: number[] = [];
   const flush = () => {
     if (run.length >= TIME_UNKNOWN_RUN) {
-      out.push({ kind: 'unknownRun', chapter: run[0], to: run[run.length - 1], text: `第 ${run[0]}–${run[run.length - 1]} 章连着推不出（都按紧接上一章算）` });
+      out.push({ kind: 'unknownRun', chapter: run[0], to: run[run.length - 1], text: `第 ${run[0]}–${run[run.length - 1]} 章連著推不出（都按緊接上一章算）` });
     }
     run = [];
   };
@@ -1107,10 +1109,10 @@ export function timelineIssues(tl: Timeline, calc: TimelineCalc): TimelineIssue[
       out.push({
         kind: 'drift',
         chapter: d.chapter,
-        text: `第 ${d.chapter} 章：前面推下来是${dayLabel(tl, d.aligned.estimate).full}，正文写${mark}（差 ${Math.abs(d.aligned.drift)} 天），已按正文对齐`,
+        text: `第 ${d.chapter} 章：前面推下來是${dayLabel(tl, d.aligned.estimate).full}，正文寫${mark}（差 ${Math.abs(d.aligned.drift)} 天），已按正文對齊`,
       });
     }
-    // 只写了日的差 1 天不报（同对齐的偏差，⚑3）；作者的锚点、起点对不上一天也报。
+    // 只寫了日的差 1 天不報（同對齊的偏差，⚑3）；作者的錨點、起點對不上一天也報。
     if (d.conflict && (d.conflict.why !== 'dayOnly' || Math.abs(d.conflict.day - d.start) >= TIME_DRIFT_WARN)) {
       const here = dayLabel(tl, d.start).full;
       out.push({
@@ -1118,10 +1120,10 @@ export function timelineIssues(tl: Timeline, calc: TimelineCalc): TimelineIssue[
         chapter: d.chapter,
         text:
           d.conflict.why === 'start'
-            ? `第 ${d.chapter} 章：起点是${tl.startText}，正文写${mark}`
+            ? `第 ${d.chapter} 章：起點是${tl.startText}，正文寫${mark}`
             : d.conflict.why === 'anchor'
-              ? `第 ${d.chapter} 章：你定的是${here}，正文写${mark}`
-              : `第 ${d.chapter} 章：推出来是${here}，正文写${mark}（只写了日，没按它对齐）`,
+              ? `第 ${d.chapter} 章：你定的是${here}，正文寫${mark}`
+              : `第 ${d.chapter} 章：推出來是${here}，正文寫${mark}（只寫了日，沒按它對齊）`,
       });
     }
     if (d.seasonMark && tl.start && d.end !== undefined && d.span <= SEASON_CHECK_MAX_SPAN) {
@@ -1136,12 +1138,12 @@ export function timelineIssues(tl: Timeline, calc: TimelineCalc): TimelineIssue[
         out.push({
           kind: 'season',
           chapter: d.chapter,
-          text: `第 ${d.chapter} 章：推出来是${dayLabel(tl, d.start).monthName ?? dayLabel(tl, d.start).full}，正文说是${d.seasonMark.season}天${quote}`,
+          text: `第 ${d.chapter} 章：推出來是${dayLabel(tl, d.start).monthName ?? dayLabel(tl, d.start).full}，正文說是${d.seasonMark.season}天${quote}`,
         });
       }
     }
     if ((d.state === 'evidence' || d.state === 'guess') && d.delta !== undefined && d.delta < 0) {
-      out.push({ kind: 'backward', chapter: d.chapter, text: `第 ${d.chapter} 章：比上一章往回跳了 ${-d.delta} 天，又没标回忆` });
+      out.push({ kind: 'backward', chapter: d.chapter, text: `第 ${d.chapter} 章：比上一章往回跳了 ${-d.delta} 天，又沒標回憶` });
     }
   }
   flush();
@@ -1149,8 +1151,8 @@ export function timelineIssues(tl: Timeline, calc: TimelineCalc): TimelineIssue[
 }
 
 /**
- * 起点建议（设计稿「二」）：没有起点、正文里出现过〔文中〕日期时，按第一次出现的那一处倒推第 1 章是哪天（照那个日期的写法）。
- * 有起点、一处都没有时 undefined。
+ * 起點建議（設計稿「二」）：沒有起點、正文裡出現過〔文中〕日期時，按第一次出現的那一處倒推第 1 章是哪天（照那個日期的寫法）。
+ * 有起點、一處都沒有時 undefined。
  */
 export function suggestStart(tl: Timeline, calc: TimelineCalc): { text: string; chapter: number; mark: string } | undefined {
   if (tl.start) {
@@ -1161,7 +1163,7 @@ export function suggestStart(tl: Timeline, calc: TimelineCalc): { text: string; 
       continue;
     }
     const md = markDate(tl.calendar, d.dateMark);
-    // 只写了日的推不出起点是几月。
+    // 只寫了日的推不出起點是幾月。
     const o = md && md.m > 0 ? ordinalOf(tl.calendar, md.y ?? (tl.calendar === '简单历' ? 1 : GREGORIAN_YEARLESS), md.m, md.d) : undefined;
     if (!md || o === undefined) {
       continue;
@@ -1173,17 +1175,17 @@ export function suggestStart(tl: Timeline, calc: TimelineCalc): { text: string; 
   return undefined;
 }
 
-// ---------------------------------------------------------------- 怎么说
+// ---------------------------------------------------------------- 怎麼說
 
-/** 一章开头那一天的说法：`大衍三年三月十四 清晨`、`第 8 天 傍晚`。回忆写 `回忆（约二十年前）`。 */
+/** 一章開頭那一天的說法：`大衍三年三月十四 清晨`、`第 8 天 傍晚`。回憶寫 `回憶（約二十年前）`。 */
 export function describeDay(tl: Pick<Timeline, 'calendar' | 'start'>, d: TimelineDay): string {
   if (d.state === 'flashback' || d.start === undefined) {
-    return `回忆${d.ago ? `（${d.ago}）` : ''}`;
+    return `回憶${d.ago ? `（${d.ago}）` : ''}`;
   }
   return `${dayLabel(tl, d.start).full}${d.part ? ` ${d.part}` : ''}`;
 }
 
-/** 一章从头到尾：`三月十四 清晨 → 夜里`、`三月十四 清晨 → 三月十六 夜里`；同一天、没有结尾时段的同 {@link describeDay}。 */
+/** 一章從頭到尾：`三月十四 清晨 → 夜裡`、`三月十四 清晨 → 三月十六 夜裡`；同一天、沒有結尾時段的同 {@link describeDay}。 */
 export function describeDayRange(tl: Pick<Timeline, 'calendar' | 'start'>, d: TimelineDay): string {
   const head = describeDay(tl, d);
   if (d.state === 'flashback' || d.start === undefined) {
@@ -1195,20 +1197,20 @@ export function describeDayRange(tl: Pick<Timeline, 'calendar' | 'start'>, d: Ti
   return d.endPart ? `${head} → ${d.endPart}` : head;
 }
 
-/** 「故事里过了 46 天」那个数怎么说：一年以上另注约几年（按历法的一年）。 */
+/** 「故事裡過了 46 天」那個數怎麼說：一年以上另注約幾年（按曆法的一年）。 */
 export function describeElapsed(tl: Pick<Timeline, 'calendar'>, days: number): string {
   const years = days / yearDays(tl.calendar);
-  return years >= 1 ? `${days} 天（约 ${years >= 10 ? Math.round(years) : Math.round(years * 10) / 10} 年）` : `${days} 天`;
+  return years >= 1 ? `${days} 天（約 ${years >= 10 ? Math.round(years) : Math.round(years * 10) / 10} 年）` : `${days} 天`;
 }
 
-/** 比上一章晚多久的说法：`+2 天`、`同一天`、`往回 3 天`。 */
+/** 比上一章晚多久的說法：`+2 天`、`同一天`、`往回 3 天`。 */
 export function describeDelta(delta: number): string {
   return delta === 0 ? '同一天' : delta > 0 ? `+${delta} 天` : `往回 ${-delta} 天`;
 }
 
 /**
- * 写第 `no` 章（或拆从第 `no` 章起的细纲）时，「上一章的时间」那一句：只看第 `no` 章之前的行（`asOf`）。往前找最近一个不是回忆的章；
- * 一行都没有返回 undefined。`gap` 是那一章与第 `no` 章之间还没记时间的章数。
+ * 寫第 `no` 章（或拆從第 `no` 章起的細綱）時，「上一章的時間」那一句：只看第 `no` 章之前的行（`asOf`）。往前找最近一個不是回憶的章；
+ * 一行都沒有返回 undefined。`gap` 是那一章與第 `no` 章之間還沒記時間的章數。
  */
 export function lastKnownBefore(tl: Timeline, no: number): { day: TimelineDay; gap: number } | undefined {
   const calc = computeTimeline(tl, no - 1);
@@ -1222,34 +1224,34 @@ export function lastKnownBefore(tl: Timeline, no: number): { day: TimelineDay; g
   return undefined;
 }
 
-/** 认时间时「前面几章的时间」最多列几章。 */
+/** 認時間時「前面幾章的時間」最多列幾章。 */
 export const RECENT_TIME_CHAPTERS = 5;
 
 /**
- * 认时间（同步、补推、重推）交给模型的「前面几章的时间」（2026-10-24 重做，设计稿「三 · 输入」）：只看第 `no` 章之前的行，最近
- * {@link RECENT_TIME_CHAPTERS} 章一章一行，带结尾时段（本章开头接着哪个时刻）。第 1 章、前面一行都没有各说一句。
+ * 認時間（同步、補推、重推）交給模型的「前面幾章的時間」（2026-10-24 重做，設計稿「三 · 輸入」）：只看第 `no` 章之前的行，最近
+ * {@link RECENT_TIME_CHAPTERS} 章一章一行，帶結尾時段（本章開頭接著哪個時刻）。第 1 章、前面一行都沒有各說一句。
  */
 export function recentTimeNote(tl: Timeline, no: number, count = RECENT_TIME_CHAPTERS): string {
   if (no <= 1) {
-    return '这是第 1 章：days 写 0。';
+    return '這是第 1 章：days 寫 0。';
   }
   const calc = computeTimeline(tl, no - 1);
   if (!calc.days.some((d) => d.state !== 'missing')) {
-    return '前面的章还没记时间：只按上一章的结尾与本章正文判，判不出写 null。';
+    return '前面的章還沒記時間：只按上一章的結尾與本章正文判，判不出寫 null。';
   }
   const from = Math.max(1, no - count);
   const lines: string[] = [];
   for (let c = from; c < no; c++) {
     const d = calc.days[c - 1];
     if (!d || d.state === 'missing') {
-      lines.push(`第 ${c} 章：还没记（按紧接上一章算）`);
+      lines.push(`第 ${c} 章：還沒記（按緊接上一章算）`);
     } else if (d.state === 'flashback') {
-      lines.push(`第 ${c} 章：整章是回忆${d.ago ? `（${d.ago}）` : ''}，不推进时间`);
+      lines.push(`第 ${c} 章：整章是回憶${d.ago ? `（${d.ago}）` : ''}，不推進時間`);
     } else if (d.state === 'bad') {
-      lines.push(`第 ${c} 章：那一行认不出（按紧接上一章算）`);
+      lines.push(`第 ${c} 章：那一行認不出（按緊接上一章算）`);
     } else {
       const delta = d.delta !== undefined ? `，比上一章 ${describeDelta(d.delta)}` : '';
-      const note = d.state === 'unknown' ? '，推不出、按紧接上一章算' : d.state === 'anchor' ? '，作者定的' : d.state === 'dated' ? '，正文写明' : '';
+      const note = d.state === 'unknown' ? '，推不出、按緊接上一章算' : d.state === 'anchor' ? '，作者定的' : d.state === 'dated' ? '，正文寫明' : '';
       const days = d.span > 1 && d.end !== undefined ? `故事第 ${d.start}–${d.end} 天` : `故事第 ${d.start} 天`;
       lines.push(`第 ${c} 章：${describeDayRange(tl, d)}（${days}${delta}${note}）`);
     }
@@ -1257,12 +1259,12 @@ export function recentTimeNote(tl: Timeline, no: number, count = RECENT_TIME_CHA
   return lines.join('\n');
 }
 
-/** 这个月是哪个季节（不放宽，同 {@link monthFitsSeason} 的口径）。 */
+/** 這個月是哪個季節（不放寬，同 {@link monthFitsSeason} 的口徑）。 */
 export function seasonOfMonth(cal: TimelineCalendar, month: number): TimelineSeason {
   return SEASONS.find((s) => seasonMonths(cal, s).includes(month)) ?? '春';
 }
 
-/** 一天不带年份的短说法：`三月十二`、`3月12日`；没有起点 `第 8 天`。 */
+/** 一天不帶年份的短說法：`三月十二`、`3月12日`；沒有起點 `第 8 天`。 */
 function shortDay(tl: Pick<Timeline, 'calendar' | 'start'>, day: number): string {
   const l = dayLabel(tl, day);
   if (!l.monthName || !tl.start) {
@@ -1271,17 +1273,17 @@ function shortDay(tl: Pick<Timeline, 'calendar' | 'start'>, day: number): string
   return tl.start.style.day === 'num' || tl.start.style.day === 'iso' || tl.start.style.day === 'slash' ? `${l.monthName}${l.short}日` : `${l.monthName}${l.short}`;
 }
 
-/** 写正文、拆细纲时「最近几章」那一句最多带几章。 */
+/** 寫正文、拆細綱時「最近幾章」那一句最多帶幾章。 */
 const CONTEXT_RECENT_CHAPTERS = 4;
 
 /**
- * 写正文、拆细纲时上下文里「故事时间」那一段（2026-10-24，设计稿「三」；同日重做扩成几行：结尾时段、眼下的季节、最近几章的节奏）：
- * 只看第 `no` 章之前的行（拆细纲传这一批的第一章）。前面一行能推出来的都没有返回 undefined（什么都不出）。
+ * 寫正文、拆細綱時上下文裡「故事時間」那一段（2026-10-24，設計稿「三」；同日重做擴成幾行：結尾時段、眼下的季節、最近幾章的節奏）：
+ * 只看第 `no` 章之前的行（拆細綱傳這一批的第一章）。前面一行能推出來的都沒有返回 undefined（什麼都不出）。
  *
  * ```
  * 上一章（第 11 章）：大衍三年三月十四 傍晚 → 深夜（故事第 8 天）。眼下是春天。
- * 最近几章：第 8 章 三月十二（+1 天）；第 9 章 同一天；第 10 章 推不出；第 11 章 三月十四（+2 天）。
- * 本章的时间要接得上；本章细纲「时间地点」写了的照它。
+ * 最近幾章：第 8 章 三月十二（+1 天）；第 9 章 同一天；第 10 章 推不出；第 11 章 三月十四（+2 天）。
+ * 本章的時間要接得上；本章細綱「時間地點」寫了的照它。
  * ```
  */
 export function timeContextText(tl: Timeline, no: number, stage: 'write' | 'plot'): string | undefined {
@@ -1291,7 +1293,7 @@ export function timeContextText(tl: Timeline, no: number, stage: 'write' | 'plot
   }
   const d = last.day;
   const when = describeDaySpan(tl, d);
-  const gap = last.gap > 0 ? `（第 ${d.chapter + 1}${last.gap > 1 ? `–${no - 1}` : ''} 章的时间还没记）` : '';
+  const gap = last.gap > 0 ? `（第 ${d.chapter + 1}${last.gap > 1 ? `–${no - 1}` : ''} 章的時間還沒記）` : '';
   const month = tl.start && d.end !== undefined ? monthOfDay(tl, d.end) : undefined;
   const season = month !== undefined ? `眼下是${seasonOfMonth(tl.calendar, month)}天。` : '';
   const calc = computeTimeline(tl, no - 1);
@@ -1299,9 +1301,9 @@ export function timeContextText(tl: Timeline, no: number, stage: 'write' | 'plot
   for (let c = Math.max(1, no - CONTEXT_RECENT_CHAPTERS); c < no; c++) {
     const x = calc.days[c - 1];
     if (!x || x.state === 'missing' || x.state === 'bad') {
-      recent.push(`第 ${c} 章 没记`);
+      recent.push(`第 ${c} 章 沒記`);
     } else if (x.state === 'flashback') {
-      recent.push(`第 ${c} 章 回忆`);
+      recent.push(`第 ${c} 章 回憶`);
     } else if (x.state === 'unknown') {
       recent.push(`第 ${c} 章 推不出`);
     } else if (x.delta === 0) {
@@ -1310,23 +1312,23 @@ export function timeContextText(tl: Timeline, no: number, stage: 'write' | 'plot
       recent.push(`第 ${c} 章 ${shortDay(tl, x.start!)}${x.delta !== undefined ? `（${describeDelta(x.delta)}）` : ''}`);
     }
   }
-  const rhythm = recent.length > 1 ? `\n最近几章：${recent.join('；')}。` : '';
+  const rhythm = recent.length > 1 ? `\n最近幾章：${recent.join('；')}。` : '';
   return stage === 'write'
-    ? `${last.gap > 0 ? `已记到第 ${d.chapter} 章` : `上一章（第 ${d.chapter} 章）`}：${when}${gap}。${season}${rhythm}\n本章的时间要接得上；本章细纲「时间地点」写了的照它。`
-    : `已写到第 ${d.chapter} 章：${when}${gap}。${season}${rhythm}\n细纲「时间地点」写清每章比上一章晚多久（当天、次日、三天后……），不要和前面打架。`;
+    ? `${last.gap > 0 ? `已記到第 ${d.chapter} 章` : `上一章（第 ${d.chapter} 章）`}：${when}${gap}。${season}${rhythm}\n本章的時間要接得上；本章細綱「時間地點」寫了的照它。`
+    : `已寫到第 ${d.chapter} 章：${when}${gap}。${season}${rhythm}\n細綱「時間地點」寫清每章比上一章晚多久（當天、次日、三天後……），不要和前面打架。`;
 }
 
-/** `大衍三年三月十四 清晨 → 夜里（故事第 8 天）`，跨了几天的另说结尾。 */
+/** `大衍三年三月十四 清晨 → 夜裡（故事第 8 天）`，跨了幾天的另說結尾。 */
 export function describeDaySpan(tl: Pick<Timeline, 'calendar' | 'start'>, d: TimelineDay): string {
   if (d.span > 1 && d.end !== undefined) {
-    return `${describeDay(tl, d)}（故事第 ${d.start} 天）起，历时 ${d.span} 天，到${dayLabel(tl, d.end).full}${d.endPart ? ` ${d.endPart}` : ''}（第 ${d.end} 天）`;
+    return `${describeDay(tl, d)}（故事第 ${d.start} 天）起，歷時 ${d.span} 天，到${dayLabel(tl, d.end).full}${d.endPart ? ` ${d.endPart}` : ''}（第 ${d.end} 天）`;
   }
   return `${describeDayRange(tl, d)}（故事第 ${d.start} 天）`;
 }
 
-// ---------------------------------------------------------------- 写入
+// ---------------------------------------------------------------- 寫入
 
-/** 新建时间线时的整份文件。 */
+/** 新建時間線時的整份檔案。 */
 export const TIMELINE_TEMPLATE = [
   '---',
   'calendar: 简单历',
@@ -1336,14 +1338,14 @@ export const TIMELINE_TEMPLATE = [
   '',
   `# ${TIMELINE_NAME}`,
   '',
-  '> 一章一行，写的是这一章开头比上一章结尾晚多久；同步时由机器按正文推。日期在叙事线页签和总览里看。',
-  '> 起点：在上面 start 后面写第 1 章那一天（如「大衍三年三月初七」「2026-03-07」），不写只显示第几天；calendar 写「简单历」（每月 30 天）或「公历」。',
-  '> 行尾带〔依据〕〔推测〕〔推不出〕的是机器写的，同步、重推时照新推的换；要定死哪一章，把「+N 天」改成具体日期（「八月十五」）或「第 N 天」（阿拉伯数字），或者删掉行尾那一段，后面的章跟着顺延。',
-  '> 〔文中〕是正文写明的日期或节日，推算时照它对齐；〔季节〕只拿来对账。',
+  '> 一章一行，寫的是這一章開頭比上一章結尾晚多久；同步時由機器按正文推。日期在敘事線頁籤和總覽裡看。',
+  '> 起點：在上面 start 後面寫第 1 章那一天（如「大衍三年三月初七」「2026-03-07」），不寫只顯示第幾天；calendar 寫「簡單歷」（每月 30 天）或「公曆」。',
+  '> 行尾帶〔依據〕〔推測〕〔推不出〕的是機器寫的，同步、重推時照新推的換；要定死哪一章，把「+N 天」改成具體日期（「八月十五」）或「第 N 天」（阿拉伯數字），或者刪掉行尾那一段，後面的章跟著順延。',
+  '> 〔文中〕是正文寫明的日期或節日，推算時照它對齊；〔季節〕只拿來對賬。',
   '',
 ].join('\n');
 
-/** 值怎么写回文件。 */
+/** 值怎麼寫回檔案。 */
 export function renderTimeValue(v: TimelineValue): string {
   switch (v.kind) {
     case 'delta':
@@ -1351,7 +1353,7 @@ export function renderTimeValue(v: TimelineValue): string {
     case 'unknown':
       return '+?';
     case 'flashback':
-      return `回忆${v.ago ? `，${v.ago}` : ''}`;
+      return `回憶${v.ago ? `，${v.ago}` : ''}`;
     case 'day':
       return `第 ${v.day} 天`;
     default:
@@ -1359,28 +1361,28 @@ export function renderTimeValue(v: TimelineValue): string {
   }
 }
 
-/** 〔文中：八月十五（中秋），开头后 2 天「原文」〕。 */
+/** 〔文中：八月十五（中秋），開頭後 2 天「原文」〕。 */
 function renderDateMark(m: TimelineDateMark): string {
-  return `〔文中：${describeDateMark(m)}${m.offset > 0 ? `，开头后 ${m.offset} 天` : ''}${m.quote ? `「${m.quote}」` : ''}〕`;
+  return `〔文中：${describeDateMark(m)}${m.offset > 0 ? `，開頭後 ${m.offset} 天` : ''}${m.quote ? `「${m.quote}」` : ''}〕`;
 }
 
 /**
- * 一行（不带项目符号）：`第 4 章：+1 天，清晨 → 夜里，历时 2 天〔依据：「次日清晨，雨停了」〕〔文中：八月十五（中秋）「…」〕〔季节：秋「…」〕`。
+ * 一行（不帶專案符號）：`第 4 章：+1 天，清晨 → 夜裡，歷時 2 天〔依據：「次日清晨，雨停了」〕〔文中：八月十五（中秋）「…」〕〔季節：秋「…」〕`。
  */
 export function renderTimelineLine(e: TimelineEntry): string {
-  const basis = e.basis ? `〔${e.basis.kind}：${e.basis.kind === '依据' ? `「${e.basis.text}」` : e.basis.text}〕` : '';
+  const basis = e.basis ? `〔${traditionalLabel(e.basis.kind)}：${e.basis.kind === '依据' ? `「${e.basis.text}」` : e.basis.text}〕` : '';
   const part = e.endPart ? `，${e.part ? `${e.part} ` : ''}→ ${e.endPart}` : e.part ? `，${e.part}` : '';
-  const season = e.seasonMark ? `〔季节：${e.seasonMark.season}${e.seasonMark.quote ? `「${e.seasonMark.quote}」` : ''}〕` : '';
-  return `第 ${e.chapter} 章：${renderTimeValue(e.value)}${part}${e.span > 1 ? `，历时 ${e.span} 天` : ''}${basis}${e.dateMark ? renderDateMark(e.dateMark) : ''}${season}`;
+  const season = e.seasonMark ? `〔季節：${e.seasonMark.season}${e.seasonMark.quote ? `「${e.seasonMark.quote}」` : ''}〕` : '';
+  return `第 ${e.chapter} 章：${renderTimeValue(e.value)}${part}${e.span > 1 ? `，歷時 ${e.span} 天` : ''}${basis}${e.dateMark ? renderDateMark(e.dateMark) : ''}${season}`;
 }
 
-/** {@link upsertTimelineEntry} 做了什么。 */
+/** {@link upsertTimelineEntry} 做了什麼。 */
 export type TimelineWrite = 'added' | 'replaced' | 'kept';
 
 /**
- * 这一行是不是机器写的（2026-10-24 重做，设计稿「三 · 写盘」）：相对量、回忆带〔依据〕〔推测〕，或者 `+?` 带〔推不出〕。作者写的日期、
- * 「第 N 天」、没有行尾那一段的、改了值却还挂着〔推不出〕的都是作者的。改了值又留着〔依据〕〔推测〕的分不出来，当机器写的（⚑7，
- * 文件开头的说明写着）。
+ * 這一行是不是機器寫的（2026-10-24 重做，設計稿「三 · 寫盤」）：相對量、回憶帶〔依據〕〔推測〕，或者 `+?` 帶〔推不出〕。作者寫的日期、
+ * 「第 N 天」、沒有行尾那一段的、改了值卻還掛著〔推不出〕的都是作者的。改了值又留著〔依據〕〔推測〕的分不出來，當機器寫的（⚑7，
+ * 檔案開頭的說明寫著）。
  */
 export function isMachineEntry(e: TimelineEntry): boolean {
   if (e.value.kind === 'unknown') {
@@ -1393,8 +1395,8 @@ export function isMachineEntry(e: TimelineEntry): boolean {
 }
 
 /**
- * 补推时机器该不该换掉已有的那一行（只填空，设计稿「谁能写什么」）：还是 `+?`〔推不出〕（作者没动过）；或者〔依据〕那句原文已经不在
- * 正文里了。其余（作者写的、改过的、〔推测〕的、依据还在的、认不出的）都不换。
+ * 補推時機器該不該換掉已有的那一行（只填空，設計稿「誰能寫什麼」）：還是 `+?`〔推不出〕（作者沒動過）；或者〔依據〕那句原文已經不在
+ * 正文裡了。其餘（作者寫的、改過的、〔推測〕的、依據還在的、認不出的）都不換。
  */
 export function machineMayReplace(existing: TimelineEntry, chapterText: string): boolean {
   if (existing.value.kind === 'unknown' && existing.basis?.kind === '推不出') {
@@ -1407,14 +1409,14 @@ export function machineMayReplace(existing: TimelineEntry, chapterText: string):
 }
 
 /**
- * 写入的口径：`fill` 只填空（补推）；`refresh` 机器写的行一律照新推的换（同步、重推，⚑7）。两种都不碰作者的行与认不出的行。
+ * 寫入的口徑：`fill` 只填空（補推）；`refresh` 機器寫的行一律照新推的換（同步、重推，⚑7）。兩種都不碰作者的行與認不出的行。
  */
 export type TimelineWriteMode = 'fill' | 'refresh';
 
 /**
- * 把第 N 章的一行写进时间线原文：还没有这份文件按模板新建；没有这一章的行就按章号插到对的位置（项目符号沿用已有的写法）；已有的
- * 按 `mode` 决定换不换（`fill`：{@link machineMayReplace}；`refresh`：{@link isMachineEntry}），其余原样。别的行、frontmatter、BOM 与
- * 换行符一个字不动。
+ * 把第 N 章的一行寫進時間線原文：還沒有這份檔案按模板新建；沒有這一章的行就按章號插到對的位置（專案符號沿用已有的寫法）；已有的
+ * 按 `mode` 決定換不換（`fill`：{@link machineMayReplace}；`refresh`：{@link isMachineEntry}），其餘原樣。別的行、frontmatter、BOM 與
+ * 換行符一個字不動。
  */
 export function upsertTimelineEntry(
   raw: string,
@@ -1467,7 +1469,7 @@ export function upsertTimelineEntry(
   } else if (after >= 0) {
     lines.splice(after, 0, row);
   } else {
-    // 一行都还没有：接在正文最后一行有字的后面（隔一个空行），文件末尾留一个换行。
+    // 一行都還沒有：接在正文最後一行有字的後面（隔一個空行），檔案末尾留一個換行。
     let tail = lines.length - 1;
     while (tail >= from && !lines[tail].trim()) {
       tail--;
@@ -1480,11 +1482,11 @@ export function upsertTimelineEntry(
   return { text: bom + lines.join(eol), action: 'added' };
 }
 
-// ---------------------------------------------------------------- 作者在界面上改（2026-10-24 重做，设计稿「五」）
+// ---------------------------------------------------------------- 作者在介面上改（2026-10-24 重做，設計稿「五」）
 
 /**
- * 「改时间…」那一问的字认不认得（写法同文件里一行冒号后面那一截：`八月十五`、`第 20 天`、`+3 天`、`同日`、`回忆`，可以带时段与历时）。
- * 认得返回 undefined，认不出返回说给作者听的一句。清空（删掉这一行）也认。
+ * 「改時間…」那一問的字認不認得（寫法同檔案裡一行冒號後面那一截：`八月十五`、`第 20 天`、`+3 天`、`同日`、`回憶`，可以帶時段與歷時）。
+ * 認得返回 undefined，認不出返回說給作者聽的一句。清空（刪掉這一行）也認。
  */
 export function checkTimeInput(text: string, tl: Pick<Timeline, 'calendar' | 'start'>): string | undefined {
   const t = text.trim();
@@ -1493,18 +1495,18 @@ export function checkTimeInput(text: string, tl: Pick<Timeline, 'calendar' | 'st
   }
   const got = parseTimelineLine(`第 1 章：${t}`, tl.calendar);
   if (!got || !('entry' in got)) {
-    return `认不出「${t}」：写「八月十五」「第 20 天」「+3 天」「同日」「次日」「回忆」这几种，可以带时段（「八月十五，傍晚」）`;
+    return `認不出「${t}」：寫「八月十五」「第 20 天」「+3 天」「同日」「次日」「回憶」這幾種，可以帶時段（「八月十五，傍晚」）`;
   }
   if (got.entry.value.kind === 'date' && !tl.start) {
-    return '还没填起点，写日期算不出是第几天：先点时间线组第一行填起点，或者写「第 N 天」「+N 天」';
+    return '還沒填起點，寫日期算不出是第幾天：先點時間線組第一行填起點，或者寫「第 N 天」「+N 天」';
   }
   return undefined;
 }
 
 /**
- * 把第 N 章那一行改成作者给的值（「改时间…」）：值换成作者写的、**去掉行尾的〔依据〕〔推测〕〔推不出〕**（改过就是作者定的，机器不再动，
- * ⚑11），时段、历时、〔文中〕〔季节〕没另写就照留；作者写了时段、历时的照作者的。清空 = 删掉这一行（留给机器重推）。没有这一行就按章号
- * 插进去；还没有这份文件按模板新建。别的行、frontmatter 一个字不动。字认不出返回 undefined（调用方先用 {@link checkTimeInput} 拦）。
+ * 把第 N 章那一行改成作者給的值（「改時間…」）：值換成作者寫的、**去掉行尾的〔依據〕〔推測〕〔推不出〕**（改過就是作者定的，機器不再動，
+ * ⚑11），時段、歷時、〔文中〕〔季節〕沒另寫就照留；作者寫了時段、歷時的照作者的。清空 = 刪掉這一行（留給機器重推）。沒有這一行就按章號
+ * 插進去；還沒有這份檔案按模板新建。別的行、frontmatter 一個字不動。字認不出返回 undefined（呼叫方先用 {@link checkTimeInput} 攔）。
  */
 export function setTimelineValue(raw: string, chapter: number, text: string): { text: string; action: 'added' | 'replaced' | 'removed' | 'kept' } | undefined {
   const source = raw && raw.trim() ? raw : TIMELINE_TEMPLATE;
@@ -1549,9 +1551,9 @@ export function setTimelineValue(raw: string, chapter: number, text: string): { 
   return { text: r.text, action: 'added' };
 }
 
-/** 作者写的值并上原来那一行还用得着的几样（时段、历时、〔文中〕〔季节〕）。行尾的依据一律去掉。 */
+/** 作者寫的值並上原來那一行還用得著的幾樣（時段、歷時、〔文中〕〔季節〕）。行尾的依據一律去掉。 */
 function merged(chapter: number, typed: TimelineEntry, text: string, old: TimelineEntry | undefined): TimelineEntry {
-  const saidSpan = /(?:历时|共|跨)\s*\S+\s*(?:天|日|周|星期|月|年)/u.test(text);
+  const saidSpan = /(?:(?:历|歷)(?:时|時)|共|跨)\s*\S+\s*(?:天|日|周|星期|月|年)/u.test(text);
   return {
     chapter,
     value: typed.value,
@@ -1564,8 +1566,8 @@ function merged(chapter: number, typed: TimelineEntry, text: string, old: Timeli
 }
 
 /**
- * 改 frontmatter 的 `calendar` 与 `start`（时间线组第一行「改历法与起点」「填为起点」）：只换这两个键那一行，没有就加在收口的 `---`
- * 前面；还没有这份文件按模板新建。别的一个字不动。
+ * 改 frontmatter 的 `calendar` 與 `start`（時間線組第一行「改曆法與起點」「填為起點」）：只換這兩個鍵那一行，沒有就加在收口的 `---`
+ * 前面；還沒有這份檔案按模板新建。別的一個字不動。
  */
 export function setTimelineHead(raw: string, head: { calendar?: TimelineCalendar; start?: string }): string {
   const source = raw && raw.trim() ? raw : TIMELINE_TEMPLATE;
@@ -1595,12 +1597,12 @@ export function setTimelineHead(raw: string, head: { calendar?: TimelineCalendar
   return bom + lines.join(eol);
 }
 
-// ---------------------------------------------------------------- 模型的输出
+// ---------------------------------------------------------------- 模型的輸出
 
-/** 模型报的一章的时间 → 一行（设计稿「一、同步时推」的校验）。 */
+/** 模型報的一章的時間 → 一行（設計稿「一、同步時推」的校驗）。 */
 export interface VerifiedTime {
   entry: TimelineEntry;
-  /** 校验时动过的地方（证据换成了最接近的原句、证据找不到改记推测……），只进日志。 */
+  /** 校驗時動過的地方（證據換成了最接近的原句、證據找不到改記推測……），只進日誌。 */
   notes: string[];
 }
 
@@ -1614,27 +1616,27 @@ function strOf(v: unknown): string {
 }
 
 /**
- * 一句里写没写着时间（设计稿「三 · 校验」，试跑之后加的）：时段与天色（夜、晨、黄昏、天亮）、过了多久（三日、半月、一年）、日子（次日、
- * 昨夜、明儿、三月初七、二十一日）、季节、节令。只写场面、动作的句子当不得时间的依据——模型常拿本章第一句充数。
+ * 一句裡寫沒寫著時間（設計稿「三 · 校驗」，試跑之後加的）：時段與天色（夜、晨、黃昏、天亮）、過了多久（三日、半月、一年）、日子（次日、
+ * 昨夜、明兒、三月初七、二十一日）、季節、節令。只寫場面、動作的句子當不得時間的依據——模型常拿本章第一句充數。
  */
 const TIME_HINT = new RegExp(
   [
-    '[夜晨晓曉昼晝午昏晚宵暮]',
-    '天[光色亮明黑边邊]|日[头頭光子]|月[光色亮]|太阳|太陽|朝阳|朝陽|夕阳|夕陽|旭日',
-    '[一二两兩三四五六七八九十百千几幾数數半0-9０-９]+\\s*[个個]?\\s*(?:天|日|夜|晚|月|年|载|載|旬|周|週|星期|时辰|時辰|更)',
-    '[春夏秋冬]|节|節',
-    '次日|翌日|隔[天日]|[昨今明当當那这這同][天日晚夜早儿兒朝]',
-    '[正腊冬]月|[一二三四五六七八九十]+月|初[一二三四五六七八九十]|[十廿卅二三]?[十]?[一二三四五六七八九十][日号]',
+    '[夜晨曉曉晝晝午昏晚宵暮]',
+    '天[光色亮明黑邊邊]|日[頭頭光子]|月[光色亮]|太陽|太陽|朝陽|朝陽|夕陽|夕陽|旭日',
+    '[一二兩兩三四五六七八九十百千幾幾數數半0-9０-９]+\\s*[個個]?\\s*(?:天|日|夜|晚|月|年|載|載|旬|周|週|星期|時辰|時辰|更)',
+    '[春夏秋冬]|節|節',
+    '次日|翌日|隔[天日]|[昨今明當當那這這同][天日晚夜早兒兒朝]',
+    '[正臘冬]月|[一二三四五六七八九十]+月|初[一二三四五六七八九十]|[十廿卅二三]?[十]?[一二三四五六七八九十][日號]',
   ].join('|'),
   'u'
 );
 
-/** 这一句能不能当时间的依据。 */
+/** 這一句能不能當時間的依據。 */
 export function mentionsTime(sentence: string): boolean {
   return TIME_HINT.test(sentence);
 }
 
-/** 正文里找一句：逐字找得到原样返回；找不到换最接近的一句（够长时）；都不行返回 undefined。`changed` 说有没有换。 */
+/** 正文裡找一句：逐字找得到原樣返回；找不到換最接近的一句（夠長時）；都不行返回 undefined。`changed` 說有沒有換。 */
 function locateEvidence(index: QuoteIndex, text: string, quote: string): { quote: string; changed: boolean } | undefined {
   if (!quote) {
     return undefined;
@@ -1646,11 +1648,11 @@ function locateEvidence(index: QuoteIndex, text: string, quote: string): { quote
   return near ? { quote: near.sentence, changed: true } : undefined;
 }
 
-/** 一句里写日期的地方（不锚头尾）：`八月十五`、`腊月廿三日`、`3月7日`。 */
+/** 一句裡寫日期的地方（不錨頭尾）：`八月十五`、`臘月廿三日`、`3月7日`。 */
 const DATE_IN_TEXT =
-  /(?:[0-9０-９〇零○一二两三四五六七八九十百千万]+\s*年\s*)?(?:[0-9０-９]{1,2}|十[一二]|[一二两三四五六七八九十]|正|冬|腊|臘)\s*月\s*(?:初[一二三四五六七八九十]|[0-9０-９]{1,2}|[一二两三四五六七八九十廿卅]{1,3})\s*[日号號]?/gu;
+  /(?:[0-9０-９〇零○一二两三四五六七八九十百千万兩萬]+\s*年\s*)?(?:[0-9０-９]{1,2}|十[一二]|[一二两三四五六七八九十兩]|正|冬|(?:腊|臘)|臘)\s*月\s*(?:初[一二三四五六七八九十]|[0-9０-９]{1,2}|[一二两三四五六七八九十廿卅兩]{1,3})\s*[日号號]?/gu;
 
-/** 原文里写没写着这一天（防编，设计稿「三 · 校验」）：写着这个节日，或者有一处日期与它同月同日。 */
+/** 原文裡寫沒寫著這一天（防編，設計稿「三 · 校驗」）：寫著這個節日，或者有一處日期與它同月同日。 */
 function quoteMentionsDate(quote: string, date: CalendarDate | undefined, festival: string | undefined): boolean {
   if (festival && quote.includes(festivalKey(festival))) {
     return true;
@@ -1674,21 +1676,21 @@ function quoteMentionsDate(quote: string, date: CalendarDate | undefined, festiv
   return false;
 }
 
-/** 一句里只写了日的地方：`二十一日`、`初三`、`十五那天`。 */
-const DAY_IN_TEXT = /(初[一二三四五六七八九十]|[0-9０-９]{1,2}|[一二两三四五六七八九十廿卅]{1,3})\s*(?:[日号號]|那[天日])/gu;
+/** 一句裡只寫了日的地方：`二十一日`、`初三`、`十五那天`。 */
+const DAY_IN_TEXT = /(初[一二三四五六七八九十]|[0-9０-９]{1,2}|[一二两三四五六七八九十廿卅兩]{1,3})\s*(?:[日号號]|那[天日])/gu;
 
 /**
- * 校验模型给的一章的时间（认时间的 `times` 里的一项，2026-10-24 重做；老的认事件 `time` 也认）。`raw` 不是对象返回 undefined（模型
- * 没给：不写这一行）。
+ * 校驗模型給的一章的時間（認時間的 `times` 裡的一項，2026-10-24 重做；老的認事件 `time` 也認）。`raw` 不是物件返回 undefined（模型
+ * 沒給：不寫這一行）。
  *
- * - `days` 是整数、绝对值不超过 {@link TIME_DAYS_MAX}；`null`、缺席、认不出 → `+?`〔推不出〕。
- * - `jumps`：本章里往后跳的每一处，天数 0 起、证据逐字（找不到换最接近的原句，还找不到这一跳不算）；历时 = 1 + 各处天数。没给 `jumps`
- *   时认老的 `span`。`part`、`endPart` 只收认得出的短词。
- * - `flashback` 有字 → 整章回忆（不推进时间），机器写的回忆一定带行尾那一段（没依据就〔推测：整章是回忆〕），好认出是机器写的。
- * - `evidence` 照叙事线事件的口径逐字校验：找不到就换成正文里最接近的一句，还找不到丢掉证据、改记〔推测〕。没给证据给了理由 →
- *   〔推测：理由〕；都没给 → 〔推测：紧接上一章〕。
- * - `date`（〔文中〕）：证据要在正文里，而且证据里写着这个日期或这个节日；日期认不出、节日在这个历法里换不出日子的不收；`offset` 夹在
- *   0 到历时 − 1。`season`（〔季节〕）：春夏秋冬之一，证据要在正文里。
+ * - `days` 是整數、絕對值不超過 {@link TIME_DAYS_MAX}；`null`、缺席、認不出 → `+?`〔推不出〕。
+ * - `jumps`：本章裡往後跳的每一處，天數 0 起、證據逐字（找不到換最接近的原句，還找不到這一跳不算）；歷時 = 1 + 各處天數。沒給 `jumps`
+ *   時認老的 `span`。`part`、`endPart` 只收認得出的短詞。
+ * - `flashback` 有字 → 整章回憶（不推進時間），機器寫的回憶一定帶行尾那一段（沒依據就〔推測：整章是回憶〕），好認出是機器寫的。
+ * - `evidence` 照敘事線事件的口徑逐字校驗：找不到就換成正文裡最接近的一句，還找不到丟掉證據、改記〔推測〕。沒給證據給了理由 →
+ *   〔推測：理由〕；都沒給 → 〔推測：緊接上一章〕。
+ * - `date`（〔文中〕）：證據要在正文裡，而且證據裡寫著這個日期或這個節日；日期認不出、節日在這個曆法裡換不出日子的不收；`offset` 夾在
+ *   0 到歷時 − 1。`season`（〔季節〕）：春夏秋冬之一，證據要在正文裡。
  */
 export function verifyTime(
   raw: unknown,
@@ -1709,10 +1711,10 @@ export function verifyTime(
   const part = partOf(o.part ?? o.timeOfDay);
   const endPart = partOf(o.endPart ?? o.end);
   const agoRaw = cut(strOf(o.flashback), AGO_MAX);
-  const flashback = o.flashback === true || (agoRaw !== '' && !/^(?:否|无|没有|false|no)$/iu.test(agoRaw));
+  const flashback = o.flashback === true || (agoRaw !== '' && !/^(?:否|(?:无|無)|(?:没|沒)有|false|no)$/iu.test(agoRaw));
   const ago = /^(?:是|true|yes)$/iu.test(agoRaw) ? '' : agoRaw;
 
-  // 历时：jumps 各处相加（模型不估 span）；没给 jumps 时认老的 span。
+  // 歷時：jumps 各處相加（模型不估 span）；沒給 jumps 時認老的 span。
   let span = 1;
   if (Array.isArray(o.jumps)) {
     for (const j of o.jumps) {
@@ -1722,17 +1724,17 @@ export function verifyTime(
       const jo = j as Record<string, unknown>;
       const days = intOf(jo.days);
       if (days === undefined || days < 0 || days > TIME_DAYS_MAX) {
-        notes.push(`章内一跳的天数认不出：${strOf(jo.days) || '（空）'}`);
+        notes.push(`章內一跳的天數認不出：${strOf(jo.days) || '（空）'}`);
         continue;
       }
       const ev = cut(unquote(strOf(jo.evidence)), TIME_BASIS_MAX);
       const found = locateEvidence(index, ctx.text, ev);
       if (!found) {
-        notes.push(`章内一跳（${days} 天）的依据在正文里找不到，不算：「${ev}」`);
+        notes.push(`章內一跳（${days} 天）的依據在正文裡找不到，不算：「${ev}」`);
         continue;
       }
       if (days > 0 && !mentionsTime(found.quote)) {
-        notes.push(`章内一跳（${days} 天）的依据那一句没写时间，不算：「${found.quote}」`);
+        notes.push(`章內一跳（${days} 天）的依據那一句沒寫時間，不算：「${found.quote}」`);
         continue;
       }
       span = Math.min(TIME_DAYS_MAX, span + days);
@@ -1747,34 +1749,34 @@ export function verifyTime(
   if (evidence) {
     const found = locateEvidence(index, ctx.text, evidence);
     if (found?.changed) {
-      notes.push(`时间的依据不是逐字原文，换成了最接近的原句：「${evidence}」→「${found.quote}」`);
+      notes.push(`時間的依據不是逐字原文，換成了最接近的原句：「${evidence}」→「${found.quote}」`);
     } else if (!found && ctx.hint && normalizeQuote(ctx.hint).includes(normalizeQuote(evidence))) {
-      // 试跑：送去的「细纲记的时间地点」被当成依据抄了回来。照细纲判的，记推测、说清是照细纲。
-      notes.push(`时间的依据抄的是细纲：「${evidence}」`);
-      hinted = `照细纲：${cut(ctx.hint, 26)}`;
+      // 試跑：送去的「細綱記的時間地點」被當成依據抄了回來。照細綱判的，記推測、說清是照細綱。
+      notes.push(`時間的依據抄的是細綱：「${evidence}」`);
+      hinted = `照細綱：${cut(ctx.hint, 26)}`;
     } else if (!found) {
-      notes.push(`时间的依据在正文里找不到：「${evidence}」`);
+      notes.push(`時間的依據在正文裡找不到：「${evidence}」`);
     }
     evidence = found?.quote ?? '';
     if (evidence && !mentionsTime(evidence)) {
-      notes.push(`时间的依据那一句没写时间，改记推测：「${evidence}」`);
+      notes.push(`時間的依據那一句沒寫時間，改記推測：「${evidence}」`);
       evidence = '';
     }
   }
   const rawDays = o.days === null || o.days === undefined || strOf(o.days) === '?' ? undefined : intOf(o.days);
   const days = rawDays !== undefined && Math.abs(rawDays) <= TIME_DAYS_MAX ? rawDays : undefined;
   if (rawDays !== undefined && days === undefined) {
-    notes.push(`时间差 ${rawDays} 天太离谱，当推不出`);
+    notes.push(`時間差 ${rawDays} 天太離譜，當推不出`);
   }
 
   let value: TimelineValue;
   let basis: TimelineEntry['basis'];
   if (flashback) {
     value = { kind: 'flashback', ago };
-    basis = evidence ? { kind: '依据', text: evidence } : { kind: '推测', text: reason || '整章是回忆' };
+    basis = evidence ? { kind: '依据', text: evidence } : { kind: '推测', text: reason || '整章是回憶' };
   } else if (days === undefined) {
     value = { kind: 'unknown' };
-    basis = { kind: '推不出', text: reason || '正文没交代过了多久' };
+    basis = { kind: '推不出', text: reason || '正文沒交代過了多久' };
   } else {
     value = { kind: 'delta', days };
     basis = evidence
@@ -1784,17 +1786,17 @@ export function verifyTime(
           text:
             reason ||
             hinted ||
-            (notes.some((n) => n.startsWith('时间的依据那一句没写时间'))
-              ? '依据那一句没写时间'
-              : notes.some((n) => n.startsWith('时间的依据'))
-                ? '依据在正文里找不到'
-                : '紧接上一章'),
+            (notes.some((n) => n.startsWith('時間的依據那一句沒寫時間'))
+              ? '依據那一句沒寫時間'
+              : notes.some((n) => n.startsWith('時間的依據'))
+                ? '依據在正文裡找不到'
+                : '緊接上一章'),
         };
   }
   if (flashback) {
     span = 1;
   }
-  // 同一天里开头、结尾是同一个时段：只写一个（试跑里「夜里 → 夜里」）。
+  // 同一天裡開頭、結尾是同一個時段：只寫一個（試跑裡「夜裡 → 夜裡」）。
   const end = endPart && !(span === 1 && endPart === part) ? endPart : undefined;
   const dateMark = flashback ? undefined : verifyDateMark(o.date, { cal, text: ctx.text, index, span, notes });
   const seasonMark = verifySeasonMark(o.season, { text: ctx.text, index, notes });
@@ -1813,7 +1815,7 @@ export function verifyTime(
   };
 }
 
-/** 〔文中〕：模型给的 `date`（`{ date, festival, offset, evidence }`）。不合格的不收，原因进 `notes`。 */
+/** 〔文中〕：模型給的 `date`（`{ date, festival, offset, evidence }`）。不合格的不收，原因進 `notes`。 */
 function verifyDateMark(
   raw: unknown,
   ctx: { cal: TimelineCalendar; text: string; index: QuoteIndex; span: number; notes: string[] }
@@ -1828,7 +1830,7 @@ function verifyDateMark(
   if (!date && !(festival && festivalDate(ctx.cal, festival))) {
     if (dateText || festival) {
       ctx.notes.push(
-        `正文写明的日子认不出，不收：${dateText || festival}${festival && !dateText && (festivalDate('简单历', festival) || festivalDate('公历', festival)) ? `（${ctx.cal}里换不出这个节日的日子）` : ''}`
+        `正文寫明的日子認不出，不收：${dateText || festival}${festival && !dateText && (festivalDate('简单历', festival) || festivalDate('公历', festival)) ? `（${ctx.cal}裡換不出這個節日的日子）` : ''}`
       );
     }
     return undefined;
@@ -1836,21 +1838,21 @@ function verifyDateMark(
   const ev = cut(unquote(strOf(o.evidence)), TIME_BASIS_MAX);
   const found = locateEvidence(ctx.index, ctx.text, ev);
   if (!found) {
-    ctx.notes.push(`正文写明的日子「${dateText || festival}」的依据在正文里找不到，不收：「${ev}」`);
+    ctx.notes.push(`正文寫明的日子「${dateText || festival}」的依據在正文裡找不到，不收：「${ev}」`);
     return undefined;
   }
   if (!quoteMentionsDate(found.quote, date, festival)) {
-    ctx.notes.push(`正文写明的日子「${dateText || festival}」在依据那一句里没写着，不收：「${found.quote}」`);
+    ctx.notes.push(`正文寫明的日子「${dateText || festival}」在依據那一句裡沒寫著，不收：「${found.quote}」`);
     return undefined;
   }
-  // 模型只写了日、原文里写着月和日的，按原文的写（试跑：「次日乃是四月二十六日」报成了「二十六日」）。
+  // 模型只寫了日、原文裡寫著月和日的，按原文的寫（試跑：「次日乃是四月二十六日」報成了「二十六日」）。
   let full = dateText;
   if (date && date.m === 0) {
     for (const m of found.quote.matchAll(DATE_IN_TEXT)) {
       const d = parseDate(m[0]);
       if (d && d.d === date.d) {
         full = m[0].replace(/\s+/gu, '').replace(/[号號]$/u, '日');
-        ctx.notes.push(`正文写明的日子只报了「${dateText}」，照原文写成「${full}」`);
+        ctx.notes.push(`正文寫明的日子只報了「${dateText}」，照原文寫成「${full}」`);
         break;
       }
     }
@@ -1860,7 +1862,7 @@ function verifyDateMark(
   return { ...(date ? { date: full } : {}), ...(festival ? { festival } : {}), offset, quote: found.quote };
 }
 
-/** 〔季节〕：模型给的 `season`（`{ season, evidence }`）。 */
+/** 〔季節〕：模型給的 `season`（`{ season, evidence }`）。 */
 function verifySeasonMark(raw: unknown, ctx: { text: string; index: QuoteIndex; notes: string[] }): TimelineSeasonMark | undefined {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return undefined;
@@ -1873,29 +1875,29 @@ function verifySeasonMark(raw: unknown, ctx: { text: string; index: QuoteIndex; 
   const ev = cut(unquote(strOf(o.evidence)), TIME_BASIS_MAX);
   const found = locateEvidence(ctx.index, ctx.text, ev);
   if (!found) {
-    ctx.notes.push(`季节「${season}」的依据在正文里找不到，不收：「${ev}」`);
+    ctx.notes.push(`季節「${season}」的依據在正文裡找不到，不收：「${ev}」`);
     return undefined;
   }
   return { season, quote: found.quote };
 }
 
 /**
- * 完成提示里时间那一句：`时间：+2 天（依据「两日后」）`、`时间推不出（按紧接上一章算）`；正文写明了日子的另说一句
- * （「正文写明八月十五（中秋），按它对齐」）。
+ * 完成提示裡時間那一句：`時間：+2 天（依據「兩日後」）`、`時間推不出（按緊接上一章算）`；正文寫明瞭日子的另說一句
+ * （「正文寫明八月十五（中秋），按它對齊」）。
  */
 export function describeTimeEntry(e: TimelineEntry): string {
-  const dated = e.dateMark ? `；正文写明${describeDateMark(e.dateMark)}，按它对齐` : '';
+  const dated = e.dateMark ? `；正文寫明${describeDateMark(e.dateMark)}，按它對齊` : '';
   switch (e.value.kind) {
     case 'unknown':
-      return dated ? `时间：比上一章晚多久推不出${dated}` : '时间推不出（按紧接上一章算，可以在时间线里改）';
+      return dated ? `時間：比上一章晚多久推不出${dated}` : '時間推不出（按緊接上一章算，可以在時間線裡改）';
     case 'flashback':
-      return `时间：整章是回忆${e.value.ago ? `（${e.value.ago}）` : ''}，不推进时间`;
+      return `時間：整章是回憶${e.value.ago ? `（${e.value.ago}）` : ''}，不推進時間`;
     case 'delta': {
-      const how = describeDelta(e.value.days).replace('同一天', '与上一章同一天');
-      const why = e.basis?.kind === '依据' ? `（依据「${cut(e.basis.text, 20)}」）` : e.basis?.kind === '推测' ? `（推测：${e.basis.text}）` : '';
-      return `时间：${how}${e.span > 1 ? `，历时 ${e.span} 天` : ''}${why}${dated}`;
+      const how = describeDelta(e.value.days).replace('同一天', '與上一章同一天');
+      const why = e.basis?.kind === '依据' ? `（依據「${cut(e.basis.text, 20)}」）` : e.basis?.kind === '推测' ? `（推測：${e.basis.text}）` : '';
+      return `時間：${how}${e.span > 1 ? `，歷時 ${e.span} 天` : ''}${why}${dated}`;
     }
     default:
-      return `时间：${renderTimeValue(e.value)}`;
+      return `時間：${renderTimeValue(e.value)}`;
   }
 }

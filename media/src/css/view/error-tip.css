@@ -1,18 +1,18 @@
-/* 失败标记（工程页行上的感叹号）与它的悬停浮窗。 */
+/* 失敗標記（工程頁行上的感嘆號）與它的懸停浮窗。 */
 
-/* ---- 行上的感叹号
+/* ---- 行上的感嘆號
 
-   排在文件名之前，扫一列名字时异常的几行第一眼就跳出来。
-   两级：error = 整体失败、目标一字未改；warn = 部分完成、下次会重来。
-   颜色一律走 --vscode-* 变量（插件里由 VS Code 注入，独立版由
-   standalone.css 提供深浅两套），不写死。 */
+   排在檔名之前，掃一列名字時異常的幾行第一眼就跳出來。
+   兩級：error = 整體失敗、目標一字未改；warn = 部分完成、下次會重來。
+   顏色一律走 --vscode-* 變數（外掛裡由 VS Code 注入，獨立版由
+   standalone.css 提供深淺兩套），不寫死。 */
 
 .row-failure {
   flex: 0 0 auto;
   font-size: 0.85em;
   line-height: 1;
   cursor: help;
-  /* 感叹号本身在不同字体下宽度飘忽，给个固定位宽免得整列名字对不齐。 */
+  /* 感嘆號本身在不同字型下寬度飄忽，給個固定位寬免得整列名字對不齊。 */
   min-width: 1em;
   text-align: center;
 }
@@ -25,20 +25,20 @@
   color: var(--vscode-editorWarning-foreground, #cca700);
 }
 
-/* ---- 悬停浮窗
+/* ---- 懸停浮窗
 
-   挂在 body 上 position: fixed，与另两只浮窗同一个理由：工程页有内部滚动，
-   挂在行里会被容器裁掉。z-index 与摘要浮窗（25）同层——比 toast（30）与
-   右键菜单（40）低，那两个都是用户主动要的。
+   掛在 body 上 position: fixed，與另兩隻浮窗同一個理由：工程頁有內部滾動，
+   掛在行裡會被容器裁掉。z-index 與摘要浮窗（25）同層——比 toast（30）與
+   右鍵選單（40）低，那兩個都是使用者主動要的。
 
-   与 .detail-tip 不同，这里**没有** pointer-events: none：失败详情有好几行、
-   常含模型返回的片段，用户要能进来选中复制（收起的宽限期在 errorTip.ts）。 */
+   與 .detail-tip 不同，這裡**沒有** pointer-events: none：失敗詳情有好幾行、
+   常含模型返回的片段，使用者要能進來選中複製（收起的寬限期在 errorTip.ts）。 */
 
 .failure-tip {
   position: fixed;
   z-index: 25;
   max-width: min(80vw, 460px);
-  /* 60vh 是可读性上限；放不下时 errorTip.ts 会再压 max-height。 */
+  /* 60vh 是可讀性上限；放不下時 errorTip.ts 會再壓 max-height。 */
   max-height: 60vh;
   overflow-y: auto;
   padding: 8px 10px;
@@ -50,7 +50,7 @@
   line-height: 1.6;
 }
 
-/* 同一目标可能挂着好几条（如「摘要失败」+「角色卡部分失败」），分条画。 */
+/* 同一目標可能掛著好幾條（如「摘要失敗」+「角色卡部分失敗」），分條畫。 */
 .failure-tip-item + .failure-tip-item {
   margin-top: 8px;
   padding-top: 8px;
@@ -64,7 +64,7 @@
   margin-bottom: 2px;
 }
 
-/* 「未改动」/「部分完成」——这是用户最想知道的一件事：磁盘上的东西动没动。 */
+/* 「未改動」/「部分完成」——這是使用者最想知道的一件事：磁碟上的東西動沒動。 */
 .failure-tip-badge {
   flex: 0 0 auto;
   padding: 0 5px;

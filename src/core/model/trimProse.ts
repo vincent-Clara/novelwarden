@@ -1,31 +1,31 @@
 /**
- * 删修饰：写完正文之后的一轮「只许删」修稿，这里是它的纯函数——编号、读回、验收、保底。
+ * 刪修飾：寫完正文之後的一輪「只許刪」修稿，這裡是它的純函式——編號、讀回、驗收、保底。
  *
- * 为什么只许删：flash-lite 这一档的模型写正文时管不住修饰（名词前堆形容词、动词前挂程度副词），
- * 提示词与写作技能怎么说都压不下来；但「从一段话里删掉多余的字」它做得好，而且删没删、加没加
- * 是代码能确定地验收的。实测与取舍见 docs/design/plans/2026-10-03-plain-prose.md。
+ * 為什麼只許刪：flash-lite 這一檔的模型寫正文時管不住修飾（名詞前堆形容詞、動詞前掛程度副詞），
+ * 提示詞與寫作技能怎麼說都壓不下來；但「從一段話裡刪掉多餘的字」它做得好，而且刪沒刪、加沒加
+ * 是程式碼能確定地驗收的。實測與取捨見 docs/design/plans/2026-10-03-plain-prose.md。
  *
- * 验收逐段做，不合格的段退回原文，其余照用：一段被改坏不该连累整章。
+ * 驗收逐段做，不合格的段退回原文，其餘照用：一段被改壞不該連累整章。
  */
 
-/** 一段里允许新增的汉字数：删掉半句之后偶尔要补一个「的」「地」「了」才通顺。 */
+/** 一段裡允許新增的漢字數：刪掉半句之後偶爾要補一個「的」「地」「了」才通順。 */
 export const TRIM_MAX_ADDED_HAN = 2;
 
-/** 一段删完至少留原来的这么多（按汉字算）。删得更狠的多半是把情节删了。 */
+/** 一段刪完至少留原來的這麼多（按漢字算）。刪得更狠的多半是把情節刪了。 */
 export const TRIM_MIN_KEEP_RATIO = 0.4;
 
 /**
- * 开着删修饰时写正文往多写几成：删修饰一章删掉一到两成，按目标字数写、删完就跌破八成，保底又把删改
- * 退回去（novel-test 第 91–100 章，十章七章触发）。所以给模型的篇幅与续写的判据都按目标的这么多倍。
+ * 開著刪修飾時寫正文往多寫幾成：刪修飾一章刪掉一到兩成，按目標字數寫、刪完就跌破八成，保底又把刪改
+ * 退回去（novel-test 第 91–100 章，十章七章觸發）。所以給模型的篇幅與續寫的判據都按目標的這麼多倍。
  */
 export const TRIM_HEADROOM = 1.2;
 
-/** 写正文时给模型、给续写判据的篇幅：开着删修饰按 {@link TRIM_HEADROOM} 放大，取整到百字。 */
+/** 寫正文時給模型、給續寫判據的篇幅：開著刪修飾按 {@link TRIM_HEADROOM} 放大，取整到百字。 */
 export function writingAim(target: number | undefined, trim: boolean): number | undefined {
   return trim && target ? Math.round((target * TRIM_HEADROOM) / 100) * 100 : target;
 }
 
-/** 新写的正文不到这么多字就不跑这一轮：几句话没什么可删的，白花一次调用。 */
+/** 新寫的正文不到這麼多字就不跑這一輪：幾句話沒什麼可刪的，白花一次呼叫。 */
 export const TRIM_MIN_CHARS = 200;
 
 const HAN = /[一-鿿]/g;
@@ -34,12 +34,12 @@ function hanCount(text: string): number {
   return text.match(HAN)?.length ?? 0;
 }
 
-/** 段里的对白（中文双引号、直角引号）。删修饰不碰对白：人物怎么说话归角色设定管。 */
+/** 段裡的對白（中文雙引號、直角引號）。刪修飾不碰對白：人物怎麼說話歸角色設定管。 */
 export function quotesOf(text: string): string[] {
   return text.match(/“[^”]*”|「[^」]*」/g) ?? [];
 }
 
-/** 按空行切段。段内的单个换行留着。 */
+/** 按空行切段。段內的單個換行留著。 */
 export function trimParagraphs(text: string): string[] {
   return text
     .replace(/\r\n?/g, '\n')
@@ -48,14 +48,14 @@ export function trimParagraphs(text: string): string[] {
     .filter(Boolean);
 }
 
-/** 给模型的那份：每段前面一个 `[n]`。 */
+/** 給模型的那份：每段前面一個 `[n]`。 */
 export function numberParagraphs(paragraphs: readonly string[]): string {
   return paragraphs.map((p, i) => `[${i + 1}] ${p}`).join('\n\n');
 }
 
 /**
- * 读回模型的输出：`[n] 正文`，一行一段。编号越界、重复的丢掉（取第一个）；没出现的编号就是
- * 这一段没交回来，验收时当退回处理。
+ * 讀回模型的輸出：`[n] 正文`，一行一段。編號越界、重複的丟掉（取第一個）；沒出現的編號就是
+ * 這一段沒交回來，驗收時當退回處理。
  */
 export function parseNumbered(output: string, count: number): Map<number, string> {
   const out = new Map<number, string>();
@@ -69,7 +69,7 @@ export function parseNumbered(output: string, count: number): Map<number, string
 }
 
 /**
- * 新版里多出来的字：按字做最长公共子序列，新版里不在公共子序列上的就是加的。段落只有几百字，
+ * 新版裡多出來的字：按字做最長公共子序列，新版裡不在公共子序列上的就是加的。段落只有幾百字，
  * n × m 的表放得下。
  */
 export function addedChars(before: string, after: string): string {
@@ -77,7 +77,7 @@ export function addedChars(before: string, after: string): string {
   const b = [...after];
   const n = a.length;
   const m = b.length;
-  // 行 i 存 a[i..] 与 b[j..] 的 LCS 长度，倒着填，正着走一遍取出 b 里没配上的字。
+  // 行 i 存 a[i..] 與 b[j..] 的 LCS 長度，倒著填，正著走一遍取出 b 裡沒配上的字。
   const dp: Uint16Array[] = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
@@ -101,24 +101,24 @@ export function addedChars(before: string, after: string): string {
   return added;
 }
 
-/** 一段删得合不合格。合格返回 undefined，否则返回退回的原因（进说明）。 */
+/** 一段刪得合不合格。合格返回 undefined，否則返回退回的原因（進說明）。 */
 export function trimProblem(before: string, after: string): string | undefined {
   if (!after.trim()) {
-    return '整段删光了';
+    return '整段刪光了';
   }
   const q1 = quotesOf(before);
   const q2 = quotesOf(after);
   if (q1.length !== q2.length || q1.some((q, i) => q !== q2[i])) {
-    return '动了对白';
+    return '動了對白';
   }
   const added = addedChars(before, after);
   if (hanCount(added) > TRIM_MAX_ADDED_HAN) {
-    return '加了原文没有的字';
+    return '加了原文沒有的字';
   }
   if (hanCount(after) < hanCount(before) * TRIM_MIN_KEEP_RATIO) {
-    return '删得太多';
+    return '刪得太多';
   }
-  // 结尾的句末标点换了，往往是把最后一句删成了半句。
+  // 結尾的句末標點換了，往往是把最後一句刪成了半句。
   if (before.slice(-1) !== after.slice(-1)) {
     return '改了段尾';
   }
@@ -126,22 +126,22 @@ export function trimProblem(before: string, after: string): string | undefined {
 }
 
 export interface TrimOutcome {
-  /** 删完的正文，段间空一行。 */
+  /** 刪完的正文，段間空一行。 */
   text: string;
-  /** 真的删了字的段数。 */
+  /** 真的刪了字的段數。 */
   changed: number;
-  /** 退回原文的段：原因 → 段数。 */
+  /** 退回原文的段：原因 → 段數。 */
   rejected: Map<string, number>;
-  /** 为了保住篇幅又退回的段数（见 {@link applyTrim} 的 `floor`）。 */
+  /** 為了保住篇幅又退回的段數（見 {@link applyTrim} 的 `floor`）。 */
   restored: number;
 }
 
 /**
- * 逐段验收、拼回正文。
+ * 逐段驗收、拼回正文。
  *
- * `floor`：删完之后这一段正文至少要有多少字（按 `countWords` 那把尺子，由调用方给）。写正文的
- * 「写够了」看的是目标字数的八成，删修饰把一章删到八成以下，主按钮就会转去推「接着写」，等于
- * 白删；所以删多了就从删得最多的段开始退回原文，直到够数为止。
+ * `floor`：刪完之後這一段正文至少要有多少字（按 `countWords` 那把尺子，由呼叫方給）。寫正文的
+ * 「寫夠了」看的是目標字數的八成，刪修飾把一章刪到八成以下，主按鈕就會轉去推「接著寫」，等於
+ * 白刪；所以刪多了就從刪得最多的段開始退回原文，直到夠數為止。
  */
 export function applyTrim(
   paragraphs: readonly string[],
@@ -152,7 +152,7 @@ export function applyTrim(
   const result = paragraphs.map((before, i) => {
     const after = edits.get(i + 1);
     if (after === undefined) {
-      rejected.set('没交回来', (rejected.get('没交回来') ?? 0) + 1);
+      rejected.set('沒交回來', (rejected.get('沒交回來') ?? 0) + 1);
       return before;
     }
     const why = trimProblem(before, after);

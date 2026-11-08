@@ -17,18 +17,18 @@ import {
 } from '../protocol';
 
 /**
- * 流水线 → `deriveNextStep` 要的那几个事实。
+ * 流水線 → `deriveNextStep` 要的那幾個事實。
  *
- * 实现在 [views/pipeline.ts](../views/pipeline.ts)：状态简报（`views/stateBrief.ts`）
- * 也要用它。这里保留转发，同包的调用点不必改。
+ * 實現在 [views/pipeline.ts](../views/pipeline.ts)：狀態簡報（`views/stateBrief.ts`）
+ * 也要用它。這裡保留轉發，同包的呼叫點不必改。
  */
 export { factsOf } from '../views/pipeline';
 
 /**
- * 下一步落在哪个具体产物上。
+ * 下一步落在哪個具體產物上。
  *
- * 单章的下一步只说「细纲层 / 正文层」，拼成 target 要知道那一章细纲的路径，
- * 而那是 I/O 层的事。全书级的下一步自己带着 target（架构、大纲），这里原样用它。
+ * 單章的下一步只說「細綱層 / 正文層」，拼成 target 要知道那一章細綱的路徑，
+ * 而那是 I/O 層的事。全書級的下一步自己帶著 target（架構、大綱），這裡原樣用它。
  */
 export function targetOf(step: NextStepPlan, plotRelPath: string): CreationTarget {
   if (step.target) {
@@ -54,7 +54,7 @@ export function serializeSession(s: ChatSession): SerializedSession {
     stage: s.stage,
     capability: s.capability,
     targetNo: s.targetNo,
-    // 前端只回显，不猜默认值：缺席归一成「不思考」这件事在后端做一次。
+    // 前端只回顯，不猜預設值：缺席歸一成「不思考」這件事在後端做一次。
     thinking: s.thinking ?? DEFAULT_THINKING_DEPTH,
     turns: s.turns.map(serializeTurn),
   };
@@ -84,9 +84,9 @@ export function serializeTurn(t: ChatTurn): SerializedTurn {
 }
 
 /**
- * 审稿那一轮的报告（五期）。会话文件里的那一份按容错读取重新归一一次：作者可能手改过，
- * 报告卡照着一份坏掉的报告画，点引文、修稿都会出错。认不出就当这一轮没有报告（气泡里
- * 仍有给人读的那一份文字）。
+ * 審稿那一輪的報告（五期）。會話檔案裡的那一份按容錯讀取重新歸一一次：作者可能手改過，
+ * 報告卡照著一份壞掉的報告畫，點引文、修稿都會出錯。認不出就當這一輪沒有報告（氣泡裡
+ * 仍有給人讀的那一份文字）。
  */
 function reviewOf(t: ChatTurn): Pick<SerializedTurn, 'review'> {
   const report = t.review ? normalizeReport(t.review.report) : undefined;
@@ -132,7 +132,7 @@ export function serializeItem(i: ContextItem) {
 
 export function describeProvider(config: NovelConfig = readConfig()): string {
   if (!config.active) {
-    return config.model || '未选择模型';
+    return config.model || '未選擇模型';
   }
   const { profile, model } = config.active;
   return `${providerLabel(profile)} · ${modelLabel(model)}`;

@@ -1,6 +1,6 @@
-/* 内置编辑器：两块编辑区、标签条、工具条、正文、冲突条、状态栏。 */
+/* 內建編輯器：兩塊編輯區、標籤條、工具條、正文、衝突條、狀態列。 */
 
-/* 两块编辑区并列的容器。草稿区没打开时里面只有主区，与改造前无差别。 */
+/* 兩塊編輯區並列的容器。草稿區沒開啟時裡面只有主區，與改造前無差別。 */
 .wb-editors {
   display: flex;
   flex: 1;
@@ -17,7 +17,7 @@
   background: var(--vscode-editor-background);
 }
 
-/* ---- 草稿区：固定宽度、可拖拽，正文那块继续占剩下的空间 */
+/* ---- 草稿區：固定寬度、可拖拽，正文那塊繼續佔剩下的空間 */
 
 .wb-editor-draft {
   flex: 0 0 auto;
@@ -25,7 +25,7 @@
   border-left: 1px solid var(--vscode-panel-border);
 }
 
-/* 标签条换个底色，一眼分得出哪块是草稿。 */
+/* 標籤條換個底色，一眼分得出哪塊是草稿。 */
 .wb-editor-draft .ed-tabs {
   background: var(--vscode-sideBar-background);
 }
@@ -35,8 +35,8 @@
   margin-right: -3px;
 }
 
-/* ---- 标签条：一行能横着滚的标签（.ed-tabs-list）+ 末尾的「▾」（.ed-tabs-more），都由 editor/tabStrip.ts 现造。
-   一个标签都没有时整条藏起来（pane.ts 给 .ed-tabs 挂 hidden）。 */
+/* ---- 標籤條：一行能橫著滾的標籤（.ed-tabs-list）+ 末尾的「▾」（.ed-tabs-more），都由 editor/tabStrip.ts 現造。
+   一個標籤都沒有時整條藏起來（pane.ts 給 .ed-tabs 掛 hidden）。 */
 
 .ed-tabs {
   display: flex;
@@ -47,8 +47,8 @@
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
-/* 滚轮横着滚、当前那个自动滚进视野（tabStrip.ts）；滚动条藏起来，与 VS Code 一样。
-   position: relative 让标签的 offsetLeft 量的是相对这一格的位置。 */
+/* 滾輪橫著滾、當前那個自動滾進視野（tabStrip.ts）；捲軸藏起來，與 VS Code 一樣。
+   position: relative 讓標籤的 offsetLeft 量的是相對這一格的位置。 */
 .ed-tabs-list {
   position: relative;
   display: flex;
@@ -112,12 +112,12 @@
   white-space: nowrap;
 }
 
-/* 临时标签：名字斜体（下一次单击打开别的文件时换掉它）。 */
+/* 臨時標籤：名字斜體（下一次單擊開啟別的檔案時換掉它）。 */
 .ed-tab.preview .ed-tab-name {
   font-style: italic;
 }
 
-/* 类型短标记（细纲 / 草稿 / 角色……，后端给的）：同一章的正文、细纲、草稿一眼分得开。正文不带。 */
+/* 型別短標記（細綱 / 草稿 / 角色……，後端給的）：同一章的正文、細綱、草稿一眼分得開。正文不帶。 */
 .ed-tab-tag {
   flex: 0 0 auto;
   padding: 0 4px;
@@ -129,7 +129,7 @@
   white-space: nowrap;
 }
 
-/* 同名的（同一种、不同目录）后面淡一点写区分它们的最短目录。 */
+/* 同名的（同一種、不同目錄）後面淡一點寫區分它們的最短目錄。 */
 .ed-tab-desc {
   flex: 0 1 auto;
   min-width: 0;
@@ -140,7 +140,7 @@
   color: var(--vscode-descriptionForeground);
 }
 
-/* 脏标记：圆点占位常驻，避免关闭按钮在保存前后左右跳动。 */
+/* 髒標記：圓點佔位常駐，避免關閉按鈕在儲存前後左右跳動。 */
 .ed-tab-dirty {
   flex: 0 0 7px;
   width: 7px;
@@ -181,11 +181,11 @@
   background: var(--vscode-toolbar-hoverBackground);
 }
 
-/* ---- 工具条 */
+/* ---- 工具條 */
 
-/* 章节条（W6 章节工作台）：正开着某一章的正文或细纲时，主区顶上一行——这一章在哪一步、
-   写了多少，右边是对这一章能做的几件事。与工具栏同一种底色，但字重一档：它说的是
-   「这一章」，工具栏说的是「这个文件」。 */
+/* 章節條（W6 章節工作臺）：正開著某一章的正文或細綱時，主區頂上一行——這一章在哪一步、
+   寫了多少，右邊是對這一章能做的幾件事。與工具欄同一種底色，但字重一檔：它說的是
+   「這一章」，工具欄說的是「這個檔案」。 */
 .ed-chapter-bar {
   display: flex;
   align-items: center;
@@ -217,7 +217,7 @@
   cursor: default;
 }
 
-/* 「‹ 上一章」「下一章 ›」夹着这一章的说明。 */
+/* 「‹ 上一章」「下一章 ›」夾著這一章的說明。 */
 .ed-chapter-nav {
   flex: 0 0 auto;
 }
@@ -232,9 +232,9 @@
   background: var(--vscode-editor-background);
 }
 
-/* 面包屑（editor/breadcrumb.ts）：「细纲 › 第一卷 › 第 3 章 夜访」，原始路径在悬停提示上。
-   太长时前面的段先省略（收缩权重大十倍），最后一段（这份文件）最后才让。
-   从前这里是原始路径 + direction: rtl 做左侧省略，`.novelwarden/…` 开头的路径会把点号排到末尾。 */
+/* 麵包屑（editor/breadcrumb.ts）：「細綱 › 第一卷 › 第 3 章 夜訪」，原始路徑在懸停提示上。
+   太長時前面的段先省略（收縮權重大十倍），最後一段（這份檔案）最後才讓。
+   從前這裡是原始路徑 + direction: rtl 做左側省略，`.novelwarden/…` 開頭的路徑會把點號排到末尾。 */
 .ed-path {
   display: flex;
   align-items: center;
@@ -260,7 +260,7 @@
   color: var(--vscode-foreground);
 }
 
-/* 目录段：点了在「文件」页定位到它。 */
+/* 目錄段：點了在「檔案」頁定位到它。 */
 .ed-crumb-dir {
   padding: 0 2px;
   border: none;
@@ -282,7 +282,7 @@
   opacity: 0.6;
 }
 
-/* ---- 内容区 */
+/* ---- 內容區 */
 
 .ed-stage {
   position: relative;
@@ -290,12 +290,12 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  /* 高亮镜像层（highlight.css）与 textarea 的上下关系只在这一格里排，不跟页面上别的层比。 */
+  /* 高亮映象層（highlight.css）與 textarea 的上下關係只在這一格里排，不跟頁面上別的層比。 */
   isolation: isolate;
 }
 
-/* 背景透明、压在高亮镜像层上面：镜像里的 <mark> 底色要透过它看得见（底色由 .wb-editor 给）。
-   字体、字号、行距、内边距（含版心）不在这里写：textarea 与镜像层共用 look.css 里那一组变量。 */
+/* 背景透明、壓在高亮映象層上面：映象裡的 <mark> 底色要通過它看得見（底色由 .wb-editor 給）。
+   字型、字號、行距、內邊距（含版心）不在這裡寫：textarea 與映象層共用 look.css 裡那一組變數。 */
 .ed-area {
   position: relative;
   z-index: 1;
@@ -314,7 +314,7 @@
   outline: none;
 }
 
-/* Markdown 之外（json/yml）用等宽字体，改缩进才看得清——也在 look.css（跟着字号缩放）。 */
+/* Markdown 之外（json/yml）用等寬字型，改縮排才看得清——也在 look.css（跟著字號縮放）。 */
 
 .ed-welcome {
   flex: 1;
@@ -369,9 +369,9 @@
   color: var(--vscode-foreground);
 }
 
-/* ---- 查找替换条在 find.css，高亮镜像层在 highlight.css。 */
+/* ---- 查詢替換條在 find.css，高亮映象層在 highlight.css。 */
 
-/* ---- 冲突提示：绝不静默覆盖，把取舍摆在用户面前。 */
+/* ---- 衝突提示：絕不靜默覆蓋，把取捨擺在使用者面前。 */
 
 .ed-conflict {
   display: flex;
@@ -390,13 +390,13 @@
   min-width: 0;
 }
 
-/* 强制覆盖会丢掉磁盘上别人的改动，别让它跟「取磁盘版」长得一样。 */
+/* 強制覆蓋會丟掉磁碟上別人的改動，別讓它跟「取磁碟版」長得一樣。 */
 .ed-conflict #edConflictForce {
   border-color: var(--vscode-inputValidation-errorBorder);
   color: var(--vscode-errorForeground);
 }
 
-/* ---- 状态栏 */
+/* ---- 狀態列 */
 
 .ed-status {
   display: flex;

@@ -1,38 +1,38 @@
 /**
- * 编辑器的页内对话框：关标签时问「保存 / 不保存 / 取消」、「还原」「用编辑器内容强制保存」之前的确认、
- * 磁盘上没了的文件要不要在原路径重建。编辑器里**不再用 `window.confirm`**——它只有确定 / 取消两颗、
- * 说不出「保存」与「不保存」的区别，还会把整个页面（连同 WebSocket 的回执）卡住。`beforeunload` 那一问
- * 仍是浏览器原生的，页面改不了。
+ * 編輯器的頁內對話方塊：關標籤時問「儲存 / 不儲存 / 取消」、「還原」「用編輯器內容強制儲存」之前的確認、
+ * 磁碟上沒了的檔案要不要在原路徑重建。編輯器裡**不再用 `window.confirm`**——它只有確定 / 取消兩顆、
+ * 說不出「儲存」與「不儲存」的區別，還會把整個頁面（連同 WebSocket 的回執）卡住。`beforeunload` 那一問
+ * 仍是瀏覽器原生的，頁面改不了。
  *
- * 外观复用页面上已有的弹窗那一套（`css/view/modal.css` 的 `.modal-overlay` / `.modal` / `.modal-head` /
- * `.modal-body` / `.modal-foot`，按钮是 `.primary` / `.secondary` / `.danger`）。DOM 每次现造、关掉就拆，
- * 页面模板里没有它。
+ * 外觀複用頁面上已有的彈窗那一套（`css/view/modal.css` 的 `.modal-overlay` / `.modal` / `.modal-head` /
+ * `.modal-body` / `.modal-foot`，按鈕是 `.primary` / `.secondary` / `.danger`）。DOM 每次現造、關掉就拆，
+ * 頁面模板裡沒有它。
  *
- * 键盘：焦点进对话框、缺省落在主按钮上；`Enter` 按下焦点所在的那颗（缺省就是主按钮），`Esc` 取消，
- * `Tab` / `Shift+Tab` 在几颗按钮之间绕、不出对话框。开着的时候 `Ctrl` / `Cmd` 组合键不往下传——
- * 别在作者正决定要不要保存的时候被 `Ctrl+S` / `Ctrl+W` 抢了先。关掉之后焦点回到打开之前的地方。
+ * 鍵盤：焦點進對話方塊、預設落在主按鈕上；`Enter` 按下焦點所在的那顆（預設就是主按鈕），`Esc` 取消，
+ * `Tab` / `Shift+Tab` 在幾顆按鈕之間繞、不出對話方塊。開著的時候 `Ctrl` / `Cmd` 組合鍵不往下傳——
+ * 別在作者正決定要不要儲存的時候被 `Ctrl+S` / `Ctrl+W` 搶了先。關掉之後焦點回到開啟之前的地方。
  *
- * 同一时刻只开一个：后来的排队，前一个答完才开。
+ * 同一時刻只開一個：後來的排隊，前一個答完才開。
  */
 import { el } from '../dom';
 
 export interface DialogButton<T extends string> {
   value: T;
   label: string;
-  /** 主按钮：`Enter` 的缺省、打开时焦点落在它上面。只该有一颗。 */
+  /** 主按鈕：`Enter` 的預設、開啟時焦點落在它上面。只該有一顆。 */
   primary?: boolean;
-  /** 会丢东西的那一颗（放弃修改、覆盖磁盘），画成红色。 */
+  /** 會丟東西的那一顆（放棄修改、覆蓋磁碟），畫成紅色。 */
   danger?: boolean;
 }
 
 export interface DialogSpec<T extends string> {
   title: string;
   message: string;
-  /** 列在说明下面的几项（批量关闭时是哪几份）。`note` 跟在名字后面，`title` 是悬停提示。 */
+  /** 列在說明下面的幾項（批次關閉時是哪幾份）。`note` 跟在名字後面，`title` 是懸停提示。 */
   items?: { label: string; note?: string; title?: string }[];
-  /** 列表下面再补一句（可选）。 */
+  /** 列表下面再補一句（可選）。 */
   detail?: string;
-  /** 从左到右摆；主按钮放最右（离「确定」最近的那一侧就是「继续」）。 */
+  /** 從左到右擺；主按鈕放最右（離「確定」最近的那一側就是「繼續」）。 */
   buttons: DialogButton<T>[];
   /** `Esc` 回的值。 */
   cancel: T;
@@ -41,12 +41,12 @@ export interface DialogSpec<T extends string> {
 let open = 0;
 let queue: Promise<unknown> = Promise.resolve();
 
-/** 有对话框开着（或排着队）。自动保存据此先不动手——作者正在决定。 */
+/** 有對話方塊開著（或排著隊）。自動儲存據此先不動手——作者正在決定。 */
 export function isDialogOpen(): boolean {
   return open > 0;
 }
 
-/** 开一个对话框，回作者按下的那颗按钮的 `value`（`Esc` 回 `spec.cancel`）。没有别的开着时当场就画出来。 */
+/** 開一個對話方塊，回作者按下的那顆按鈕的 `value`（`Esc` 回 `spec.cancel`）。沒有別的開著時當場就畫出來。 */
 export function askDialog<T extends string>(spec: DialogSpec<T>): Promise<T> {
   open++;
   const run = open === 1 ? show(spec) : queue.then(() => show(spec));
@@ -131,7 +131,7 @@ function show<T extends string>(spec: DialogSpec<T>): Promise<T> {
         stop(e);
       }
     };
-    // 点到遮罩外面不算答（免得一失手关掉了还以为存了），焦点被点走了就拉回来。
+    // 點到遮罩外面不算答（免得一失手關掉了還以為存了），焦點被點走了就拉回來。
     const keepFocus = (e: FocusEvent): void => {
       if (!box.contains(e.target as Node)) {
         primary?.focus();

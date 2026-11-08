@@ -1,18 +1,18 @@
 /**
- * LLM provider 的流式解析：跨块切分、CRLF、心跳注释、非 JSON 行、流中错误、
- * 取消、超时、流式输出期间不超时、HTTP 错误信息、思考深度落成请求字段，
- * 以及 Anthropic 的 system 抽取与相邻消息合并。
+ * LLM provider 的流式解析：跨塊切分、CRLF、心跳註釋、非 JSON 行、流中錯誤、
+ * 取消、超時、流式輸出期間不超時、HTTP 錯誤資訊、思考深度落成請求欄位，
+ * 以及 Anthropic 的 system 抽取與相鄰訊息合併。
  *
- * OpenAI 那一侧走的是 **Responses**（`/responses`）：事件名是
- * `response.output_text.delta` 这一套，思考深度是 `reasoning.effort`。
+ * OpenAI 那一側走的是 **Responses**（`/responses`）：事件名是
+ * `response.output_text.delta` 這一套，思考深度是 `reasoning.effort`。
  *
- * ## 为什么这份假服务器留在文件里
+ * ## 為什麼這份假伺服器留在檔案裡
  *
- * 它跑的是**真的 OpenAiProvider / AnthropicProvider**，走真的 fetch 与真的 SSE
- * 解析，所以必须有一个真的 HTTP 服务端把畸形分帧喂进去——事件被切在半路、
- * CRLF 分隔、注释心跳、空 delta、流到一半改吐 error。这与
- * helpers/fakeProvider.js（经 registerProviderFactory 注入假模型、根本不过网络）
- * 是两件事，别硬凑到一起。
+ * 它跑的是**真的 OpenAiProvider / AnthropicProvider**，走真的 fetch 與真的 SSE
+ * 解析，所以必須有一個真的 HTTP 服務端把畸形分幀喂進去——事件被切在半路、
+ * CRLF 分隔、註釋心跳、空 delta、流到一半改吐 error。這與
+ * helpers/fakeProvider.js（經 registerProviderFactory 注入假模型、根本不過網路）
+ * 是兩件事，別硬湊到一起。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -21,10 +21,10 @@ const { loadBundle } = require('../../helpers/load');
 const { installVscodeStub } = require('../../helpers/vscodeStub');
 
 /**
- * 服务端行为开关：每个用例在自己的 before() 里切 mode，再看 lastRequest。
+ * 服務端行為開關：每個用例在自己的 before() 裡切 mode，再看 lastRequest。
  *
- * `requests` 留着整串——**字段协商**那几条要看「第一次发了什么、第二次少了
- * 什么」，只留最后一条看不出来。用例自己在 before() 里清空它。
+ * `requests` 留著整串——**欄位協商**那幾條要看「第一次發了什麼、第二次少了
+ * 什麼」，只留最後一條看不出來。用例自己在 before() 裡清空它。
  */
 const server = { mode: 'openai-ok', lastRequest: null, requests: [] };
 
@@ -46,15 +46,15 @@ const httpServer = http.createServer((req, res) => {
     switch (server.mode) {
       case 'openai-ok': {
         sse();
-        // 故意把事件切成不规则的块，检验缓冲区拼接。
+        // 故意把事件切成不規則的塊，檢驗緩衝區拼接。
         res.write('data: {"type":"response.output_text.delta","delta":"雨下了"}\n\n');
         res.write('data: {"type":"response.output_text.delta","del');
         res.write(
           'ta":"三天，"}\n\ndata: {"type":"response.output_text.delta","delta":"石板路"}\n\n'
         );
-        res.write(': 这是一条注释心跳\n\n');
+        res.write(': 這是一條註釋心跳\n\n');
         res.write('data: {"type":"response.output_text.delta"}\n\n'); // 空 delta
-        res.write('data: {"type":"response.output_text.delta","delta":"泡得发白。"}\n\n');
+        res.write('data: {"type":"response.output_text.delta","delta":"泡得發白。"}\n\n');
         res.write(
           'data: {"type":"response.completed","response":{"usage":{"input_tokens":11,"output_tokens":4}}}\n\n'
         );
@@ -72,7 +72,7 @@ const httpServer = http.createServer((req, res) => {
       }
       case 'openai-reasoning': {
         sse();
-        // 思考摘要先来、正文后到：摘要不能混进正文。
+        // 思考摘要先來、正文後到：摘要不能混進正文。
         res.write('data: {"type":"response.reasoning_summary_text.delta","delta":"我在思考"}\n\n');
         res.write('data: {"type":"response.output_text.delta","delta":"正文"}\n\n');
         res.write('data: [DONE]\n\n');
@@ -81,16 +81,16 @@ const httpServer = http.createServer((req, res) => {
       }
       case 'openai-garbage': {
         sse();
-        res.write('data: 这不是 JSON\n\n');
-        res.write('data: {"type":"response.output_text.delta","delta":"仍能继续"}\n\n');
+        res.write('data: 這不是 JSON\n\n');
+        res.write('data: {"type":"response.output_text.delta","delta":"仍能繼續"}\n\n');
         res.write('data: [DONE]\n\n');
         res.end();
         return;
       }
       case 'openai-mid-error': {
         sse();
-        res.write('data: {"type":"response.output_text.delta","delta":"开头"}\n\n');
-        res.write('data: {"type":"error","error":{"message":"上游过载"}}\n\n');
+        res.write('data: {"type":"response.output_text.delta","delta":"開頭"}\n\n');
+        res.write('data: {"type":"error","error":{"message":"上游過載"}}\n\n');
         res.end();
         return;
       }
@@ -112,11 +112,11 @@ const httpServer = http.createServer((req, res) => {
       case 'slow': {
         sse();
         res.write('data: {"type":"response.output_text.delta","delta":"慢"}\n\n');
-        // 不结束，用于测试取消与超时
+        // 不結束，用於測試取消與超時
         return;
       }
       case 'slow-stream': {
-        // 持续吐字，总时长超过 timeoutMs；空闲超时不应打断。
+        // 持續吐字，總時長超過 timeoutMs；空閒超時不應打斷。
         sse();
         let i = 0;
         let closed = false;
@@ -140,10 +140,10 @@ const httpServer = http.createServer((req, res) => {
         return;
       }
       /**
-       * 第一次 400（「不认这个 effort 值」），之后正常。
+       * 第一次 400（「不認這個 effort 值」），之後正常。
        *
-       * 用来验字段协商：**降一档再发**，而不是把这一轮判死——上游那句
-       * 「Unsupported value」在作者眼里只是「怎么又不能用了」。
+       * 用來驗欄位協商：**降一檔再發**，而不是把這一輪判死——上游那句
+       * 「Unsupported value」在作者眼裡只是「怎麼又不能用了」。
        */
       case 'openai-effort-400': {
         if (server.requests.length === 1) {
@@ -156,7 +156,7 @@ const httpServer = http.createServer((req, res) => {
           return;
         }
         sse();
-        res.write('data: {"type":"response.output_text.delta","delta":"降档后成了"}\n\n');
+        res.write('data: {"type":"response.output_text.delta","delta":"降檔後成了"}\n\n');
         res.write('data: [DONE]\n\n');
         res.end();
         return;
@@ -170,7 +170,7 @@ const httpServer = http.createServer((req, res) => {
         res.end();
         return;
       }
-      /** 思考块：thinking_delta 若干 + 一个 signature_delta，然后才是正文。 */
+      /** 思考塊：thinking_delta 若干 + 一個 signature_delta，然後才是正文。 */
       case 'anthropic-thinking': {
         sse();
         res.write('data: {"type":"message_start","message":{"usage":{"input_tokens":7}}}\n\n');
@@ -192,10 +192,10 @@ const httpServer = http.createServer((req, res) => {
         return;
       }
       /**
-       * 第一次 400（「这个模型不认自适应思考」），之后正常。
+       * 第一次 400（「這個模型不認自適應思考」），之後正常。
        *
-       * 验的是**换写法再发**：老模型只认手动预算，而作者的设置页里只有一个
-       * 模型名，指望他知道自家模型属于哪一代思考写法是不合理的。
+       * 驗的是**換寫法再發**：老模型只認手動預算，而作者的設定頁裡只有一個
+       * 模型名，指望他知道自家模型屬於哪一代思考寫法是不合理的。
        */
       case 'anthropic-adaptive-400': {
         if (server.requests.length === 1) {
@@ -209,7 +209,7 @@ const httpServer = http.createServer((req, res) => {
         }
         sse();
         res.write(
-          'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"换写法后成了"}}\n\n'
+          'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"換寫法後成了"}}\n\n'
         );
         res.write('data: {"type":"message_stop"}\n\n');
         res.end();
@@ -246,7 +246,7 @@ let anthropic;
 let base;
 let port;
 
-/** core 侧取消已改 AbortSignal：包一层，用 provider 模块自己的 CancelledError 作 reason。 */
+/** core 側取消已改 AbortSignal：包一層，用 provider 模組自己的 CancelledError 作 reason。 */
 function makeCancelSource() {
   const controller = new AbortController();
   return {
@@ -255,7 +255,7 @@ function makeCancelSource() {
   };
 }
 
-/** 把「跑一次流并接住异常」压成一句，省掉每处都写 try/catch。 */
+/** 把「跑一次流並接住異常」壓成一句，省掉每處都寫 try/catch。 */
 async function catchError(fn) {
   try {
     await fn();
@@ -267,9 +267,9 @@ async function catchError(fn) {
 
 before(async () => {
   vs = installVscodeStub({ level: 'minimal' });
-  // 一个 bundle 装全部：两个 provider 与 provider.ts 必须共用同一份
-  // CancelledError / LlmError，否则 normalizeError 的 instanceof 判断落空
-  //（它有 err.name 兜底，所以原脚本分开 bundle 也过得去，但共用才是对的）。
+  // 一個 bundle 裝全部：兩個 provider 與 provider.ts 必須共用同一份
+  // CancelledError / LlmError，否則 normalizeError 的 instanceof 判斷落空
+  //（它有 err.name 兜底，所以原指令碼分開 bundle 也過得去，但共用才是對的）。
   const bundle = loadBundle({
     openai: './src/core/llm/openaiProvider.ts',
     anthropic: './src/core/llm/anthropicProvider.ts',
@@ -290,8 +290,8 @@ before(async () => {
 });
 
 after(() => {
-  // close() 只是停止接受新连接：slow 模式的响应从不 res.end()，不显式销毁
-  // 已建立的连接就会把进程吊住。原脚本靠 process.exit 掩盖了这一点。
+  // close() 只是停止接受新連線：slow 模式的響應從不 res.end()，不顯式銷燬
+  // 已建立的連線就會把程序吊住。原指令碼靠 process.exit 掩蓋了這一點。
   httpServer.closeAllConnections();
   httpServer.close();
   vs.restore();
@@ -307,83 +307,83 @@ describe('OpenAI provider · 正常流', () => {
   before(async () => {
     server.mode = 'openai-ok';
     text = await collectText(openai.stream(
-      [{ role: 'system', content: '你是作者' }, { role: 'user', content: '续写' }],
+      [{ role: 'system', content: '你是作者' }, { role: 'user', content: '續寫' }],
       opts()
     ));
-    // 必须在下面那次请求之前抓下来：lastRequest 只留最后一条。
+    // 必須在下面那次請求之前抓下來：lastRequest 只留最後一條。
     req = server.lastRequest;
 
-    // 含斜杠的模型名必须**原样**上线。路由型服务商（OpenRouter、my-router 等）
-    // 的模型名本就是 `渠道/厂商/模型`，任何一段被吃掉，上游都会回
-    // 「has no provider supported」，而那个报错看起来像是模型不存在。
+    // 含斜槓的模型名必須**原樣**上線。路由型服務商（OpenRouter、my-router 等）
+    // 的模型名本就是 `渠道/廠商/模型`，任何一段被吃掉，上游都會回
+    // 「has no provider supported」，而那個報錯看起來像是模型不存在。
     const nested = new OpenAiProvider(base, 'ms/deepseek-ai/DeepSeek-V4-Flash', 'sk-test');
     await collectText(nested.stream([], opts()));
     nestedModel = server.lastRequest.body.model;
   });
 
-  test('拼接出完整文本', () => {
-    assert.equal(text, '雨下了三天，石板路泡得发白。');
+  test('拼接出完整文字', () => {
+    assert.equal(text, '雨下了三天，石板路泡得發白。');
   });
 
-  test('跨块切分的事件被正确拼接', () => {
+  test('跨塊切分的事件被正確拼接', () => {
     assert.ok(text.includes('三天，'));
   });
 
-  test('注释心跳被忽略', () => {
-    assert.ok(!text.includes('注释'));
+  test('註釋心跳被忽略', () => {
+    assert.ok(!text.includes('註釋'));
   });
 
-  test('请求路径正确', () => {
+  test('請求路徑正確', () => {
     assert.equal(req.url, '/v1/responses');
   });
 
-  test('带 Bearer 认证头', () => {
+  test('帶 Bearer 認證頭', () => {
     assert.equal(req.headers.authorization, 'Bearer sk-test');
   });
 
-  test('stream 为 true', () => {
+  test('stream 為 true', () => {
     assert.equal(req.body.stream, true);
   });
 
-  test('传递 model', () => {
+  test('傳遞 model', () => {
     assert.equal(req.body.model, 'test-model');
   });
 
-  test('传递 max_output_tokens', () => {
+  test('傳遞 max_output_tokens', () => {
     assert.equal(req.body.max_output_tokens, 1000);
   });
 
-  // 不思考时它仍是有效的文风旋钮；思考开着时一律不带（见下面那一组）。
-  test('不思考时带 temperature', () => {
+  // 不思考時它仍是有效的文風旋鈕；思考開著時一律不帶（見下面那一組）。
+  test('不思考時帶 temperature', () => {
     assert.equal(req.body.temperature, 0.8);
   });
 
-  test('system 走 instructions 顶层字段，不留在 input 里', () => {
+  test('system 走 instructions 頂層欄位，不留在 input 裡', () => {
     assert.equal(req.body.instructions, '你是作者');
-    assert.deepEqual(req.body.input, [{ role: 'user', content: '续写' }]);
+    assert.deepEqual(req.body.input, [{ role: 'user', content: '續寫' }]);
   });
 
-  // 会话历史由本地那份 JSON 负责，服务端再存一份只是多一个副本。
-  test('store 恒为 false', () => {
+  // 會話歷史由本地那份 JSON 負責，服務端再存一份只是多一個副本。
+  test('store 恆為 false', () => {
     assert.equal(req.body.store, false);
   });
 
-  test('不思考时不带 reasoning 字段', () => {
+  test('不思考時不帶 reasoning 欄位', () => {
     assert.equal('reasoning' in req.body, false);
   });
 
-  test('provider label 含模型与主机', () => {
+  test('provider label 含模型與主機', () => {
     assert.ok(openai.label.includes('test-model') && openai.label.includes('127.0.0.1'));
   });
 
-  test('多层斜杠的模型名原样传给上游', () => {
+  test('多層斜槓的模型名原樣傳給上游', () => {
     assert.equal(nestedModel, 'ms/deepseek-ai/DeepSeek-V4-Flash');
   });
 });
 
 // ---------------------------------------------------------------------------
 
-describe('OpenAI provider · 边界情况', () => {
+describe('OpenAI provider · 邊界情況', () => {
   let crlf;
   let reasoning;
   let garbage;
@@ -407,32 +407,32 @@ describe('OpenAI provider · 边界情况', () => {
     assert.equal(crlf, 'CRLF分隔');
   });
 
-  // 思考不该被采纳写进章节，所以它不进 text；但它必须有地方去，
-  // 否则推理模型想几十秒的那段时间界面上是一片空白。
-  test('思考摘要不混进正文', () => {
+  // 思考不該被採納寫進章節，所以它不進 text；但它必須有地方去，
+  // 否則推理模型想幾十秒的那段時間介面上是一片空白。
+  test('思考摘要不混進正文', () => {
     assert.equal(reasoning, '正文');
   });
 
-  test('跳过非 JSON 行继续解析', () => {
-    assert.equal(garbage, '仍能继续');
+  test('跳過非 JSON 行繼續解析', () => {
+    assert.equal(garbage, '仍能繼續');
   });
 
-  test('流中途的 error 事件被抛出', () => {
+  test('流中途的 error 事件被拋出', () => {
     assert.equal(caught && caught.name, 'LlmError');
   });
 
-  test('错误信息含上游原文', () => {
-    assert.ok(caught && caught.message.includes('上游过载'), caught && caught.message);
+  test('錯誤資訊含上游原文', () => {
+    assert.ok(caught && caught.message.includes('上游過載'), caught && caught.message);
   });
 });
 
 // ---------------------------------------------------------------------------
 
-describe('OpenAI provider · HTTP 错误', () => {
+describe('OpenAI provider · HTTP 錯誤', () => {
   for (const [mode, expect] of [
-    ['http-401', 'API Key 可能无效'],
-    ['http-404', '接口地址或模型名可能填错'],
-    ['http-429', '触发限流'],
+    ['http-401', 'API Key 可能無效'],
+    ['http-404', '介面地址或模型名可能填錯'],
+    ['http-429', '觸發限流'],
   ]) {
     describe(mode, () => {
       let err;
@@ -442,11 +442,11 @@ describe('OpenAI provider · HTTP 错误', () => {
         err = await catchError(() => collectText(openai.stream([], opts())));
       });
 
-      test(`${mode} 抛出 LlmError`, () => {
+      test(`${mode} 拋出 LlmError`, () => {
         assert.ok(err && err.name === 'LlmError');
       });
 
-      test(`${mode} 附带排查提示`, () => {
+      test(`${mode} 附帶排查提示`, () => {
         assert.ok(err && err.message.includes(expect), err && err.message);
       });
     });
@@ -455,7 +455,7 @@ describe('OpenAI provider · HTTP 错误', () => {
 
 // ---------------------------------------------------------------------------
 
-describe('OpenAI provider · 取消与超时', () => {
+describe('OpenAI provider · 取消與超時', () => {
   let first;
   let cancelErr;
   let timeoutErr;
@@ -477,7 +477,7 @@ describe('OpenAI provider · 取消与超时', () => {
       collectText(openai.stream([], opts({ timeoutMs: 300 })))
     );
 
-    // 已取消的 signal 传进来时应立刻失败，不发请求
+    // 已取消的 signal 傳進來時應立刻失敗，不發請求
     server.mode = 'openai-ok';
     const src = makeCancelSource();
     src.cancel();
@@ -486,39 +486,39 @@ describe('OpenAI provider · 取消与超时', () => {
     );
   });
 
-  test('取消前已收到首个分片', () => {
+  test('取消前已收到首個分片', () => {
     assert.deepEqual(first.value, { type: 'text', text: '慢' });
   });
 
-  test('取消后抛 CancelledError', () => {
+  test('取消後拋 CancelledError', () => {
     assert.equal(cancelErr && cancelErr.name, 'CancelledError');
   });
 
-  test('超时抛 LlmError', () => {
+  test('超時拋 LlmError', () => {
     assert.equal(timeoutErr && timeoutErr.name, 'LlmError');
   });
 
-  test('超时信息提示可调设置', () => {
+  test('超時資訊提示可調設定', () => {
     assert.ok(timeoutErr && timeoutErr.message.includes('requestTimeoutMs'), timeoutErr && timeoutErr.message);
   });
 
-  test('预先取消的 signal 立即抛 CancelledError', () => {
+  test('預先取消的 signal 立即拋 CancelledError', () => {
     assert.equal(preCancelledErr && preCancelledErr.name, 'CancelledError');
   });
 });
 
 // ---------------------------------------------------------------------------
 
-describe('OpenAI provider · 流式输出期间不超时', () => {
+describe('OpenAI provider · 流式輸出期間不超時', () => {
   let text;
 
   before(async () => {
     server.mode = 'slow-stream';
-    // 6 片 × 150ms ≈ 900ms，大于 400ms 空闲超时；一直有数据就不该中止。
+    // 6 片 × 150ms ≈ 900ms，大於 400ms 空閒超時；一直有資料就不該中止。
     text = await collectText(openai.stream([], opts({ timeoutMs: 400 })));
   });
 
-  test('总时长超过 timeoutMs 仍收齐全文', () => {
+  test('總時長超過 timeoutMs 仍收齊全文', () => {
     assert.equal(text, '012345');
   });
 });
@@ -534,8 +534,8 @@ describe('Anthropic provider', () => {
     server.mode = 'anthropic-ok';
     aText = await collectText(anthropic.stream(
       [
-        { role: 'system', content: '系统提示A' },
-        { role: 'system', content: '系统提示B' },
+        { role: 'system', content: '系統提示A' },
+        { role: 'system', content: '系統提示B' },
         { role: 'user', content: '第一段' },
         { role: 'user', content: '第二段' },
         { role: 'assistant', content: '上一版' },
@@ -554,50 +554,50 @@ describe('Anthropic provider', () => {
     assert.equal(aText, '三更，林昭醒了。');
   });
 
-  test('请求路径为 /v1/messages', () => {
+  test('請求路徑為 /v1/messages', () => {
     assert.equal(aReq.url, '/v1/messages');
   });
 
-  test('带 x-api-key 头', () => {
+  test('帶 x-api-key 頭', () => {
     assert.equal(aReq.headers['x-api-key'], 'sk-ant-test');
   });
 
-  test('带 anthropic-version 头', () => {
+  test('帶 anthropic-version 頭', () => {
     assert.equal(aReq.headers['anthropic-version'], '2023-06-01');
   });
 
-  test('system 提到顶层字段', () => {
-    assert.equal(aReq.body.system, '系统提示A\n\n系统提示B');
+  test('system 提到頂層欄位', () => {
+    assert.equal(aReq.body.system, '系統提示A\n\n系統提示B');
   });
 
   test('messages 中不含 system', () => {
     assert.ok(aReq.body.messages.every((m) => m.role !== 'system'));
   });
 
-  test('相邻同角色消息被合并', () => {
+  test('相鄰同角色訊息被合併', () => {
     assert.equal(aReq.body.messages[0].content, '第一段\n\n第二段', JSON.stringify(aReq.body.messages));
   });
 
-  test('首条为 user', () => {
+  test('首條為 user', () => {
     assert.equal(aReq.body.messages[0].role, 'user');
   });
 
-  test('assistant 消息保留', () => {
+  test('assistant 訊息保留', () => {
     assert.equal(aReq.body.messages[1].role, 'assistant');
   });
 
-  test('Anthropic 错误事件被抛出', () => {
+  test('Anthropic 錯誤事件被拋出', () => {
     assert.ok(aErr && aErr.name === 'LlmError');
   });
 
-  test('错误信息含上游原文', () => {
+  test('錯誤資訊含上游原文', () => {
     assert.ok(aErr && aErr.message.includes('overloaded_error'), aErr && aErr.message);
   });
 });
 
 // ---------------------------------------------------------------------------
 
-describe('collectText onDelta 回调', () => {
+describe('collectText onDelta 回呼', () => {
   const deltas = [];
   const fulls = [];
   let result;
@@ -612,33 +612,33 @@ describe('collectText onDelta 回调', () => {
     });
   });
 
-  test('onDelta 收到每个分片', () => {
+  test('onDelta 收到每個分片', () => {
     assert.equal(deltas.length, 4, JSON.stringify(deltas));
   });
 
-  test('onDelta 的 full 是累积值', () => {
+  test('onDelta 的 full 是累積值', () => {
     assert.equal(fulls[fulls.length - 1], result);
   });
 
-  test('full 逐步增长', () => {
+  test('full 逐步增長', () => {
     assert.ok(fulls.every((f, i) => i === 0 || f.length > fulls[i - 1].length));
   });
 });
 
 // ---------------------------------------------------------------------------
 
-describe('OpenAI provider · 请求体', () => {
+describe('OpenAI provider · 請求體', () => {
   before(async () => {
     server.mode = 'openai-ok';
     await collectText(openai.stream([], opts()));
   });
 
-  test('stream 恒开', () => {
+  test('stream 恆開', () => {
     assert.equal(server.lastRequest.body.stream, true);
   });
 
-  // 历史由本地会话文件负责，不让上游再存一份。
-  test('store 恒关', () => {
+  // 歷史由本地會話檔案負責，不讓上游再存一份。
+  test('store 恆關', () => {
     assert.equal(server.lastRequest.body.store, false);
   });
 });
@@ -662,57 +662,57 @@ describe('思考深度 · OpenAI Responses', () => {
     off = server.lastRequest.body;
   });
 
-  test('档位落成 reasoning.effort', () => {
+  test('檔位落成 reasoning.effort', () => {
     assert.deepEqual(low.reasoning, { effort: 'low', summary: 'auto' });
   });
 
-  // 界面上只有一个「极限思考」，两家的枚举名不同：这边是 xhigh。
-  test('极限档在 OpenAI 这侧是 xhigh', () => {
+  // 介面上只有一個「極限思考」，兩家的列舉名不同：這邊是 xhigh。
+  test('極限檔在 OpenAI 這側是 xhigh', () => {
     assert.equal(max.reasoning.effort, 'xhigh');
   });
 
-  // 没有 summary 就没有思考增量，界面上那段「正在思考」会是空白。
+  // 沒有 summary 就沒有思考增量，介面上那段「正在思考」會是空白。
   test('要思考摘要（summary: auto）', () => {
     assert.equal(max.reasoning.summary, 'auto');
   });
 
-  // 推理模型一律拒收 temperature：带上去就是 400。
-  test('思考开着时不带 temperature', () => {
+  // 推理模型一律拒收 temperature：帶上去就是 400。
+  test('思考開著時不帶 temperature', () => {
     assert.equal('temperature' in low, false);
   });
 
-  test('关着时不带 reasoning', () => {
+  test('關著時不帶 reasoning', () => {
     assert.equal('reasoning' in off, false);
   });
 });
 
 // ---------------------------------------------------------------------------
 
-describe('思考深度 · 上游不认那一档时降级再发', () => {
+describe('思考深度 · 上游不認那一檔時降級再發', () => {
   let text;
   let bodies;
 
   before(async () => {
     server.mode = 'openai-effort-400';
     server.requests.length = 0;
-    // 模型名与别的用例不同：降级结论按「接口地址 + 模型」记在内存里，
-    // 共用一个模型名会让用例之间互相污染。
+    // 模型名與別的用例不同：降級結論按「介面地址 + 模型」記在記憶體裡，
+    // 共用一個模型名會讓用例之間互相汙染。
     const provider = new OpenAiProvider(base, 'picky-model', 'sk-test');
     text = await collectText(provider.stream([], opts({ thinking: 'max' })));
     bodies = server.requests.map((r) => r.body);
   });
 
-  test('两次请求：第一次 xhigh 被拒，第二次降到 high', () => {
+  test('兩次請求：第一次 xhigh 被拒，第二次降到 high', () => {
     assert.equal(bodies.length, 2, JSON.stringify(bodies.map((b) => b.reasoning)));
     assert.equal(bodies[0].reasoning.effort, 'xhigh');
     assert.equal(bodies[1].reasoning.effort, 'high');
   });
 
-  test('作者拿到的是正常结果，不是一句报错', () => {
-    assert.equal(text, '降档后成了');
+  test('作者拿到的是正常結果，不是一句報錯', () => {
+    assert.equal(text, '降檔後成了');
   });
 
-  test('降级结论记住了：同一个模型的下一次请求直接发 high', async () => {
+  test('降級結論記住了：同一個模型的下一次請求直接發 high', async () => {
     server.mode = 'openai-ok';
     const provider = new OpenAiProvider(base, 'picky-model', 'sk-test');
     await collectText(provider.stream([], opts({ thinking: 'max' })));
@@ -739,26 +739,26 @@ describe('思考深度 · Anthropic', () => {
     off = server.lastRequest.body;
   });
 
-  test('默认走自适应写法', () => {
+  test('預設走自適應寫法', () => {
     assert.deepEqual(body.thinking, { type: 'adaptive', display: 'summarized' });
   });
 
-  // 界面上那个「极限思考」在这一侧的名字是 max（OpenAI 那侧是 xhigh）。
-  test('档位落成 output_config.effort，极限档是 max', () => {
+  // 介面上那個「極限思考」在這一側的名字是 max（OpenAI 那側是 xhigh）。
+  test('檔位落成 output_config.effort，極限檔是 max', () => {
     assert.deepEqual(body.output_config, { effort: 'max' });
   });
 
-  test('思考开着时不带 temperature', () => {
+  test('思考開著時不帶 temperature', () => {
     assert.equal('temperature' in body, false);
   });
 
-  test('关着时不带思考字段，temperature 照常', () => {
+  test('關著時不帶思考欄位，temperature 照常', () => {
     assert.equal('thinking' in off, false);
     assert.equal('output_config' in off, false);
     assert.equal(off.temperature, 0.8);
   });
 
-  test('thinking_delta 走 reasoning，不混进正文', () => {
+  test('thinking_delta 走 reasoning，不混進正文', () => {
     assert.equal(result.reasoning, '先想一下');
     assert.equal(result.text, '答案');
   });
@@ -767,7 +767,7 @@ describe('思考深度 · Anthropic', () => {
 
 // ---------------------------------------------------------------------------
 
-describe('思考深度 · 老模型不认自适应时换写法', () => {
+describe('思考深度 · 老模型不認自適應時換寫法', () => {
   let text;
   let bodies;
 
@@ -778,21 +778,21 @@ describe('思考深度 · 老模型不认自适应时换写法', () => {
     text = await collectText(
       provider.stream(
         [{ role: 'user', content: 'x' }],
-        // 输出上限要给足：预算必须小于它，1000 的上限连 1024 的下限都装不下。
+        // 輸出上限要給足：預算必須小於它，1000 的上限連 1024 的下限都裝不下。
         opts({ thinking: 'medium', maxOutputTokens: 16000 })
       )
     );
     bodies = server.requests.map((r) => r.body);
   });
 
-  test('第一次自适应被拒，第二次改用手动思考预算', () => {
+  test('第一次自適應被拒，第二次改用手動思考預算', () => {
     assert.equal(bodies.length, 2, JSON.stringify(bodies.map((b) => b.thinking)));
     assert.equal(bodies[0].thinking.type, 'adaptive');
     assert.deepEqual(bodies[1].thinking, { type: 'enabled', budget_tokens: 10240 });
   });
 
-  // 预算必须小于 max_tokens（思考 token 算在输出上限里），所以留 1024 给正文。
-  test('预算按输出上限收紧', async () => {
+  // 預算必須小於 max_tokens（思考 token 算在輸出上限裡），所以留 1024 給正文。
+  test('預算按輸出上限收緊', async () => {
     server.mode = 'anthropic-ok';
     const provider = new AnthropicProvider(`http://127.0.0.1:${port}`, 'claude-old', 'sk-ant-test');
     await collectText(
@@ -804,8 +804,8 @@ describe('思考深度 · 老模型不认自适应时换写法', () => {
     assert.equal(server.lastRequest.body.thinking.budget_tokens, 4000 - 1024);
   });
 
-  // 上限太小连 1024 的硬下限都留不出来时不带思考字段，而不是发一个必然 400 的请求。
-  test('输出上限装不下思考时干脆不带思考字段', async () => {
+  // 上限太小連 1024 的硬下限都留不出來時不帶思考欄位，而不是發一個必然 400 的請求。
+  test('輸出上限裝不下思考時乾脆不帶思考欄位', async () => {
     server.mode = 'anthropic-ok';
     const provider = new AnthropicProvider(`http://127.0.0.1:${port}`, 'claude-old', 'sk-ant-test');
     await collectText(
@@ -814,7 +814,7 @@ describe('思考深度 · 老模型不认自适应时换写法', () => {
     assert.equal('thinking' in server.lastRequest.body, false);
   });
 
-  test('作者拿到的是正常结果，不是一句报错', () => {
-    assert.equal(text, '换写法后成了');
+  test('作者拿到的是正常結果，不是一句報錯', () => {
+    assert.equal(text, '換寫法後成了');
   });
 });

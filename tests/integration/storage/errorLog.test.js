@@ -1,15 +1,15 @@
 /**
- * 工程数据库与失败记录。迁自 scripts/smoke-errorlog.js（全部 46 条）。
+ * 工程資料庫與失敗記錄。遷自 scripts/smoke-errorlog.js（全部 46 條）。
  *
- * 这套机制的存在理由是「日志与 toast 都要求用户恰好在看」，所以它自己必须满足三条：
- * 写记录绝不带崩正事、成功必须清标记、纯读取不建库。外加驱动适配层：语句用完即
- * finalize，否则 Windows 上库文件删不掉。
+ * 這套機制的存在理由是「日誌與 toast 都要求使用者恰好在看」，所以它自己必須滿足三條：
+ * 寫記錄絕不帶崩正事、成功必須清標記、純讀取不建庫。外加驅動適配層：語句用完即
+ * finalize，否則 Windows 上庫檔案刪不掉。
  *
- * 收尾必须 `cleanup(WORK, db)`——先 resetDatabases() 关连接再 rmSync，
- * 否则 SQLite 句柄开着会漏临时目录。
+ * 收尾必須 `cleanup(WORK, db)`——先 resetDatabases() 關連線再 rmSync，
+ * 否則 SQLite 控制代碼開著會漏臨時目錄。
  *
- * 时序敏感：断言里凡是读「此刻磁盘上有没有库文件」的，都在操作后**当场**取布尔值存起来，
- * 断言只读变量。整段跑完再回头 existsSync 会全看到最终状态，早先那几条就废了。
+ * 時序敏感：斷言裡凡是讀「此刻磁碟上有沒有庫檔案」的，都在操作後**當場**取布林值存起來，
+ * 斷言只讀變數。整段跑完再回頭 existsSync 會全看到最終狀態，早先那幾條就廢了。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -29,12 +29,12 @@ describe('errorLog · db', () => {
   let wsMod;
   let WORK;
 
-  /** 与原脚本的 newProject 一致：WORK 下开子工程，不删示例文件（本文件无计数断言）。 */
+  /** 與原指令碼的 newProject 一致：WORK 下開子工程，不刪示例檔案（本檔案無計數斷言）。 */
   async function newProject(name) {
     const root = path.join(WORK, name);
     fs.mkdirSync(root, { recursive: true });
     const project = projectMod.NovelProject.open(root);
-    await new wsMod.Workspace(project).initializeProject({ title: name, author: '测试' });
+    await new wsMod.Workspace(project).initializeProject({ title: name, author: '測試' });
     return project;
   }
 
@@ -49,14 +49,14 @@ describe('errorLog · db', () => {
       ws: './src/core/workspace/index.ts',
     });
     ({ logger, project: projectMod, db, errorLog, projectView, ws: wsMod } = bundle);
-    // 原脚本的 host 字面量里没有 reviewReplace，显式抹掉，与原 host 形状一致。
+    // 原指令碼的 host 字面量裡沒有 reviewReplace，顯式抹掉，與原 host 形狀一致。
     bundle.host.initHost(makeFakeHost({ overrides: { reviewReplace: undefined } }).host);
     ({ dir: WORK } = makeTempDir('errorlog'));
   });
 
   after(() => cleanup(WORK, db));
 
-  describe('驱动适配层', () => {
+  describe('驅動適配層', () => {
     let project;
     let dbFile;
     let handle;
@@ -69,7 +69,7 @@ describe('errorLog · db', () => {
       dbFile = path.join(project.root, '.novelwarden', 'novelwarden.db');
       handle = await db.openDatabase(project);
 
-      // 建表是幂等的：每次开库都会跑一遍 CREATE TABLE IF NOT EXISTS。
+      // 建表是冪等的：每次開庫都會跑一遍 CREATE TABLE IF NOT EXISTS。
       handle.run(
         'INSERT INTO errors (at, scope, target_kind, target_key, severity, op, message) VALUES (?, ?, ?, ?, ?, ?, ?)',
         new Date().toISOString(),
@@ -78,11 +78,11 @@ describe('errorLog · db', () => {
         'a.md',
         'error',
         'updateCard',
-        '往返测试'
+        '往返測試'
       );
       rows = handle.all('SELECT target_key, message FROM errors');
 
-      // NULL 要能存也能读回来（detail 常常是空的）。
+      // NULL 要能存也能讀回來（detail 常常是空的）。
       handle.run(
         'INSERT INTO errors (at, scope, target_kind, target_key, severity, op, message, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         new Date().toISOString(),
@@ -91,40 +91,40 @@ describe('errorLog · db', () => {
         'b.md',
         'error',
         'summarize',
-        '无详情',
+        '無詳情',
         null
       );
       nullRow = handle.all("SELECT detail FROM errors WHERE target_key = 'b.md'")[0];
 
-      // 同一个工程只开一个连接，不是每次查询都开一次。
+      // 同一個工程只開一個連線，不是每次查詢都開一次。
       cached = await db.openDatabase(project);
     });
 
-    test('开得出库', () => {
+    test('開得出庫', () => {
       assert.ok(handle);
     });
 
-    test('库文件落在 .novelwarden/ 下', () => {
+    test('庫檔案落在 .novelwarden/ 下', () => {
       assert.ok(fs.existsSync(dbFile), dbFile);
     });
 
-    test('写进去再读得回来', () => {
+    test('寫進去再讀得回來', () => {
       assert.equal(rows.length, 1, JSON.stringify(rows));
-      assert.equal(rows[0].message, '往返测试', JSON.stringify(rows));
+      assert.equal(rows[0].message, '往返測試', JSON.stringify(rows));
     });
 
-    test('detail 可以为 NULL', () => {
+    test('detail 可以為 NULL', () => {
       assert.ok(nullRow, JSON.stringify(nullRow));
       assert.equal(nullRow.detail, null, JSON.stringify(nullRow));
     });
 
-    test('连接按工程根缓存', () => {
+    test('連線按工程根快取', () => {
       assert.equal(cached, handle);
     });
 
-    // ★ Windows 上不 finalize 语句就删不掉库文件。这条挂了的话，
-    //   所有用临时工程的测试都会在收尾时 EBUSY。
-    test('关库之后删得掉工程目录（语句已 finalize）', () => {
+    // ★ Windows 上不 finalize 語句就刪不掉庫檔案。這條掛了的話，
+    //   所有用臨時工程的測試都會在收尾時 EBUSY。
+    test('關庫之後刪得掉工程目錄（語句已 finalize）', () => {
       db.closeDatabase(project);
       let removed = true;
       try {
@@ -136,7 +136,7 @@ describe('errorLog · db', () => {
     });
   });
 
-  describe('纯读取不建库', () => {
+  describe('純讀取不建庫', () => {
     let project;
     let empty;
     let existsAfterQuery;
@@ -149,7 +149,7 @@ describe('errorLog · db', () => {
       project = await newProject('readonly');
       const dbFile = path.join(project.root, '.novelwarden', 'novelwarden.db');
 
-      // 一个从没出过错的工程，光是刷新工程页不该生出 db 文件。
+      // 一個從沒出過錯的工程，光是重新整理工程頁不該生出 db 檔案。
       empty = await errorLog.listActiveFailures(project);
       existsAfterQuery = fs.existsSync(dbFile);
 
@@ -159,46 +159,46 @@ describe('errorLog · db', () => {
       history = await db.readLogHistory(project, 10);
       existsAfterHistory = fs.existsSync(dbFile);
 
-      // 写入方才有理由建库。
+      // 寫入方才有理由建庫。
       await errorLog.recordFailure(project, {
         scope: '角色卡',
         targetKind: 'character',
         targetKey: 'x.md',
         severity: 'error',
         op: 'updateCard',
-        message: '第一条记录',
+        message: '第一條記錄',
       });
       existsAfterRecord = fs.existsSync(dbFile);
     });
 
     after(() => db.closeDatabase(project));
 
-    test('没有库时查询返回空', () => {
+    test('沒有庫時查詢返回空', () => {
       assert.equal(Object.keys(empty).length, 0, JSON.stringify(empty));
     });
 
-    test('查询不会建出库文件', () => {
+    test('查詢不會建出庫檔案', () => {
       assert.ok(!existsAfterQuery);
     });
 
-    test('清记录也不会建出库文件', () => {
+    test('清記錄也不會建出庫檔案', () => {
       assert.ok(!existsAfterClear);
     });
 
-    test('读日志历史不会建出库文件', () => {
+    test('讀日誌歷史不會建出庫檔案', () => {
       assert.equal(history.length, 0);
     });
 
-    test('读历史后仍无库文件', () => {
+    test('讀歷史後仍無庫檔案', () => {
       assert.ok(!existsAfterHistory);
     });
 
-    test('记一条失败会建出库文件', () => {
+    test('記一條失敗會建出庫檔案', () => {
       assert.ok(existsAfterRecord);
     });
   });
 
-  describe('失败记录的生命周期', () => {
+  describe('失敗記錄的生命週期', () => {
     const CARD = '.novelwarden/characters/林昭.md';
     let project;
     let first;
@@ -217,13 +217,13 @@ describe('errorLog · db', () => {
         targetKey: CARD,
         severity: 'error',
         op: 'updateCard',
-        message: '3 批全部解析失败，角色卡未改动',
-        detail: '范围 第 1-5 章',
+        message: '3 批全部解析失敗，角色卡未改動',
+        detail: '範圍 第 1-5 章',
       });
       first = await errorLog.listActiveFailures(project);
 
-      // 同一目标 + 同一动作只留最新一条：连着重试三次失败，用户要看的是
-      // 「现在还错着」，不是三条一模一样的记录。
+      // 同一目標 + 同一動作只留最新一條：連著重試三次失敗，使用者要看的是
+      // 「現在還錯著」，不是三條一模一樣的記錄。
       for (let i = 0; i < 3; i++) {
         await errorLog.recordFailure(project, {
           scope: '角色卡',
@@ -231,31 +231,31 @@ describe('errorLog · db', () => {
           targetKey: CARD,
           severity: 'error',
           op: 'updateCard',
-          message: `重试第 ${i + 1} 次仍失败`,
+          message: `重試第 ${i + 1} 次仍失敗`,
         });
       }
       afterRetries = await errorLog.listActiveFailures(project);
 
-      // 不同动作各留各的：同一章可能既定稿失败、又角色卡失败。
+      // 不同動作各留各的：同一章可能既定稿失敗、又角色卡失敗。
       await errorLog.recordFailure(project, {
         scope: '定稿',
         targetKind: 'chapter',
         targetKey: CARD,
         severity: 'warn',
         op: 'summarize',
-        message: '定稿也失败了',
+        message: '定稿也失敗了',
       });
       afterSecondOp = await errorLog.listActiveFailures(project);
 
-      // 清某个动作不该顺手把别的动作的记录抹掉。
+      // 清某個動作不該順手把別的動作的記錄抹掉。
       await errorLog.clearFailures(project, 'character', CARD, 'updateCard');
       afterClearOp = await errorLog.listActiveFailures(project);
 
-      // 不给 op 就清该目标全部。
+      // 不給 op 就清該目標全部。
       await errorLog.clearFailures(project, 'chapter', CARD);
       afterClearAll = await errorLog.listActiveFailures(project);
 
-      // 一个目标最多显示 3 条（浮窗里摊开更多没人看）。
+      // 一個目標最多顯示 3 條（浮窗裡攤開更多沒人看）。
       for (let i = 0; i < 6; i++) {
         await errorLog.recordFailure(project, {
           scope: '设定',
@@ -263,7 +263,7 @@ describe('errorLog · db', () => {
           targetKey: 'lore.md',
           severity: 'error',
           op: `op-${i}`,
-          message: `第 ${i} 条`,
+          message: `第 ${i} 條`,
         });
       }
       afterSix = await errorLog.listActiveFailures(project);
@@ -275,57 +275,57 @@ describe('errorLog · db', () => {
       assert.ok(first[CARD], JSON.stringify(first));
     });
 
-    test('带回 severity', () => {
+    test('帶回 severity', () => {
       assert.equal(first[CARD][0].severity, 'error');
     });
 
-    test('带回 message', () => {
-      assert.ok(first[CARD][0].message.includes('未改动'));
+    test('帶回 message', () => {
+      assert.ok(first[CARD][0].message.includes('未改動'));
     });
 
-    test('带回 detail', () => {
-      assert.equal(first[CARD][0].detail, '范围 第 1-5 章');
+    test('帶回 detail', () => {
+      assert.equal(first[CARD][0].detail, '範圍 第 1-5 章');
     });
 
-    test('带回时间戳', () => {
+    test('帶回時間戳', () => {
       assert.equal(typeof first[CARD][0].at, 'string');
       assert.ok(first[CARD][0].at.length > 0);
     });
 
-    test('同一动作只留最新一条', () => {
+    test('同一動作只留最新一條', () => {
       assert.equal(afterRetries[CARD].length, 1, String(afterRetries[CARD].length));
     });
 
-    test('留下的是最新那条', () => {
-      assert.ok(afterRetries[CARD][0].message.includes('重试第 3 次'), afterRetries[CARD][0].message);
+    test('留下的是最新那條', () => {
+      assert.ok(afterRetries[CARD][0].message.includes('重試第 3 次'), afterRetries[CARD][0].message);
     });
 
-    test('不同动作各留一条', () => {
+    test('不同動作各留一條', () => {
       assert.equal(afterSecondOp[CARD].length, 2, String(afterSecondOp[CARD].length));
     });
 
-    test('清掉了指定动作', () => {
+    test('清掉了指定動作', () => {
       assert.equal(afterClearOp[CARD].length, 1, JSON.stringify(afterClearOp[CARD]));
     });
 
-    test('别的动作的记录还在', () => {
-      assert.equal(afterClearOp[CARD][0].message, '定稿也失败了', afterClearOp[CARD][0].message);
+    test('別的動作的記錄還在', () => {
+      assert.equal(afterClearOp[CARD][0].message, '定稿也失敗了', afterClearOp[CARD][0].message);
     });
 
-    test('不给 op 则全清', () => {
+    test('不給 op 則全清', () => {
       assert.ok(!afterClearAll[CARD], JSON.stringify(afterClearAll));
     });
 
-    test('一个目标最多 3 条', () => {
+    test('一個目標最多 3 條', () => {
       assert.equal(afterSix['lore.md'].length, 3, String(afterSix['lore.md'].length));
     });
 
-    test('留下的是最近的 3 条', () => {
-      assert.equal(afterSix['lore.md'][0].message, '第 5 条', afterSix['lore.md'][0].message);
+    test('留下的是最近的 3 條', () => {
+      assert.equal(afterSix['lore.md'][0].message, '第 5 條', afterSix['lore.md'][0].message);
     });
   });
 
-  describe('工程页快照带上失败记录', () => {
+  describe('工程頁快照帶上失敗記錄', () => {
     let project;
     let before1;
     let after1;
@@ -347,23 +347,23 @@ describe('errorLog · db', () => {
         targetKey: '.novelwarden/characters/林昭.md',
         severity: 'error',
         op: 'updateCard',
-        message: '解析失败，角色卡未改动',
+        message: '解析失敗，角色卡未改動',
       });
       after1 = await projectView.buildProjectTree(project);
     });
 
     after(() => db.closeDatabase(project));
 
-    test('没有失败时 failures 是空对象', () => {
+    test('沒有失敗時 failures 是空物件', () => {
       assert.equal(Object.keys(before1.failures).length, 0, JSON.stringify(before1.failures));
     });
 
-    test('失败记录进了工程页快照', () => {
+    test('失敗記錄進了工程頁快照', () => {
       assert.ok(after1.failures['.novelwarden/characters/林昭.md'], JSON.stringify(after1.failures));
     });
   });
 
-  describe('日志持久化', () => {
+  describe('日誌持久化', () => {
     let project;
     let history;
     let batched;
@@ -374,80 +374,80 @@ describe('errorLog · db', () => {
 
     before(async () => {
       project = await newProject('logs');
-      const log = logger.scoped('测试');
-      // 挂 sink **之前**先打一条：core 的模块在 import 期就在打日志了
-      // （配置读取、迁移检测），那段是排查启动问题要看的第一段，不能丢。
-      log.info('挂载之前打的一条');
+      const log = logger.scoped('測試');
+      // 掛 sink **之前**先打一條：core 的模組在 import 期就在打日誌了
+      // （配置讀取、遷移檢測），那段是排查啟動問題要看的第一段，不能丟。
+      log.info('掛載之前打的一條');
 
       const sub = await db.installLogPersistence(project);
 
-      log.info('第一条', '带 detail');
-      log.error('第二条');
-      // 攒批写入：立刻查是查不到的，等一拍或手动 flush。
+      log.info('第一條', '帶 detail');
+      log.error('第二條');
+      // 攢批寫入：立刻查是查不到的，等一拍或手動 flush。
       db.flushPendingLogs();
       history = await db.readLogHistory(project, 50);
 
-      // 攒批：多条只写一次事务，但一条都不能少。
+      // 攢批：多條只寫一次事務，但一條都不能少。
       for (let i = 0; i < 20; i++) {
-        log.debug(`批量 ${i}`);
+        log.debug(`批次 ${i}`);
       }
       await sleep(300);
       batched = await db.readLogHistory(project, 100);
 
       // limit 生效，且取的是最近的那些。
       tail = await db.readLogHistory(project, 5);
-      // 翻页：只取更早的。
+      // 翻頁：只取更早的。
       earlier = await db.readLogHistory(project, 5, tail[0].at);
 
-      // ★ 日志写库失败绝不能再打日志——那会递归刷屏。这里退订后再打日志，
-      //   验证 sink 已经摘干净（不再往库里写）。
+      // ★ 日誌寫庫失敗絕不能再打日誌——那會遞迴刷屏。這裡退訂後再打日誌，
+      //   驗證 sink 已經摘乾淨（不再往庫裡寫）。
       sub.dispose();
       countBeforeDispose = (await db.readLogHistory(project, 500)).length;
-      log.info('退订之后的日志');
+      log.info('退訂之後的日誌');
       db.flushPendingLogs();
       countAfterDispose = (await db.readLogHistory(project, 500)).length;
     });
 
     after(() => db.closeDatabase(project));
 
-    test('日志落进了库', () => {
+    test('日誌落進了庫', () => {
       assert.ok(history.length >= 2, String(history.length));
     });
 
-    test('挂载之前的日志被补写进来', () => {
+    test('掛載之前的日誌被補寫進來', () => {
       assert.ok(
-        history.some((e) => e.message === '挂载之前打的一条'),
+        history.some((e) => e.message === '掛載之前打的一條'),
         JSON.stringify(history.map((e) => e.message))
       );
     });
 
-    test('按时间正序返回', () => {
+    test('按時間正序返回', () => {
       assert.ok(history[0].at <= history[history.length - 1].at);
     });
 
-    test('detail 一并落盘', () => {
-      const first = history.find((e) => e.message === '第一条');
-      assert.ok(first, '没找到「第一条」');
-      assert.equal(first.detail, '带 detail', first.detail);
+    test('detail 一併落盤', () => {
+      const first = history.find((e) => e.message === '第一條');
+      assert.ok(first, '沒找到「第一條」');
+      assert.equal(first.detail, '帶 detail', first.detail);
     });
 
-    test('level 原样保留', () => {
+    test('level 原樣保留', () => {
       assert.ok(history.some((e) => e.level === 'error'));
     });
 
-    test('补写不产生重复条目', () => {
-      const dup = history.filter((e) => e.message === '挂载之前打的一条').length;
+    test('補寫不產生重複條目', () => {
+      const dup = history.filter((e) => e.message === '掛載之前打的一條').length;
       assert.equal(dup, 1, String(dup));
     });
 
-    // 历史条目的 seq 取负：前端按 seq 去重，而库里的 seq 是各次进程的
-    // 进程内序号，昨天的第 7 条会和今天的第 7 条撞车。
-    test('历史条目的 seq 不与实时序号冲突', () => {
+    // 歷史條目的 seq 取負：前端按 seq 去重，而庫裡的 seq 是各次程序的
+    // 程序內序號，昨天的第 7 條會和今天的第 7 條撞車。
+    test('歷史條目的 seq 不與實時序號衝突', () => {
       assert.ok(history.every((e) => e.seq < 0), JSON.stringify(history.map((e) => e.seq)));
     });
 
-    test('攒批写入不丢条', () => {
-      assert.equal(batched.filter((e) => e.message.startsWith('批量')).length, 20);
+    test('攢批寫入不丟條', () => {
+      assert.equal(batched.filter((e) => e.message.startsWith('批次')).length, 20);
     });
 
     test('limit 生效', () => {
@@ -455,22 +455,22 @@ describe('errorLog · db', () => {
     });
 
     test('取的是最近的', () => {
-      assert.equal(tail[tail.length - 1].message, '批量 19', tail[tail.length - 1].message);
+      assert.equal(tail[tail.length - 1].message, '批次 19', tail[tail.length - 1].message);
     });
 
-    test('翻页只取更早的', () => {
+    test('翻頁只取更早的', () => {
       assert.ok(
         earlier.every((e) => e.at < tail[0].at),
         JSON.stringify(earlier.map((e) => e.at))
       );
     });
 
-    test('退订后不再写库', () => {
+    test('退訂後不再寫庫', () => {
       assert.equal(countAfterDispose, countBeforeDispose, `${countBeforeDispose} → ${countAfterDispose}`);
     });
   });
 
-  describe('库不可用时静默降级', () => {
+  describe('庫不可用時靜默降級', () => {
     let threw = false;
     let thrown;
     let active;
@@ -480,7 +480,7 @@ describe('errorLog · db', () => {
 
     before(async () => {
       const project = await newProject('broken');
-      // 用一个**目录**占住库文件的位置：SQLite 打不开它，于是走降级路径。
+      // 用一個**目錄**佔住庫檔案的位置：SQLite 打不開它，於是走降級路徑。
       const dbFile = path.join(project.root, '.novelwarden', 'novelwarden.db');
       fs.mkdirSync(dbFile, { recursive: true });
 
@@ -491,64 +491,64 @@ describe('errorLog · db', () => {
           targetKey: 'x.md',
           severity: 'error',
           op: 'updateCard',
-          message: '库坏了也不能抛',
+          message: '庫壞了也不能拋',
         });
         await errorLog.clearFailures(project, 'character', 'x.md');
         active = await errorLog.listActiveFailures(project);
         history = await db.readLogHistory(project, 10);
-        // 工程页仍然渲染得出来——这是最要紧的一条：库坏了不能让工程页打不开。
+        // 工程頁仍然渲染得出來——這是最要緊的一條：庫壞了不能讓工程頁打不開。
         tree = await projectView.buildProjectTree(project);
       } catch (err) {
         threw = true;
         thrown = err;
       }
 
-      // 开库失败只报一次，不该每次调用都重试并刷日志。
+      // 開庫失敗只報一次，不該每次呼叫都重試並刷日誌。
       warned = logger
         .recentLogs()
-        .filter((e) => e.scope === '数据库' && e.message.includes('打不开工程数据库'));
+        .filter((e) => e.scope === '資料庫' && e.message.includes('打不開工程資料庫'));
     });
 
-    // ↓ 下面四条沿用原脚本的语义：它们原本埋在 try 里，任一 API 抛异常就整段不执行。
-    //   这里保留「不执行」而不是改成失败——改断言不是本次迁移该做的决定。
-    //   区别只在可见性：抛了的话它们显示为 skipped，不再伪装成 pass。
-    //   也就是说，这四条只在「一个 API 都没抛」的前提下才有结论；前提破了它们什么都不证明，
-    //   真正会变红的是下面那条「库不可用时一个 API 都不抛」。
-    test('库不可用时查询返回空', (t) => {
-      if (threw) return t.skip(`前置 API 抛了：${thrown && thrown.message}`);
+    // ↓ 下面四條沿用原指令碼的語義：它們原本埋在 try 裡，任一 API 拋異常就整段不執行。
+    //   這裡保留「不執行」而不是改成失敗——改斷言不是本次遷移該做的決定。
+    //   區別只在可見性：拋了的話它們顯示為 skipped，不再偽裝成 pass。
+    //   也就是說，這四條只在「一個 API 都沒拋」的前提下才有結論；前提破了它們什麼都不證明，
+    //   真正會變紅的是下面那條「庫不可用時一個 API 都不拋」。
+    test('庫不可用時查詢返回空', (t) => {
+      if (threw) return t.skip(`前置 API 拋了：${thrown && thrown.message}`);
       assert.equal(Object.keys(active).length, 0, JSON.stringify(active));
     });
 
-    test('库不可用时读历史返回空', (t) => {
-      if (threw) return t.skip(`前置 API 抛了：${thrown && thrown.message}`);
+    test('庫不可用時讀歷史返回空', (t) => {
+      if (threw) return t.skip(`前置 API 拋了：${thrown && thrown.message}`);
       assert.equal(history.length, 0);
     });
 
-    test('库不可用时工程页照常构建', (t) => {
-      if (threw) return t.skip(`前置 API 抛了：${thrown && thrown.message}`);
+    test('庫不可用時工程頁照常構建', (t) => {
+      if (threw) return t.skip(`前置 API 拋了：${thrown && thrown.message}`);
       assert.equal(tree.initialized, true);
     });
 
-    test('库不可用时 failures 为空对象', (t) => {
-      if (threw) return t.skip(`前置 API 抛了：${thrown && thrown.message}`);
+    test('庫不可用時 failures 為空物件', (t) => {
+      if (threw) return t.skip(`前置 API 拋了：${thrown && thrown.message}`);
       assert.equal(Object.keys(tree.failures).length, 0);
     });
 
-    test('库不可用时一个 API 都不抛', () => {
+    test('庫不可用時一個 API 都不拋', () => {
       assert.ok(!threw, thrown && thrown.message);
     });
 
-    test('开库失败只 warn 一次', () => {
+    test('開庫失敗只 warn 一次', () => {
       assert.equal(warned.length, 1, String(warned.length));
     });
 
-    test('开库失败只是 warn 不是 error', () => {
+    test('開庫失敗只是 warn 不是 error', () => {
       assert.ok(warned.every((e) => e.level === 'warn'));
     });
   });
 
-  // 改名前的库是**可丢弃的痕迹**：新库用新名字，旧文件原样留着，绝不顺手删。
-  describe('旧库文件名', () => {
+  // 改名前的庫是**可丟棄的痕跡**：新庫用新名字，舊檔案原樣留著，絕不順手刪。
+  describe('舊庫檔名', () => {
     let project;
     let legacyFile;
     let freshExists;
@@ -557,19 +557,19 @@ describe('errorLog · db', () => {
     before(async () => {
       project = await newProject('legacy-db');
       legacyFile = path.join(project.root, '.novelwarden', 'novelforge.db');
-      fs.writeFileSync(legacyFile, 'SQLite format 3\0旧痕迹');
+      fs.writeFileSync(legacyFile, 'SQLite format 3\0舊痕跡');
       await db.openDatabase(project);
       freshExists = fs.existsSync(path.join(project.root, '.novelwarden', 'novelwarden.db'));
       legacyAfter = fs.readFileSync(legacyFile, 'utf8');
       db.closeDatabase(project);
     });
 
-    test('新库落在 novelwarden.db', () => {
+    test('新庫落在 novelwarden.db', () => {
       assert.equal(freshExists, true);
     });
 
-    test('旧的 novelforge.db 一字不动', () => {
-      assert.equal(legacyAfter, 'SQLite format 3\0旧痕迹');
+    test('舊的 novelforge.db 一字不動', () => {
+      assert.equal(legacyAfter, 'SQLite format 3\0舊痕跡');
     });
   });
 });

@@ -8,8 +8,8 @@ import type { Assembly, LayerFn } from './assembly';
 import { ATTACHMENT_NOTE, LORE_HIDDEN_DROPPED_NOTE, hiddenTextIn, loreBodyFor, resolveAttachment } from './render';
 
 /**
- * 这一次装配交给提示词的事实。系统提示（这里）与输出契约（builder.ts）必须拿同一份，
- * 不然一个说「写第 6–10 章」，另一个说「写这一章」。
+ * 這一次裝配交給提示詞的事實。系統提示（這裡）與輸出契約（builder.ts）必須拿同一份，
+ * 不然一個說「寫第 6–10 章」，另一個說「寫這一章」。
  */
 export function promptFactsOf(a: Pick<Assembly, 'request' | 'book' | 'focus'>): PromptFacts {
   const r = a.request;
@@ -29,7 +29,7 @@ export function promptFactsOf(a: Pick<Assembly, 'request' | 'book' | 'focus'>): 
     written: r.writeMode === 'continue' ? a.focus.chapter?.wordCount : undefined,
     reviewGoals: r.reviewGoals,
     ...(r.derive ? { derive: r.derive } : {}),
-    // 「本章不出场」（五期补遗 §1.2）：生成层交过来的那一份优先（与写完查的同源）；没给就按 focus 现算。
+    // 「本章不出場」（五期補遺 §1.2）：生成層交過來的那一份優先（與寫完查的同源）；沒給就按 focus 現算。
     ...(drafting
       ? {
           ...(r.banned?.length ? { banned: r.banned } : {}),
@@ -43,7 +43,7 @@ export function promptFactsOf(a: Pick<Assembly, 'request' | 'book' | 'focus'>): 
   };
 }
 
-/** 历史里单条消息的上限，超出取结尾（越靠后越相关）。 */
+/** 歷史裡單條訊息的上限，超出取結尾（越靠後越相關）。 */
 const HISTORY_TURN_CAP_RATIO = 0.12;
 
 export const system: LayerFn = async (a, spec) => {
@@ -52,7 +52,7 @@ export const system: LayerFn = async (a, spec) => {
       id: 'system',
       kind: 'system',
       priority: spec.priority,
-      label: `系统提示 · ${STAGE_ROLE[a.request.action.stage]}`,
+      label: `系統提示 · ${STAGE_ROLE[a.request.action.stage]}`,
       text: buildSystemPrompt(a.request.action, a.config, promptFactsOf(a)),
     },
     { force: spec.force }
@@ -64,11 +64,11 @@ export const ask: LayerFn = async (a, spec) => {
   const isDraftOrder = stage === 'manuscript' && capability === 'generate';
   const label =
     capability === 'review'
-      ? '要求重点检查的方面'
+      ? '要求重點檢查的方面'
       : isDraftOrder && a.request.writeMode === 'revise'
-        ? '修稿的补充要求'
+        ? '修稿的補充要求'
         : isDraftOrder
-          ? '这一章的补充要求'
+          ? '這一章的補充要求'
           : '我的要求';
   a.admit(
     {
@@ -84,8 +84,8 @@ export const ask: LayerFn = async (a, spec) => {
 
 export const attachments: LayerFn = async (a, spec) => {
   const attachmentCap = Math.floor(a.budget * (spec.cap ?? 1));
-  // 正文阶段作者 @ 引用一条设定或一张角色卡：同 lore 层、`characters` 层，暗设不带、明细里注一句（完善设定，2026-10-19；
-  // 角色卡的暗设是叙事线重做加的）。要让正文知道，就写进这一章细纲。别的阶段、别的种类照旧整份带。
+  // 正文階段作者 @ 引用一條設定或一張角色卡：同 lore 層、`characters` 層，暗設不帶、明細裡注一句（完善設定，2026-10-19；
+  // 角色卡的暗設是敘事線重做加的）。要讓正文知道，就寫進這一章細綱。別的階段、別的種類照舊整份帶。
   const manuscript = a.request.action.stage === 'manuscript';
   for (const att of a.request.attachments ?? []) {
     const id = `attachment:${att.id}`;
@@ -102,12 +102,12 @@ export const attachments: LayerFn = async (a, spec) => {
     }
     let body = await resolveAttachment(a.project, att);
     if (!body.trim()) {
-      a.reject({ ...base, text: '' }, 'dropped', '内容为空或文件已不存在');
+      a.reject({ ...base, text: '' }, 'dropped', '內容為空或檔案已不存在');
       continue;
     }
     let hiddenNote = '';
     if (manuscript && (att.kind === 'lore' || att.kind === 'character')) {
-      // 角色卡的「暗设」空着（「（待补充）」、角色图谱写的「无」）时只是去掉一个空标题，不注。
+      // 角色卡的「暗設」空著（「（待補充）」、角色圖譜寫的「無」）時只是去掉一個空標題，不注。
       const noted = att.kind === 'lore' || !!hiddenTextIn(body);
       const split = loreBodyFor(body, false);
       if (split.dropped) {
@@ -127,7 +127,7 @@ export const attachments: LayerFn = async (a, spec) => {
       a.reject(
         { ...base, text: '' },
         'dropped',
-        `预算不足（需 ${rawTokens} token，剩 ${Math.max(0, a.remaining)}）`
+        `預算不足（需 ${rawTokens} token，剩 ${Math.max(0, a.remaining)}）`
       );
       continue;
     }
@@ -138,7 +138,7 @@ export const attachments: LayerFn = async (a, spec) => {
         ...base,
         text: clipped,
         status: 'degraded',
-        note: `原文需 ${rawTokens} token，已截断至 ${clippedTokens}${hiddenNote}`,
+        note: `原文需 ${rawTokens} token，已截斷至 ${clippedTokens}${hiddenNote}`,
       },
       clippedTokens
     );
@@ -146,29 +146,29 @@ export const attachments: LayerFn = async (a, spec) => {
 };
 
 /**
- * 历史对话。
+ * 歷史對話。
  *
- * **已经写入的那一轮不再带**（五期补遗 §1.4）：同一个会话跟着主按钮一路走，配置、前提、角色图谱、
- * 大纲、细纲、前几章正文都留在历史里，写第 3 章时又整份装一遍。它们早就落盘了，专门的层按磁盘带
- * （设定、大纲切片、本章细纲、上一章结尾、前文全文、证据），而作者落盘之后可能手改过——历史里的
- * 还是改之前那一版。发起那一轮的命令（用户轮，带 `command`）一起跳过：要求已经落在产物里了。
- * 讨论（没有 `command`）与没写入的产物（作者点了不采纳，那份只在历史里有）照旧带。
+ * **已經寫入的那一輪不再帶**（五期補遺 §1.4）：同一個會話跟著主按鈕一路走，配置、前提、角色圖譜、
+ * 大綱、細綱、前幾章正文都留在歷史裡，寫第 3 章時又整份裝一遍。它們早就落盤了，專門的層按磁碟帶
+ * （設定、大綱切片、本章細綱、上一章結尾、前文全文、證據），而作者落盤之後可能手改過——歷史裡的
+ * 還是改之前那一版。發起那一輪的命令（使用者輪，帶 `command`）一起跳過：要求已經落在產物裡了。
+ * 討論（沒有 `command`）與沒寫入的產物（作者點了不採納，那份只在歷史裡有）照舊帶。
  *
- * **已经移除的内置 agent 跑的那几轮也不带**，交给它的那句指令一起跳过：它说的是「我先读第 3 章」
- * 这类调度过程，不是与作者的讨论，混进来模型会以为自己刚才在读文件、调工具。跳过的都记在
- * 明细里（第 2 条）。
+ * **已經移除的內建 agent 跑的那幾輪也不帶**，交給它的那句指令一起跳過：它說的是「我先讀第 3 章」
+ * 這類排程過程，不是與作者的討論，混進來模型會以為自己剛才在讀檔案、調工具。跳過的都記在
+ * 明細裡（第 2 條）。
  */
 export const history: LayerFn = async (a, spec) => {
   const turns = a.request.history ?? [];
   if (turns.length === 0) {
     return;
   }
-  // 配方没写封顶就按上下文详细度那一级（缺省 0.3）；落定细纲在配方上写死 0.6。
+  // 配方沒寫封頂就按上下文詳細度那一級（預設 0.3）；落定細綱在配方上寫死 0.6。
   const historyCap = Math.floor(a.budget * (spec.cap ?? a.limits.historyCap));
   const turnCap = Math.floor(a.budget * HISTORY_TURN_CAP_RATIO);
   let historyRemaining = Math.min(historyCap, Math.max(0, a.remaining));
 
-  // 已写入的那一轮 → 落点；发起它的命令轮 → 同一个落点。
+  // 已寫入的那一輪 → 落點；發起它的命令輪 → 同一個落點。
   const landed = new Map<string, string>();
   turns.forEach((turn, i) => {
     if (turn.role === 'assistant' && turn.acceptedTo) {
@@ -180,14 +180,14 @@ export const history: LayerFn = async (a, spec) => {
     }
   });
 
-  // 内置 agent 跑的那一轮 → 不带；交给它的那句指令（紧挨在前面、没有 `command` 的用户轮）一起不带。
+  // 內建 agent 跑的那一輪 → 不帶；交給它的那句指令（緊挨在前面、沒有 `command` 的使用者輪）一起不帶。
   const byAgent = new Map<string, string>();
   turns.forEach((turn, i) => {
     if (isBuiltinAgentTurn(turn)) {
-      byAgent.set(turn.id, '已经移除的内置 agent 跑的一轮，只留着回看，不随历史带');
+      byAgent.set(turn.id, '已經移除的內建 agent 跑的一輪，只留著回看，不隨歷史帶');
       const asked = turns[i - 1];
       if (asked && asked.role === 'user' && !asked.command) {
-        byAgent.set(asked.id, '这一句是交给已经移除的内置 agent 的指令，不随历史带');
+        byAgent.set(asked.id, '這一句是交給已經移除的內建 agent 的指令，不隨歷史帶');
       }
     }
   });
@@ -201,7 +201,7 @@ export const history: LayerFn = async (a, spec) => {
       id,
       kind: 'history' as const,
       priority: spec.priority,
-      label: `${turn.role === 'user' ? '我' : '模型'} · 第 ${i + 1} 轮`,
+      label: `${turn.role === 'user' ? '我' : '模型'} · 第 ${i + 1} 輪`,
     };
 
     const agentNote = a.excluded.has(id) ? undefined : byAgent.get(turn.id);
@@ -215,7 +215,7 @@ export const history: LayerFn = async (a, spec) => {
         text: '',
         tokens: 0,
         status: a.excluded.has(id) ? 'excluded' : 'dropped',
-        note: a.excluded.has(id) ? '已被手动排除' : '空消息',
+        note: a.excluded.has(id) ? '已被手動排除' : '空訊息',
       });
       continue;
     }
@@ -228,8 +228,8 @@ export const history: LayerFn = async (a, spec) => {
         status: 'dropped',
         note:
           turn.role === 'assistant'
-            ? `已写入「${to}」，以磁盘上那一份为准，不再随历史带`
-            : `这一轮的产物已写入「${to}」，要求已经落在产物里`,
+            ? `已寫入「${to}」，以磁碟上那一份為準，不再隨歷史帶`
+            : `這一輪的產物已寫入「${to}」，要求已經落在產物裡`,
       });
       continue;
     }
@@ -242,7 +242,7 @@ export const history: LayerFn = async (a, spec) => {
         text: '',
         tokens: 0,
         status: 'dropped',
-        note: '历史对话预算已满，更早的轮次不再注入',
+        note: '歷史對話預算已滿，更早的輪次不再注入',
       });
       continue;
     }
@@ -253,7 +253,7 @@ export const history: LayerFn = async (a, spec) => {
       text: content,
       tokens,
       status: content.length < turn.content.length ? 'degraded' : 'included',
-      note: content.length < turn.content.length ? '过长，仅注入结尾部分' : undefined,
+      note: content.length < turn.content.length ? '過長，僅注入結尾部分' : undefined,
     });
   }
   a.items.push(...kept.reverse(), ...skipped.reverse());

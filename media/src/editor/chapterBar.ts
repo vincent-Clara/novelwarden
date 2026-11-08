@@ -1,25 +1,25 @@
 /**
- * 章节条（W6 章节工作台）：编辑区里正开着某一章的正文或细纲时，主区顶上一条——
- * 「‹ 上一章 · 第 3 章《夜访》 · 待写正文 · 1860 / 3000 字 · 下一章 ›」，外加对这一章能做的几件事。
+ * 章節條（W6 章節工作臺）：編輯區里正開著某一章的正文或細綱時，主區頂上一條——
+ * 「‹ 上一章 · 第 3 章《夜訪》 · 待寫正文 · 1860 / 3000 字 · 下一章 ›」，外加對這一章能做的幾件事。
  *
- * ## 为什么在编辑器里
+ * ## 為什麼在編輯器裡
  *
- * 并排看着细纲改正文时，下一步（写这一章、接着写、定稿）从前得切回对话页去按主按钮。
- * 按钮放在正在看的东西旁边，才叫工作台。点下去走的仍是主按钮那一条路（后端
- * `chapterAction`）：生成照样在对话页流式输出、照样当场问写不写（第 19 条）。
+ * 並排看著細綱改正文時，下一步（寫這一章、接著寫、定稿）從前得切回對話頁去按主按鈕。
+ * 按鈕放在正在看的東西旁邊，才叫工作臺。點下去走的仍是主按鈕那一條路（後端
+ * `chapterAction`）：生成照樣在對話頁流式輸出、照樣當場問寫不寫（第 19 條）。
  *
- * ## 数据从哪来
+ * ## 資料從哪來
  *
- * 章节索引（`chapterIndex.ts`，后端 `chapterIndex` 消息）：每一章的状态、字数、目标字数、两份文件的路径，
- * **哪个页签都推**、内容变了才推。从前只吃工程树（`project` 消息），而那棵树只在「工程」页签开着时才推——
- * 作者待在对话页时条上的数是旧的。当下是哪一章，看编辑器广播的「正在编辑哪个文件」（`nf-editor-active`）。
+ * 章節索引（`chapterIndex.ts`，後端 `chapterIndex` 訊息）：每一章的狀態、字數、目標字數、兩份檔案的路徑，
+ * **哪個頁籤都推**、內容變了才推。從前只吃工程樹（`project` 訊息），而那棵樹只在「工程」頁籤開著時才推——
+ * 作者待在對話頁時條上的數是舊的。當下是哪一章，看編輯器廣播的「正在編輯哪個檔案」（`nf-editor-active`）。
  *
- * ## 按钮
+ * ## 按鈕
  *
- * 四颗按这一章的状态亮灭：「写这一章」只在细纲排好、还没有正文时亮；「接着写」「重写」
- * 要这一章已经有正文；「定稿」也要有正文。提示里写调用次数，与主按钮同一个数（D16）。
- * 另一份没开着时给「并排看细纲 / 并排看正文」。「审稿」（五期）要有正文：只出报告、不写文件，
- * 报告出在对话页，勾选之后按勾选的条目修稿。「‹ 上一章」「下一章 ›」见 `chapterNav.ts`，到头了禁用。
+ * 四顆按這一章的狀態亮滅：「寫這一章」只在細綱排好、還沒有正文時亮；「接著寫」「重寫」
+ * 要這一章已經有正文；「定稿」也要有正文。提示裡寫呼叫次數，與主按鈕同一個數（D16）。
+ * 另一份沒開著時給「並排看細綱 / 並排看正文」。「審稿」（五期）要有正文：只出報告、不寫檔案，
+ * 報告出在對話頁，勾選之後按勾選的條目修稿。「‹ 上一章」「下一章 ›」見 `chapterNav.ts`，到頭了禁用。
  */
 import { el } from '../dom';
 import { FINALIZE_CALLS, PLOT_STAGE_LABEL, REVIEW_CALLS, WRITE_CALLS, describeCalls } from '../protocol';
@@ -31,13 +31,13 @@ import { isNarrow, revealSide } from './shell';
 import { shortcutLabel } from './shortcuts';
 import { paneOwning } from './store';
 
-/** 挂到主区上方（标签栏与工具栏之间）。 */
+/** 掛到主區上方（標籤欄與工具欄之間）。 */
 export function installChapterBar(stage: HTMLElement, post: (msg: InMessage) => void): void {
   const bar = el('div', 'ed-chapter-bar hidden');
   bar.id = 'edChapterBar';
   stage.insertBefore(bar, stage.querySelector('.ed-toolbar'));
-  // 条上说的是「当前那份文件」那一章，而它可能开在右侧那一块：在条上按下去不该把「当前这一块」抢到左侧来
-  // （主区根节点上的 pointerdown / focusin 会认领）——不然按钮刚按下条就换成了左侧那一章，点击落空。
+  // 條上說的是「當前那份檔案」那一章，而它可能開在右側那一塊：在條上按下去不該把「當前這一塊」搶到左側來
+  // （主區根節點上的 pointerdown / focusin 會認領）——不然按鈕剛按下條就換成了左側那一章，點選落空。
   bar.addEventListener('pointerdown', (e) => e.stopPropagation());
   bar.addEventListener('focusin', (e) => e.stopPropagation());
 
@@ -64,34 +64,34 @@ export function installChapterBar(stage: HTMLElement, post: (msg: InMessage) => 
       ? row.targetWords
         ? `${row.wordCount} / ${row.targetWords} 字`
         : `${row.wordCount} 字`
-      : '还没有正文';
+      : '還沒有正文';
     const info = el('span', 'ed-chapter-info', `${row.label} · ${PLOT_STAGE_LABEL[row.stage]} · ${words}`);
     bar.appendChild(info);
     bar.appendChild(navButton(1, around.next, around.side));
 
     const actions = el('span', 'ed-chapter-actions');
-    // 窄屏上底下这一排收起，条上一颗「操作 ▾」照着它们列菜单（narrowTools.ts）：悬停提示手机上看不到，调用次数写进菜单项。
+    // 窄屏上底下這一排收起，條上一顆「操作 ▾」照著它們列選單（narrowTools.ts）：懸停提示手機上看不到，呼叫次數寫進選單項。
     bar.appendChild(menuButton(el('button', 'chip-btn ed-chapter-menu', '操作 ▾'), () => menuFromButtons(actions.querySelectorAll('button'))));
     const plotReady = row.plotExists && row.stage !== 'plot';
     actions.appendChild(
-      button('写这一章', 'write', plotReady && !written, plotReady ? describeCalls(WRITE_CALLS) : '先把这一章的细纲排好', plotReady ? briefCalls(WRITE_CALLS) : '先排好细纲')
+      button('寫這一章', 'write', plotReady && !written, plotReady ? describeCalls(WRITE_CALLS) : '先把這一章的細綱排好', plotReady ? briefCalls(WRITE_CALLS) : '先排好細綱')
     );
-    actions.appendChild(button('接着写', 'continue', written, `从末尾往下写，新写的追加在后面。${describeCalls(WRITE_CALLS)}`, briefCalls(WRITE_CALLS)));
+    actions.appendChild(button('接著寫', 'continue', written, `從末尾往下寫，新寫的追加在後面。${describeCalls(WRITE_CALLS)}`, briefCalls(WRITE_CALLS)));
     actions.appendChild(
-      button('重写', 'rewrite', written && row.plotExists, `照细纲整章重写，写入前会让你先对比。${describeCalls(WRITE_CALLS)}`, briefCalls(WRITE_CALLS))
-    );
-    actions.appendChild(
-      button('审稿', 'review', written, `逐条引原文挑出这一章的问题，逐项核对细纲的关键事件；只出报告，不改文件。${describeCalls(REVIEW_CALLS)}`, briefCalls(REVIEW_CALLS))
+      button('重寫', 'rewrite', written && row.plotExists, `照細綱整章重寫，寫入前會讓你先對比。${describeCalls(WRITE_CALLS)}`, briefCalls(WRITE_CALLS))
     );
     actions.appendChild(
-      button('同步', 'finalize', written, `照正文更新细纲（带连续性事实），再更新出场角色的当前状态、认这一章在叙事线上发生了什么（带原文证据记下事件、更新各条线的当前进度，正文里新长出来的线也认出来）、推这一章的故事时间。${describeCalls(FINALIZE_CALLS)}`, briefCalls(FINALIZE_CALLS))
+      button('審稿', 'review', written, `逐條引原文挑出這一章的問題，逐項核對細綱的關鍵事件；只出報告，不改檔案。${describeCalls(REVIEW_CALLS)}`, briefCalls(REVIEW_CALLS))
+    );
+    actions.appendChild(
+      button('同步', 'finalize', written, `照正文更新細綱（帶連續性事實），再更新出場角色的當前狀態、認這一章在敘事線上發生了什麼（帶原文證據記下事件、更新各條線的當前進度，正文裡新長出來的線也認出來）、推這一章的故事時間。${describeCalls(FINALIZE_CALLS)}`, briefCalls(FINALIZE_CALLS))
     );
 
-    // 另一份没开着：给一颗把它并排打开的按钮。窄屏上没有第二块，开在同一块里成了另一个标签（editor/index.ts），不说「并排」。
+    // 另一份沒開著：給一顆把它並排開啟的按鈕。窄屏上沒有第二塊，開在同一塊裡成了另一個標籤（editor/index.ts），不說「並排」。
     const onChapter = around.side === 'chapter';
     const other = onChapter ? (row.plotExists ? row.plotPath : '') : row.chapterPath;
     if (other && !paneOwning(other)) {
-      const pair = el('button', 'chip-btn ed-chapter-pair', `${isNarrow() ? '' : '并排'}看${onChapter ? '细纲' : '正文'}`);
+      const pair = el('button', 'chip-btn ed-chapter-pair', `${isNarrow() ? '' : '並排'}看${onChapter ? '細綱' : '正文'}`);
       pair.addEventListener('click', () =>
         post({ type: 'openEditor', path: other, pane: onChapter ? 'draft' : 'main' })
       );
@@ -107,7 +107,7 @@ export function installChapterBar(stage: HTMLElement, post: (msg: InMessage) => 
       b.title = hint;
       b.addEventListener('click', () => {
         post({ type: 'chapterAction', plotRelPath: row.relPath, action });
-        // 生成在对话页流式输出、在那儿问写不写（后端同时切到对话页）：窄屏上编辑区盖着它，收下去。
+        // 生成在對話頁流式輸出、在那兒問寫不寫（後端同時切到對話頁）：窄屏上編輯區蓋著它，收下去。
         if (isNarrow()) {
           revealSide();
         }
@@ -117,15 +117,15 @@ export function installChapterBar(stage: HTMLElement, post: (msg: InMessage) => 
   }
 }
 
-/** 菜单项上写的调用次数：只写「预计几次」，最多几次与为什么留给确认框（菜单一行装不下）。 */
+/** 選單項上寫的呼叫次數：只寫「預計幾次」，最多幾次與為什麼留給確認框（選單一行裝不下）。 */
 function briefCalls(c: CallEstimate): string {
   return describeCalls({ ...c, max: c.high, why: undefined });
 }
 
-/** 「‹ 上一章」「下一章 ›」。到头了禁用；相邻那一章还没有这一面时照样能点（点了说一句），提示里先写明。 */
+/** 「‹ 上一章」「下一章 ›」。到頭了禁用；相鄰那一章還沒有這一面時照樣能點（點了說一句），提示裡先寫明。 */
 function navButton(step: -1 | 1, to: ChapterIndexEntry | undefined, side: 'chapter' | 'plot'): HTMLButtonElement {
   const b = el('button', 'chip-btn ed-chapter-nav');
-  // 窄屏上只露箭头（「上一章」「下一章」那几个字收起，narrow.css）。
+  // 窄屏上只露箭頭（「上一章」「下一章」那幾個字收起，narrow.css）。
   const word = el('span', 'ed-chapter-nav-word', step < 0 ? ' 上一章' : '下一章 ');
   b.append(...(step < 0 ? ['‹', word] : [word, '›']));
   b.dataset.nav = step < 0 ? 'prev' : 'next';
@@ -133,11 +133,11 @@ function navButton(step: -1 | 1, to: ChapterIndexEntry | undefined, side: 'chapt
   b.disabled = !to;
   b.title = !to
     ? step < 0
-      ? '已经是第一章了'
-      : '已经是最后一章了'
+      ? '已經是第一章了'
+      : '已經是最後一章了'
     : pathOn(to, side)
       ? `${to.label}的${SIDE_LABEL[side]}（${key}）`
-      : `${to.label}还没有${SIDE_LABEL[side]}（${key}）`;
+      : `${to.label}還沒有${SIDE_LABEL[side]}（${key}）`;
   b.addEventListener('click', () => goChapter(step));
   return b;
 }

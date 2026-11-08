@@ -1,20 +1,20 @@
 /**
- * 四期验收：从排好前 5 章细纲的工程起，工程页「批量写章」第 1–3 章、写完即定稿。
+ * 四期驗收：從排好前 5 章細綱的工程起，工程頁「批次寫章」第 1–3 章、寫完即定稿。
  *
- *   写第 1 章 → 定稿（照正文更新细纲 + 角色状态）→ 写第 2 章 → 定稿 → 写第 3 章 → 定稿
+ *   寫第 1 章 → 定稿（照正文更新細綱 + 角色狀態）→ 寫第 2 章 → 定稿 → 寫第 3 章 → 定稿
  *
- * 经 controller 发出去（与工程页弹窗提交的那一条消息一样），假模型按脚本应答。
+ * 經 controller 發出去（與工程頁彈窗提交的那一條訊息一樣），假模型按指令碼應答。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 三章正文都在，三份细纲都定了稿（sourceHash 对得上正文），连续性事实每条带证据 | 第 23 条：细纲定稿过且对得上才算写完；D18：证据确定性地找 |
- * | 第 2 章定稿后，角色卡的当前状态换成第 2 章给出的那一版 | D15：机器的那一节由定稿维护 |
- * | **第 3 章写正文那一次的装配里**：角色卡是第 2 章更新过的状态，定稿原文片段里有第 2 章证据所在的那一段 | 这一期存在的理由：后一章读得到前一章定稿留下的东西 |
- * | 作者在第 1 章之后手改过沈氏的当前状态：后两章定稿都没覆盖，卡上挂黄 ❗ | 第 3 条：不静默覆盖 |
- * | 实际调用次数 ≤ 确认框报的上限，完成提示带「打开第 3 章」 | 第 4 条；D24 |
+ * | 三章正文都在，三份細綱都定了稿（sourceHash 對得上正文），連續性事實每條帶證據 | 第 23 條：細綱定稿過且對得上才算寫完；D18：證據確定性地找 |
+ * | 第 2 章定稿後，角色卡的當前狀態換成第 2 章給出的那一版 | D15：機器的那一節由定稿維護 |
+ * | **第 3 章寫正文那一次的裝配裡**：角色卡是第 2 章更新過的狀態，定稿原文片段裡有第 2 章證據所在的那一段 | 這一期存在的理由：後一章讀得到前一章定稿留下的東西 |
+ * | 作者在第 1 章之後手改過沈氏的當前狀態：後兩章定稿都沒覆蓋，卡上掛黃 ❗ | 第 3 條：不靜默覆蓋 |
+ * | 實際呼叫次數 ≤ 確認框報的上限，完成提示帶「開啟第 3 章」 | 第 4 條；D24 |
  *
- * 近章全文设成 0：否则第 2 章整章进了上下文，它的片段按去重规则就不单独带了——那条规则
- * 在 context/evidence.test.js 里另有用例。这里要看的是片段本身。
+ * 近章全文設成 0：否則第 2 章整章進了上下文，它的片段按去重規則就不單獨帶了——那條規則
+ * 在 context/evidence.test.js 裡另有用例。這裡要看的是片段本身。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -33,66 +33,66 @@ let project;
 let controller;
 const finished = [];
 
-const TITLES = ['停舟', '令牌', '夜访', '井', '名册'];
+const TITLES = ['停舟', '令牌', '夜訪', '井', '名冊'];
 const pad3 = (n) => String(n).padStart(3, '0');
 const CH = (no) => `chapters/${pad3(no)}-${TITLES[no - 1]}.txt`;
 const PLOT = (no) => `.novelwarden/summaries/${pad3(no)}-${TITLES[no - 1]}.md`;
 const LIN = '.novelwarden/characters/林昭.md';
 const SHEN = '.novelwarden/characters/沈氏.md';
-const AUTHOR_STATE = '作者写的：沈氏其实早就认出了林昭，只是不说。';
+const AUTHOR_STATE = '作者寫的：沈氏其實早就認出了林昭，只是不說。';
 
-/** 第 N 章的正文：一段带证据的原句夹在两段填充之间。 */
+/** 第 N 章的正文：一段帶證據的原句夾在兩段填充之間。 */
 function chapterText(no) {
   return [
     filler(260, no * 10 + 1),
-    `林昭在第${no}章受了第${no}处伤，血顺着左臂往下淌。`,
-    `沈氏在第${no}章把第${no}盏灯吹灭了。`,
+    `林昭在第${no}章受了第${no}處傷，血順著左臂往下淌。`,
+    `沈氏在第${no}章把第${no}盞燈吹滅了。`,
     filler(260, no * 10 + 2),
   ].join('\n\n');
 }
 
-/** 第 3 章那一次写正文调用发出去的 user 消息，与那一刻角色卡的样子。 */
+/** 第 3 章那一次寫正文呼叫發出去的 user 訊息，與那一刻角色卡的樣子。 */
 let ch3Prompt = '';
 let linWhenCh3 = '';
 
 function reply(messages) {
   const system = messages[0]?.content ?? '';
   const user = messages[messages.length - 1].content;
-  if (system.includes('你是长篇小说的连续性编辑')) {
+  if (system.includes('你是長篇小說的連續性編輯')) {
     return JSON.stringify({ conflicts: [] });
   }
-  // 叙事线认事件（每次定稿都跑）：这本书还没有线，什么都认不出。
-  if (system.includes('你是小说定稿事实审查员')) {
+  // 敘事線認事件（每次定稿都跑）：這本書還沒有線，什麼都認不出。
+  if (system.includes('你是小說定稿事實審查員')) {
     return JSON.stringify({ events: [], newThreads: [], newForeshadowing: [] });
   }
-  if (system.includes('建立可检索的章节档案')) {
+  if (system.includes('建立可檢索的章節檔案')) {
     const no = Number(/【第(\d+)章/.exec(user)?.[1] ?? 0);
     return JSON.stringify({
-      梗概: `第 ${no} 章：林昭又受了伤。`,
+      梗概: `第 ${no} 章：林昭又受了傷。`,
       出场人物: [{ name: '林昭', aliases: [] }, { name: '沈氏', aliases: [] }],
-      时间地点: '青崖镇。',
+      时间地点: '青崖鎮。',
       关键事件: [`第 ${no} 章的事`],
       状态变更: '',
-      连续性事实: [`林昭在第${no}章左臂受伤流血`, `沈氏在第${no}章吹灭了第${no}盏灯`],
+      连续性事实: [`林昭在第${no}章左臂受傷流血`, `沈氏在第${no}章吹滅了第${no}盞燈`],
     });
   }
-  if (system.includes('依据本章正文更新角色的「当前状态」')) {
+  if (system.includes('依據本章正文更新角色的「當前狀態」')) {
     const no = Number(/【第(\d+)章/.exec(user)?.[1] ?? 0);
     return JSON.stringify({
       updates: [
-        { name: '林昭', 当前状态: `第 ${no} 章之后：左臂有 ${no} 处伤，还在青崖镇。` },
-        { name: '沈氏', 当前状态: `第 ${no} 章之后：守着客栈。` },
+        { name: '林昭', 当前状态: `第 ${no} 章之後：左臂有 ${no} 處傷，還在青崖鎮。` },
+        { name: '沈氏', 当前状态: `第 ${no} 章之後：守著客棧。` },
       ],
     });
   }
-  // 写正文那一次：执行卡重列的必需事件以「第 N 章」开头，靠它认是哪一章。
+  // 寫正文那一次：執行卡重列的必需事件以「第 N 章」開頭，靠它認是哪一章。
   const card = /- 必需事件：第 (\d+) 章/.exec(user);
   if (card) {
     const no = Number(card[1]);
     if (no === 2) {
-      // 第 1 章已经定稿：作者这时候手改了沈氏的当前状态。
+      // 第 1 章已經定稿：作者這時候手改了沈氏的當前狀態。
       const card = t.read(SHEN);
-      t.write(SHEN, card.replace(/## 当前状态\n\n[^\n]*/, `## 当前状态\n\n${AUTHOR_STATE}`));
+      t.write(SHEN, card.replace(/## 當前狀態\n\n[^\n]*/, `## 當前狀態\n\n${AUTHOR_STATE}`));
     }
     if (no === 3) {
       ch3Prompt = user;
@@ -100,11 +100,11 @@ function reply(messages) {
     }
     return { text: chapterText(no), stop: 'end' };
   }
-  // 故事时间（同步时单独一次，2026-10-24 重做）：都紧接上一章。
+  // 故事時間（同步時單獨一次，2026-10-24 重做）：都緊接上一章。
   if ((messages[0]?.content ?? '').includes(TIME_MARK)) {
     return timeReply(messages);
   }
-  return '（认不出这一步）';
+  return '（認不出這一步）';
 }
 
 before(async () => {
@@ -129,7 +129,7 @@ before(async () => {
     models: ['p/m'],
     concurrency: 1,
   };
-  // 近章全文 0 章、其余照缺省那一级：没有哪一级是这个组合，只能单项覆盖（作者那边只有级别可选）。
+  // 近章全文 0 章、其餘照預設那一級：沒有哪一級是這個組合，只能單項覆蓋（作者那邊只有級別可選）。
   bundle.config.setContextLimitsOverride({ fullTextChapters: 0 });
   h = makeFakeHost({ name: 'standalone', supportsVscodeLm: true, settings: () => settings });
   bundle.host.initHost(h.host);
@@ -139,13 +139,13 @@ before(async () => {
   });
   bundle.progress.onTaskFinished((x) => finished.push(x));
 
-  t = await makeTempProject(bundle.project, { prefix: 'phase4', title: '青崖记' });
+  t = await makeTempProject(bundle.project, { prefix: 'phase4', title: '青崖記' });
   project = t.project;
-  t.write('.novelwarden/config.md', '---\ntotalChapters: 30\nwordsPerChapter: 600\n---\n\n# 小说配置\n\n## 核心梗概\n\n回镇查案。\n');
-  // 架构四件与大纲都在（二期那一段的产物），主按钮才会落到单章上。
-  t.write('.novelwarden/premise.md', '# 故事前提\n\n## 一句话前提\n\n林昭回镇，必须找出放火的人。\n\n## 核心冲突链\n\n回镇 → 受伤 → 追查。\n');
-  t.write('.novelwarden/world.md', '# 世界观\n\n## 规则与漏洞\n\n名册决定谁算镇上的人。\n');
-  writeOutline(t, outlineOf(20, { text: { 1: '林昭进镇，一路受伤一路查。' } }));
+  t.write('.novelwarden/config.md', '---\ntotalChapters: 30\nwordsPerChapter: 600\n---\n\n# 小說配置\n\n## 核心梗概\n\n回鎮查案。\n');
+  // 架構四件與大綱都在（二期那一段的產物），主按鈕才會落到單章上。
+  t.write('.novelwarden/premise.md', '# 故事前提\n\n## 一句話前提\n\n林昭回鎮，必須找出放火的人。\n\n## 核心衝突鏈\n\n回鎮 → 受傷 → 追查。\n');
+  t.write('.novelwarden/world.md', '# 世界觀\n\n## 規則與漏洞\n\n名冊決定誰算鎮上的人。\n');
+  writeOutline(t, outlineOf(20, { text: { 1: '林昭進鎮，一路受傷一路查。' } }));
   const ws = new bundle.ws.Workspace(project);
   for (let no = 1; no <= 5; no++) {
     await ws.writePlot({
@@ -159,12 +159,12 @@ before(async () => {
         梗概: `第 ${no} 章的目的`,
         出场人物: '林昭、沈氏',
         关键事件: `第 ${no} 章林昭又往前查了一步。`,
-        看点: `第 ${no} 章结尾：又一个人不见了。`,
+        看点: `第 ${no} 章結尾：又一個人不見了。`,
       },
     });
   }
-  // 两张卡都是角色图谱建的：开篇状态、归机器（与 acceptRoster 盖的章一样）。
-  for (const [rel, name, state] of [[LIN, '林昭', '刚回到青崖镇。'], [SHEN, '沈氏', '客栈老板娘。']]) {
+  // 兩張卡都是角色圖譜建的：開篇狀態、歸機器（與 acceptRoster 蓋的章一樣）。
+  for (const [rel, name, state] of [[LIN, '林昭', '剛回到青崖鎮。'], [SHEN, '沈氏', '客棧老闆娘。']]) {
     await ws.writeCharacter(
       bundle.stateModel.stampState(
         {
@@ -183,7 +183,7 @@ before(async () => {
 
   controller = new bundle.controller.ChatController(project);
   controller.attach({ kind: 'sidebar', post: () => {}, reveal() {} });
-  // 与工程页弹窗提交的那一条一样：弹窗已经报过调用次数，带 call（作者在弹窗上没改模型与详细度）。
+  // 與工程頁彈窗提交的那一條一樣：彈窗已經報過呼叫次數，帶 call（作者在彈窗上沒改模型與詳細度）。
   await controller.handle({
     type: 'projectAction',
     action: 'writeManuscripts',
@@ -199,16 +199,16 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('四期验收：批量写章第 1–3 章、写完即定稿', () => {
-  test('三章正文都在，第 4 章没写', () => {
+describe('四期驗收：批次寫章第 1–3 章、寫完即定稿', () => {
+  test('三章正文都在，第 4 章沒寫', () => {
     for (const no of [1, 2, 3]) {
       assert.ok(t.has(CH(no)), CH(no));
     }
     assert.ok(!t.has(CH(4)));
   });
 
-  // 定稿 = 同一份细纲照正文反向更新，sourceHash 记下正文那时的指纹。
-  test('三份细纲都定了稿：sourceHash 对得上正文', async () => {
+  // 定稿 = 同一份細綱照正文反向更新，sourceHash 記下正文那時的指紋。
+  test('三份細綱都定了稿：sourceHash 對得上正文', async () => {
     project.invalidate();
     for (const no of [1, 2, 3]) {
       const chapter = await project.getChapter(no);
@@ -216,70 +216,70 @@ describe('四期验收：批量写章第 1–3 章、写完即定稿', () => {
     }
   });
 
-  test('细纲里的连续性事实每条都带一句正文原句', async () => {
+  test('細綱裡的連續性事實每條都帶一句正文原句', async () => {
     for (const no of [1, 2, 3]) {
       const s = await project.getPlot(no);
       const facts = s.sections.连续性事实.split('\n').filter(Boolean);
       assert.equal(facts.length, 2, s.sections.连续性事实);
       for (const f of facts) {
-        const quote = /〔证据：「(.+)」〕$/.exec(f)?.[1];
+        const quote = /〔證據：「(.+)」〕$/.exec(f)?.[1];
         assert.ok(quote && t.read(CH(no)).includes(quote), f);
       }
     }
   });
 
-  test('第 2 章定稿后，林昭的当前状态换成了第 2 章那一版', () => {
-    assert.match(linWhenCh3, /## 当前状态\n\n第 2 章之后：左臂有 2 处伤，还在青崖镇。/);
+  test('第 2 章定稿後，林昭的當前狀態換成了第 2 章那一版', () => {
+    assert.match(linWhenCh3, /## 當前狀態\n\n第 2 章之後：左臂有 2 處傷，還在青崖鎮。/);
     assert.match(linWhenCh3, /stateThrough: 2/);
   });
 
-  test('第 3 章写正文时：角色卡是第 2 章更新过的状态', () => {
-    assert.ok(ch3Prompt.includes('第 2 章之后：左臂有 2 处伤，还在青崖镇。'), ch3Prompt.slice(0, 2000));
+  test('第 3 章寫正文時：角色卡是第 2 章更新過的狀態', () => {
+    assert.ok(ch3Prompt.includes('第 2 章之後：左臂有 2 處傷，還在青崖鎮。'), ch3Prompt.slice(0, 2000));
   });
 
-  test('第 3 章写正文时：定稿原文片段里有第 2 章证据所在的那一段', () => {
+  test('第 3 章寫正文時：定稿原文片段裡有第 2 章證據所在的那一段', () => {
     const at = ch3Prompt.indexOf('# 定稿原文片段');
-    assert.ok(at > 0, '没有原文片段那一节');
+    assert.ok(at > 0, '沒有原文片段那一節');
     const section = ch3Prompt.slice(at, ch3Prompt.indexOf('\n---\n', at));
-    assert.ok(section.includes('林昭在第2章受了第2处伤，血顺着左臂往下淌。'), section.slice(0, 800));
-    assert.ok(section.includes('林昭在第1章受了第1处伤'), section.slice(0, 800));
+    assert.ok(section.includes('林昭在第2章受了第2處傷，血順著左臂往下淌。'), section.slice(0, 800));
+    assert.ok(section.includes('林昭在第1章受了第1處傷'), section.slice(0, 800));
   });
 
-  test('作者手改过的沈氏：后两章定稿都没覆盖，卡上挂黄 ❗', async () => {
+  test('作者手改過的沈氏：後兩章定稿都沒覆蓋，卡上掛黃 ❗', async () => {
     assert.ok(t.read(SHEN).includes(AUTHOR_STATE), t.read(SHEN));
     const [f] = (await bundle.errorLog.listActiveFailures(project))[SHEN] ?? [];
     assert.equal(f?.severity, 'warn');
     assert.equal(f.op, 'cardState');
-    assert.match(f.message, /第 3 章同步时给出了新的「当前状态」/);
+    assert.match(f.message, /第 3 章同步時給出了新的「當前狀態」/);
   });
 
-  test('林昭最后是第 3 章的状态；工程页的角色行写着「状态截至第 3 章」', async () => {
-    assert.match(t.read(LIN), /第 3 章之后：左臂有 3 处伤/);
+  test('林昭最後是第 3 章的狀態；工程頁的角色行寫著「狀態截至第 3 章」', async () => {
+    assert.match(t.read(LIN), /第 3 章之後：左臂有 3 處傷/);
     project.invalidate();
     const tree = await bundle.projectView.buildProjectTree(project);
     const lin = tree.characters.find((n) => n.relPath === LIN);
-    assert.match(lin.detail, /状态截至第 3 章/);
+    assert.match(lin.detail, /狀態截至第 3 章/);
   });
 
-  // 写前冲突检查：第 1 章前面没有定稿过的章，不调；第 2、3 章各一次。
-  test('一共 17 次：一章写一次、更新细纲一次、角色状态一次、认叙事线一次、故事时间一次，第 2、3 章写前各比对一次；没超过确认框的上限', () => {
+  // 寫前衝突檢查：第 1 章前面沒有定稿過的章，不調；第 2、3 章各一次。
+  test('一共 17 次：一章寫一次、更新細綱一次、角色狀態一次、認敘事線一次、故事時間一次，第 2、3 章寫前各比對一次；沒超過確認框的上限', () => {
     assert.equal(fake.callCount(), 17);
     const plan = bundle.pipelineModel.planWriteBatch({ from: 1, to: 3, mode: 'finalize', writtenNos: [], plotFilledNos: [1, 2, 3, 4, 5] });
     assert.ok(fake.callCount() <= plan.calls.max);
   });
 
-  test('完成提示：写好 3 章、定稿 3 章，带「打开第 3 章」', () => {
-    const f = finished.find((x) => x.title === '批量写章');
-    assert.equal(f.message, '第 1–3 章已写好，同步 3 章（调用 17 次）。');
-    assert.deepEqual(f.open, { plotRelPath: PLOT(3), label: '打开第 3 章' });
+  test('完成提示：寫好 3 章、定稿 3 章，帶「開啟第 3 章」', () => {
+    const f = finished.find((x) => x.title === '批次寫章');
+    assert.equal(f.message, '第 1–3 章已寫好，同步 3 章（呼叫 17 次）。');
+    assert.deepEqual(f.open, { plotRelPath: PLOT(3), label: '開啟第 3 章' });
   });
 
-  test('主按钮转去第 4 章', async () => {
+  test('主按鈕轉去第 4 章', async () => {
     const out = [];
     controller.attach({ kind: 'sidebar', post: (m) => out.push(m), reveal() {} });
     await controller.handle({ type: 'requestPipeline' });
     const next = out.filter((m) => m.type === 'pipeline').pop()?.next;
-    assert.equal(next?.label, '写第 4 章', JSON.stringify(next));
+    assert.equal(next?.label, '寫第 4 章', JSON.stringify(next));
   });
 });
 

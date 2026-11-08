@@ -1,23 +1,23 @@
 /**
- * 创作流水线条与「下一步」。
+ * 創作流水線條與「下一步」。
  *
- * 界面要回答三个问题，这里管前两个（第三个是工作区卡，见 workbench.ts）：
+ * 介面要回答三個問題，這裡管前兩個（第三個是工作區卡，見 workbench.ts）：
  *
- * - **我现在在哪一层？** —— 位置信息条 + 大纲 / 细纲 / 正文三格与定稿状态
- * - **我接下来该干什么？** —— 下一步条（一个主按钮；其余动作在输入区的 `/` 命令里）
+ * - **我現在在哪一層？** —— 位置資訊條 + 大綱 / 細綱 / 正文三格與定稿狀態
+ * - **我接下來該幹什麼？** —— 下一步條（一個主按鈕；其餘動作在輸入區的 `/` 命令裡）
  *
- * ## 为什么是一个按钮而不是七个
+ * ## 為什麼是一個按鈕而不是七個
  *
- * 改造前这里是 `STAGE_CAPABILITIES[stage]` 的平铺：七个等重的按钮，
- * 看不出该点哪个。可在任何一个具体时刻，作者真正要按的只有一个——
- * 那一个由状态机算得出来（`deriveNextStep`，判据与 `deriveStage` 同源）。
- * 于是：状态机那一个做主按钮，其余六个收进 `/` 命令面板。
+ * 改造前這裡是 `STAGE_CAPABILITIES[stage]` 的平鋪：七個等重的按鈕，
+ * 看不出該點哪個。可在任何一個具體時刻，作者真正要按的只有一個——
+ * 那一個由狀態機算得出來（`deriveNextStep`，判據與 `deriveStage` 同源）。
+ * 於是：狀態機那一個做主按鈕，其餘六個收進 `/` 命令面板。
  *
- * ## 为什么主按钮点了就跑
+ * ## 為什麼主按鈕點了就跑
  *
- * 它是状态机替你选的，没有参数可填：这一章该发生什么，大纲与前后章里都写着。
- * 旧界面逼作者先编一句「请生成」才肯发送，而那句废话还会被当成要求装进
- * prompt。输入框里有字就当补充要求带上，没有就不带。
+ * 它是狀態機替你選的，沒有引數可填：這一章該發生什麼，大綱與前後章裡都寫著。
+ * 舊介面逼作者先編一句「請生成」才肯傳送，而那句廢話還會被當成要求裝進
+ * prompt。輸入框裡有字就當補充要求帶上，沒有就不帶。
  */
 import { el as mk, clear, maybeById, setHidden } from '../dom';
 import {
@@ -39,24 +39,24 @@ import type {
 import { el } from './refs';
 import { store, vscode } from './store';
 
-// ---------------------------------------------------------------- 状态
+// ---------------------------------------------------------------- 狀態
 
-/** 当前这一章的流水线。切目标或产物落盘后由后端重推。 */
+/** 當前這一章的流水線。切目標或產物落盤後由後端重推。 */
 let current: PlotPipelineView | null = null;
-/** 状态机算出的下一步。全书那一层也有（生成架构 / 大纲 / 拆细纲）。 */
+/** 狀態機算出的下一步。全書那一層也有（生成架構 / 大綱 / 拆細綱）。 */
 let next: NextStepView | null = null;
 
 const crumb = () => maybeById('pipelineCrumb');
 const stagesBox = () => maybeById('pipelineStages');
 
-/** 由 composer 注入：主按钮点下去要走发送那条路（它管附件、草稿、busy）。 */
+/** 由 composer 注入：主按鈕點下去要走傳送那條路（它管附件、草稿、busy）。 */
 let runNextStep: (step: NextStepView) => void = () => {};
 
 export function bindNextStepRunner(fn: (step: NextStepView) => void): void {
   runNextStep = fn;
 }
 
-/** 「开始新对话」：清空消息流，从同一目标重新起一段对话。 */
+/** 「開始新對話」：清空訊息流，從同一目標重新起一段對話。 */
 export function installNewSession(): void {
   el.newSessionBtn.addEventListener('click', () => {
     if (store.busy) {
@@ -67,10 +67,10 @@ export function installNewSession(): void {
 }
 
 /**
- * 「重命名当前章节」。
+ * 「重新命名當前章節」。
  *
- * 复用工程页右键那条 `fileAction: 'rename'`——后端的 `writePlot` 会保留
- * 章号前缀。这里只负责说清「改的是哪一章」，不新增协议。
+ * 複用工程頁右鍵那條 `fileAction: 'rename'`——後端的 `writePlot` 會保留
+ * 章號字首。這裡只負責說清「改的是哪一章」，不新增協議。
  */
 export function installRenamePlot(): void {
   el.renamePlotBtn.addEventListener('click', () => {
@@ -89,10 +89,10 @@ export function renderPipeline(pipeline: PlotPipelineView | undefined, step: Nex
 }
 
 /**
- * 会话变了（切目标、开历史会话）时重画。
+ * 會話變了（切目標、開歷史會話）時重畫。
  *
- * 目标换到另一章时手上这份 pipeline 就过期了——先丢掉再等后端推新的，
- * **不要留着显示**：拿上一章的状态配这一章的名字，比什么都不显示更糟。
+ * 目標換到另一章時手上這份 pipeline 就過期了——先丟掉再等後端推新的，
+ * **不要留著顯示**：拿上一章的狀態配這一章的名字，比什麼都不顯示更糟。
  */
 export function onSessionChanged(): void {
   if (current && current.plotRelPath !== plotOfTarget(store.session.target)) {
@@ -111,10 +111,10 @@ function redraw(): void {
 }
 
 /**
- * 「重命名当前章节」按钮的显隐与 tooltip。
+ * 「重新命名當前章節」按鈕的顯隱與 tooltip。
  *
- * 目标是架构或大纲时藏起来——那两层没有章可改名，留一个点了会报错的按钮
- * 比没有更糟。tooltip 里带上章名，作者才看得出改的是哪一章。
+ * 目標是架構或大綱時藏起來——那兩層沒有章可改名，留一個點了會報錯的按鈕
+ * 比沒有更糟。tooltip 裡帶上章名，作者才看得出改的是哪一章。
  */
 function renderRenameBtn(): void {
   const relPath = plotOfTarget(store.session.target);
@@ -122,32 +122,32 @@ function renderRenameBtn(): void {
   if (!relPath) {
     return;
   }
-  el.renamePlotBtn.title = current && current.no > 0 ? `重命名${headLabel()}的细纲` : `重命名 ${relPath}`;
+  el.renamePlotBtn.title = current && current.no > 0 ? `重新命名${headLabel()}的細綱` : `重新命名 ${relPath}`;
 }
 
-/** 当前目标那一行的说法。与工程页、与后端日志同一份文案（`model/pipeline.ts`）。 */
+/** 當前目標那一行的說法。與工程頁、與後端日誌同一份文案（`model/pipeline.ts`）。 */
 function headLabel(): string {
   const target = store.session.target;
   if (target.kind === 'setting') {
-    return `故事架构 · ${SETTING_DOC_LABEL[target.doc]}`;
+    return `故事架構 · ${SETTING_DOC_LABEL[target.doc]}`;
   }
   if (target.kind === 'outline') {
-    return '情节大纲';
+    return '情節大綱';
   }
-  // 单条设定（展开）：「设定 · 天机阁」，名字取文件名（与后端 `describeTarget` 同一份）。
+  // 單條設定（展開）：「設定 · 天機閣」，名字取檔名（與後端 `describeTarget` 同一份）。
   if (target.kind === 'lore') {
     return describeTarget(target);
   }
   return current ? chapterLabel(current.no, current.title) : '';
 }
 
-// ---------------------------------------------------------------- 位置信息条（只读）
+// ---------------------------------------------------------------- 位置資訊條（只讀）
 
 /**
- * 顶部只报「在哪」，不负责导航。
+ * 頂部只報「在哪」，不負責導航。
  *
- * 切层靠下面的细纲 / 正文两格；切章靠工程页。这里做成可点只会多一个几乎没人用的
- * 入口，还让人以为点了会有什么深层动作。
+ * 切層靠下面的細綱 / 正文兩格；切章靠工程頁。這裡做成可點只會多一個幾乎沒人用的
+ * 入口，還讓人以為點了會有什麼深層動作。
  */
 function renderCrumb(): void {
   const box = crumb();
@@ -158,8 +158,8 @@ function renderCrumb(): void {
   const target = store.session.target;
   const relPath = plotOfTarget(target);
 
-  // `no` 为 0 是后端给的「找不到」空壳（刚被改名或删掉），
-  // 那时报文件名比报「第 0 章」有用。
+  // `no` 為 0 是後端給的「找不到」空殼（剛被改名或刪掉），
+  // 那時報檔名比報「第 0 章」有用。
   const title = !relPath
     ? headLabel()
     : current && current.no > 0
@@ -169,25 +169,25 @@ function renderCrumb(): void {
   if (!title) {
     return;
   }
-  // 从前章名后面还挂一枚状态徽章（「待写正文」），与下一行的两格加「未写正文 / 待定稿 / 已定稿」
-  // 说的是同一件事，挤在同一块里说两遍。这一章走到哪，只在下一行报一次。
+  // 從前章名後面還掛一枚狀態徽章（「待寫正文」），與下一行的兩格加「未寫正文 / 待定稿 / 已定稿」
+  // 說的是同一件事，擠在同一塊裡說兩遍。這一章走到哪，只在下一行報一次。
   box.appendChild(mk('span', 'crumb', title));
 }
 
-// ---------------------------------------------------------------- 三格状态
+// ---------------------------------------------------------------- 三格狀態
 
 /**
- * 大纲 / 细纲 / 正文三个可点的按钮（点了就切到那一层），加一个「定稿」状态点。
+ * 大綱 / 細綱 / 正文三個可點的按鈕（點了就切到那一層），加一個「定稿」狀態點。
  *
- * 从前这里是「卷纲 / 剧情 / 正文」三层——卷那一层删掉了，一章一纲之后这一章的
- * 上游链只剩细纲、正文两格。定稿不是一个创作阶段（它是写完之后的一步工程动作），
- * 所以只给状态，不给按钮。「大纲」那一格见 {@link outlineCell}。
+ * 從前這裡是「卷綱 / 劇情 / 正文」三層——卷那一層刪掉了，一章一綱之後這一章的
+ * 上游鏈只剩細綱、正文兩格。定稿不是一個創作階段（它是寫完之後的一步工程動作），
+ * 所以只給狀態，不給按鈕。「大綱」那一格見 {@link outlineCell}。
  *
- * 完成度落成三态圆点（未开始 / 进行中 / 已完成），不用百分比条——这里
- * 表达的是状态机走到哪，不是「完成了百分之几」。
+ * 完成度落成三態圓點（未開始 / 進行中 / 已完成），不用百分比條——這裡
+ * 表達的是狀態機走到哪，不是「完成了百分之幾」。
  *
- * 「上游变过」的标记（⟳）是这套流水线最有价值的一格信息：改了大纲之后，
- * 哪几章的细纲需要回头看，光靠人脑记不住。它由 hash 链算出来，零模型调用。
+ * 「上游變過」的標記（⟳）是這套流水線最有價值的一格資訊：改了大綱之後，
+ * 哪幾章的細綱需要回頭看，光靠人腦記不住。它由 hash 鏈算出來，零模型呼叫。
  */
 function renderStages(): void {
   const box = stagesBox();
@@ -197,7 +197,7 @@ function renderStages(): void {
   clear(box);
 
   const relPath = plotOfTarget(store.session.target);
-  // 架构与大纲两层没有「这一章的三格」可言，整条收起来。
+  // 架構與大綱兩層沒有「這一章的三格」可言，整條收起來。
   setHidden(box, !relPath);
   if (!relPath) {
     return;
@@ -225,7 +225,7 @@ function renderStages(): void {
     btn.appendChild(mk('span', 'pstage-label', STAGE_LABEL[cell.stage]));
     if (cell.stale) {
       const dot = mk('span', 'pstage-stale', '⟳');
-      dot.title = '上游产物改过，这一层可能需要回头看';
+      dot.title = '上游產物改過，這一層可能需要回頭看';
       btn.appendChild(dot);
     }
     const target: CreationTarget = { kind: cell.stage as 'plot' | 'manuscript', plotRelPath: relPath };
@@ -233,10 +233,10 @@ function renderStages(): void {
     box.appendChild(btn);
   }
 
-  // 定稿：只报状态。没有正文时说「未写」，别把一格空的说成「待定稿」。
+  // 定稿：只報狀態。沒有正文時說「未寫」，別把一格空的說成「待定稿」。
   if (current) {
     const text = !current.chapter.exists || current.chapter.words === 0
-      ? '未写正文'
+      ? '未寫正文'
       : current.summary.exists && !current.summary.stale
         ? '已同步'
         : '待同步';
@@ -246,11 +246,11 @@ function renderStages(): void {
 }
 
 /**
- * 「大纲」那一格（2026-10-24）：这一章在情节大纲里有没有那一条（就是这一章细纲的梗概），点了回到全书那一层
- * （目标是情节大纲，主按钮是全书的下一步）。从前停在一章上，回全书只有目标下拉框最上面那一项，找不到续写大纲。
+ * 「大綱」那一格（2026-10-24）：這一章在情節大綱裡有沒有那一條（就是這一章細綱的梗概），點了回到全書那一層
+ * （目標是情節大綱，主按鈕是全書的下一步）。從前停在一章上，回全書只有目標下拉框最上面那一項，找不到續寫大綱。
  *
- * 大纲是这一章的上游、不是这一章的一层，所以从不高亮。没排进大纲挂 ⚠；流水线还没推到（刚切过来）时
- * 只画空心、不挂——没数据不该说「没排到」。
+ * 大綱是這一章的上游、不是這一章的一層，所以從不高亮。沒排進大綱掛 ⚠；流水線還沒推到（剛切過來）時
+ * 只畫空心、不掛——沒資料不該說「沒排到」。
  */
 function outlineCell(): HTMLElement {
   const outline = current?.outline;
@@ -259,14 +259,14 @@ function outlineCell(): HTMLElement {
   const mark = mk('span', `pstage-mark ${covered ? 'done' : 'todo'}`);
   mark.setAttribute('aria-hidden', 'true');
   btn.appendChild(mark);
-  btn.appendChild(mk('span', 'pstage-label', '大纲'));
+  btn.appendChild(mk('span', 'pstage-label', '大綱'));
 
-  const reach = outline?.coverage ? `大纲排到第 ${outline.coverage} 章` : '还没有情节大纲';
-  const state = !outline ? '' : covered ? `情节大纲里有这一章（${reach}）· ` : `情节大纲里还没有这一章（${reach}）· `;
-  btn.title = `${state}点了回到全书那一层；往后排大纲在任何一层打 /续写大纲`;
+  const reach = outline?.coverage ? `大綱排到第 ${outline.coverage} 章` : '還沒有情節大綱';
+  const state = !outline ? '' : covered ? `情節大綱裡有這一章（${reach}）· ` : `情節大綱裡還沒有這一章（${reach}）· `;
+  btn.title = `${state}點了回到全書那一層；往後排大綱在任何一層打 /續寫大綱`;
   if (outline && !covered) {
     const warn = mk('span', 'pstage-stale', '⚠');
-    warn.title = `情节大纲里还没有这一章（${reach}）`;
+    warn.title = `情節大綱裡還沒有這一章（${reach}）`;
     btn.appendChild(warn);
   }
   btn.addEventListener('click', () => go({ kind: 'outline' }));
@@ -274,9 +274,9 @@ function outlineCell(): HTMLElement {
 }
 
 /**
- * 把 0..1 的比例收成界面要的三态——不把连续比例画成百分比。
+ * 把 0..1 的比例收成介面要的三態——不把連續比例畫成百分比。
  *
- * 类名刻意不用 `empty`：消息流的 `.empty` 带大 padding，撞上会把圆点撑成椭圆。
+ * 類名刻意不用 `empty`：訊息流的 `.empty` 帶大 padding，撞上會把圓點撐成橢圓。
  */
 function stageStatus(ratio: number): 'todo' | 'partial' | 'done' {
   if (ratio >= 1) {
@@ -289,40 +289,40 @@ function stageStatus(ratio: number): 'todo' | 'partial' | 'done' {
 }
 
 const STAGE_STATUS_LABEL = {
-  todo: '未开始',
-  partial: '进行中',
+  todo: '未開始',
+  partial: '進行中',
   done: '已完成',
 } as const;
 
 // ---------------------------------------------------------------- 下一步
 
 /**
- * 下一步条：一句「为什么是这一步」 + 一个主按钮。
+ * 下一步條：一句「為什麼是這一步」 + 一個主按鈕。
  *
- * 没有下一步（这一章全做完了）时主按钮收起——**不造一个假的下一步**。
- * 给一个「下一步」等于逼作者一直有事可做，而写完就是写完了。其余命令在
- * 输入框里打 `/` 就有（或点工具行上的「/ 命令」）。
+ * 沒有下一步（這一章全做完了）時主按鈕收起——**不造一個假的下一步**。
+ * 給一個「下一步」等於逼作者一直有事可做，而寫完就是寫完了。其餘命令在
+ * 輸入框裡打 `/` 就有（或點工具行上的「/ 命令」）。
  */
 function renderNextStep(): void {
   setHidden(el.nextStep, false);
 
   if (!next) {
     el.nextStepHint.textContent = current
-      ? '这一章都齐了。要改哪一层就点上面对应的那一格。'
-      : '全书都写完了。要改哪一章就去工程页点它，或在输入框里打 / 挑一个命令。';
+      ? '這一章都齊了。要改哪一層就點上面對應的那一格。'
+      : '全書都寫完了。要改哪一章就去工程頁點它，或在輸入框裡打 / 挑一個命令。';
     setHidden(el.nextStepBtn, true);
     return;
   }
 
-  // 调用次数写在动手之前（第 4 条、D16）：有自动修复的步骤连上限一起报。
+  // 呼叫次數寫在動手之前（第 4 條、D16）：有自動修復的步驟連上限一起報。
   el.nextStepHint.textContent = next.calls ? `${next.hint}（${describeCalls(next.calls)}）` : next.hint;
   setHidden(el.nextStepBtn, false);
   el.nextStepBtn.textContent = next.form ? `${next.label}…` : next.label;
   el.nextStepBtn.title = next.form
-    ? '先填一句话与规模，再生成'
+    ? '先填一句話與規模，再生成'
     : next.projectAction
-      ? '这一步是工程动作，不消耗对话上下文'
-      : `${STAGE_LABEL[next.stage]} · 点了立即执行，输入框里有字就一起带上`;
+      ? '這一步是工程動作，不消耗對話上下文'
+      : `${STAGE_LABEL[next.stage]} · 點了立即執行，輸入框裡有字就一起帶上`;
   el.nextStepBtn.disabled = store.busy;
   el.nextStepBtn.onclick = () => {
     if (!store.busy && next) {
@@ -332,20 +332,20 @@ function renderNextStep(): void {
 }
 
 /**
- * 输入框的提示语跟着阶段与能力走。
+ * 輸入框的提示語跟著階段與能力走。
  *
- * 正文层写正文时，要写什么已经在细纲里了——输入框里是补充要求（「多写点雨里的
- * 细节」）。而多数命令的输入是**可选**的，提示语要说出这一点。
+ * 正文層寫正文時，要寫什麼已經在細綱裡了——輸入框裡是補充要求（「多寫點雨裡的
+ * 細節」）。而多數命令的輸入是**可選**的，提示語要說出這一點。
  */
 function updatePlaceholder(): void {
   const { stage, capability, target } = store.session;
   if (stage === 'manuscript' && capability === 'generate') {
-    el.input.placeholder = '这一章的补充要求…（可留空，Enter 发送）';
+    el.input.placeholder = '這一章的補充要求…（可留空，Enter 傳送）';
     return;
   }
-  // 单条设定：打字是聊这一条，`/展开` 是生成——架构那一句「这是个什么故事？」问的不是它。
+  // 單條設定：打字是聊這一條，`/展開` 是生成——架構那一句「這是個什麼故事？」問的不是它。
   if (target.kind === 'lore') {
-    el.input.placeholder = '聊聊这一条设定…（打 /展开 把它往前想细）';
+    el.input.placeholder = '聊聊這一條設定…（打 /展開 把它往前想細）';
     return;
   }
   el.input.placeholder = `${STAGE_LABEL[stage]}：${STAGE_QUESTION[stage]}（可留空，打 / 挑命令）`;

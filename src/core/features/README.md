@@ -1,130 +1,130 @@
-# core/features — 功能编排
+# core/features — 功能編排
 
-面向用户动作的编排层：每个文件对应一类「点一下发生什么」。负责组合数据层（model）、装配器（context）与模型层（llm），并把结果以回调形式交回宿主，不直接操作 UI。
+面向使用者動作的編排層：每個檔案對應一類「點一下發生什麼」。負責組合資料層（model）、裝配器（context）與模型層（llm），並把結果以回呼形式交回宿主，不直接操作 UI。
 
-## 文件
+## 檔案
 
-| 文件 | 职责 |
+| 檔案 | 職責 |
 |---|---|
-| [creation.ts](creation.ts) | 设置页的连接测试（`testConnection`，严格用指定的模型）与两个纯文本工具 `cleanOutput`（只对正文层用）、`suggestTitle`。 |
-| [artifact.ts](artifact.ts) | ★ 模型输出 → 可采纳的结构化产物（三层降级；细纲给了区间就按批次合同严格解码）。 |
-| [blueprint.ts](blueprint.ts) | 细纲批次（章节蓝图）的严格解码与覆盖检查，含这一章在叙事线上的计划 `threads`。 |
-| [roster.ts](roster.ts) | 角色图谱两段式的解码：身份清单 → 按冻结清单补详情 → 拼成角色卡。 |
-| [loreExpand.ts](loreExpand.ts) | 展开一条设定的解码与截断（明面三节合计 600、暗设 200、一句话 40）。 |
-| [loreSettle.ts](loreSettle.ts) | 落定设定的解码：一批条目照展开那一套截，最多 12 条。 |
-| [loreList.ts](loreList.ts) | 设定清单（架构第五件）两段式的解码：清单 → 每 6 条补正文三节；调用次数 `loreListCalls()`。 |
-| [novelConfig.ts](novelConfig.ts) | 小说配置的 JSON 合同、「全局要求」的质检与规范化草稿。 |
-| [structuredJson.ts](structuredJson.ts) | 结构化输出的 JSON 小工具，含转写用的 `jsonValueOf` / `withoutNone` / `unfaithfulStrings`。 |
-| [parse.ts](parse.ts) | 模型输出解析小工具：剥代码围栏、提取 JSON、字符串与数字去重、字符串数组归一。 |
-| [pipelineBatch.ts](pipelineBatch.ts) | ★ 工程页的三条批量动作（补齐架构、批量拆细纲、批量写章），都严格串行、一件失败就停、只补空白。 |
-| [askCall.ts](askCall.ts) | ★ 调模型之前的那一问：确认框上模型与上下文详细度两个下拉框只在这里拼（第 4 条）。 |
-| [transcribe.ts](transcribe.ts) | ★ 转写的整条走法 `transcribeJson`：照抄 → 「无」换空 → 逐段核对出自原文 → 原来的解码，不合格重转一次。 |
-| [poolIO.ts](poolIO.ts) | 工程页任务那条路的 `ChainIO`（走分档池、用干活那个模型的窗口、不带思考深度），以及转写的 `lazyTranscriber` / `transcribeWith`。 |
-| [finalize.ts](finalize.ts) | ★ 定稿一章：照正文反向更新细纲 → 出场角色的当前状态 → 叙事线 → 故事时间。 |
-| [finalizeSteps.ts](finalizeSteps.ts) | 定稿的后几步（角色状态、叙事线 `judgeChapterThreads`）与 `ModelRunner`，单章定稿与「立即同步」共用。 |
-| [threads.ts](threads.ts) | 叙事线：从情节大纲排线（`generateThreads`）与定稿时认事件 / 归并 / 当前进度（`recordThreads`）。 |
-| [threadsBackfill.ts](threadsBackfill.ts) | **从已写正文补记叙事线**：`planThreadsBackfill` 算出水位之后要判的章（零调用），`runThreadsBackfill` 按章号串行补。 |
-| [storyTime.ts](storyTime.ts) | **认时间**：同步一章时单独推一次故事时间（`recordChapterTime`），补推、重推也走 `judgeTimes`。 |
-| [timelineBackfill.ts](timelineBackfill.ts) | **补推、重推故事时间**：几章一批，只动机器写的行。 |
-| [timelineEdit.ts](timelineEdit.ts) | **作者在工程页改故事时间**（零调用）：改一行、改历法与起点，经网关只改那一行、那两个键。 |
-| [threadPlan.ts](threadPlan.ts) | 叙事线的计划事件随细纲走：`writePlannedThreads` 整组换掉那几章的计划事件、新伏笔加在线下。 |
-| [threadsPrompt.ts](threadsPrompt.ts) | 叙事线的四段系统提示（排线、认事件、当前进度、归并），按格式写、转写成 JSON。 |
-| [plotCheck.ts](plotCheck.ts) | 写前冲突检查（只在批量写章里跑）：本章细纲比对前面的连续性事实，对不上就停在那一章前面。 |
-| [preflight.ts](preflight.ts) | 一致性预检的取数（零调用；判断在 `model/preflight.ts`），对话页写第 N 章之前与批量写章两个入口。 |
-| [characterState.ts](characterState.ts) | 定稿时更新本章出场角色的「当前状态」：归机器的卡只换那一节，作者改过的不写、挂黄 ❗。 |
-| [summarize.ts](summarize.ts) | 定稿第一步（`summarizeChapter`）、「立即同步」（`syncSummaries`）与全文大纲（`updateGlobalSummary` / `rebuildGlobalSummary`）。 |
-| [summarizePrompt.ts](summarizePrompt.ts) | 定稿（照正文整理细纲）、阶段大纲与全文大纲的系统提示，以及转写合同 `SUMMARY_JSON_CONTRACT`。 |
-| [characters.ts](characters.ts) | 从选定的几段正文批量提取 / 更新角色卡（剧作称谓换成真名、同一批先去重）。 |
-| [charactersPrompt.ts](charactersPrompt.ts) | 批量提取角色卡的系统提示（一个人物一份、十个小标题，不写 JSON）与转写那一步的合同（`CHARACTER_JSON_CONTRACT`）。 |
-| [lore.ts](lore.ts) | ★ 设定条目的四件维护：建条目、整合、按目录整理、批量展开。 |
-| [loreRecord.ts](loreRecord.ts) | 记设定：定稿时顺手记进细纲「设定」一节（`checkLore` 校验），以及单独记一章 / 补记（`recordLore`）。 |
-| [lorePrompt.ts](lorePrompt.ts) | 「设定」字段说明（定稿与单独记设定共用）与建条目、整合、按目录整理的提示词及转写合同；字数上限是第 27 条的锚点。 |
-| [characterCard.ts](characterCard.ts) | ★ **单个角色**的档案更新编排；解析在 characterCardParse.ts，提示词在 characterCardPrompt.ts。 |
-| [characterCardParse.ts](characterCardParse.ts) | 角色卡更新的 JSON 解析（`parseCardResponse`）与转写那一步的说明（`cardTranscribeSpec`：合同、解码、性别按对应关系填）。 |
-| [characterCardPrompt.ts](characterCardPrompt.ts) | 更新角色卡与定稿时更新当前状态（`STATE_SYSTEM`）的系统提示，及各自的转写合同。 |
-| [characterMaintenance.ts](characterMaintenance.ts) | ★ 两条不调模型的整理动作：`cleanCharacterAliases` 删非专属别名、`mergeDuplicateCharacterCards` 合并重复卡；只改 frontmatter。 |
-| [style.ts](style.ts) | 从样章归纳文风指南写入 `.novelwarden/style.md`。 |
-| [stylePrompt.ts](stylePrompt.ts) | 文风提取与从参考书学写法的系统提示（只学技法，不复述情节、不抄原句）。 |
-| [bookText.ts](bookText.ts) | 拆书两条路共用的取书：作者可挑本机任意位置的 txt（上限 64 MiB），agent 给的路径只认工程里的清单。 |
-| [importManuscript.ts](importManuscript.ts) | ★ **导入原稿**（拆书 A）：挑 txt → 切章 → 确认 → 一批建好章节，再问要不要从已写正文补齐。 |
-| [exportBook.ts](exportBook.ts) | **导出全文**（零调用）：全部章节按章号拼成 `导出/<书名>.txt`。 |
-| [derive.ts](derive.ts) | ★ **从已写正文补齐**（拆书 A）：按 细纲 → 配置 → 前提 → 角色卡 → 世界观 → 设定条目 → 全文大纲 的顺序只补空白。 |
-| [outlineRewrite.ts](outlineRewrite.ts) | **分段重写情节大纲**：只重写还没写正文的章，20 章一段，全部写完一次审阅。 |
-| [reference.ts](reference.ts) | **从参考书学写法**（拆书 B）：学文风写 `style.md`、学写法写成本工程的写作技能；原文不进工程。 |
-| [bookReplace.ts](bookReplace.ts) | ★ **全书替换**（零调用）：预览里勾着的几处经网关逐份写；未保存的、hash 对不上的跳过，换之前先存一版历史。 |
-| [checkpoint.ts](checkpoint.ts) | 存档点：批量动作之前自动存（`checkpointBefore`，绝不抛）与退回的编排（`restoreCheckpoint`）。 |
-| [pickPlots.ts](pickPlots.ts) | 多章选择：Host.pick 只支持单选，需要选几章时改为输入章号列表（如 `1,2,3`）。 |
+| [creation.ts](creation.ts) | 設定頁的連線測試（`testConnection`，嚴格用指定的模型）與兩個純文字工具 `cleanOutput`（只對正文層用）、`suggestTitle`。 |
+| [artifact.ts](artifact.ts) | ★ 模型輸出 → 可採納的結構化產物（三層降級；細綱給了區間就按批次合同嚴格解碼）。 |
+| [blueprint.ts](blueprint.ts) | 細綱批次（章節藍圖）的嚴格解碼與覆蓋檢查，含這一章在敘事線上的計劃 `threads`。 |
+| [roster.ts](roster.ts) | 角色圖譜兩段式的解碼：身份清單 → 按凍結清單補詳情 → 拼成角色卡。 |
+| [loreExpand.ts](loreExpand.ts) | 展開一條設定的解碼與截斷（明面三節合計 600、暗設 200、一句話 40）。 |
+| [loreSettle.ts](loreSettle.ts) | 落定設定的解碼：一批條目照展開那一套截，最多 12 條。 |
+| [loreList.ts](loreList.ts) | 設定清單（架構第五件）兩段式的解碼：清單 → 每 6 條補正文三節；呼叫次數 `loreListCalls()`。 |
+| [novelConfig.ts](novelConfig.ts) | 小說配置的 JSON 合同、「全域要求」的質檢與規範化草稿。 |
+| [structuredJson.ts](structuredJson.ts) | 結構化輸出的 JSON 小工具，含轉寫用的 `jsonValueOf` / `withoutNone` / `unfaithfulStrings`。 |
+| [parse.ts](parse.ts) | 模型輸出解析小工具：剝程式碼圍欄、提取 JSON、字串與數字去重、字串陣列歸一。 |
+| [pipelineBatch.ts](pipelineBatch.ts) | ★ 工程頁的三條批次動作（補齊架構、批次拆細綱、批次寫章），都嚴格序列、一件失敗就停、只補空白。 |
+| [askCall.ts](askCall.ts) | ★ 調模型之前的那一問：確認框上模型與上下文詳細度兩個下拉框只在這裡拼（第 4 條）。 |
+| [transcribe.ts](transcribe.ts) | ★ 轉寫的整條走法 `transcribeJson`：照抄 → 「無」換空 → 逐段核對出自原文 → 原來的解碼，不合格重轉一次。 |
+| [poolIO.ts](poolIO.ts) | 工程頁任務那條路的 `ChainIO`（走分檔池、用幹活那個模型的視窗、不帶思考深度），以及轉寫的 `lazyTranscriber` / `transcribeWith`。 |
+| [finalize.ts](finalize.ts) | ★ 定稿一章：照正文反向更新細綱 → 出場角色的當前狀態 → 敘事線 → 故事時間。 |
+| [finalizeSteps.ts](finalizeSteps.ts) | 定稿的後幾步（角色狀態、敘事線 `judgeChapterThreads`）與 `ModelRunner`，單章定稿與「立即同步」共用。 |
+| [threads.ts](threads.ts) | 敘事線：從情節大綱排線（`generateThreads`）與定稿時認事件 / 歸併 / 當前進度（`recordThreads`）。 |
+| [threadsBackfill.ts](threadsBackfill.ts) | **從已寫正文補記敘事線**：`planThreadsBackfill` 算出水位之後要判的章（零呼叫），`runThreadsBackfill` 按章號序列補。 |
+| [storyTime.ts](storyTime.ts) | **認時間**：同步一章時單獨推一次故事時間（`recordChapterTime`），補推、重推也走 `judgeTimes`。 |
+| [timelineBackfill.ts](timelineBackfill.ts) | **補推、重推故事時間**：幾章一批，只動機器寫的行。 |
+| [timelineEdit.ts](timelineEdit.ts) | **作者在工程頁改故事時間**（零呼叫）：改一行、改曆法與起點，經閘道器只改那一行、那兩個鍵。 |
+| [threadPlan.ts](threadPlan.ts) | 敘事線的計劃事件隨細綱走：`writePlannedThreads` 整組換掉那幾章的計劃事件、新伏筆加線上下。 |
+| [threadsPrompt.ts](threadsPrompt.ts) | 敘事線的四段系統提示（排線、認事件、當前進度、歸併），按格式寫、轉寫成 JSON。 |
+| [plotCheck.ts](plotCheck.ts) | 寫前衝突檢查（只在批次寫章裡跑）：本章細綱比對前面的連續性事實，對不上就停在那一章前面。 |
+| [preflight.ts](preflight.ts) | 一致性預檢的取數（零呼叫；判斷在 `model/preflight.ts`），對話頁寫第 N 章之前與批次寫章兩個入口。 |
+| [characterState.ts](characterState.ts) | 定稿時更新本章出場角色的「當前狀態」：歸機器的卡只換那一節，作者改過的不寫、掛黃 ❗。 |
+| [summarize.ts](summarize.ts) | 定稿第一步（`summarizeChapter`）、「立即同步」（`syncSummaries`）與全文大綱（`updateGlobalSummary` / `rebuildGlobalSummary`）。 |
+| [summarizePrompt.ts](summarizePrompt.ts) | 定稿（照正文整理細綱）、階段大綱與全文大綱的系統提示，以及轉寫合同 `SUMMARY_JSON_CONTRACT`。 |
+| [characters.ts](characters.ts) | 從選定的幾段正文批次提取 / 更新角色卡（劇作稱謂換成真名、同一批先去重）。 |
+| [charactersPrompt.ts](charactersPrompt.ts) | 批次提取角色卡的系統提示（一個人物一份、十個小標題，不寫 JSON）與轉寫那一步的合同（`CHARACTER_JSON_CONTRACT`）。 |
+| [lore.ts](lore.ts) | ★ 設定條目的四件維護：建條目、整合、按目錄整理、批次展開。 |
+| [loreRecord.ts](loreRecord.ts) | 記設定：定稿時順手記進細綱「設定」一節（`checkLore` 校驗），以及單獨記一章 / 補記（`recordLore`）。 |
+| [lorePrompt.ts](lorePrompt.ts) | 「設定」欄位說明（定稿與單獨記設定共用）與建條目、整合、按目錄整理的提示詞及轉寫合同；字數上限是第 27 條的錨點。 |
+| [characterCard.ts](characterCard.ts) | ★ **單個角色**的檔案更新編排；解析在 characterCardParse.ts，提示詞在 characterCardPrompt.ts。 |
+| [characterCardParse.ts](characterCardParse.ts) | 角色卡更新的 JSON 解析（`parseCardResponse`）與轉寫那一步的說明（`cardTranscribeSpec`：合同、解碼、性別按對應關係填）。 |
+| [characterCardPrompt.ts](characterCardPrompt.ts) | 更新角色卡與定稿時更新當前狀態（`STATE_SYSTEM`）的系統提示，及各自的轉寫合同。 |
+| [characterMaintenance.ts](characterMaintenance.ts) | ★ 兩條不調模型的整理動作：`cleanCharacterAliases` 刪非專屬別名、`mergeDuplicateCharacterCards` 合併重複卡；只改 frontmatter。 |
+| [style.ts](style.ts) | 從樣章歸納文風指南寫入 `.novelwarden/style.md`。 |
+| [stylePrompt.ts](stylePrompt.ts) | 文風提取與從參考書學寫法的系統提示（只學技法，不復述情節、不抄原句）。 |
+| [bookText.ts](bookText.ts) | 拆書兩條路共用的取書：作者可挑本機任意位置的 txt（上限 64 MiB），agent 給的路徑只認工程裡的清單。 |
+| [importManuscript.ts](importManuscript.ts) | ★ **匯入原稿**（拆書 A）：挑 txt → 切章 → 確認 → 一批建好章節，再問要不要從已寫正文補齊。 |
+| [exportBook.ts](exportBook.ts) | **匯出全文**（零呼叫）：全部章節按章號拼成 `导出/<书名>.txt`。 |
+| [derive.ts](derive.ts) | ★ **從已寫正文補齊**（拆書 A）：按 細綱 → 配置 → 前提 → 角色卡 → 世界觀 → 設定條目 → 全文大綱 的順序只補空白。 |
+| [outlineRewrite.ts](outlineRewrite.ts) | **分段重寫情節大綱**：只重寫還沒寫正文的章，20 章一段，全部寫完一次審閱。 |
+| [reference.ts](reference.ts) | **從參考書學寫法**（拆書 B）：學文風寫 `style.md`、學寫法寫成本工程的寫作技能；原文不進工程。 |
+| [bookReplace.ts](bookReplace.ts) | ★ **全書替換**（零呼叫）：預覽裡勾著的幾處經閘道器逐份寫；未儲存的、hash 對不上的跳過，換之前先存一版歷史。 |
+| [checkpoint.ts](checkpoint.ts) | 存檔點：批次動作之前自動存（`checkpointBefore`，絕不拋）與退回的編排（`restoreCheckpoint`）。 |
+| [pickPlots.ts](pickPlots.ts) | 多章選擇：Host.pick 只支援單選，需要選幾章時改為輸入章號列表（如 `1,2,3`）。 |
 
-## 创作的四层与两条路
+## 創作的四層與兩條路
 
-创作按 `Stage × Capability × Target` 展开（定义在 [../model/pipeline.ts](../model/pipeline.ts)）：架构 → 大纲 → 细纲 → 正文。同一层可以被讨论（默认动作，挑刺、检查设定都靠直接打字说），也可以被生成；细纲层另有一个 `settle`（落定细纲），把刚才那段讨论里**已经达成的结论**沉淀成细纲。改写不是独立能力：目标已有内容时的生成就是改写，作者那句话就是修改意见。从前还有 `split`（大纲拆卷、卷拆剧情段）与拆章，卷那一层删掉之后都没了。
+創作按 `Stage × Capability × Target` 展開（定義在 [../model/pipeline.ts](../model/pipeline.ts)）：架構 → 大綱 → 細綱 → 正文。同一層可以被討論（預設動作，挑刺、檢查設定都靠直接打字說），也可以被生成；細綱層另有一個 `settle`（落定細綱），把剛才那段討論裡**已經達成的結論**沉澱成細綱。改寫不是獨立能力：目標已有內容時的生成就是改寫，作者那句話就是修改意見。從前還有 `split`（大綱拆卷、卷拆劇情段）與拆章，卷那一層刪掉之後都沒了。
 
-**创作编排本身已经不在本层了**——它是 [../generation/](../generation/README.md)：`generate.ts` 无状态地装配 → 调模型 → （需要时接 `structured.ts` 的生成链）→ 解析成 `Draft`，`accept.ts` 按产物分派到八条落盘路径，`drafts.ts` 让草稿活过一次刷新。并发控制在 `controller/`（那是调度的责任）。本层留下的是 `artifact.ts`（解析）与 `pipelineBatch.ts`（工程页批量）。
+**創作編排本身已經不在本層了**——它是 [../generation/](../generation/README.md)：`generate.ts` 無狀態地裝配 → 調模型 → （需要時接 `structured.ts` 的生成鏈）→ 解析成 `Draft`，`accept.ts` 按產物分派到八條落盤路徑，`drafts.ts` 讓草稿活過一次重新整理。併發控制在 `controller/`（那是排程的責任）。本層留下的是 `artifact.ts`（解析）與 `pipelineBatch.ts`（工程頁批次）。
 
-**生成与落盘是两步**，这是这条路上最要紧的一条：
+**生成與落盤是兩步**，這是這條路上最要緊的一條：
 
-1. `generate()` 只把文本交回调用方，**一个字都不写盘**，产出一份带 `artifact` 的 `Draft`；
-2. `acceptArtifact()` 才写，且只在用户在那张落盘卡片上点了「写入」之后（`controller/chat.ts` 的 `askArtifact`，产出的当下就问）——**落盘时拿气泡里当下的文本重新解析**（用户可能改过），`draft.artifact` 只是生成那一刻的展示快照。
+1. `generate()` 只把文字交回呼用方，**一個字都不寫盤**，產出一份帶 `artifact` 的 `Draft`；
+2. `acceptArtifact()` 才寫，且只在使用者在那張落盤卡片上點了「寫入」之後（`controller/chat.ts` 的 `askArtifact`，產出的當下就問）——**落盤時拿氣泡裡當下的文字重新解析**（使用者可能改過），`draft.artifact` 只是生成那一刻的展示快照。
 
-中间那一步是用户看着产物决定要不要的机会——少了它，「不静默覆盖」无从谈起。
+中間那一步是使用者看著產物決定要不要的機會——少了它，「不靜默覆蓋」無從談起。
 
-`generation/`（创作页，一次一份）与 `pipelineBatch.ts`（工程页，一次几十份）的失败模型完全不同，所以是两条路：
+`generation/`（創作頁，一次一份）與 `pipelineBatch.ts`（工程頁，一次幾十份）的失敗模型完全不同，所以是兩條路：
 
 | | `generation/` | `pipelineBatch.ts` |
 |---|---|---|
-| 一次处理 | 一份产物 | 几十章 |
-| 覆盖已有产物 | 走 `reviewReplace` 逐份审阅 | **一律跳过**——一次弹 63 个 diff 没人看得完。补齐架构连一节都不覆盖：作者写过的节原样留着（`onlyBlank`） |
-| 解析失败 | 单份文档全文兜底（产物摊在屏幕上，用户看得见它是什么）；细纲批次不兜底 | **不兜底**——没人逐份过目，兜底会把「这次失败了」变成「这一章已排好」，紧接着的批量写章还会照着它写出一整章 |
-| 出错 | 报错，用户重来 | 记进 errorLog 挂在那一行上，**就此停下**——后一件、后一批、后一章要吃前面的产出 |
-| 写出来但有问题（重演、没写够） | 卡片上标出来，作者当场判断 | 照样落盘（钱已经花了，D6），不定稿，黄 ❗ 挂在那一章上，**停下**——接着往下写等于踩着一个有问题的结尾 |
+| 一次處理 | 一份產物 | 幾十章 |
+| 覆蓋已有產物 | 走 `reviewReplace` 逐份審閱 | **一律跳過**——一次彈 63 個 diff 沒人看得完。補齊架構連一節都不覆蓋：作者寫過的節原樣留著（`onlyBlank`） |
+| 解析失敗 | 單份文件全文兜底（產物攤在螢幕上，使用者看得見它是什麼）；細綱批次不兜底 | **不兜底**——沒人逐份過目，兜底會把「這次失敗了」變成「這一章已排好」，緊接著的批次寫章還會照著它寫出一整章 |
+| 出錯 | 報錯，使用者重來 | 記進 errorLog 掛在那一行上，**就此停下**——後一件、後一批、後一章要吃前面的產出 |
+| 寫出來但有問題（重演、沒寫夠） | 卡片上標出來，作者當場判斷 | 照樣落盤（錢已經花了，D6），不定稿，黃 ❗ 掛在那一章上，**停下**——接著往下寫等於踩著一個有問題的結尾 |
 
-两条路共用同一个 `buildContext` 与同两条生成链（`generation/structured.ts`、`generation/continuation.ts`），因此批量与单次产出的是同一个质量、同一套降级与续写。
+兩條路共用同一個 `buildContext` 與同兩條生成鏈（`generation/structured.ts`、`generation/continuation.ts`），因此批次與單次產出的是同一個質量、同一套降級與續寫。
 
 ## 定稿走 JSON
 
-定稿第一步（2026-10-25 起）要模型按八个小标题写自然语言，转写模型照抄成 JSON：细纲的七个字段（梗概 / 出场人物 / 时间地点 / 关键事件 / 看点 / 状态变更 / 连续性事实；叙事线二期删了「新增伏笔」——伏笔由定稿第三步认进叙事线）与「设定」，其中 `出场人物: [{name, aliases}]`、`连续性事实: [...]`。`parseSummaryResponse` 解析成 `SummaryData`。落盘是 `Workspace.finalizePlot`，写回同一份细纲，仍是 Markdown（作者要翻、要手改）：结构化的出场人物额外写进 frontmatter 的 `cast`；连续性事实挂上证据之后写成最后一节（`- 陈述 〔证据：「原文」〕`，格式在 [../model/continuity.ts](../model/continuity.ts)）。
+定稿第一步（2026-10-25 起）要模型按八個小標題寫自然語言，轉寫模型照抄成 JSON：細綱的七個欄位（梗概 / 出場人物 / 時間地點 / 關鍵事件 / 看點 / 狀態變更 / 連續性事實；敘事線二期刪了「新增伏筆」——伏筆由定稿第三步認進敘事線）與「設定」，其中 `出場人物: [{name, aliases}]`、`連續性事實: [...]`。`parseSummaryResponse` 解析成 `SummaryData`。落盤是 `Workspace.finalizePlot`，寫回同一份細綱，仍是 Markdown（作者要翻、要手改）：結構化的出場人物額外寫進 frontmatter 的 `cast`；連續性事實掛上證據之後寫成最後一節（`- 陳述 〔證據：「原文」〕`，格式在 [../model/continuity.ts](../model/continuity.ts)）。
 
-解析分**两层**，两层都不中就什么都不收——能解析的一定要解析出来（解析失败意味着这一章的连续性事实与出场人物进不了上下文），解析不了的一个字都不写：
+解析分**兩層**，兩層都不中就什麼都不收——能解析的一定要解析出來（解析失敗意味著這一章的連續性事實與出場人物進不了上下文），解析不了的一個字都不寫：
 
-1. **JSON**：字段缺失、类型不对（字符串/数组混用）都逐字段兜住，不整体作废；多出来的尾逗号（模型最常见的语法错）先自己去掉再解析一次（`parse.ts` 的 `stripTrailingCommas`）。判据是「梗概或关键事件至少有一个非空」——模型偶尔吐出语法合法但不相干的 JSON，认下来会得到一份空细纲，比解析失败更糟。
-2. **Markdown 小节**：模型忽略 JSON 要求、照着细纲的样子写回来时走这条。
+1. **JSON**：欄位缺失、型別不對（字串/陣列混用）都逐欄位兜住，不整體作廢；多出來的尾逗號（模型最常見的語法錯）先自己去掉再解析一次（`parse.ts` 的 `stripTrailingCommas`）。判據是「梗概或關鍵事件至少有一個非空」——模型偶爾吐出語法合法但不相干的 JSON，認下來會得到一份空細綱，比解析失敗更糟。
+2. **Markdown 小節**：模型忽略 JSON 要求、照著細綱的樣子寫回來時走這條。
 
-从前还有第三层「全文进梗概」。定稿写回的就是这一章的细纲，那一层等于拿一段没解析开的原文换掉作者的计划、还记上 `sourceHash` 让这一章看起来已经定稿（真实模型试跑撞上过：尾逗号让 JSON 解析失败，整段 JSON 进了梗概）。所以两层都不中就报失败、挂红，细纲一个字不动。
+從前還有第三層「全文進梗概」。定稿寫回的就是這一章的細綱，那一層等於拿一段沒解析開的原文換掉作者的計劃、還記上 `sourceHash` 讓這一章看起來已經定稿（真實模型試跑撞上過：尾逗號讓 JSON 解析失敗，整段 JSON 進了梗概）。所以兩層都不中就報失敗、掛紅，細綱一個字不動。
 
-只有第 1 条有结构化 `cast`，第 2 条从「出场人物」小节的文本反解（见 [../model/castParse.ts](../model/castParse.ts) 的 `castFromText`）。
+只有第 1 條有結構化 `cast`，第 2 條從「出場人物」小節的文字反解（見 [../model/castParse.ts](../model/castParse.ts) 的 `castFromText`）。
 
-## 两条角色流程的分工
+## 兩條角色流程的分工
 
 | | `characters.ts` · 提取角色 | `characterCard.ts` · 更新角色卡 |
 |---|---|---|
-| 面向 | 「刚写完几章，把新出现的人补上」 | 「这个人出场三十章了，把他的档案重新过一遍」 |
-| 作用对象 | 一批章里的**所有**角色 | **一个**角色（另有按卡并发的批量版） |
-| 章从哪来 | 作者手输序号列表 | 出场索引（定稿过的细纲）自动给出该角色的出场章 |
-| 上下文 | 一次装完（超预算就截断并 warn） | 按预算分批，逐批精炼同一张卡 |
-| 入口 | 「角色」分组右键「提取/更新角色卡（挑几章正文）…」 | 角色行右键；角色分组右键的批量更新；「未建卡」分组右键的「全部建卡」 |
+| 面向 | 「剛寫完幾章，把新出現的人補上」 | 「這個人出場三十章了，把他的檔案重新過一遍」 |
+| 作用物件 | 一批章裡的**所有**角色 | **一個**角色（另有按卡併發的批次版） |
+| 章從哪來 | 作者手輸序號列表 | 出場索引（定稿過的細綱）自動給出該角色的出場章 |
+| 上下文 | 一次裝完（超預算就截斷並 warn） | 按預算分批，逐批精煉同一張卡 |
+| 入口 | 「角色」分組右鍵「提取/更新角色卡（挑幾章正文）…」 | 角色行右鍵；角色分組右鍵的批次更新；「未建卡」分組右鍵的「全部建卡」 |
 
-`characterCard.ts` 的三条关键设计：
+`characterCard.ts` 的三條關鍵設計：
 
-- **自动关联出场章**：来自 [../views/cast.ts](../views/cast.ts) 的索引，作者不必再手输章号。
-- **分批时先说要调几次**：主角可能出现在几十章里，一次装不下就切批。动手前的确认框里必须写明「分 N 批」与预计调用次数（2026-10-25 起每批写 1 次、转写 1 次）——这是「不偷偷烧 token」在本层的落法。后一批看得到前一批的产出，逐批精炼而非各写各的。
-- **提示词是为「控篇幅」写的**：同一个角色会被反复调用，每批都往上堆的话角色卡会膨胀成一篇论文，而它每次续写都要注入上下文。所以每一节都给了硬性字数上限，并明确「性格 / 语言习惯」优先（它们决定模型能不能把人写像），外貌与人物关系从简；「暗设」（读者还不知道的事，原「未收伏笔」，≤120 字）只做减法——正文里已经揭开的拿掉、写进相应的节，没揭开的一字不改，看不出来的秘密不编。
+- **自動關聯出場章**：來自 [../views/cast.ts](../views/cast.ts) 的索引，作者不必再手輸章號。
+- **分批時先說要調幾次**：主角可能出現在幾十章裡，一次裝不下就切批。動手前的確認框裡必須寫明「分 N 批」與預計呼叫次數（2026-10-25 起每批寫 1 次、轉寫 1 次）——這是「不偷偷燒 token」在本層的落法。後一批看得到前一批的產出，逐批精煉而非各寫各的。
+- **提示詞是為「控篇幅」寫的**：同一個角色會被反覆呼叫，每批都往上堆的話角色卡會膨脹成一篇論文，而它每次續寫都要注入上下文。所以每一節都給了硬性字數上限，並明確「性格 / 語言習慣」優先（它們決定模型能不能把人寫像），外貌與人物關係從簡；「暗設」（讀者還不知道的事，原「未收伏筆」，≤120 字）只做減法——正文裡已經揭開的拿掉、寫進相應的節，沒揭開的一字不改，看不出來的秘密不編。
 
-## 关键设计
+## 關鍵設計
 
-- **回调而非返回**：生成类操作通过 `GenerateHandlers`（onDelta / onDone / onError / onCancelled）汇报进度，UI 层决定怎么展示流式内容。
-- **长任务走 `runTask`，不直调 `Host.progress`**：本层除创作页的单次生成（它在对话页有流式气泡）以外的批量活一律经 [../runtime/progress.ts](../runtime/progress.ts)。`report({ message, current, total })` 里的 `total` 决定网页上画不画进度条——同步过期细纲是 `stale.length`，重建全文大纲是「批数 + 合并那一步」，角色/文风是固定三步/两步，设定生成是「逐章扫描 + 设定整合 + 写入/审阅」，流水线批量是待处理的章数（补齐架构是缺的件数）。
-- **一次改很多份的批量动作，动手之前先存一个存档点**（[checkpoint.ts](checkpoint.ts) 的 `checkpointBefore`，设计见 [docs/design/plans/2026-10-20-checkpoints.md](../../../docs/design/plans/2026-10-20-checkpoints.md)「自动存档点」）：十一处——批量写章（含写完即定稿）、补齐架构、批量拆细纲（`pipelineBatch.ts`）、全书替换（`bookReplace.ts`）、按目录整理设定与批量展开设定（`lore.ts`）、导入原稿、从已写正文补齐、立即同步（`summarize.ts`）、从正文补记叙事线（`threadsBackfill.ts`；补齐里接上的那一段算在补齐那一个里，不另存）、补推 / 重推故事时间（`timelineBackfill.ts`）——作者点了「开始」之后、第一次写盘之前各调一次，整本书退得回这一次之前。位置是 `runTask` 回调的开头（确认框取消、「没有可用的模型」直接返回的都不留一个没用的点）；按目录整理在作者点了「照这样整理」之后、搬之前；全书替换在逐份写之前、有要换的才存。钩子在本层，外部 agent 经 MCP 调同一个批量功能也一样先存。批量写章「边写边拆」走的是 `runPlotBatch`、从已写正文补齐的细纲那一步存过之后其余几样，都不另存；其余与最近一个一模一样时也不另存。**绝不抛、不挡**：存不下只记一条 warn，批量动作照常跑（第 1 条；每份文件覆盖之前的历史版本照存）。
-- **无先后依赖的条目并发跑**：各章照正文更新细纲之间、角色卡之间、全文大纲的各阶段批次之间都没有依赖，一律经 [../runtime/concurrency.ts](../runtime/concurrency.ts) 的 `runPool`（并发量取 `config.concurrency`）。**有依赖的绝不并发**——同一张角色卡内部的分批必须串行，后一批要看到前一批的产出；全文大纲的 reduce 合并要等全部 map 到齐。并发下 `current` 只在项结束时 +1，`message` 报「已完成 n/N + 正在跑哪几项」。
-- **模型经 `llm/pool.ts` 取，并且要报出档位**：建池时必须传 `task`（如 `createModelPool({ task: 'plotSummary' })`），这样才有分档、「同档失败随机换模型」与并发轮转。唯一的例外是创作页的单次生成（[../generation/generate.ts](../generation/README.md)）与设置页的连接测试（`creation.ts`），两者都必须用用户选定的那个模型。同一个功能里难度不同的阶段要**各建一个池**——`rebuildGlobalSummary` 的分批汇总（`globalSummaryStage`）与最终合并（`globalSummaryMerge`）、`generateLore` 的逐章识别（`loreScan`）与条目整合（`loreSynthesis`）都是两档，串行时也不能图省事复用同一个池（那会把后一阶段悄悄降级到前一阶段的档）。流水线批量同理：`plotOutline`（均衡）与 `manuscript`（均衡）各建各的池；批量写章的「写完即定稿」再为定稿的两步各建一个（`plotSummary`、`characterCard`）。
-- **切批与预算用 `pool.primaryBudget`，不用 `config.contextWindow`**：后者是对话页选定模型的窗口，分档后与干活的模型无关。确认框之前就要算的批数/片段数（它们就是「预计调用 N 次」那个数字）用 `budgetForTask(task)`，它不构造 provider，不会在用户点确认前弹 Key 输入框。
-- **确认框里的「模型」一行走 `describeTaskModels(config, task)`**：档位、实际清单、会不会换人、是不是继承默认模型，四件事一次说清。**不要再打印 `config.models`**——弹窗写着一个模型、实际跑另一个，是「不偷偷烧 token」的反面。
-- **每一步都留痕**：批量任务逐项打一条 `info`（含刚完成的项、用时、平均速度、预计剩余），失败项打 `error`；可以并发的（同步细纲、角色卡批量）**继续跑完剩下的**、结束时汇总说明哪几项失败，流水线那三条就此停下并说清停在哪。日志里绝不出现 API Key（`logger.redact` 统一处理），也不记 prompt 全文。
-- **模型输出清洗**：LLM 常把正文包在 code fence 里或加上「好的，以下是续写」之类的前言，写入前统一剥掉（`stripCodeFence` 等）。
-- **人工确认优先**：凡是覆盖作者可能手改过的文件（角色卡、style.md），一律先经宿主审阅/弹窗确认。批量更新时分析是并发的，但审阅经 `concurrency.ts` 的 `serialize()` 排队——同时弹三个 diff，用户根本不知道自己在看谁。作者点了采纳（或在批量确认框里选了「全部直接采纳」）之后经 `workspace.write` 写回原文件（`review: false`：不问第二次），覆盖之前旧内容照样进历史版本（第 7 条：写盘经网关）。
-- **超预算截断必须打 `warn`**：单章正文、角色提取的语料、文风样文、阶段摘要合并这四处都会按输入预算 `takeHead`。截断本身是对的，但作者选了五章却只读进两章半时必须说出来——这是「不静默截断」在本层的落法。
-- **交互全走 Host**：弹窗、进度、文件打开都经 `host.ts` 窄接口，本层零 `vscode` 依赖。
-- **定稿与全文大纲温度 0.3**：要稳定、可复现，不用用户设的创作温度。
+- **回呼而非返回**：生成類操作通過 `GenerateHandlers`（onDelta / onDone / onError / onCancelled）彙報進度，UI 層決定怎麼展示流式內容。
+- **長任務走 `runTask`，不直調 `Host.progress`**：本層除創作頁的單次生成（它在對話頁有流式氣泡）以外的批次活一律經 [../runtime/progress.ts](../runtime/progress.ts)。`report({ message, current, total })` 裡的 `total` 決定網頁上畫不畫進度條——同步過期細綱是 `stale.length`，重建全文大綱是「批數 + 合併那一步」，角色/文風是固定三步/兩步，設定生成是「逐章掃描 + 設定整合 + 寫入/審閱」，流水線批次是待處理的章數（補齊架構是缺的件數）。
+- **一次改很多份的批次動作，動手之前先存一個存檔點**（[checkpoint.ts](checkpoint.ts) 的 `checkpointBefore`，設計見 [docs/design/plans/2026-10-20-checkpoints.md](../../../docs/design/plans/2026-10-20-checkpoints.md)「自動存檔點」）：十一處——批次寫章（含寫完即定稿）、補齊架構、批次拆細綱（`pipelineBatch.ts`）、全書替換（`bookReplace.ts`）、按目錄整理設定與批次展開設定（`lore.ts`）、匯入原稿、從已寫正文補齊、立即同步（`summarize.ts`）、從正文補記敘事線（`threadsBackfill.ts`；補齊裡接上的那一段算在補齊那一個裡，不另存）、補推 / 重推故事時間（`timelineBackfill.ts`）——作者點了「開始」之後、第一次寫盤之前各調一次，整本書退得回這一次之前。位置是 `runTask` 回呼的開頭（確認框取消、「沒有可用的模型」直接返回的都不留一個沒用的點）；按目錄整理在作者點了「照這樣整理」之後、搬之前；全書替換在逐份寫之前、有要換的才存。鉤子在本層，外部 agent 經 MCP 調同一個批次功能也一樣先存。批次寫章「邊寫邊拆」走的是 `runPlotBatch`、從已寫正文補齊的細綱那一步存過之後其餘幾樣，都不另存；其餘與最近一個一模一樣時也不另存。**絕不拋、不擋**：存不下只記一條 warn，批次動作照常跑（第 1 條；每份檔案覆蓋之前的歷史版本照存）。
+- **無先後依賴的條目併發跑**：各章照正文更新細綱之間、角色卡之間、全文大綱的各階段批次之間都沒有依賴，一律經 [../runtime/concurrency.ts](../runtime/concurrency.ts) 的 `runPool`（併發量取 `config.concurrency`）。**有依賴的絕不併發**——同一張角色卡內部的分批必須序列，後一批要看到前一批的產出；全文大綱的 reduce 合併要等全部 map 到齊。併發下 `current` 只在項結束時 +1，`message` 報「已完成 n/N + 正在跑哪幾項」。
+- **模型經 `llm/pool.ts` 取，並且要報出檔位**：建池時必須傳 `task`（如 `createModelPool({ task: 'plotSummary' })`），這樣才有分檔、「同檔失敗隨機換模型」與併發輪轉。唯一的例外是創作頁的單次生成（[../generation/generate.ts](../generation/README.md)）與設定頁的連線測試（`creation.ts`），兩者都必須用使用者選定的那個模型。同一個功能裡難度不同的階段要**各建一個池**——`rebuildGlobalSummary` 的分批匯總（`globalSummaryStage`）與最終合併（`globalSummaryMerge`）、`generateLore` 的逐章識別（`loreScan`）與條目整合（`loreSynthesis`）都是兩檔，序列時也不能圖省事複用同一個池（那會把後一階段悄悄降級到前一階段的檔）。流水線批次同理：`plotOutline`（均衡）與 `manuscript`（均衡）各建各的池；批次寫章的「寫完即定稿」再為定稿的兩步各建一個（`plotSummary`、`characterCard`）。
+- **切批與預算用 `pool.primaryBudget`，不用 `config.contextWindow`**：後者是對話頁選定模型的視窗，分檔後與幹活的模型無關。確認框之前就要算的批數/片段數（它們就是「預計呼叫 N 次」那個數字）用 `budgetForTask(task)`，它不構造 provider，不會在使用者點確認前彈 Key 輸入框。
+- **確認框裡的「模型」一行走 `describeTaskModels(config, task)`**：檔位、實際清單、會不會換人、是不是繼承預設模型，四件事一次說清。**不要再列印 `config.models`**——彈窗寫著一個模型、實際跑另一個，是「不偷偷燒 token」的反面。
+- **每一步都留痕**：批次任務逐項打一條 `info`（含剛完成的項、用時、平均速度、預計剩餘），失敗項打 `error`；可以併發的（同步細綱、角色卡批次）**繼續跑完剩下的**、結束時彙總說明哪幾項失敗，流水線那三條就此停下並說清停在哪。日誌裡絕不出現 API Key（`logger.redact` 統一處理），也不記 prompt 全文。
+- **模型輸出清洗**：LLM 常把正文包在 code fence 裡或加上「好的，以下是續寫」之類的前言，寫入前統一剝掉（`stripCodeFence` 等）。
+- **人工確認優先**：凡是覆蓋作者可能手改過的檔案（角色卡、style.md），一律先經宿主審閱/彈窗確認。批次更新時分析是併發的，但審閱經 `concurrency.ts` 的 `serialize()` 排隊——同時彈三個 diff，使用者根本不知道自己在看誰。作者點了採納（或在批次確認框裡選了「全部直接採納」）之後經 `workspace.write` 寫回原檔案（`review: false`：不問第二次），覆蓋之前舊內容照樣進歷史版本（第 7 條：寫盤經閘道器）。
+- **超預算截斷必須打 `warn`**：單章正文、角色提取的語料、文風樣文、階段摘要合併這四處都會按輸入預算 `takeHead`。截斷本身是對的，但作者選了五章卻只讀進兩章半時必須說出來——這是「不靜默截斷」在本層的落法。
+- **互動全走 Host**：彈窗、進度、檔案開啟都經 `host.ts` 窄介面，本層零 `vscode` 依賴。
+- **定稿與全文大綱溫度 0.3**：要穩定、可復現，不用使用者設的創作溫度。
 
-## 依赖关系
+## 依賴關係
 
-依赖 `model/`、`context/`、`llm/`、`host.ts`。被 `vscode/extension.ts`（命令）与 `core/controller/`（对话面板）调用；插件命令面板与独立版网页共用同一批流程。
+依賴 `model/`、`context/`、`llm/`、`host.ts`。被 `vscode/extension.ts`（命令）與 `core/controller/`（對話面板）呼叫；外掛命令面板與獨立版網頁共用同一批流程。

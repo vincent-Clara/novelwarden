@@ -1,110 +1,110 @@
 /**
- * 「时间线总览」（独立版内置编辑器里的一个特殊标签，2026-10-24，设计稿 docs/design/plans/2026-10-24-timeline-page.md）要的那份数据：
- * 竖着按故事日子排，一个日子一项，那一天的几章一章一张卡片。
+ * 「時間線總覽」（獨立版內建編輯器裡的一個特殊標籤，2026-10-24，設計稿 docs/design/plans/2026-10-24-timeline-page.md）要的那份資料：
+ * 豎著按故事日子排，一個日子一項，那一天的幾章一章一張卡片。
  *
- * 和「叙事线总览」同一个做法：标签显示出来时前端发 `requestTimelineOverview`，后端回 `timelineOverview`（同一个 `requestId`）——
- * **按需要，不常驻推送**（只在总览开着的时候有用，塞进每次文件变动都全量重推的 `ProjectTree` 等于每保存一次就白推一遍）。
+ * 和「敘事線總覽」同一個做法：標籤顯示出來時前端發 `requestTimelineOverview`，後端回 `timelineOverview`（同一個 `requestId`）——
+ * **按需要，不常駐推送**（只在總覽開著的時候有用，塞進每次檔案變動都全量重推的 `ProjectTree` 等於每儲存一次就白推一遍）。
  *
- * 构建见 `views/timeline.ts` 的 `buildTimelineMatrix`（纯函数、不调模型、不落盘；日期与对账现算，第 18、28 条），读盘在
- * `views/threads.ts` 的 `buildTimelineOverview`；前端只画（`media/src/editor/timelineOverview.ts`）。文案都由后端给。
+ * 構建見 `views/timeline.ts` 的 `buildTimelineMatrix`（純函式、不調模型、不落盤；日期與對賬現算，第 18、28 條），讀盤在
+ * `views/threads.ts` 的 `buildTimelineOverview`；前端只畫（`media/src/editor/timelineOverview.ts`）。文案都由後端給。
  */
 import type { ThreadEventType } from '../model/threadFile';
 import type { TimelineDayState, TimelineSeason } from '../model/timelineFile';
 import type { TimelineIssueView } from './views';
 
 export interface TimelineOverview {
-  /** 还不是小说工程（没有 `.novelwarden/project.json`）时为 false，其余都是空的。 */
+  /** 還不是小說工程（沒有 `.novelwarden/project.json`）時為 false，其餘都是空的。 */
   initialized: boolean;
-  /** `threads/时间线.md`（还没有这份文件时也给：补推会建它）。 */
+  /** `threads/时间线.md`（還沒有這份檔案時也給：補推會建它）。 */
   relPath: string;
-  /** 文件在不在。 */
+  /** 檔案在不在。 */
   exists: boolean;
-  /** 标题栏后面那一串：`简单历 · 起点 大衍三年三月初七 · 推到第 30 章 · 故事第 46 天（大衍三年四月十九 夜里）`。 */
+  /** 標題欄後面那一串：`簡單歷 · 起點 大衍三年三月初七 · 推到第 30 章 · 故事第 46 天（大衍三年四月十九 夜裡）`。 */
   meta: string;
-  /** 标题栏的悬停：历法怎么算、起点。 */
+  /** 標題欄的懸停：曆法怎麼算、起點。 */
   tip: string;
-  /** 「改历法与起点」「填为起点」要的（同工程页那一组）。 */
+  /** 「改曆法與起點」「填為起點」要的（同工程頁那一組）。 */
   calendar: { name: '简单历' | '公历'; start: string; suggestion?: { start: string; note: string } };
-  /** ⚠ 一条一行（不带 ⚠，前端加）：对账、推不出、认不出、起点、还没推。`chapter` 给了的点了展开那一章。 */
+  /** ⚠ 一條一行（不帶 ⚠，前端加）：對賬、推不出、認不出、起點、還沒推。`chapter` 給了的點了展開那一章。 */
   issues: TimelineIssueView[];
-  /** 筛选下拉里的线：有实际事件的线，按种类（主线 → 支线 → 感情线 → 人物线）与目录里的先后；「未归属的伏笔」排最后。颜色同卡片。 */
+  /** 篩選下拉里的線：有實際事件的線，按種類（主線 → 支線 → 感情線 → 人物線）與目錄裡的先後；「未歸屬的伏筆」排最後。顏色同卡片。 */
   threads: TimelineOverviewThread[];
-  /** 轴：按故事日子从早到晚，一个日子一项（没有章的日子不给）。 */
+  /** 軸：按故事日子從早到晚，一個日子一項（沒有章的日子不給）。 */
   days: TimelineOverviewDay[];
-  /** 同步过、时间线里还没有（或还推不出）的章（右键「补推时间」）。没有时缺席。 */
+  /** 同步過、時間線裡還沒有（或還推不出）的章（右鍵「補推時間」）。沒有時缺席。 */
   missing?: { count: number; text: string };
-  /** 机器写的行有几行（右键「重推」；0 时不给）。 */
+  /** 機器寫的行有幾行（右鍵「重推」；0 時不給）。 */
   machine: number;
-  /** 最后一章的章号（「从这一章起重推」到哪一章）。 */
+  /** 最後一章的章號（「從這一章起重推」到哪一章）。 */
   last: number;
 }
 
-/** 一条线：名字与颜色（0–7 按线的先后各一色、不循环；第 9 条线起与「未归属的伏笔」一样是 -1，灰——名字总写在标签上）。 */
+/** 一條線：名字與顏色（0–7 按線的先後各一色、不迴圈；第 9 條線起與「未歸屬的伏筆」一樣是 -1，灰——名字總寫在標籤上）。 */
 export interface TimelineOverviewThread {
   name: string;
   color: number;
 }
 
-/** 轴上的一个日子。 */
+/** 軸上的一個日子。 */
 export interface TimelineOverviewDay {
-  /** 故事第几天（第 1 天 = 起点；只有回忆、一天都推不出时是 0）。 */
+  /** 故事第幾天（第 1 天 = 起點；只有回憶、一天都推不出時是 0）。 */
   day: number;
-  /** 轴上写的：`三月初七`、`3月7日`；没起点 `第 8 天`。 */
+  /** 軸上寫的：`三月初七`、`3月7日`；沒起點 `第 8 天`。 */
   label: string;
-  /** 下面一行小字：`第 1 天`（没起点时缺席——大字就是它）。 */
+  /** 下面一行小字：`第 1 天`（沒起點時缺席——大字就是它）。 */
   sub?: string;
-  /** 悬停：`大衍三年三月初七`。 */
+  /** 懸停：`大衍三年三月初七`。 */
   full: string;
-  /** 这一天在哪个月（填了起点才有）：`大衍三年三月`。月份变了，前端插一行分隔。 */
+  /** 這一天在哪個月（填了起點才有）：`大衍三年三月`。月份變了，前端插一行分隔。 */
   month?: string;
-  /** 那个月是什么季节（同对账的口径：简单历正月到三月是春，公历 3–5 月是春）。 */
+  /** 那個月是什麼季節（同對賬的口徑：簡單歷正月到三月是春，公曆 3–5 月是春）。 */
   season?: TimelineSeason;
-  /** 这一天开头的章（按章号）；回忆的章跟在阅读顺序上前一章后面。 */
+  /** 這一天開頭的章（按章號）；回憶的章跟在閱讀順序上前一章後面。 */
   cards: TimelineOverviewCard[];
 }
 
-/** 一章一张卡片。 */
+/** 一章一張卡片。 */
 export interface TimelineOverviewCard {
   no: number;
   title: string;
   state: TimelineDayState;
-  /** 右上角那一截：`清晨 → 夜里`、`清晨 → 三月十五 夜里 · 3 天`、`回忆（约二十年前）`；同一天又没写时段是空串。 */
+  /** 右上角那一截：`清晨 → 夜裡`、`清晨 → 三月十五 夜裡 · 3 天`、`回憶（約二十年前）`；同一天又沒寫時段是空串。 */
   when: string;
-  /** 比上一章：`+2 天`、`同一天`、`往回 3 天`；第 1 章、回忆、没推缺席。 */
+  /** 比上一章：`+2 天`、`同一天`、`往回 3 天`；第 1 章、回憶、沒推缺席。 */
   delta?: string;
-  /** 结尾是故事第几天（前端照它算「N 天后」：下一个日子比它晚 2 天以上才画）。回忆缺席。 */
+  /** 結尾是故事第幾天（前端照它算「N 天后」：下一個日子比它晚 2 天以上才畫）。回憶缺席。 */
   end?: number;
-  /** 依据「…」、推测：…、推不出：…、正文写明八月十五、你定的、还没推（截短；全文在 `detail`）。 */
+  /** 依據「…」、推測：…、推不出：…、正文寫明八月十五、你定的、還沒推（截短；全文在 `detail`）。 */
   note: string;
-  /** 这一章在各条线上实际发生的事（计划的不给），按线的先后、同一条线里照文件里的先后。 */
+  /** 這一章在各條線上實際發生的事（計劃的不給），按線的先後、同一條線裡照檔案裡的先後。 */
   events: TimelineOverviewEvent[];
-  /** 一条事件都没有时：细纲的梗概。 */
+  /** 一條事件都沒有時：細綱的梗概。 */
   synopsis?: string;
-  /** 对账报了这一章的几条（卡片上红字一条一行）。 */
+  /** 對賬報了這一章的幾條（卡片上紅字一條一行）。 */
   issues: string[];
-  /** 展开之后的详情（一条一行）：那一天的全称、故事第几天、比上一章、历时、依据、正文写明的、对齐、季节、细纲的时间地点。 */
+  /** 展開之後的詳情（一條一行）：那一天的全稱、故事第幾天、比上一章、歷時、依據、正文寫明的、對齊、季節、細綱的時間地點。 */
   detail: string[];
-  /** 整章是回忆：挂在阅读顺序上前一章那一天里，缩进、虚线框。 */
+  /** 整章是回憶：掛在閱讀順序上前一章那一天裡，縮排、虛線框。 */
   flashback?: true;
-  /** 「只看有问题的」留它：对账报了、推不出、认不出、还没推。 */
+  /** 「只看有問題的」留它：對賬報了、推不出、認不出、還沒推。 */
   problem: boolean;
-  /** 正文、细纲（右键打开）；还没有时缺席。 */
+  /** 正文、細綱（右鍵開啟）；還沒有時缺席。 */
   chapterPath?: string;
   plotPath?: string;
-  /** 这一行是机器写的（右键「重推这一章」给不给）。 */
+  /** 這一行是機器寫的（右鍵「重推這一章」給不給）。 */
   machine: boolean;
 }
 
-/** 卡片上的一条事件。 */
+/** 卡片上的一條事件。 */
 export interface TimelineOverviewEvent {
-  /** 线名；「未归属的伏笔」里的写「未归属的伏笔」。 */
+  /** 線名；「未歸屬的伏筆」裡的寫「未歸屬的伏筆」。 */
   thread: string;
   /** 同 {@link TimelineOverviewThread.color}。 */
   color: number;
   type: ThreadEventType;
-  /** 伏笔的事件挂的是哪一条。 */
+  /** 伏筆的事件掛的是哪一條。 */
   foreshadowing?: string;
   what: string;
-  /** 正文里的一句原文。 */
+  /** 正文裡的一句原文。 */
   evidence?: string;
 }

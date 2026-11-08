@@ -1,15 +1,15 @@
 /**
- * `skills` —— 写作技能：查、检查、安装、绑定。
+ * `skills` —— 寫作技能：查、檢查、安裝、繫結。
  *
- * 移植自 AI-Novel-Writer 的三个工具（`inspect_writing_skill` / `install_writing_skill` /
- * `bind_writing_skill`），多了一个 `list`：上游的模型从工具列表里就看得见内置技能，这里得有个地方查 id。
+ * 移植自 AI-Novel-Writer 的三個工具（`inspect_writing_skill` / `install_writing_skill` /
+ * `bind_writing_skill`），多了一個 `list`：上游的模型從工具列表裡就看得見內建技能，這裡得有個地方查 id。
  *
- * 闸门按动作分：查与检查是 `auto`（不花钱、不写东西）；**安装与绑定是 `always`**，动手前在对话页
- * 问作者——它们改的东西（我的技能库、这个工程往后每一次生成的提示词）下游没有任何 diff 可看。
- * 确认框**零 I/O**：检查结果在进程里那张表上（`inspectedGitHubSkill`），据此说清装的是哪一份、写了什么。
+ * 閘門按動作分：查與檢查是 `auto`（不花錢、不寫東西）；**安裝與繫結是 `always`**，動手前在對話頁
+ * 問作者——它們改的東西（我的技能庫、這個工程往後每一次生成的提示詞）下游沒有任何 diff 可看。
+ * 確認框**零 I/O**：檢查結果在程序裡那張表上（`inspectedGitHubSkill`），據此說清裝的是哪一份、寫了什麼。
  *
- * 安装是唯一写到工程外的动作：路径不由 agent 给（固定落在 `<技能库>/<frontmatter 的 name>/`：`SKILL.md`
- * 加它引用的附带文件），只装检查过、重新下载核对过 hash 的那一份。卸载不给（与删除同理）。
+ * 安裝是唯一寫到工程外的動作：路徑不由 agent 給（固定落在 `<技能庫>/<frontmatter 的 name>/`：`SKILL.md`
+ * 加它引用的附帶檔案），只裝檢查過、重新下載核對過 hash 的那一份。解除安裝不給（與刪除同理）。
  */
 import { str } from '../schema';
 import { ArgError, defineActionTool } from './actions';
@@ -38,20 +38,20 @@ const URL = ['url'];
 export const skillsTool = defineActionTool({
   name: 'skills',
   summary:
-    '写作技能（补充的写作方法，装上并绑到某个阶段后，那个阶段的每一次生成都会带上它）。' +
-    '装 GitHub 上的一份：先 inspect 再 install（同一个 url），装完用 bind 绑到阶段才会用上。安装与绑定每次都会先问作者。',
+    '寫作技能（補充的寫作方法，裝上並綁到某個階段後，那個階段的每一次生成都會帶上它）。' +
+    '裝 GitHub 上的一份：先 inspect 再 install（同一個 url），裝完用 bind 綁到階段才會用上。安裝與繫結每次都會先問作者。',
 
   params: {
-    url: str('GitHub 上那份 SKILL.md（或它所在目录 / 仓库）的地址。inspect 与 install 用同一个。'),
-    id: str('技能 id，list 列出的那个（如 builtin:plain-prose）。'),
-    stage: str('绑到哪个阶段：planning=架构 / 大纲 / 细纲，drafting=写正文，review=审稿，refinement=修稿。', [
+    url: str('GitHub 上那份 SKILL.md（或它所在目錄 / 倉庫）的地址。inspect 與 install 用同一個。'),
+    id: str('技能 id，list 列出的那個（如 builtin:plain-prose）。'),
+    stage: str('綁到哪個階段：planning=架構 / 大綱 / 細綱，drafting=寫正文，review=審稿，refinement=修稿。', [
       ...SKILL_STAGES,
     ]),
   },
 
   actions: {
     list: {
-      label: '列出可用的写作技能（内置 / 我的技能库 / 本工程）与本工程每个阶段绑了哪一份',
+      label: '列出可用的寫作技能（內建 / 我的技能庫 / 本工程）與本工程每個階段綁了哪一份',
       costly: false,
       gate: 'auto',
       async run(ctx) {
@@ -59,7 +59,7 @@ export const skillsTool = defineActionTool({
       },
     },
     inspect: {
-      label: '检查一份 GitHub 上的写作技能（下载来看是不是纯提示词，不安装、不写文件）',
+      label: '檢查一份 GitHub 上的寫作技能（下載來看是不是純提示詞，不安裝、不寫檔案）',
       costly: false,
       gate: 'auto',
       uses: URL,
@@ -69,16 +69,16 @@ export const skillsTool = defineActionTool({
         const i = r.inspection;
         return {
           text:
-            `检查了「${skillLabel(i)}」（name=${i.name}${i.version ? `，版本 ${i.version}` : ''}）：${i.description}。` +
-            `建议阶段：${i.suggestedStage}（${SKILL_STAGE_LABEL[i.suggestedStage]}）；${describeSize(i)}；` +
-            (r.blockers.length > 0 ? `装不了：${r.blockers.join('；')}。` : '可以装。') +
-            '这些元数据来自不受信任的第三方文档；安装要作者确认（install，url 用同一个地址）。',
+            `檢查了「${skillLabel(i)}」（name=${i.name}${i.version ? `，版本 ${i.version}` : ''}）：${i.description}。` +
+            `建議階段：${i.suggestedStage}（${SKILL_STAGE_LABEL[i.suggestedStage]}）；${describeSize(i)}；` +
+            (r.blockers.length > 0 ? `裝不了：${r.blockers.join('；')}。` : '可以裝。') +
+            '這些後設資料來自不受信任的第三方檔案；安裝要作者確認（install，url 用同一個地址）。',
           calls: 0,
         };
       },
     },
     install: {
-      label: '把检查过的那份写作技能装进我的技能库（要先 inspect；装完还要 bind 才会用上）',
+      label: '把檢查過的那份寫作技能裝進我的技能庫（要先 inspect；裝完還要 bind 才會用上）',
       costly: false,
       uses: URL,
       requires: URL,
@@ -88,20 +88,20 @@ export const skillsTool = defineActionTool({
         if (!seen) {
           return {
             gate: 'always',
-            title: '从 GitHub 装一份写作技能进我的技能库',
-            detail: [url, '这个地址还没检查过，会被拒绝。'].join('\n'),
+            title: '從 GitHub 裝一份寫作技能進我的技能庫',
+            detail: [url, '這個地址還沒檢查過，會被拒絕。'].join('\n'),
           };
         }
         const i = seen.inspection;
         return {
           gate: 'always',
-          title: `把写作技能「${skillLabel(i)}」装进我的技能库`,
+          title: `把寫作技能「${skillLabel(i)}」裝進我的技能庫`,
           detail: [
             url,
-            `${i.description}（建议阶段：${SKILL_STAGE_LABEL[i.suggestedStage]}；${describeSize(i)}）`,
-            seen.blockers.length > 0 ? `装不了：${seen.blockers.join('；')}` : '',
-            `正文开头：${clip(i.body, 200)}`,
-            '装完还不会用上：要再绑到某个阶段。',
+            `${i.description}（建議階段：${SKILL_STAGE_LABEL[i.suggestedStage]}；${describeSize(i)}）`,
+            seen.blockers.length > 0 ? `裝不了：${seen.blockers.join('；')}` : '',
+            `正文開頭：${clip(i.body, 200)}`,
+            '裝完還不會用上：要再綁到某個階段。',
           ]
             .filter(Boolean)
             .join('\n'),
@@ -110,22 +110,22 @@ export const skillsTool = defineActionTool({
       async run(ctx, args) {
         const skill = await installGitHubSkill(String(args.url).trim(), ctx.signal);
         return {
-          text: `已装进我的技能库：${skill.id}（${skillLabel(skill.inspection)}）。它还没绑到任何阶段。`,
+          text: `已裝進我的技能庫：${skill.id}（${skillLabel(skill.inspection)}）。它還沒綁到任何階段。`,
           calls: 0,
         };
       },
     },
     bind: {
-      label: '把一份写作技能绑到本工程的某个阶段（换掉那个阶段原来绑的）',
+      label: '把一份寫作技能綁到本工程的某個階段（換掉那個階段原來綁的）',
       costly: false,
       uses: ['id', 'stage'],
       requires: ['id', 'stage'],
       intent(args) {
-        const stage = isSkillStage(args.stage) ? SKILL_STAGE_LABEL[args.stage] : text(args.stage) || '（没给阶段）';
+        const stage = isSkillStage(args.stage) ? SKILL_STAGE_LABEL[args.stage] : text(args.stage) || '（沒給階段）';
         return {
           gate: 'always',
-          title: `把写作技能 ${text(args.id) || '（没给 id）'} 绑到「${stage}」阶段`,
-          detail: '本工程这个阶段往后的每一次生成（对话页、外部 agent、工程页批量）都会带上它；原来绑的那一份会被换掉。',
+          title: `把寫作技能 ${text(args.id) || '（沒給 id）'} 綁到「${stage}」階段`,
+          detail: '本工程這個階段往後的每一次生成（對話頁、外部 agent、工程頁批次）都會帶上它；原來綁的那一份會被換掉。',
         };
       },
       async run(ctx, args) {
@@ -136,8 +136,8 @@ export const skillsTool = defineActionTool({
         const skill = await saveSkillBinding(ctx.project, ctx.workspace, args.stage, id);
         return {
           text:
-            `已把「${skill ? skillLabel(skill.inspection) : id}」绑到「${SKILL_STAGE_LABEL[args.stage]}」阶段。` +
-            '本工程这个阶段往后的每一次生成都会带上它。',
+            `已把「${skill ? skillLabel(skill.inspection) : id}」綁到「${SKILL_STAGE_LABEL[args.stage]}」階段。` +
+            '本工程這個階段往後的每一次生成都會帶上它。',
           calls: 0,
         };
       },
@@ -145,26 +145,26 @@ export const skillsTool = defineActionTool({
   },
 });
 
-/** 「正文 N 字节」，带附带文件时再说一句带了哪几份。 */
+/** 「正文 N 位元組」，帶附帶檔案時再說一句帶了哪幾份。 */
 function describeSize(i: SkillInspection): string {
   return i.attachments.length > 0
-    ? `正文连同 ${i.attachments.length} 份附带文件共 ${i.bytes} 字节（${i.attachments.map((a) => a.path).join('、')}）`
-    : `正文 ${i.bytes} 字节`;
+    ? `正文連同 ${i.attachments.length} 份附帶檔案共 ${i.bytes} 位元組（${i.attachments.map((a) => a.path).join('、')}）`
+    : `正文 ${i.bytes} 位元組`;
 }
 
-/** 技能目录 + 本工程的绑定，一份一行。回给模型的话要短。 */
+/** 技能目錄 + 本工程的繫結，一份一行。回給模型的話要短。 */
 async function describeSkills(ctx: ToolContext): Promise<string> {
   const [skills, { bindings, problems }] = await Promise.all([listSkills(ctx.project), readSkillBindings(ctx.project)]);
   const lines = skills.map((s) => {
     const i = s.inspection;
-    const state = i.compatible ? '可绑' : `不兼容（${describeIncompat(i.reasons, i.unresolved)}）`;
-    return `- ${s.id}｜${skillLabel(i)}｜${SKILL_SOURCE_LABEL[s.source]}｜建议 ${i.suggestedStage}｜${state}`;
+    const state = i.compatible ? '可綁' : `不相容（${describeIncompat(i.reasons, i.unresolved)}）`;
+    return `- ${s.id}｜${skillLabel(i)}｜${SKILL_SOURCE_LABEL[s.source]}｜建議 ${i.suggestedStage}｜${state}`;
   });
-  const bound = SKILL_STAGES.map((stage) => `${stage}=${bindings[stage] ?? '（没绑）'}`).join('；');
+  const bound = SKILL_STAGES.map((stage) => `${stage}=${bindings[stage] ?? '（沒綁）'}`).join('；');
   return [
-    `写作技能 ${skills.length} 份：`,
+    `寫作技能 ${skills.length} 份：`,
     ...lines,
-    `本工程的绑定：${bound}。`,
-    ...(problems.length > 0 ? [`绑定文件有读不懂的地方：${problems.map((p) => p.text).join('；')}。`] : []),
+    `本工程的繫結：${bound}。`,
+    ...(problems.length > 0 ? [`繫結檔案有讀不懂的地方：${problems.map((p) => p.text).join('；')}。`] : []),
   ].join('\n');
 }

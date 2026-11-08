@@ -1,11 +1,11 @@
 /**
- * 空窗口 Get Started：#nfWelcome、no-workspace、Recent、关闭文件夹。
+ * 空視窗 Get Started：#nfWelcome、no-workspace、Recent、關閉資料夾。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, JSDOM_SKIP } = require('../../helpers/dom');
 
-describe('独立版空窗口欢迎页', { skip: JSDOM_SKIP }, () => {
+describe('獨立版空視窗歡迎頁', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
@@ -17,20 +17,20 @@ describe('独立版空窗口欢迎页', { skip: JSDOM_SKIP }, () => {
     });
   });
 
-  test('页面有 Get Started 节点', () => {
+  test('頁面有 Get Started 節點', () => {
     assert.ok(ui.doc.getElementById('nfWelcome'));
     assert.ok(ui.doc.body.classList.contains('no-workspace'));
   });
 
-  test('无工程时输入框禁用', () => {
+  test('無工程時輸入框禁用', () => {
     assert.equal(ui.doc.getElementById('input').disabled, true);
   });
 
-  // W12：侧栏每一页的遮罩上都看得见下一步，不必先找到欢迎页。
-  test('侧栏遮罩上有「打开文件夹…」，与欢迎页那颗同一个动作', () => {
+  // W12：側欄每一頁的遮罩上都看得見下一步，不必先找到歡迎頁。
+  test('側欄遮罩上有「開啟資料夾…」，與歡迎頁那顆同一個動作', () => {
     for (const id of ['pane-chat', 'pane-project', 'pane-files', 'pane-history']) {
       const btn = ui.doc.querySelector(`#${id} .ws-empty button`);
-      assert.ok(btn && btn.textContent === '打开文件夹…', id);
+      assert.ok(btn && btn.textContent === '開啟資料夾…', id);
     }
     let intent;
     const onPick = (e) => {
@@ -43,7 +43,7 @@ describe('独立版空窗口欢迎页', { skip: JSDOM_SKIP }, () => {
     assert.equal(intent, 'open');
   });
 
-  test('workspaces 带 recents 时画出 Recent', () => {
+  test('workspaces 帶 recents 時畫出 Recent', () => {
     ui.post({
       type: 'workspaces',
       currentId: null,
@@ -55,7 +55,7 @@ describe('独立版空窗口欢迎页', { skip: JSDOM_SKIP }, () => {
     assert.ok(list.textContent.includes('/tmp/my-book'));
   });
 
-  test('打开工程后去掉 no-workspace 并更新标题', () => {
+  test('開啟工程後去掉 no-workspace 並更新標題', () => {
     ui.post({
       type: 'workspaces',
       currentId: '/tmp/my-book',
@@ -63,7 +63,7 @@ describe('独立版空窗口欢迎页', { skip: JSDOM_SKIP }, () => {
       recents: [{ root: '/tmp/my-book', name: 'my-book' }],
     });
     assert.equal(ui.doc.body.classList.contains('no-workspace'), false);
-    // 宽屏露完整目录、窄屏露书名（文件夹名）：两份都写着，CSS 按宽度挑（窄屏上整条路径只露得出开头那一截）。
+    // 寬屏露完整目錄、窄屏露書名（資料夾名）：兩份都寫著，CSS 按寬度挑（窄屏上整條路徑只露得出開頭那一截）。
     const titleText = ui.doc.getElementById('wbTitleText');
     assert.equal(titleText.querySelector('.wb-title-full').textContent, '/tmp/my-book - Novelwarden');
     assert.equal(titleText.querySelector('.wb-title-short').textContent, 'my-book');
@@ -72,7 +72,7 @@ describe('独立版空窗口欢迎页', { skip: JSDOM_SKIP }, () => {
     assert.equal(ui.doc.getElementById('input').disabled, false);
   });
 
-  test('点 Recent 发 openFolder', () => {
+  test('點 Recent 發 openFolder', () => {
     ui.sent.length = 0;
     ui.clickEl(ui.doc.querySelector('#nfRecentList button'));
     const msg = ui.last('openFolder');

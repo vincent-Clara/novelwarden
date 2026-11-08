@@ -1,9 +1,9 @@
 /**
- * 工作台外壳里归编辑器管的那几件事：主题切换、两条分隔条的宽度拖拽、
- * 窄屏下把编辑区翻上来。
+ * 工作臺外殼裡歸編輯器管的那幾件事：主題切換、兩條分隔條的寬度拖拽、
+ * 窄屏下把編輯區翻上來。
  *
- * 都只在独立版存在（插件形态由 VS Code 自己负责这些），所以放在 editor 下面
- * 而不是共用层。
+ * 都只在獨立版存在（外掛形態由 VS Code 自己負責這些），所以放在 editor 下面
+ * 而不是共用層。
  */
 import { byId } from '../dom';
 import { narrowScreen } from '../narrow';
@@ -33,21 +33,21 @@ export function collectShell(): Shell {
   };
 }
 
-// ---------------------------------------------------------------- 主题
+// ---------------------------------------------------------------- 主題
 
 /**
- * 三套主题：深色、浅色、护眼（米黄）。切换只有这一条路——`<html data-theme>` 换值，`css/standalone/theme.css`
- * 里每套一组变量；记在 localStorage `novelforge.theme`（从前就在那儿，不并进编辑器偏好）。标题栏那颗按钮按
- * 深色 → 浅色 → 护眼 → 深色轮着换，外观面板（`lookPanel.ts`）里可以直接挑。护眼管整个界面，不只编辑区（⚑）：
- * 一半米黄一半深色，交界处更刺眼。
+ * 三套主題：深色、淺色、護眼（米黃）。切換隻有這一條路——`<html data-theme>` 換值，`css/standalone/theme.css`
+ * 裡每套一組變數；記在 localStorage `novelforge.theme`（從前就在那兒，不併進編輯器偏好）。標題欄那顆按鈕按
+ * 深色 → 淺色 → 護眼 → 深色輪著換，外觀面板（`lookPanel.ts`）裡可以直接挑。護眼管整個介面，不只編輯區（⚑）：
+ * 一半米黃一半深色，交界處更刺眼。
  */
 export type Theme = 'dark' | 'light' | 'sepia';
 
 export const THEMES: readonly Theme[] = ['dark', 'light', 'sepia'];
 
-export const THEME_LABEL: Record<Theme, string> = { dark: '深色', light: '浅色', sepia: '护眼（米黄）' };
+export const THEME_LABEL: Record<Theme, string> = { dark: '深色', light: '淺色', sepia: '護眼（米黃）' };
 
-/** 按钮上画的是**下一套**的样子（与从前「深色时画 ☀」一致）。 */
+/** 按鈕上畫的是**下一套**的樣子（與從前「深色時畫 ☀」一致）。 */
 const THEME_ICON: Record<Theme, string> = { dark: '☾', light: '☀', sepia: '◐' };
 
 let themeBtn: HTMLElement | undefined;
@@ -66,8 +66,8 @@ export function currentTheme(): Theme {
 }
 
 /**
- * `<meta name="theme-color">` 跟着换成标题栏的底色（标题栏与底栏同色）：手机浏览器的地址栏、
- * Android 壳的系统栏都按它染（壳那边见 `src/shells/android/…/MainActivity.java` 的 THEME_HOOK）。
+ * `<meta name="theme-color">` 跟著換成標題欄的底色（標題欄與底欄同色）：手機瀏覽器的位址列、
+ * Android 殼的系統欄都按它染（殼那邊見 `src/shells/android/…/MainActivity.java` 的 THEME_HOOK）。
  */
 function syncThemeColor(): void {
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
@@ -77,19 +77,19 @@ function syncThemeColor(): void {
   }
 }
 
-/** 换主题并记下来。 */
+/** 換主題並記下來。 */
 export function setTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme;
   syncThemeColor();
   if (themeBtn) {
     const next = nextTheme(theme);
     themeBtn.textContent = THEME_ICON[next];
-    themeBtn.title = `切换到${THEME_LABEL[next]}主题`;
+    themeBtn.title = `切換到${THEME_LABEL[next]}主題`;
   }
   try {
     localStorage.setItem(THEME_KEY, theme);
   } catch {
-    /* 存不下就只在本次会话生效 */
+    /* 存不下就只在本次會話生效 */
   }
 }
 
@@ -99,7 +99,7 @@ export function initTheme(shell: Shell): void {
   try {
     saved = localStorage.getItem(THEME_KEY);
   } catch {
-    /* 读不到就跟随系统 */
+    /* 讀不到就跟隨系統 */
   }
   const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
   setTheme(isTheme(saved) ? saved : prefersLight ? 'light' : 'dark');
@@ -107,9 +107,9 @@ export function initTheme(shell: Shell): void {
   shell.themeBtn.addEventListener('click', () => setTheme(nextTheme(currentTheme())));
 }
 
-// ---------------------------------------------------------------- 拖拽调宽
+// ---------------------------------------------------------------- 拖拽調寬
 
-/** 两条分隔条共用一套指针拖拽：区别只在「拖到哪算多宽」。 */
+/** 兩條分隔條共用一套指標拖拽：區別只在「拖到哪算多寬」。 */
 function makeResizer(
   handle: HTMLElement,
   onDrag: (e: PointerEvent) => void,
@@ -155,7 +155,7 @@ function storeNumber(key: string, value: number): void {
   try {
     localStorage.setItem(key, String(value));
   } catch {
-    /* 存不下就只在本次会话生效 */
+    /* 存不下就只在本次會話生效 */
   }
 }
 
@@ -163,11 +163,11 @@ export function initResizers(shell: Shell): void {
   let sideWidth = DEFAULT_SIDE_WIDTH;
   let draftWidth = DEFAULT_DRAFT_WIDTH;
 
-  // 两侧都留出可用空间，别让谁被拖没。
+  // 兩側都留出可用空間，別讓誰被拖沒。
   const setSideWidth = (px: number) => {
     sideWidth = Math.max(300, Math.min(px, Math.max(320, window.innerWidth - 360)));
-    // 写变量不写 width：行内的 width 压得过窄屏那条 `width: auto`，桌面上拖宽过的人把窗口缩窄（或分屏）时，
-    // 侧栏会顶着几百像素的宽度把整页撑出横向滚动。
+    // 寫變數不寫 width：行內的 width 壓得過窄屏那條 `width: auto`，桌面上拖寬過的人把視窗縮窄（或分屏）時，
+    // 側欄會頂著幾百畫素的寬度把整頁撐出橫向滾動。
     shell.side.style.setProperty('--nf-side-width', `${sideWidth}px`);
   };
   const setDraftWidth = (px: number) => {
@@ -184,7 +184,7 @@ export function initResizers(shell: Shell): void {
   makeResizer(
     shell.resizer,
     (e) => {
-      // 左边还有一条 62px 的活动栏，拖拽位置要把它减掉。
+      // 左邊還有一條 62px 的活動欄，拖拽位置要把它減掉。
       const bar = document.getElementById('tabbar');
       const offset = bar ? bar.getBoundingClientRect().right : 0;
       setSideWidth(e.clientX - offset);
@@ -195,7 +195,7 @@ export function initResizers(shell: Shell): void {
 
   makeResizer(
     shell.draftResizer,
-    // 草稿区在分隔条右边：往右拖是把它压窄。
+    // 草稿區在分隔條右邊：往右拖是把它壓窄。
     (e) => setDraftWidth(shell.editors.getBoundingClientRect().right - e.clientX),
     () => storeNumber(DRAFT_WIDTH_KEY, draftWidth),
     () => setDraftWidth(DEFAULT_DRAFT_WIDTH)
@@ -204,17 +204,17 @@ export function initResizers(shell: Shell): void {
 
 // ---------------------------------------------------------------- 窄屏
 
-/** 窄屏：编辑区是盖在侧栏上的一层，底栏「正文」翻它上来（view/mobileNav.ts），草稿区不显示。 */
+/** 窄屏：編輯區是蓋在側欄上的一層，底欄「正文」翻它上來（view/mobileNav.ts），草稿區不顯示。 */
 export const isNarrow = narrowScreen;
 
-/** 窄屏下编辑区是覆盖层，打开文件时得把它翻上来。 */
+/** 窄屏下編輯區是覆蓋層，開啟檔案時得把它翻上來。 */
 export function revealEditor(): void {
   if (isNarrow()) {
     document.body.classList.add('editor-open');
   }
 }
 
-/** 窄屏下要看侧栏（编辑区工具栏「历史」切到「版本」页）：把编辑区翻下去。 */
+/** 窄屏下要看側欄（編輯區工具欄「歷史」切到「版本」頁）：把編輯區翻下去。 */
 export function revealSide(): void {
   document.body.classList.remove('editor-open');
 }

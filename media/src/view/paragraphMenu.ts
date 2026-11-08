@@ -1,14 +1,14 @@
 /**
- * 标题栏「编辑」菜单里段落那一组（独立版）：
+ * 標題欄「編輯」選單裡段落那一組（獨立版）：
  *
- * - 「段落格式 ▸」三项（空行分段 / 段首缩进 / 缩进加空行），当前那项打 ✓；没开工程（或还不是小说工程）时置灰。
- *   点了直接发 `setParagraphStyle` 给后端——那是工程的设置，后端只改 `config.md` 的这一个键，再 `pushState`，
- *   勾随新的 `ViewState.paragraphStyle` 回来（前端无状态）。
- * - 「成对符号自动补全」开关（打 ✓）：编辑器的偏好，按浏览器记，经 `nf-paragraph-command` 交给编辑器。
- * - 「一键排版」「半角标点转全角」：作用于当前那块编辑区，当前文件不是正文时置灰。
+ * - 「段落格式 ▸」三項（空行分段 / 段首縮排 / 縮排加空行），當前那項打 ✓；沒開工程（或還不是小說工程）時置灰。
+ *   點了直接發 `setParagraphStyle` 給後端——那是工程的設定，後端只改 `config.md` 的這一個鍵，再 `pushState`，
+ *   勾隨新的 `ViewState.paragraphStyle` 回來（前端無狀態）。
+ * - 「成對符號自動補全」開關（打 ✓）：編輯器的偏好，按瀏覽器記，經 `nf-paragraph-command` 交給編輯器。
+ * - 「一鍵排版」「半形標點轉全形」：作用於當前那塊編輯區，當前檔案不是正文時置灰。
  *
- * 状态问编辑器（`nf-paragraph-query`，`editor/paragraph.ts` 回答）；编辑器没装（插件）时这一组根本不出现——
- * 菜单栏本身就只在独立版里有。
+ * 狀態問編輯器（`nf-paragraph-query`，`editor/paragraph.ts` 回答）；編輯器沒裝（外掛）時這一組根本不出現——
+ * 選單欄本身就只在獨立版裡有。
  */
 import { DEFAULT_PARAGRAPH_STYLE, PARAGRAPH_STYLES, PARAGRAPH_STYLE_HINT, PARAGRAPH_STYLE_LABEL } from '../protocol';
 import { commandParagraph, queryParagraph } from '../globals';
@@ -31,9 +31,9 @@ export function paragraphMenuEntries(): MenuEntry[] {
         run: () => vscode.postMessage({ type: 'setParagraphStyle', style }),
       })),
     },
-    { label: '成对符号自动补全', checked: status.autoPair, run: () => commandParagraph('toggleAutoPair') },
+    { label: '成對符號自動補全', checked: status.autoPair, run: () => commandParagraph('toggleAutoPair') },
     { label: 'sep' },
-    { label: '一键排版', disabled: !status.prose, run: () => commandParagraph('formatProse') },
-    { label: '半角标点转全角', disabled: !status.prose, run: () => commandParagraph('fullWidthPunct') },
+    { label: '一鍵排版', disabled: !status.prose, run: () => commandParagraph('formatProse') },
+    { label: '半形標點轉全形', disabled: !status.prose, run: () => commandParagraph('fullWidthPunct') },
   ];
 }

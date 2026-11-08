@@ -1,14 +1,14 @@
 /**
- * 「什么算章节」落到磁盘上的部分：任意后缀的扫描、可编辑判定、createChapter 的默认扩展名。
- * 迁自 scripts/smoke-chapters.js 的文件系统半场（19 条）。
+ * 「什麼算章節」落到磁碟上的部分：任意字尾的掃描、可編輯判定、createChapter 的預設副檔名。
+ * 遷自 scripts/smoke-chapters.js 的檔案系統半場（19 條）。
  *
- * 分家说明（三处，账要对得上）：
- * - 本脚本前两节（`== 章节文件名规则 ==` 18 条、`== extractH1 只看首行 ==` 3 条）是纯函数，
- *   不在本文件，另见 unit 侧。
- * - 草稿相关各节（40 条）在同目录的 drafts.test.js。
- * - 原 `== manifest 认得非 .md 章节 ==` 那一节已随「章节退出流水线」改写：manifest
- *   索引的是发布章节，见本文件末尾那一节。
- *   「manifest 里没有草稿」那一条只有草稿真的存在时才有意义，放在 drafts.test.js。
+ * 分家說明（三處，賬要對得上）：
+ * - 本指令碼前兩節（`== 章節檔名規則 ==` 18 條、`== extractH1 只看首行 ==` 3 條）是純函式，
+ *   不在本檔案，另見 unit 側。
+ * - 草稿相關各節（40 條）在同目錄的 drafts.test.js。
+ * - 原 `== manifest 認得非 .md 章節 ==` 那一節已隨「章節退出流水線」改寫：manifest
+ *   索引的是釋出章節，見本檔案末尾那一節。
+ *   「manifest 裡沒有草稿」那一條只有草稿真的存在時才有意義，放在 drafts.test.js。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -18,15 +18,15 @@ const { makeFakeHost } = require('../../helpers/fakeHost');
 const { cleanup } = require('../../helpers/teardown');
 
 /**
- * 产物写入搬进了 `core/workspace/`：正文落盘要在细纲上记 `writtenFrom`、
- * 建章节要同名报错并同步 manifest、草稿按需创建但绝不覆盖。`NovelProject`
- * 这一层只留领域查询。
+ * 產物寫入搬進了 `core/workspace/`：正文落盤要在細綱上記 `writtenFrom`、
+ * 建章節要同名報錯並同步 manifest、草稿按需建立但絕不覆蓋。`NovelProject`
+ * 這一層只留領域查詢。
  */
 let wsMod;
 const wsOf = (p) => new wsMod.Workspace(p);
 
 
-describe('章节文件规则（磁盘）', () => {
+describe('章節檔案規則（磁碟）', () => {
   let projectView;
   let fileEditing;
   let project;
@@ -50,27 +50,27 @@ describe('章节文件规则（磁盘）', () => {
     });
     wsMod = bundle.ws;
     ({ projectView, fileEditing } = bundle);
-    // 原脚本的 host 字面量里没有 reviewReplace，显式抹掉，别走进 diff 审阅分支。
+    // 原指令碼的 host 字面量裡沒有 reviewReplace，顯式抹掉，別走進 diff 審閱分支。
     bundle.host.initHost(makeFakeHost({ overrides: { reviewReplace: undefined } }).host);
 
-    const t = await makeTempProject(bundle.project, { prefix: 'chapters', title: '章节格式测试' });
+    const t = await makeTempProject(bundle.project, { prefix: 'chapters', title: '章節格式測試' });
     ({ dir, rel, write, read, remove, project } = t);
 
     write('chapters/001-楔子.md', '# 楔子\n\n雨下了三天。\n');
-    // 正文中段有一行像标题的字：不该被当成章节标题，也不该从正文里消失。
-    write('chapters/002-手记.txt', '他翻开笔记。\n\n# 这是纸上写的字\n\n然后合上了。\n');
-    write('chapters/卷一/003-夜访.md', '# 夜访\n\n三更时分。\n');
-    write('chapters/004-无扩展名', '没有扩展名的一章。\n');
-    write('chapters/005-封面.png', 'PNG 假装');
-    write('chapters/笔记.txt', '没有数字前缀，不是章节');
+    // 正文中段有一行像標題的字：不該被當成章節標題，也不該從正文裡消失。
+    write('chapters/002-手記.txt', '他翻開筆記。\n\n# 這是紙上寫的字\n\n然後合上了。\n');
+    write('chapters/卷一/003-夜访.md', '# 夜訪\n\n三更時分。\n');
+    write('chapters/004-無副檔名', '沒有副檔名的一章。\n');
+    write('chapters/005-封面.png', 'PNG 假裝');
+    write('chapters/筆記.txt', '沒有數字字首，不是章節');
     write('.novelwarden/characters/林昭.md', '---\nname: 林昭\n---\n\n# 林昭\n');
-    write('.novelwarden/characters/说明.txt', '角色区不放宽扩展名');
+    write('.novelwarden/characters/說明.txt', '角色區不放寬副檔名');
     project.invalidate();
   });
 
   after(() => cleanup(dir));
 
-  describe('扫描：任意后缀', () => {
+  describe('掃描：任意字尾', () => {
     let chapters;
     let txt;
     let txtBody;
@@ -89,68 +89,68 @@ describe('章节文件规则（磁盘）', () => {
       cards = await project.listCharacters();
     });
 
-    test('扫到四章（.md / .txt / 无扩展名，跨子目录）', () => {
+    test('掃到四章（.md / .txt / 無副檔名，跨子目錄）', () => {
       assert.equal(chapters.length, 4, `got ${chapters.length}`);
     });
 
-    test('png 不算章节', () => {
+    test('png 不算章節', () => {
       assert.ok(!chapters.some((c) => c.relPath.endsWith('.png')));
     });
 
-    test('无数字前缀的 txt 不算章节', () => {
-      assert.ok(!chapters.some((c) => c.relPath.endsWith('笔记.txt')));
+    test('無數字字首的 txt 不算章節', () => {
+      assert.ok(!chapters.some((c) => c.relPath.endsWith('筆記.txt')));
     });
 
-    test('.txt 章节标题取自文件名，不吃正文里的 #', () => {
-      assert.equal(txt.title, '手记', txt.title);
+    test('.txt 章節標題取自檔名，不吃正文裡的 #', () => {
+      assert.equal(txt.title, '手記', txt.title);
     });
 
-    test('.txt 章节正文原样保留那行 #', () => {
-      assert.ok(txtBody.includes('# 这是纸上写的字'), txtBody);
+    test('.txt 章節正文原樣保留那行 #', () => {
+      assert.ok(txtBody.includes('# 這是紙上寫的字'), txtBody);
     });
 
-    test('.md 章节仍取 H1', () => {
+    test('.md 章節仍取 H1', () => {
       assert.equal(md.title, '楔子', md.title);
     });
 
-    test('.md 章节 readChapterText 仍剥掉 H1', () => {
+    test('.md 章節 readChapterText 仍剝掉 H1', () => {
       assert.equal(mdBody, '雨下了三天。', mdBody);
     });
 
-    test('无扩展名章节标题取自文件名', () => {
-      assert.equal(bare.title, '无扩展名', bare.title);
+    test('無副檔名章節標題取自檔名', () => {
+      assert.equal(bare.title, '無副檔名', bare.title);
     });
 
-    test('角色区仍然只认 .md', () => {
+    test('角色區仍然只認 .md', () => {
       assert.equal(cards.length, 1, `got ${cards.length}`);
       assert.equal(cards[0].name, '林昭', `got ${cards.length}`);
     });
   });
 
-  describe('可编辑判定', () => {
-    test('无扩展名章节可编辑', () => {
-      assert.ok(fileEditing.isEditablePath('chapters/004-无扩展名'));
+  describe('可編輯判定', () => {
+    test('無副檔名章節可編輯', () => {
+      assert.ok(fileEditing.isEditablePath('chapters/004-無副檔名'));
     });
 
-    test('.rtf 章节可编辑', () => {
-      assert.ok(fileEditing.isEditablePath('chapters/006-手记.rtf'));
+    test('.rtf 章節可編輯', () => {
+      assert.ok(fileEditing.isEditablePath('chapters/006-手記.rtf'));
     });
 
-    test('.png 不可编辑', () => {
+    test('.png 不可編輯', () => {
       assert.ok(!fileEditing.isEditablePath('chapters/005-封面.png'));
     });
 
-    test('白名单里的 json 仍可编辑', () => {
+    test('白名單裡的 json 仍可編輯', () => {
       assert.ok(fileEditing.isEditablePath('.novelwarden/project.json'));
     });
 
-    test('非章节的 png 不可编辑', () => {
+    test('非章節的 png 不可編輯', () => {
       assert.ok(!fileEditing.isEditablePath('media/icon.png'));
     });
   });
 
-  // 2026-10-24 作者定：新建正文一律出 .txt（从前缺省是 .md）；指定 .md 时照旧写标题行。
-  describe('createChapter 默认出 .txt', () => {
+  // 2026-10-24 作者定：新建正文一律出 .txt（從前預設是 .md）；指定 .md 時照舊寫標題行。
+  describe('createChapter 預設出 .txt', () => {
     let created;
     let createdHead;
     let txt;
@@ -163,9 +163,9 @@ describe('章节文件规则（磁盘）', () => {
     before(async () => {
       created = await wsOf(project).createChapter(9, '新章', '', undefined, '.md');
       createdHead = read(created);
-      txt = await wsOf(project).createChapter(10, '纯文本章', '正文', undefined);
+      txt = await wsOf(project).createChapter(10, '純文字章', '正文', undefined);
       txtBody = read(txt);
-      // 流水线新建那条路：还没有标题可言，落成纯序号名。
+      // 流水線新建那條路：還沒有標題可言，落成純序號名。
       bare = await wsOf(project).createChapter(11, '', '', undefined);
       bareBody = read(bare);
       project.invalidate();
@@ -181,44 +181,44 @@ describe('章节文件规则（磁盘）', () => {
       project.invalidate();
     });
 
-    test('指定 .md 时文件名带 .md', () => {
+    test('指定 .md 時檔名帶 .md', () => {
       assert.equal(created, 'chapters/009-新章.md', created);
     });
 
-    test('markdown 家族写标题行', () => {
+    test('markdown 家族寫標題行', () => {
       assert.ok(createdHead.startsWith('# 新章'), createdHead.slice(0, 20));
     });
 
-    test('缺省是 .txt，不写标题行', () => {
-      assert.equal(txt, 'chapters/010-纯文本章.txt', txt);
+    test('預設是 .txt，不寫標題行', () => {
+      assert.equal(txt, 'chapters/010-純文字章.txt', txt);
       assert.equal(txtBody, '正文\n', JSON.stringify(txtBody));
     });
 
-    test('标题留空时文件名只有序号', () => {
+    test('標題留空時檔名只有序號', () => {
       assert.equal(bare, 'chapters/011.txt', bare);
     });
 
-    // 不写 `# `：空标题行既没意义，又会让改名时的 H1 同步判据从第一天就对不上。
-    test('标题留空时不写标题行', () => {
+    // 不寫 `# `：空標題行既沒意義，又會讓改名時的 H1 同步判據從第一天就對不上。
+    test('標題留空時不寫標題行', () => {
       assert.equal(bareBody.trim(), '', JSON.stringify(bareBody));
     });
 
-    test('扫描时标题回落成「第 N 章」', () => {
+    test('掃描時標題回落成「第 N 章」', () => {
       assert.equal(bareTitle, '第 11 章', bareTitle);
     });
 
-    test('新建出来是 0 字', () => {
+    test('新建出來是 0 字', () => {
       assert.equal(bareWords, 0, String(bareWords));
     });
   });
 
   /**
-   * manifest 索引的是**章节正文**：字数、正文 hash 描述的全是 `chapters/` 里的文件。
-   * 细纲不进索引（它的新鲜度与定稿记在自己的 frontmatter 里：upstreamHash / writtenFrom / sourceHash）。
+   * manifest 索引的是**章節正文**：字數、正文 hash 描述的全是 `chapters/` 裡的檔案。
+   * 細綱不進索引（它的新鮮度與定稿記在自己的 frontmatter 裡：upstreamHash / writtenFrom / sourceHash）。
    *
-   * 任意扩展名都算章节（`.txt` / 无扩展名 / `.json`），所以它们也都要进。
+   * 任意副檔名都算章節（`.txt` / 無副檔名 / `.json`），所以它們也都要進。
    */
-  describe('manifest 索引章节', () => {
+  describe('manifest 索引章節', () => {
     let manifest;
 
     before(async () => {
@@ -226,17 +226,17 @@ describe('章节文件规则（磁盘）', () => {
       manifest = await project.syncManifest();
     });
 
-    test('manifest 里是 chapters', () => {
+    test('manifest 裡是 chapters', () => {
       assert.ok(Array.isArray(manifest.chapters), JSON.stringify(Object.keys(manifest)));
       assert.equal(manifest.plots, undefined);
     });
 
-    test('磁盘上有几章就索引几章', async () => {
+    test('磁碟上有幾章就索引幾章', async () => {
       assert.equal(manifest.chapters.length, (await project.listChapters()).length);
     });
 
-    // 非 markdown 的章一样要进——它们照样是正文。
-    test('.txt 章节也进索引', () => {
+    // 非 markdown 的章一樣要進——它們照樣是正文。
+    test('.txt 章節也進索引', () => {
       assert.ok(
         manifest.chapters.some((c) => c.file.endsWith('.txt')),
         JSON.stringify(manifest.chapters.map((c) => c.file))

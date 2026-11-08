@@ -1,19 +1,19 @@
 /**
- * 切预览 / 切回编辑时两边滚到同一处（`pane.ts` 的 `setPreviewing` 用）。换算是纯函数（`previewCore.ts`），这里只量：
+ * 切預覽 / 切回編輯時兩邊滾到同一處（`pane.ts` 的 `setPreviewing` 用）。換算是純函式（`previewCore.ts`），這裡只量：
  *
- * - **编辑区**：第 i 行的顶借高亮镜像层量（`highlight.ts` 的 `measureOffset`，与打字机滚动、名词补全同一个办法，
- *   不另起测量 DOM），二分找视口顶上那一行，只量 log₂(行数) 次。中文一段就是一行、能折成好几行，所以位置带小数：
- *   滚到一段中间时，预览里也滚到那一段的中间。
- * - **预览**：`renderPreview` 给每一块记了 `data-line` / `data-line-end`，量这几块相对预览内容顶上的位置。
+ * - **編輯區**：第 i 行的頂借高亮映象層量（`highlight.ts` 的 `measureOffset`，與打字機滾動、名詞補全同一個辦法，
+ *   不另起測量 DOM），二分找視口頂上那一行，只量 log₂(行數) 次。中文一段就是一行、能折成好幾行，所以位置帶小數：
+ *   滾到一段中間時，預覽裡也滾到那一段的中間。
+ * - **預覽**：`renderPreview` 給每一塊記了 `data-line` / `data-line-end`，量這幾塊相對預覽內容頂上的位置。
  *
- * 量不了（文字超过 `HIGHLIGHT_LIMIT`、没有排版——比如 jsdom）时退回按比例：位置 = 滚过的比例 × 行数。
+ * 量不了（文字超過 `HIGHLIGHT_LIMIT`、沒有排版——比如 jsdom）時退回按比例：位置 = 滾過的比例 × 行數。
  */
 import { measureOffset } from './highlight';
 import type { Pane } from './store';
 import { lineAtY, lineStarts, previewYToSource, sourceToPreviewY, yOfLine } from './previewCore';
 import type { BlockBox } from './previewCore';
 
-/** 编辑区里一行一行的顶（从第 0 行的顶算）。量过的记下来，一次切换里不重量。量不了返回 undefined。 */
+/** 編輯區裡一行一行的頂（從第 0 行的頂算）。量過的記下來，一次切換裡不重量。量不了返回 undefined。 */
 function areaTops(pane: Pane): { count: number; topOf: (i: number) => number } | undefined {
   const text = pane.area.value;
   const starts = lineStarts(text);
@@ -31,7 +31,7 @@ function areaTops(pane: Pane): { count: number; topOf: (i: number) => number } |
     }
     let top: number;
     if (i >= count) {
-      // 最后一行的底：最后一行的顶 + 它的行高（空的最后一行量的是零宽空格，行高照样有）。
+      // 最後一行的底：最後一行的頂 + 它的行高（空的最後一行量的是零寬空格，行高照樣有）。
       const last = measureOffset(pane, starts[count - 1]);
       top = last ? last.top + last.height - first.top : 0;
     } else {
@@ -45,20 +45,20 @@ function areaTops(pane: Pane): { count: number; topOf: (i: number) => number } |
     cache.set(i, top);
     return top;
   };
-  // 没有排版（每一行都量出 0）时只会把人带到最后一行——当量不了。
+  // 沒有排版（每一行都量出 0）時只會把人帶到最後一行——當量不了。
   if (count > 1 && topOf(count) <= 0) {
     return undefined;
   }
   return broken ? undefined : { count, topOf };
 }
 
-/** 按比例：滚过的比例 × 行数。 */
+/** 按比例：滾過的比例 × 行數。 */
 function proportional(scrollTop: number, scrollHeight: number, clientHeight: number, count: number): number {
   const range = scrollHeight - clientHeight;
   return range > 0 ? (Math.max(0, scrollTop) / range) * count : 0;
 }
 
-/** 编辑区视口顶上是第几行（带小数）。 */
+/** 編輯區視口頂上是第幾行（帶小數）。 */
 export function areaTopLine(pane: Pane): number {
   const area = pane.area;
   const tops = areaTops(pane);
@@ -69,8 +69,8 @@ export function areaTopLine(pane: Pane): number {
 }
 
 /**
- * 要让第 `pos` 行（带小数）停在编辑区视口顶上，`scrollTop` 该是多少，那时视口里是从第几行到第几行（带小数；量不了时
- * 按比例估）。只量不滚：调用方先落光标（看它还在不在视口里），再滚——落选区时浏览器可能自己把光标滚进视野。
+ * 要讓第 `pos` 行（帶小數）停在編輯區視口頂上，`scrollTop` 該是多少，那時視口裡是從第幾行到第幾行（帶小數；量不了時
+ * 按比例估）。只量不滾：呼叫方先落游標（看它還在不在視口裡），再滾——落選區時瀏覽器可能自己把游標滾進視野。
  */
 export function areaScrollForLine(pane: Pane, pos: number): { scrollTop: number; top: number; bottom: number } {
   const area = pane.area;
@@ -91,7 +91,7 @@ export function areaScrollForLine(pane: Pane, pos: number): { scrollTop: number;
   };
 }
 
-/** 预览里每一块的位置（相对预览内容的最顶上）。全是 0（没有排版）时返回空。 */
+/** 預覽裡每一塊的位置（相對預覽內容的最頂上）。全是 0（沒有排版）時返回空。 */
 function previewBoxes(preview: HTMLElement): BlockBox[] {
   const base = preview.getBoundingClientRect().top - preview.scrollTop;
   const boxes: BlockBox[] = [];
@@ -109,7 +109,7 @@ function previewBoxes(preview: HTMLElement): BlockBox[] {
   return any ? boxes : [];
 }
 
-/** 预览视口顶上对着源文件第几行（带小数）。 */
+/** 預覽視口頂上對著原始檔第幾行（帶小數）。 */
 export function previewTopLine(preview: HTMLElement, lineCount: number): number {
   const boxes = previewBoxes(preview);
   if (boxes.length === 0) {
@@ -118,7 +118,7 @@ export function previewTopLine(preview: HTMLElement, lineCount: number): number 
   return previewYToSource(boxes, preview.scrollTop);
 }
 
-/** 把预览滚到让源文件第 `pos` 行（带小数）对应的那一处停在视口顶上。 */
+/** 把預覽滾到讓原始檔第 `pos` 行（帶小數）對應的那一處停在視口頂上。 */
 export function scrollPreviewToLine(preview: HTMLElement, pos: number, lineCount: number): void {
   const boxes = previewBoxes(preview);
   if (boxes.length === 0) {

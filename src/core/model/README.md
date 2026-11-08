@@ -1,76 +1,77 @@
-# core/model — 数据层
+# core/model — 資料層
 
-小说工程的数据模型与全部文件读写。所有上层功能（上下文装配、生成、定稿）都通过这一层访问数据，不直接碰磁盘。
+小說工程的資料模型與全部檔案讀寫。所有上層功能（上下文裝配、生成、定稿）都通過這一層訪問資料，不直接碰磁碟。
 
-核心约定：**数据是工作区里的普通 Markdown / JSON**，作者随时可以在编辑器里手改。因此本层的一切解析都以「容错优先」——手改文件不该让插件崩掉。
+核心約定：**資料是工作區裡的普通 Markdown / JSON**，作者隨時可以在編輯器裡手改。因此本層的一切解析都以「容錯優先」——手改檔案不該讓外掛崩掉。
 
-## 文件
+## 檔案
 
-| 文件 | 职责 |
+| 檔案 | 職責 |
 |---|---|
-| [types.ts](types.ts) | 全部数据结构（`Chapter` / `SummaryCast` / `CharacterCard` / `LoreEntry` / `ProjectManifest` / `NovelConfig`）与角色卡的固定小节定义。 |
-| [chapterFile.ts](chapterFile.ts) | ★ 「什么文件算章节」的唯一定义（第 9 条）。纯函数，扫描器、编辑器、独立版文件监听共用。 |
-| [naming.ts](naming.ts) | ★ 称呼学（纯函数）：判泛称、过滤别名；只过滤 aliases、不过滤 name，剧作称谓（`主角`、`反派`）例外。 |
-| [identity.ts](identity.ts) | ★ 同一人聚类（纯函数）：同章共现作硬约束的贪心聚类，不用并查集。 |
-| [gender.ts](gender.ts) | 角色卡 `gender` 的归一（`normalizeGender`）与合并口径（`keepGender`：卡上写了的不动）。 |
-| [pipeline.ts](pipeline.ts) | ★ **创作流水线的领域模型**：`Stage × Capability × Target`、全书与单章两级状态机（`deriveBookNextStep` / `deriveNextStep` / `deriveStage`）与各动作的调用次数。纯函数。 |
-| [settingFile.ts](settingFile.ts) | ★ 架构层三份文档（`config.md`、`premise.md`、`world.md`）的格式与读写。 |
-| [plotFile.ts](plotFile.ts) | ★ 一章细纲的格式：镜像正文路径、七节加「设定」一节、梗概的指纹；写之前是计划，定稿后是实际。 |
-| [loreFile.ts](loreFile.ts) | ★ 设定的格式与认法：细纲「设定」一节一行一条、条目的一句话与「暗设」、分类就是目录。 |
-| [outlineFile.ts](outlineFile.ts) | ★ 情节大纲**一章一条**的认法、按远近带，以及从各章细纲梗概汇总、存时拆回的规矩。 |
-| [structureGuide.ts](structureGuide.ts) | 故事结构指导：六种结构按累计百分比切成章号区间。纯函数。 |
-| [markdown.ts](markdown.ts) | 轻量 Markdown 工具：frontmatter 与「## 小节」的解析 / 序列化、取值兜底；解析失败忽略该行、不抛。 |
-| [fs.ts](fs.ts) | 磁盘与字符串小工具：文本读写、稳定哈希、字数统计、文件名清理、slug 生成与扫描目录忽略规则。 |
-| [castParse.ts](castParse.ts) | 出场人物字段的序列化与解析（`pushCast`：称谓换真名、光称谓丢掉）。 |
-| [continuity.ts](continuity.ts) | ★ 细纲的「连续性事实」：渲染与读回、定稿时找证据（`attachEvidence`）、写正文时按证据定位（`locateEvidence`）。 |
-| [writingSkill.ts](writingSkill.ts) | 写作技能的纯函数：读 `SKILL.md`、不兼容规则、技能 id、阶段绑定文件的格式。 |
-| [importText.ts](importText.ts) | 拆书的纯函数：解码、认章标题、切章、抽样与篇幅统计。 |
-| [threadFile.ts](threadFile.ts) | ★ 叙事线的格式：一条线一个文件、状态从事件现算、外科式写入、各阶段挑哪几条、判到哪的水位。 |
-| [timelineFile.ts](timelineFile.ts) | ★ 故事时间 `threads/时间线.md`：一章一行的认法、历法与日期推算、对账；机器写的行能换，作者的不动。 |
-| [characterState.ts](characterState.ts) | ★ 角色卡「当前状态」归谁：空着或 `stateHash` 对得上归机器，其余归作者；`patchCardState` 只换那一节。 |
-| [review.ts](review.ts) | ★ 审稿报告：目标冻结、引文归一与定位（`normalizeQuote` / `locateQuote`）、报告的解析。 |
-| [plotCheck.ts](plotCheck.ts) | 写前冲突检查的选事实、提示词与校验：只认硬矛盾，每一处都要带两句能在原文里找到的引文。 |
-| [preflight.ts](preflight.ts) | ★ 一致性预检：细纲排出场的人在卡上或连续性事实里已经死了 → 一条风险。 |
-| [manuscriptCheck.ts](manuscriptCheck.ts) | 写完一章之后的确定性检查（禁用词、停在半句、比喻词计数）与续写回退点。 |
-| [sensitiveWords.ts](sensitiveWords.ts) | 自定义敏感词表 `.novelwarden/sensitive.txt` 的解析（写作体检用），坏行跳过并记原因。 |
-| [trimProse.ts](trimProse.ts) | 删修饰的纯函数：切段编号、读回 `[n] 正文`、只许删的逐段验收（`trimProblem`：新增汉字按字 LCS 算、对白一字不差、删完至少留四成、段尾标点不变）、拼回正文并按八成保底退回删得最多的段（`applyTrim`）。纯函数、零 import。 |
-| [paragraphFormat.ts](paragraphFormat.ts) | ★ **正文的分段格式与一键排版**（`paragraphStyle` 三个值，`formatProse` / `layoutProse`）。 |
-| [textFind.ts](textFind.ts) | 查找替换的匹配口径（编正则、找全部匹配、`$1` 展开、只换选中的几处），编辑器查找条与全书查找替换共用。 |
-| [bookDir.ts](bookDir.ts) | 新建一本书时的文件夹名（`bookDirName`）。纯函数，前端也打包它。 |
-| [bookFindScope.ts](bookFindScope.ts) | 全书查找替换的范围表与上限（`BOOK_FIND_LIMIT`）。纯数据，前端也打包它。 |
-| [bookFind.ts](bookFind.ts) | 全书查找替换在一份文件上的口径：哪些字不搜不换（`protectionOf`：frontmatter 的机器账、解析器认的小节标题）。 |
-| [paragraphDiff.ts](paragraphDiff.ts) | 段级 diff（五期 W11）：按空行切段、段序列 LCS、相邻改动并成一处，`joinMerge` 拼合并结果。独立版的合并视图直接打包它。纯函数、零 import。 |
-| [project.ts](project.ts) | ★ `NovelProject`：只读的数据访问层（写盘在 `core/workspace/`）：脚手架、章节索引、架构读取、细纲按路径配对、定稿查询、回收站落点。 |
-| [providers.ts](providers.ts) | ★ 多服务商 / 多模型的数据模型；引用只在第一个斜杠处切分（第 5 条）。 |
-| [tiers.ts](tiers.ts) | ★ **模型分档**：三档与各项后台任务的归属（含 `review`、`transcribe`）。纯数据 + 纯函数。 |
-| [transcribe.ts](transcribe.ts) | 转写与具体哪一步无关的那一半：两条消息（`transcribeMessages`）与温度 0；整条走法在 features/transcribe.ts。 |
-| [callChoice.ts](callChoice.ts) | 调模型之前那一问的两个下拉框：`CallChoice` / `CallPrompt` / `CallAnswer`。 |
-| [thinking.ts](thinking.ts) | ★ **思考深度**的档位表与两家的字段映射；「不思考」不带任何思考参数。 |
-| [contextDetail.ts](contextDetail.ts) | ★ **上下文详细度**四级与每一级的全部上限；`contextLimitsOf(config)` 是唯一的取法。 |
-| [session.ts](session.ts) | 对话会话存储 `.novelwarden/sessions/<id>.json`：创作目标、@ 引用、上下文明细快照的序列化与旧会话归一。 |
+| [types.ts](types.ts) | 全部資料結構（`Chapter` / `SummaryCast` / `CharacterCard` / `LoreEntry` / `ProjectManifest` / `NovelConfig`）與角色卡的固定小節定義。 |
+| [chapterFile.ts](chapterFile.ts) | ★ 「什麼檔案算章節」的唯一定義（第 9 條）。純函式，掃描器、編輯器、獨立版檔案監聽共用。 |
+| [naming.ts](naming.ts) | ★ 稱呼學（純函式）：判泛稱、過濾別名；只過濾 aliases、不過濾 name，劇作稱謂（`主角`、`反派`）例外。 |
+| [identity.ts](identity.ts) | ★ 同一人聚類（純函式）：同章共現作硬約束的貪心聚類，不用並查集。 |
+| [gender.ts](gender.ts) | 角色卡 `gender` 的歸一（`normalizeGender`）與合併口徑（`keepGender`：卡上寫了的不動）。 |
+| [pipeline.ts](pipeline.ts) | ★ **創作流水線的領域模型**：`Stage × Capability × Target`、全書與單章兩級狀態機（`deriveBookNextStep` / `deriveNextStep` / `deriveStage`）與各動作的呼叫次數。純函式。 |
+| [settingFile.ts](settingFile.ts) | ★ 架構層三份文件（`config.md`、`premise.md`、`world.md`）的格式與讀寫。 |
+| [plotFile.ts](plotFile.ts) | ★ 一章細綱的格式：映象正文路徑、七節加「設定」一節、梗概的指紋；寫之前是計劃，定稿後是實際。 |
+| [loreFile.ts](loreFile.ts) | ★ 設定的格式與認法：細綱「設定」一節一行一條、條目的一句話與「暗設」、分類就是目錄。 |
+| [outlineFile.ts](outlineFile.ts) | ★ 情節大綱**一章一條**的認法、按遠近帶，以及從各章細綱梗概彙總、存時拆回的規矩。 |
+| [structureGuide.ts](structureGuide.ts) | 故事結構指導：六種結構按累計百分比切成章號區間。純函式。 |
+| [labels.ts](labels.ts) | 固定介面／小節標籤的繁體顯示與繁簡別名；保留既有儲存鍵，不轉換作者自行輸入的內容。 |
+| [markdown.ts](markdown.ts) | 輕量 Markdown 工具：frontmatter 與「## 小節」的解析 / 序列化、取值兜底；解析失敗忽略該行、不拋。 |
+| [fs.ts](fs.ts) | 磁碟與字串小工具：文字讀寫、穩定雜湊、字數統計、檔名清理、slug 生成與掃描目錄忽略規則。 |
+| [castParse.ts](castParse.ts) | 出場人物欄位的序列化與解析（`pushCast`：稱謂換真名、光稱謂丟掉）。 |
+| [continuity.ts](continuity.ts) | ★ 細綱的「連續性事實」：渲染與讀回、定稿時找證據（`attachEvidence`）、寫正文時按證據定位（`locateEvidence`）。 |
+| [writingSkill.ts](writingSkill.ts) | 寫作技能的純函式：讀 `SKILL.md`、不相容規則、技能 id、階段繫結檔案的格式。 |
+| [importText.ts](importText.ts) | 拆書的純函式：解碼、認章標題、切章、抽樣與篇幅統計。 |
+| [threadFile.ts](threadFile.ts) | ★ 敘事線的格式：一條線一個檔案、狀態從事件現算、外科式寫入、各階段挑哪幾條、判到哪的水位。 |
+| [timelineFile.ts](timelineFile.ts) | ★ 故事時間 `threads/时间线.md`：一章一行的認法、曆法與日期推算、對賬；機器寫的行能換，作者的不動。 |
+| [characterState.ts](characterState.ts) | ★ 角色卡「當前狀態」歸誰：空著或 `stateHash` 對得上歸機器，其餘歸作者；`patchCardState` 只換那一節。 |
+| [review.ts](review.ts) | ★ 審稿報告：目標凍結、引文歸一與定位（`normalizeQuote` / `locateQuote`）、報告的解析。 |
+| [plotCheck.ts](plotCheck.ts) | 寫前衝突檢查的選事實、提示詞與校驗：只認硬矛盾，每一處都要帶兩句能在原文裡找到的引文。 |
+| [preflight.ts](preflight.ts) | ★ 一致性預檢：細綱排出場的人在卡上或連續性事實裡已經死了 → 一條風險。 |
+| [manuscriptCheck.ts](manuscriptCheck.ts) | 寫完一章之後的確定性檢查（禁用詞、停在半句、比喻詞計數）與續寫回退點。 |
+| [sensitiveWords.ts](sensitiveWords.ts) | 自定義敏感詞表 `.novelwarden/sensitive.txt` 的解析（寫作體檢用），壞行跳過並記原因。 |
+| [trimProse.ts](trimProse.ts) | 刪修飾的純函式：切段編號、讀回 `[n] 正文`、只許刪的逐段驗收（`trimProblem`：新增漢字按字 LCS 算、對白一字不差、刪完至少留四成、段尾標點不變）、拼回正文並按八成保底退回刪得最多的段（`applyTrim`）。純函式、零 import。 |
+| [paragraphFormat.ts](paragraphFormat.ts) | ★ **正文的分段格式與一鍵排版**（`paragraphStyle` 三個值，`formatProse` / `layoutProse`）。 |
+| [textFind.ts](textFind.ts) | 查詢替換的匹配口徑（編正則、找全部匹配、`$1` 展開、只換選中的幾處），編輯器查詢條與全書查詢替換共用。 |
+| [bookDir.ts](bookDir.ts) | 新建一本書時的資料夾名（`bookDirName`）。純函式，前端也打包它。 |
+| [bookFindScope.ts](bookFindScope.ts) | 全書查詢替換的範圍表與上限（`BOOK_FIND_LIMIT`）。純資料，前端也打包它。 |
+| [bookFind.ts](bookFind.ts) | 全書查詢替換在一份檔案上的口徑：哪些字不搜不換（`protectionOf`：frontmatter 的機器賬、解析器認的小節標題）。 |
+| [paragraphDiff.ts](paragraphDiff.ts) | 段級 diff（五期 W11）：按空行切段、段序列 LCS、相鄰改動併成一處，`joinMerge` 組合合併結果。獨立版的合併檢視直接打包它。純函式、零 import。 |
+| [project.ts](project.ts) | ★ `NovelProject`：只讀的資料訪問層（寫盤在 `core/workspace/`）：腳手架、章節索引、架構讀取、細綱按路徑配對、定稿查詢、回收站落點。 |
+| [providers.ts](providers.ts) | ★ 多服務商 / 多模型的資料模型；引用只在第一個斜槓處切分（第 5 條）。 |
+| [tiers.ts](tiers.ts) | ★ **模型分檔**：三檔與各項後臺任務的歸屬（含 `review`、`transcribe`）。純資料 + 純函式。 |
+| [transcribe.ts](transcribe.ts) | 轉寫與具體哪一步無關的那一半：兩條訊息（`transcribeMessages`）與溫度 0；整條走法在 features/transcribe.ts。 |
+| [callChoice.ts](callChoice.ts) | 調模型之前那一問的兩個下拉框：`CallChoice` / `CallPrompt` / `CallAnswer`。 |
+| [thinking.ts](thinking.ts) | ★ **思考深度**的檔位表與兩家的欄位對映；「不思考」不帶任何思考引數。 |
+| [contextDetail.ts](contextDetail.ts) | ★ **上下文詳細度**四級與每一級的全部上限；`contextLimitsOf(config)` 是唯一的取法。 |
+| [session.ts](session.ts) | 對話會話儲存 `.novelwarden/sessions/<id>.json`：創作目標、@ 引用、上下文明細快照的序列化與舊會話歸一。 |
 
-## 关键设计
+## 關鍵設計
 
-- **每次读盘，不缓存正文**：`read*` 方法每次调用都重新读文件（作者可能刚手改完），只有章节列表做一层缓存，由 FileSystemWatcher 主动失效。
-- **目录是任意深度的**：`chapters/`、`characters/`、`lore/` 都递归扫描，作者可以按卷、按阵营分子目录整理（`summaries/` 也递归扫：细纲跟着正文的子目录走）。隐藏目录（含 `.trash/`）与 `node_modules` 一律跳过，深度上限 8 层。
-- **章节认任意扩展名，角色/设定只认 `.md`**：章节的判定在 `chapterFile.ts`——数字前缀 + 非二进制扩展名，所以 `001-楔子.txt`、`001-楔子`（无扩展名）、`004.json` 都是章节，`001-封面.png` 不是，`047 细纲.txt`、`048 作话.txt` 这种整个标题就是笔记词的也不是。角色卡与设定条目是插件自己的数据格式（frontmatter + 固定小节），不跟着放宽；`listFilesDeep` 收 accept 回调，两类各传各的。
-- **顺序只看序号，一条轴**：章节顺序由文件名数字前缀决定，与所在层级无关；`卷一/003-x.md` 与 `003-x.md` 都是「第 3 章」。细纲号就是章号，但配对按路径：有正文的章只认正文镜像的那份细纲（`NovelProject.plotFor`），还没有正文的章按号认计划。序号撞车时两条都留在树上，让作者看见冲突，流水线认路径排序第一份正文。
-- **只有 markdown 家族解析 H1**：`.md`/`.markdown` 的章节标题取自正文首行的 `# 标题`（`readChapterText` 会剥掉），其余格式一律取文件名、正文一个字节不动。`extractH1` 与 `stripH1` **都只看首行、互为逆运算**——早先 `extractH1` 带 `m` 标志扫全文，会把 `.txt` 正文中段的一行 `# xxx` 认成标题却不剥掉它。改这两个函数时务必保持互逆。（副作用：角色卡/设定条目里 `# 名字` 不在首行时，标题现在回落 `frontmatter.name` → 文件名。）
-- **草稿与细纲都按章节路径镜像**：`chapters/第一卷/012-夜入.txt` → `drafts/第一卷/012-夜入.txt`（文件名原样）、`.novelwarden/summaries/第一卷/012-夜入.md`（扩展名换成 `.md`），不落索引——没有索引就没有会漂移的第二份真相。章节（文件或整个卷目录）经网关改名/移动时草稿与细纲跟着搬（`workspace/handlers/chapter.ts` 的 `carryDraft` / `carryPlot`；移出 `chapters/` 就留在原处），单章改名时细纲里的标题也跟着改成新名（`Workspace.retitlePlot`，只改标题两行；作者在细纲上另起过的不动），删章节两样都不删（第 10 条；细纲退回这一章的计划）；在外面直接给正文改名，旧细纲不被新路径冒认（那是一章新的）。细纲改名改的是标题：没有正文时文件名跟着标题，有正文时文件名跟着正文不动；正文从不跟着细纲改名（作者的文件）。照细纲新写正文时正文落在细纲所在的子目录，纯序号的细纲（`030.md`）配上有标题的正文会跟着改名（`Workspace.createChapterAt`）。目标已存在时**不动**（不静默覆盖）。
-- **`deletePlot` 不碰 `chapters/`**：删细纲只是放弃这一章的规划稿（定稿过的连同档案一起进回收站），正文是作者的东西，不该被顺手带走。
-- **新建只出序号名**：`writePlot` / `createChapter` 的 `title` 允许为空，那时落成 `007.md` 且不写 H1——手工新建一章时还没有标题可言，凭空塞一个「第7章」进文件名只是个假标题，而它会进上下文。为此有个 `safeStem`：**空标题给空串，不给 `sanitizeFileName` 的兜底名「未命名」**，否则会得到 `007-未命名.md`。标题回落链（`extractH1` → 文件名词干 → `第 N 章`）本来就认这种名；界面上的说法统一走 `pipeline.ts` 的 `chapterLabel`，未命名时只报序号。写 H1 时用的是**清洗后的词干**而不是原样 `title`，两者一致，改名时 `renamedBody` 才认得出「这个 H1 是跟着文件名走的」。
-- **正文依据的细纲指纹记在细纲上**：章节可以是 `.txt` / 无扩展名 / `.json`，是作者的东西、没有 frontmatter，所以「这份正文依据的是哪一版细纲」记在细纲自己的 frontmatter（`writtenFrom`），由正文落盘那一步写（`workspace.recordWrittenFrom`），定稿时刷成反向更新之后的指纹——之后再改细纲，正文才挂 ⟳。定稿时正文的 `contentHash` 记在同一份 frontmatter 的 `sourceHash` 上。从没记过（作者手写的正文）就永不标脏。老工程 `manuscripts/` 里的中转站正文、`plots/` 里的老细纲一个字节都不动，代码不再读。
-- **草稿是纯推导出来的**：`draftRelPathFor` 把章节在**章节根之下**的那段相对路径镜像到 `draftsDir` 下，文件名含扩展名原样沿用。`ensureDraft` 按需创建、已存在原样返回（不静默覆盖）；`listDraftPaths` 一次遍历给出全部已存在的草稿，供工程页与 `@` 引用共用（每章一次 stat 会把工程页刷新的 syscall 翻一倍）。`draftsDir` 是 `chaptersDir` 的兄弟目录、不从它派生，因此改 `chaptersDir` 不影响草稿落点；`chapterSkipDirs()` 兜住 `chaptersDir` 被配成 `.` 的极端情况。
-- **出场人物只认定稿过的细纲**：有 `sourceHash` 的细纲，它的 `cast` 是**实际出场**，也是唯一的真相（AGENTS.md 第 14 条）。没定稿的细纲里「出场人物」一节是**计划**出场：只给装配器挑角色卡（`context/layers/render.ts` 的 `selectCharacters`）、算「后几章才出场的人」与一致性预检用，不进 `castIndex`——混进去会污染出场章统计与角色卡语料（D13）。
-- **角色/设定的 slug 是路径**：根目录下的文件 slug 就是文件名（与改造前一致），子目录里的形如 `主角/林昭`——上下文明细里的 `character:<slug>` 因此仍然唯一。
-- **定稿对不对得上按章算**：`chapters/` 里的成品写盘后重算 `contentHash`，与正文镜像那份细纲 frontmatter 里的 `sourceHash` 比对（`finalizedPlotOf`），不一致就回到待定稿。**空章不算没定稿**——没有正文就无从定稿，混进来会让同步细纲的确认框报一个虚高的调用次数。不自动重新定稿，只提示。manifest 只是章节索引，不记任何定稿的账。
-- **出场人物有两种形态，一份信息**：定稿过的细纲 frontmatter 的 `cast: [林昭, 年轻守卫(那个年轻人)]` 给程序用（角色页聚合、角色卡关联），`## 出场人物` 小节给人看。定稿时从结构化 cast 渲染出小节，保证两者一致；**读的时候以 frontmatter 为准，字段缺席才从小节文本反解**（见 [castParse.ts](castParse.ts) 的 `castFromText`）——老工程的摘要与作者手写的细纲没有这个字段，不该因此在角色页上凭空少一批人。用括号而不是嵌套 YAML 是因为本层的 frontmatter 解析器刻意只支持字符串与字符串数组，为一个字段引入真正的 yaml 依赖不值得，而括号形式作者也能直接手改。
-  `castFromText` 的两条判据（名字 ≤ 8 字、不含「的了是在不没」这类虚词）是为了挡住模型把这一节写成句子的情况——按标点切开会得到一串句子碎片，全都会跑进角色页的「未建卡」组里。宁可漏掉一两个长称呼，也不能让那一组塞满垃圾；漏掉的重新定稿就有了（定稿走结构化 cast，根本不经过这个函数）。计划名单（`plannedNames`）不套这两条：那是作者与排细纲的模型写的名单，「沈从文」不该因为带个「从」就漏掉。
-- **角色卡的 `stateThrough` / `stateHash` 是「当前状态」的归属账**（四期，D15）：前者是这一节写到第几章（0 = 开篇，角色图谱建卡时写的），后者是机器最后一次写它时的指纹。`renderCharacterCard` 原样带着它们走——清理别名、合并重复卡这些维护动作不重新盖章，作者改过的那一节不会因为换了个别名就变成「机器写的」。
-- **角色卡的 `appearsIn` / `updatedThrough` 是缓存**：前者是该角色出场的章号，后者是上次「更新角色卡」读到了第几章（增量更新的依据）。真相永远是各章定稿过的细纲，落在卡里只为两件事——不读全部细纲就能在角色页显示「出场 12 章」，以及日后按人物检索章节。
-- **会话用 JSON 而不是 Markdown**：会话是机器记录（含 token 明细、附件快照），不期待人工编写，但仍是纯文本、可 Git。
-- **选区引用存快照**：`Attachment.text` 对 selection 存当时的快照，历史对话不因原文修改而变；整文件引用每次读盘取最新。
+- **每次讀盤，不快取正文**：`read*` 方法每次呼叫都重新讀檔案（作者可能剛手改完），只有章節列表做一層快取，由 FileSystemWatcher 主動失效。
+- **目錄是任意深度的**：`chapters/`、`characters/`、`lore/` 都遞迴掃描，作者可以按卷、按陣營分子目錄整理（`summaries/` 也遞迴掃：細綱跟著正文的子目錄走）。隱藏目錄（含 `.trash/`）與 `node_modules` 一律跳過，深度上限 8 層。
+- **章節認任意副檔名，角色/設定只認 `.md`**：章節的判定在 `chapterFile.ts`——數字字首 + 非二進位制副檔名，所以 `001-楔子.txt`、`001-楔子`（無副檔名）、`004.json` 都是章節，`001-封面.png` 不是，`047 细纲.txt`、`048 作话.txt` 這種整個標題就是筆記詞的也不是。角色卡與設定條目是外掛自己的資料格式（frontmatter + 固定小節），不跟著放寬；`listFilesDeep` 收 accept 回呼，兩類各傳各的。
+- **順序只看序號，一條軸**：章節順序由檔名數字字首決定，與所在層級無關；`卷一/003-x.md` 與 `003-x.md` 都是「第 3 章」。細綱號就是章號，但配對按路徑：有正文的章只認正文映象的那份細綱（`NovelProject.plotFor`），還沒有正文的章按號認計劃。序號撞車時兩條都留在樹上，讓作者看見衝突，流水線認路徑排序第一份正文。
+- **只有 markdown 家族解析 H1**：`.md`/`.markdown` 的章節標題取自正文首行的 `# 標題`（`readChapterText` 會剝掉），其餘格式一律取檔名、正文一個位元組不動。`extractH1` 與 `stripH1` **都只看首行、互為逆運算**——早先 `extractH1` 帶 `m` 標誌掃全文，會把 `.txt` 正文中段的一行 `# xxx` 認成標題卻不剝掉它。改這兩個函式時務必保持互逆。（副作用：角色卡/設定條目裡 `# 名字` 不在首行時，標題現在回落 `frontmatter.name` → 檔名。）
+- **草稿與細綱都按章節路徑映象**：`chapters/第一卷/012-夜入.txt` → `drafts/第一卷/012-夜入.txt`（檔名原樣）、`.novelwarden/summaries/第一卷/012-夜入.md`（副檔名換成 `.md`），不落索引——沒有索引就沒有會漂移的第二份真相。章節（檔案或整個卷目錄）經閘道器改名/移動時草稿與細綱跟著搬（`workspace/handlers/chapter.ts` 的 `carryDraft` / `carryPlot`；移出 `chapters/` 就留在原處），單章改名時細綱裡的標題也跟著改成新名（`Workspace.retitlePlot`，只改標題兩行；作者在細綱上另起過的不動），刪章節兩樣都不刪（第 10 條；細綱退回這一章的計劃）；在外面直接給正文改名，舊細綱不被新路徑冒認（那是一章新的）。細綱改名改的是標題：沒有正文時檔名跟著標題，有正文時檔名跟著正文不動；正文從不跟著細綱改名（作者的檔案）。照細綱新寫正文時正文落在細綱所在的子目錄，純序號的細綱（`030.md`）配上有標題的正文會跟著改名（`Workspace.createChapterAt`）。目標已存在時**不動**（不靜默覆蓋）。
+- **`deletePlot` 不碰 `chapters/`**：刪細綱只是放棄這一章的規劃稿（定稿過的連同檔案一起進回收站），正文是作者的東西，不該被順手帶走。
+- **新建只出序號名**：`writePlot` / `createChapter` 的 `title` 允許為空，那時落成 `007.md` 且不寫 H1——手工新建一章時還沒有標題可言，憑空塞一個「第7章」進檔名只是個假標題，而它會進上下文。為此有個 `safeStem`：**空標題給空串，不給 `sanitizeFileName` 的兜底名「未命名」**，否則會得到 `007-未命名.md`。標題回落鏈（`extractH1` → 檔名詞幹 → `第 N 章`）本來就認這種名；介面上的說法統一走 `pipeline.ts` 的 `chapterLabel`，未命名時只報序號。寫 H1 時用的是**清洗後的詞幹**而不是原樣 `title`，兩者一致，改名時 `renamedBody` 才認得出「這個 H1 是跟著檔名走的」。
+- **正文依據的細綱指紋記在細綱上**：章節可以是 `.txt` / 無副檔名 / `.json`，是作者的東西、沒有 frontmatter，所以「這份正文依據的是哪一版細綱」記在細綱自己的 frontmatter（`writtenFrom`），由正文落盤那一步寫（`workspace.recordWrittenFrom`），定稿時刷成反向更新之後的指紋——之後再改細綱，正文才掛 ⟳。定稿時正文的 `contentHash` 記在同一份 frontmatter 的 `sourceHash` 上。從沒記過（作者手寫的正文）就永不標髒。老工程 `manuscripts/` 裡的中轉站正文、`plots/` 裡的老細綱一個位元組都不動，程式碼不再讀。
+- **草稿是純推匯出來的**：`draftRelPathFor` 把章節在**章節根之下**的那段相對路徑映象到 `draftsDir` 下，檔名含副檔名原樣沿用。`ensureDraft` 按需建立、已存在原樣返回（不靜默覆蓋）；`listDraftPaths` 一次遍歷給出全部已存在的草稿，供工程頁與 `@` 引用共用（每章一次 stat 會把工程頁重新整理的 syscall 翻一倍）。`draftsDir` 是 `chaptersDir` 的兄弟目錄、不從它派生，因此改 `chaptersDir` 不影響草稿落點；`chapterSkipDirs()` 兜住 `chaptersDir` 被配成 `.` 的極端情況。
+- **出場人物只認定稿過的細綱**：有 `sourceHash` 的細綱，它的 `cast` 是**實際出場**，也是唯一的真相（AGENTS.md 第 14 條）。沒定稿的細綱裡「出場人物」一節是**計劃**出場：只給裝配器挑角色卡（`context/layers/render.ts` 的 `selectCharacters`）、算「後幾章才出場的人」與一致性預檢用，不進 `castIndex`——混進去會汙染出場章統計與角色卡語料（D13）。
+- **角色/設定的 slug 是路徑**：根目錄下的檔案 slug 就是檔名（與改造前一致），子目錄裡的形如 `主角/林昭`——上下文明細裡的 `character:<slug>` 因此仍然唯一。
+- **定稿對不對得上按章算**：`chapters/` 裡的成品寫盤後重算 `contentHash`，與正文映象那份細綱 frontmatter 裡的 `sourceHash` 比對（`finalizedPlotOf`），不一致就回到待定稿。**空章不算沒定稿**——沒有正文就無從定稿，混進來會讓同步細綱的確認框報一個虛高的呼叫次數。不自動重新定稿，只提示。manifest 只是章節索引，不記任何定稿的賬。
+- **出場人物有兩種形態，一份資訊**：定稿過的細綱 frontmatter 的 `cast: [林昭, 年輕守衛(那個年輕人)]` 給程式用（角色頁聚合、角色卡關聯），`## 出場人物` 小節給人看。定稿時從結構化 cast 渲染出小節，保證兩者一致；**讀的時候以 frontmatter 為準，欄位缺席才從小節文字反解**（見 [castParse.ts](castParse.ts) 的 `castFromText`）——老工程的摘要與作者手寫的細綱沒有這個欄位，不該因此在角色頁上憑空少一批人。用括號而不是巢狀 YAML 是因為本層的 frontmatter 解析器刻意只支援字串與字串陣列，為一個欄位引入真正的 yaml 依賴不值得，而括號形式作者也能直接手改。
+  `castFromText` 的兩條判據（名字 ≤ 8 字、不含「的了是在不沒」這類虛詞）是為了擋住模型把這一節寫成句子的情況——按標點切開會得到一串句子碎片，全都會跑進角色頁的「未建卡」組裡。寧可漏掉一兩個長稱呼，也不能讓那一組塞滿垃圾；漏掉的重新定稿就有了（定稿走結構化 cast，根本不經過這個函式）。計劃名單（`plannedNames`）不套這兩條：那是作者與排細綱的模型寫的名單，「沈從文」不該因為帶個「從」就漏掉。
+- **角色卡的 `stateThrough` / `stateHash` 是「當前狀態」的歸屬賬**（四期，D15）：前者是這一節寫到第幾章（0 = 開篇，角色圖譜建卡時寫的），後者是機器最後一次寫它時的指紋。`renderCharacterCard` 原樣帶著它們走——清理別名、合併重複卡這些維護動作不重新蓋章，作者改過的那一節不會因為換了個別名就變成「機器寫的」。
+- **角色卡的 `appearsIn` / `updatedThrough` 是快取**：前者是該角色出場的章號，後者是上次「更新角色卡」讀到了第幾章（增量更新的依據）。真相永遠是各章定稿過的細綱，落在卡裡只為兩件事——不讀全部細綱就能在角色頁顯示「出場 12 章」，以及日後按人物檢索章節。
+- **會話用 JSON 而不是 Markdown**：會話是機器記錄（含 token 明細、附件快照），不期待人工編寫，但仍是純文字、可 Git。
+- **選區引用存快照**：`Attachment.text` 對 selection 存當時的快照，歷史對話不因原文修改而變；整檔案引用每次讀盤取最新。
 
-## 依赖关系
+## 依賴關係
 
-本层只依赖 Node API 与 core 内更底层模块；`context/`、`features/`、`llm/` 依赖本层，反向不允许。
+本層只依賴 Node API 與 core 內更底層模組；`context/`、`features/`、`llm/` 依賴本層，反向不允許。

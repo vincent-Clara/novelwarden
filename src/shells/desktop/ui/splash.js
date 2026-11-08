@@ -1,12 +1,12 @@
 /**
- * 启动页：starting / failed。打开文件夹改由 sidecar 页面上的 HTML 菜单负责。
+ * 啟動頁：starting / failed。開啟資料夾改由 sidecar 頁面上的 HTML 選單負責。
  *
- * 状态既 **拉** 也 **推**：页面加载完成的时刻与 Rust 侧 emit 的时刻没有先后保证，
- * 只监听会丢掉早于自己的那次推送，只拉又不知道后来变没变。所以 load 时 invoke
- * 一次 `boot_state`，之后跟着 `boot-state` 事件更新。
+ * 狀態既 **拉** 也 **推**：頁面載入完成的時刻與 Rust 側 emit 的時刻沒有先後保證，
+ * 只監聽會丟掉早於自己的那次推送，只拉又不知道後來變沒變。所以 load 時 invoke
+ * 一次 `boot_state`，之後跟著 `boot-state` 事件更新。
  *
- * 依赖 tauri.conf.json 的 `withGlobalTauri: true`——这一页是纯静态文件，
- * 没有打包步骤，只能用全局的 window.__TAURI__。
+ * 依賴 tauri.conf.json 的 `withGlobalTauri: true`——這一頁是純靜態檔案，
+ * 沒有打包步驟，只能用全域的 window.__TAURI__。
  */
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -22,7 +22,7 @@ const ui = {
   logs: el('btnLogs'),
 };
 
-/** 每个按钮在哪些状态下出现。 */
+/** 每個按鈕在哪些狀態下出現。 */
 const BUTTONS = {
   failed: ['retry', 'logs'],
   starting: [],
@@ -42,13 +42,13 @@ function render(state) {
   }
 
   if (phase === 'failed') {
-    ui.title.textContent = '内置服务没起来';
+    ui.title.textContent = '內建服務沒起來';
   } else {
-    ui.title.textContent = '正在启动 Novelwarden…';
+    ui.title.textContent = '正在啟動 Novelwarden…';
   }
 }
 
-/** 点了按钮就回到「启动中」：命令本身是异步的，界面不该停在旧状态上。 */
+/** 點了按鈕就回到「啟動中」：命令本身是非同步的，介面不該停在舊狀態上。 */
 ui.retry.addEventListener('click', () => {
   render({ phase: 'starting' });
   invoke('retry').catch((err) => {
@@ -56,7 +56,7 @@ ui.retry.addEventListener('click', () => {
   });
 });
 
-// 「查看日志」不改状态：它只是开一个文件管理器窗口，失败界面得留着。
+// 「檢視日誌」不改狀態：它只是開一個檔案管理器視窗，失敗介面得留著。
 ui.logs.addEventListener('click', () => {
   invoke('open_logs').catch((err) => {
     ui.detail.hidden = false;

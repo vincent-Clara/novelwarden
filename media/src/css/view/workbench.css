@@ -1,21 +1,21 @@
 /*
- * 「当前产物」：流水线条上的一个入口 + 一只悬停浮窗。
+ * 「當前產物」：流水線條上的一個入口 + 一隻懸停浮窗。
  *
- * 从前这是消息流里一张 `position: sticky` 的常驻卡片——滚不出视野，代价是永远
- * 占着消息流最上面那一块，既关不掉也藏不起来（只能折叠成一条标题栏，那条标题
- * 栏还在）。侧边栏只有三百来像素宽，一份八小节的细纲能吃掉半屏对话。
+ * 從前這是訊息流裡一張 `position: sticky` 的常駐卡片——滾不出視野，代價是永遠
+ * 佔著訊息流最上面那一塊，既關不掉也藏不起來（只能摺疊成一條標題欄，那條標題
+ * 欄還在）。側邊欄只有三百來畫素寬，一份八小節的細綱能吃掉半屏對話。
  *
- * 现在与工程页那三只浮窗（summary-tip / detail-tip / error-tip）同一套：挂在
- * body 上 `position: fixed`（消息流有内部滚动，挂在里面会被裁掉），几何算在
- * `view/tip.ts`。不占版面，随时够得着。
+ * 現在與工程頁那三隻浮窗（summary-tip / detail-tip / error-tip）同一套：掛在
+ * body 上 `position: fixed`（訊息流有內部滾動，掛在裡面會被裁掉），幾何算在
+ * `view/tip.ts`。不佔版面，隨時夠得著。
  *
- * 类名用 `wbt-` 而不是 `wb-`：`wb-` 是**独立版工作台外壳**的命名空间
- * （`css/standalone/workbench.css` 里的 `.wb-title` 是那条 38px 高的标题栏、
- * `.wb-side` 是侧栏……）。改造前这张卡的标题也叫 `.wb-title`，于是在独立版里
- * 它被标题栏那条规则套上了 38px 高度与标题栏底色——一处没人发现的串味。
+ * 類名用 `wbt-` 而不是 `wb-`：`wb-` 是**獨立版工作臺外殼**的名稱空間
+ * （`css/standalone/workbench.css` 裡的 `.wb-title` 是那條 38px 高的標題欄、
+ * `.wb-side` 是側欄……）。改造前這張卡的標題也叫 `.wb-title`，於是在獨立版裡
+ * 它被標題欄那條規則套上了 38px 高度與標題欄底色——一處沒人發現的串味。
  */
 
-/* ---- 流水线条上的入口 */
+/* ---- 流水線條上的入口 */
 
 .wb-entry {
   display: flex;
@@ -46,7 +46,7 @@
   white-space: nowrap;
 }
 
-/* 上游变过 / 这一层还空着。与流水线条上的 ⟳ 同色——同一件事在两处该长得一样。 */
+/* 上游變過 / 這一層還空著。與流水線條上的 ⟳ 同色——同一件事在兩處該長得一樣。 */
 .wbt-entry-mark {
   flex: 0 0 auto;
   margin-left: auto;
@@ -57,17 +57,17 @@
   color: var(--vscode-descriptionForeground);
 }
 
-/* 写前提醒（完善设定三期）：只是提个醒，淡色，不与 ⟳ 同色。 */
+/* 寫前提醒（完善設定三期）：只是提個醒，淡色，不與 ⟳ 同色。 */
 .wbt-entry-mark.is-notice {
   color: var(--vscode-descriptionForeground);
 }
 
 /* ---- 浮窗
 
-   与 .summary-tip 同一套取舍：z-index 25（低于 toast 30 与右键菜单 40，那两个
-   都是用户主动要的）；60vh 是可读性上限，放不下时 tip.ts 再压一次行内
-   max-height；**没有** pointer-events: none——细纲里的要点常要抄进对话，
-   鼠标得进得来，能滚、能选中复制（收起的宽限期在 workbench.ts）。 */
+   與 .summary-tip 同一套取捨：z-index 25（低於 toast 30 與右鍵選單 40，那兩個
+   都是使用者主動要的）；60vh 是可讀性上限，放不下時 tip.ts 再壓一次行內
+   max-height；**沒有** pointer-events: none——細綱裡的要點常要抄進對話，
+   滑鼠得進得來，能滾、能選中複製（收起的寬限期在 workbench.ts）。 */
 
 .workbench-tip {
   position: fixed;
@@ -76,7 +76,7 @@
   max-width: calc(100vw - 16px);
   max-height: 60vh;
   overflow-y: auto;
-  /* 浮窗里滚到头时不要把滚动继续传给底下的消息流。 */
+  /* 浮窗裡滾到頭時不要把滾動繼續傳給底下的訊息流。 */
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
@@ -86,7 +86,7 @@
   border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
   border-radius: var(--radius);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
-  /* 产物是拿来读、拿来抄进正文的，别禁掉选中。 */
+  /* 產物是拿來讀、拿來抄進正文的，別禁掉選中。 */
   user-select: text;
 }
 
@@ -123,13 +123,13 @@
   padding: 1px 5px;
 }
 
-/* ---- 小节 */
+/* ---- 小節 */
 
 /*
- * 「动作」「对话」这类小节。左边一列固定宽的键，右边是内容。
+ * 「動作」「對話」這類小節。左邊一列固定寬的鍵，右邊是內容。
  *
- * `white-space: pre-line` 让多行素材保持分行——几条动作并成一行读起来
- * 就完全不像几个独立的动作了，对话更是必须一句一行。
+ * `white-space: pre-line` 讓多行素材保持分行——幾條動作併成一行讀起來
+ * 就完全不像幾個獨立的動作了，對話更是必須一句一行。
  */
 .wbt-row {
   display: flex;
@@ -150,21 +150,21 @@
   overflow-wrap: anywhere;
 }
 
-/* 上游变过。与流水线条上的 ⟳ 同色——同一件事在两处该长得一样。 */
+/* 上游變過。與流水線條上的 ⟳ 同色——同一件事在兩處該長得一樣。 */
 .wbt-warning {
   font-size: 0.85em;
   line-height: 1.5;
   color: var(--vscode-editorWarning-foreground, #cca700);
 }
 
-/* 写前提醒（完善设定三期）：本章要用的设定还只有一句话。不拦，所以不用警告色。 */
+/* 寫前提醒（完善設定三期）：本章要用的設定還只有一句話。不攔，所以不用警告色。 */
 .wbt-notice {
   font-size: 0.85em;
   line-height: 1.5;
   color: var(--vscode-descriptionForeground);
 }
 
-/* 这一层还没有产物。说清楚缺什么，不要留一只空浮窗。 */
+/* 這一層還沒有產物。說清楚缺什麼，不要留一隻空浮窗。 */
 .wbt-empty {
   font-size: 0.85em;
   line-height: 1.5;

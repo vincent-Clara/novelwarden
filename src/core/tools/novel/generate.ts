@@ -1,39 +1,39 @@
 /**
- * `generate` —— 「agent 只做上层调度，实际生成通过工具调用」的落点。
+ * `generate` —— 「agent 只做上層排程，實際生成通過工具呼叫」的落點。
  *
- * ## 五件必须做对的事
+ * ## 五件必須做對的事
  *
- * 1. **产物绝不回灌 agent 上下文**。返回文本里只有形状与 draftId，**没有
- *    正文**。一份三千字的正文塞回循环，agent 每走一步就重烧一遍——十步之后
- *    这一份正文被算了十次钱。要看内容让它显式 `read`。
- * 2. **`history` 传空数组**。agent 的工具调用不是作者的讨论，混进装配器会被
- *    当成创作要求装进 prompt（「用户刚才说：list .novelwarden/summaries」）。唯一
- *    该带历史的能力是 `settle`（落定细纲、落定设定）——它要沉淀的就是一段讨论，所以**不支持它**。
- * 3. **哪一层用哪个模型**，AGENTS 第 12 条的延伸：
+ * 1. **產物絕不回灌 agent 上下文**。返回文字裡只有形狀與 draftId，**沒有
+ *    正文**。一份三千字的正文塞回迴圈，agent 每走一步就重燒一遍——十步之後
+ *    這一份正文被算了十次錢。要看內容讓它顯式 `read`。
+ * 2. **`history` 傳空陣列**。agent 的工具呼叫不是作者的討論，混進裝配器會被
+ *    當成創作要求裝進 prompt（「使用者剛才說：list .novelwarden/summaries」）。唯一
+ *    該帶歷史的能力是 `settle`（落定細綱、落定設定）——它要沉澱的就是一段討論，所以**不支援它**。
+ * 3. **哪一層用哪個模型**，AGENTS 第 12 條的延伸：
  *
- *    | 层 | 用哪个模型 | 为什么 |
+ *    | 層 | 用哪個模型 | 為什麼 |
  *    |---|---|---|
- *    | `manuscript` | **对话页选定的那个**，不走池 | 中途换人会让文风断掉 |
- *    | `outline` | 同上 | 一次定调，而且没有对应档位 |
- *    | `setting` | `setting` 档（故事架构） | 与工程页「补齐架构」同一个模型 |
- *    | `plot` | `plotOutline` 档 | 与工程页「批量拆细纲」同一个模型 |
+ *    | `manuscript` | **對話頁選定的那個**，不走池 | 中途換人會讓文風斷掉 |
+ *    | `outline` | 同上 | 一次定調，而且沒有對應檔位 |
+ *    | `setting` | `setting` 檔（故事架構） | 與工程頁「補齊架構」同一個模型 |
+ *    | `plot` | `plotOutline` 檔 | 與工程頁「批次拆細綱」同一個模型 |
  *
- *    走池时**必须把池的 `primaryBudget` 一起传下去**（第 13 条）：
- *    `config.contextWindow` 跟着对话页那个模型走，拿 200k 的窗口给快速档的
- *    32k 模型装配上下文会稳定超窗。
- * 4. **流式内容照旧推给前端**：作者看得见 agent 在写什么，而不是盯着一个
- *    「正在生成」转十几秒（第 11 条：不闷着干活）。
- * 5. **发请求之前先 `usage.record(1)`**（第 4 条：不偷偷烧 token）。记在前面是
- *    因为**请求发出去钱就花了**——中途抛异常、被取消，那一次照样收费。等函数
- *    返回再记，异常那条路上的钱就丢账了。**这里只报数，不判断触没触顶**：
- *    上限是调用方的事，工具连「上限是多少」都不知道。
+ *    走池時**必須把池的 `primaryBudget` 一起傳下去**（第 13 條）：
+ *    `config.contextWindow` 跟著對話頁那個模型走，拿 200k 的視窗給快速檔的
+ *    32k 模型裝配上下文會穩定超窗。
+ * 4. **流式內容照舊推給前端**：作者看得見 agent 在寫什麼，而不是盯著一個
+ *    「正在生成」轉十幾秒（第 11 條：不悶著幹活）。
+ * 5. **發請求之前先 `usage.record(1)`**（第 4 條：不偷偷燒 token）。記在前面是
+ *    因為**請求發出去錢就花了**——中途拋異常、被取消，那一次照樣收費。等函式
+ *    返回再記，異常那條路上的錢就丟賬了。**這裡只報數，不判斷觸沒觸頂**：
+ *    上限是呼叫方的事，工具連「上限是多少」都不知道。
  *
- * ## 层与目标从路径反推
+ * ## 層與目標從路徑反推
  *
- * `kindOfPath` 一次给出 `stage` 与 `target`，不必让模型填 `{kind, chapterNo}`
- * 那种嵌套结构——路径是产物在这个工程里的身份，作者在文件管理器里看到的
- * 就是它。**章节路径是例外**：正文层的 target 以细纲路径为身份，章节路径要换成
- * 这一章的细纲（正文在 `summaries/` 下的镜像），那一步要读盘，在这里做。
+ * `kindOfPath` 一次給出 `stage` 與 `target`，不必讓模型填 `{kind, chapterNo}`
+ * 那種巢狀結構——路徑是產物在這個工程裡的身份，作者在檔案管理器裡看到的
+ * 就是它。**章節路徑是例外**：正文層的 target 以細綱路徑為身份，章節路徑要換成
+ * 這一章的細綱（正文在 `summaries/` 下的映象），那一步要讀盤，在這裡做。
  */
 import type { ToolContext, ToolDef, ToolIntent, ToolResult } from '../types';
 import { int, objectSchema, str } from '../schema';
@@ -60,13 +60,13 @@ import {
 const log = scoped('MCP');
 
 /**
- * 哪一层走哪一档。**列在这里的才走池**——不在表里的（正文、大纲）严格用
- * 对话页选定的那个模型，不走池、不 fallback（第 12 条）。
+ * 哪一層走哪一檔。**列在這裡的才走池**——不在表裡的（正文、大綱）嚴格用
+ * 對話頁選定的那個模型，不走池、不 fallback（第 12 條）。
  *
- * 没有审稿档：这个工具不做审稿（`capability === 'review'` 当场报错，理由写在那里）。
- * `review` 档只给批量写章的「写完即审稿」用。
+ * 沒有審稿檔：這個工具不做審稿（`capability === 'review'` 當場報錯，理由寫在那裡）。
+ * `review` 檔只給批次寫章的「寫完即審稿」用。
  */
-/** 正文层可选的两种写法。修稿只从审稿报告卡进来，这里不给。 */
+/** 正文層可選的兩種寫法。修稿只從審稿報告卡進來，這裡不給。 */
 const WRITE_MODES = ['continue', 'rewrite'] as const;
 
 const TIER_TASK: Partial<Record<CreationStage, LlmTask>> = {
@@ -79,23 +79,23 @@ export const generateTool: ToolDef = {
   costly: true,
 
   /**
-   * 花钱但不写盘 → `costly`。调用方据此决定问不问（谨慎模式问，平时不问）。
+   * 花錢但不寫盤 → `costly`。呼叫方據此決定問不問（謹慎模式問，平時不問）。
    *
-   * 卡片上必须写清**会花钱**与**产出还会再问一次**：「Agent 想调用 generate，
-   * 允许吗」作者答不上来，他不知道会写到哪、花多少。**这一问是「要不要花钱
-   * 生成」，落盘是另一问**——产出之后当场还有一张卡（第 19 条）。
+   * 卡片上必須寫清**會花錢**與**產出還會再問一次**：「Agent 想呼叫 generate，
+   * 允許嗎」作者答不上來，他不知道會寫到哪、花多少。**這一問是「要不要花錢
+   * 生成」，落盤是另一問**——產出之後當場還有一張卡（第 19 條）。
    */
   intent(args, project): ToolIntent {
     const target = text(args.target);
     const dir = project ? settingDirPath(project, target) : undefined;
     return {
       gate: 'costly',
-      title: `为「${dir ? describeForReview(dir, target) : describePath(target, project)}」调一次创作模型`,
+      title: `為「${dir ? describeForReview(dir, target) : describePath(target, project)}」調一次創作模型`,
       detail: [
         target,
-        text(args.writeMode) === 'continue' ? '接着已有的正文往下写' : text(args.writeMode) === 'rewrite' ? '整章重写' : '',
+        text(args.writeMode) === 'continue' ? '接著已有的正文往下寫' : text(args.writeMode) === 'rewrite' ? '整章重寫' : '',
         text(args.ask) && `要求：${clip(text(args.ask))}`,
-        '这一步会花钱。产出之后还会再问你一次要不要落盘。',
+        '這一步會花錢。產出之後還會再問你一次要不要落盤。',
       ]
         .filter(Boolean)
         .join('\n'),
@@ -103,35 +103,35 @@ export const generateTool: ToolDef = {
   },
 
   description:
-    '调用创作模型，为某一份产物生成内容。target 是那份产物的工程内相对路径，' +
-    '层由路径决定：.novelwarden/config.md、premise.md、world.md 是架构层，角色图谱给角色目录 .novelwarden/characters 本身（一次排出一批角色卡），' +
-    '设定清单给设定目录 .novelwarden/lore 本身（一次排一批设定条目），' +
-    '展开一条设定给那一条条目的路径（.novelwarden/lore/ 下的 .md，如 .novelwarden/lore/宗门/天机阁.md：照已排的细纲把它往前想细，可能建议拆出几条空条目），' +
-    '.novelwarden/outline.md 是大纲层（各章细纲「梗概」的汇总，采纳时按章号写回各章细纲），.novelwarden/summaries/ 下的细纲是细纲层（一章一份，与正文同样的相对路径、扩展名 .md，' +
+    '呼叫創作模型，為某一份產物生成內容。target 是那份產物的工程內相對路徑，' +
+    '層由路徑決定：.novelwarden/config.md、premise.md、world.md 是架構層，角色圖譜給角色目錄 .novelwarden/characters 本身（一次排出一批角色卡），' +
+    '設定清單給設定目錄 .novelwarden/lore 本身（一次排一批設定條目），' +
+    '展開一條設定給那一條條目的路徑（.novelwarden/lore/ 下的 .md，如 .novelwarden/lore/宗门/天机阁.md：照已排的細綱把它往前想細，可能建議拆出幾條空條目），' +
+    '.novelwarden/outline.md 是大綱層（各章細綱「梗概」的彙總，採納時按章號寫回各章細綱），.novelwarden/summaries/ 下的細綱是細綱層（一章一份，與正文同樣的相對路徑、副檔名 .md，' +
     '如 .novelwarden/summaries/上部/003-夜访.md），' +
-    '正文层给那一章的章节路径（chapters/ 下，可以在子目录里；还没写过的章写成 chapters/<章号>.md 即可，' +
-    '按章号认到这一章的细纲）。**细纲路径永远是细纲层**，要写正文不要给细纲路径。' +
-    '这一章已经有正文时用 writeMode 说清是接着写（continue）还是整章重写（rewrite，缺省）。' +
-    '各层可用的 capability 不同：' +
-    // 架构那一层的 settle（落定设定）只给对话页：它要沉淀作者刚才的讨论，这里没有那段讨论（见 run 里的拒绝）。
+    '正文層給那一章的章節路徑（chapters/ 下，可以在子目錄裡；還沒寫過的章寫成 chapters/<章號>.md 即可，' +
+    '按章號認到這一章的細綱）。**細綱路徑永遠是細綱層**，要寫正文不要給細綱路徑。' +
+    '這一章已經有正文時用 writeMode 說清是接著寫（continue）還是整章重寫（rewrite，預設）。' +
+    '各層可用的 capability 不同：' +
+    // 架構那一層的 settle（落定設定）只給對話頁：它要沉澱作者剛才的討論，這裡沒有那段討論（見 run 裡的拒絕）。
     Object.entries(STAGE_CAPABILITIES)
       .map(([stage, caps]) => `${stage}=${caps.filter((c) => c !== 'review' && !(stage === 'setting' && c === 'settle')).join('/')}`)
       .join('；') +
-    '（审稿只能由作者在对话页发起，这个工具不做）。' +
-    '**返回的只有形状与 draftId，没有正文**——正文会直接流给作者看；' +
-    '你要看内容就等它落盘之后再 read。' +
-    '产出之后会当场请作者点头，同意才落盘，结果写在返回里；不必也不要再用 write 写同一份。' +
-    '这个工具会真的调模型花钱，每次调用都会记账，不要重复生成同一份东西。',
+    '（審稿只能由作者在對話頁發起，這個工具不做）。' +
+    '**返回的只有形狀與 draftId，沒有正文**——正文會直接流給作者看；' +
+    '你要看內容就等它落盤之後再 read。' +
+    '產出之後會當場請作者點頭，同意才落盤，結果寫在返回裡；不必也不要再用 write 寫同一份。' +
+    '這個工具會真的調模型花錢，每次呼叫都會記賬，不要重複生成同一份東西。',
 
   parameters: objectSchema(
     {
-      target: str('要生成的那份产物的工程内相对路径。'),
-      capability: str(`要它干什么。${describeCapabilities()}`, CAPABILITIES),
-      ask: str('补充要求，可留空。留空时按上一层的产物照常生成。'),
-      targetWords: int('目标字数，只对正文层有意义。留空取细纲的目标字数，再没有取小说配置的每章字数；不到八成会自动续写。'),
+      target: str('要生成的那份產物的工程內相對路徑。'),
+      capability: str(`要它幹什麼。${describeCapabilities()}`, CAPABILITIES),
+      ask: str('補充要求，可留空。留空時按上一層的產物照常生成。'),
+      targetWords: int('目標字數，只對正文層有意義。留空取細綱的目標字數，再沒有取小說配置的每章字數；不到八成會自動續寫。'),
       writeMode: str(
-        '正文层这一章已经有字时怎么写，其余层不认：continue=接着已有的正文往下写，落盘时追加到末尾；' +
-          'rewrite=整章重写，落盘时覆盖（作者会先逐行对比）。缺省 rewrite。这一章还没有正文时两者一样，就是从头写。',
+        '正文層這一章已經有字時怎麼寫，其餘層不認：continue=接著已有的正文往下寫，落盤時追加到末尾；' +
+          'rewrite=整章重寫，落盤時覆蓋（作者會先逐行對比）。預設 rewrite。這一章還沒有正文時兩者一樣，就是從頭寫。',
         [...WRITE_MODES]
       ),
     },
@@ -145,25 +145,25 @@ export const generateTool: ToolDef = {
     if (!isCapability(capability)) {
       return { text: '', error: `capability 只能是：${CAPABILITIES.join(' / ')}。` };
     }
-    // `settle` 沉淀的是**一段已经发生过的讨论**，而 agent 手里没有那段讨论
-    // （history 恒为空，见文件头第 2 条）。喂它一个空历史，它会凭空编一份
-    // 「刚才讨论出的结论」——那比不支持更糟。落定细纲、落定设定（完善设定二期）都一样。
+    // `settle` 沉澱的是**一段已經發生過的討論**，而 agent 手裡沒有那段討論
+    // （history 恆為空，見檔案頭第 2 條）。餵它一個空歷史，它會憑空編一份
+    // 「剛才討論出的結論」——那比不支援更糟。落定細綱、落定設定（完善設定二期）都一樣。
     if (capability === 'settle') {
       return {
         text: '',
         error:
-          'settle 要沉淀的是作者与模型刚刚讨论出的结论，而你手上没有那段讨论。' +
-          '请让作者在对话页手动落定（/落定细纲、/落定设定）；要按你自己的思路排细纲、展开一条设定用 capability=generate。',
+          'settle 要沉澱的是作者與模型剛剛討論出的結論，而你手上沒有那段討論。' +
+          '請讓作者在對話頁手動落定（/落定細綱、/落定設定）；要按你自己的思路排細綱、展開一條設定用 capability=generate。',
       };
     }
 
-    // `review` 只出报告，要作者在报告卡上勾选之后才修稿——agent 拿到一份「2 严重 · 1 建议」
-    // 做不了什么，也不该替作者决定哪几条算数；作者要审稿，对话页 `/审稿` 或章节条上一颗按钮
-    // 就到。五期把开不开放留给六期，六期定了不开放。
+    // `review` 只出報告，要作者在報告卡上勾選之後才修稿——agent 拿到一份「2 嚴重 · 1 建議」
+    // 做不了什麼，也不該替作者決定哪幾條算數；作者要審稿，對話頁 `/審稿` 或章節條上一顆按鈕
+    // 就到。五期把開不開放留給六期，六期定了不開放。
     if (capability === 'review') {
       return {
         text: '',
-        error: '审稿要作者在对话页的正文层发起（/审稿，或章节条上的「审稿」），报告由作者勾选之后再修稿。这个工具不做审稿。',
+        error: '審稿要作者在對話頁的正文層發起（/審稿，或章節條上的「審稿」），報告由作者勾選之後再修稿。這個工具不做審稿。',
       };
     }
 
@@ -172,10 +172,10 @@ export const generateTool: ToolDef = {
       return {
         text: '',
         error:
-          `认不出「${rel}」是哪一层的产物。` +
-          '架构给 .novelwarden/config.md / premise.md / world.md（角色图谱给 .novelwarden/characters，设定清单给 .novelwarden/lore，展开一条设定给 .novelwarden/lore/ 下那一条的 .md），大纲给 .novelwarden/outline.md，' +
-          '细纲给 .novelwarden/summaries/ 下那一章的细纲（与正文同样的相对路径），正文给那一章的章节路径（chapters/ 下）。' +
-          '可以先用 list 看看那个目录下实际有什么。',
+          `認不出「${rel}」是哪一層的產物。` +
+          '架構給 .novelwarden/config.md / premise.md / world.md（角色圖譜給 .novelwarden/characters，設定清單給 .novelwarden/lore，展開一條設定給 .novelwarden/lore/ 下那一條的 .md），大綱給 .novelwarden/outline.md，' +
+          '細綱給 .novelwarden/summaries/ 下那一章的細綱（與正文同樣的相對路徑），正文給那一章的章節路徑（chapters/ 下）。' +
+          '可以先用 list 看看那個目錄下實際有什麼。',
       };
     }
 
@@ -184,7 +184,7 @@ export const generateTool: ToolDef = {
       return { text: '', error: `writeMode 只能是 ${WRITE_MODES.join(' / ')}，收到的是「${writeMode}」。` };
     }
     if (writeMode && path.stage !== 'manuscript') {
-      return { text: '', error: 'writeMode 只对正文层有意义（target 给章节路径）。其余层不要给它。' };
+      return { text: '', error: 'writeMode 只對正文層有意義（target 給章節路徑）。其餘層不要給它。' };
     }
 
     const action = { stage: path.stage, capability: capability as Capability };
@@ -192,12 +192,12 @@ export const generateTool: ToolDef = {
       return {
         text: '',
         error:
-          `${STAGE_LABEL[path.stage]}层不支持 ${capability}。` +
-          `这一层可用：${STAGE_CAPABILITIES[path.stage].filter((c) => c !== 'settle' && c !== 'review').join(' / ')}。`,
+          `${STAGE_LABEL[path.stage]}層不支援 ${capability}。` +
+          `這一層可用：${STAGE_CAPABILITIES[path.stage].filter((c) => c !== 'settle' && c !== 'review').join(' / ')}。`,
       };
     }
 
-    // 记在发请求之前：请求发出去钱就花了，抛异常也一样。
+    // 記在發請求之前：請求發出去錢就花了，拋異常也一樣。
     ctx.usage.record(1);
     let failure: string | undefined;
     const picked = await pickModel(path.stage);
@@ -211,11 +211,11 @@ export const generateTool: ToolDef = {
         ask: typeof args.ask === 'string' ? args.ask : '',
         targetWords: toPositiveInt(args.targetWords),
         ...(writeMode ? { writeMode: writeMode as 'continue' | 'rewrite' } : {}),
-        // 空数组，见文件头第 2 条。**不要改成 ctx 里的什么历史。**
+        // 空陣列，見檔案頭第 2 條。**不要改成 ctx 裡的什麼歷史。**
         history: [],
       },
       {
-        // 正文流给前端气泡，不进 agent 上下文。
+        // 正文流給前端氣泡，不進 agent 上下文。
         onDelta: (delta) => ctx.onDelta?.(delta),
         onDone: () => undefined,
         onError: (message) => {
@@ -225,48 +225,48 @@ export const generateTool: ToolDef = {
           failure = '生成被取消。';
         },
       },
-      // provider 留空 = 用对话页选定的那个模型（第 12 条）。
+      // provider 留空 = 用對話頁選定的那個模型（第 12 條）。
       //
-      // **不带 thinking**（第 26 条）：作者选的那一档是给「他自己在跟模型讨论
-      // 这件事」的，而这里是外部 agent 顺手产出一份产物——它可能连着调好几次，
-      // 每次都按极限档想一遍，等于把那个下拉框变成一个倍率不明的开关。
+      // **不帶 thinking**（第 26 條）：作者選的那一檔是給「他自己在跟模型討論
+      // 這件事」的，而這裡是外部 agent 順手產出一份產物——它可能連著調好幾次，
+      // 每次都按極限檔想一遍，等於把那個下拉框變成一個倍率不明的開關。
       { signal: ctx.signal, ...picked }
     );
 
     if (!draft) {
-      return { text: '', error: failure ?? '这次生成没有产出内容。' };
+      return { text: '', error: failure ?? '這次生成沒有產出內容。' };
     }
     ctx.drafts.put(draft, ctx.sessionId);
 
     const what = `${STAGE_LABEL[path.stage]}·${CAPABILITY_LABEL[action.capability]}`;
     const shape = draft.summary ?? `${draft.words} 字`;
-    // 只说发生了什么。「已用 3/10 次生成」那半句是调用方的账，它才知道上限。
+    // 只說發生了什麼。「已用 3/10 次生成」那半句是呼叫方的賬，它才知道上限。
     ctx.report(`已生成 ${what}：${shape}`);
 
     return {
       draftIds: [draft.id],
-      // 只有形状与 id。**这里出现正文就是 bug。**
+      // 只有形狀與 id。**這裡出現正文就是 bug。**
       text:
         `已生成：${what} · ${shape}，${draft.words} 字\n` +
         `draftId: ${draft.id}\n` +
-        `落点：${rel}\n` +
-        `内容已经流给作者看了。要不要落盘正在问他，结论就在下面。` +
-        `你不需要复述它的内容。`,
+        `落點：${rel}\n` +
+        `內容已經流給作者看了。要不要落盤正在問他，結論就在下面。` +
+        `你不需要複述它的內容。`,
       display: { title: `generate ${what}`, detail: `${shape} · ${draft.words} 字` },
     };
   },
 };
 
 /**
- * 这一层该用哪个模型。
+ * 這一層該用哪個模型。
  *
- * 返回空对象 = 用对话页选定的那个（`generate` 的缺省）。这也是池建不出来时的
- * 退路：报一条 warn 然后照常跑，好过让 agent 在这里硬失败——作者已经在对话页
- * 选了一个能用的模型。
+ * 返回空物件 = 用對話頁選定的那個（`generate` 的預設）。這也是池建不出來時的
+ * 退路：報一條 warn 然後照常跑，好過讓 agent 在這裡硬失敗——作者已經在對話頁
+ * 選了一個能用的模型。
  *
- * **只取 `pool.primary`，不用 `pool.run` 的失败换人**：`generate` 是流式的，
- * 换一个模型重跑会把半份产物再冲一遍进作者的气泡。串行恒用该档首选本来就是
- * 池的行为，这里少的只有 fallback 那一半，而且**绝不跨档**。
+ * **只取 `pool.primary`，不用 `pool.run` 的失敗換人**：`generate` 是流式的，
+ * 換一個模型重跑會把半份產物再衝一遍進作者的氣泡。序列恆用該檔首選本來就是
+ * 池的行為，這裡少的只有 fallback 那一半，而且**絕不跨檔**。
  */
 async function pickModel(
   stage: CreationStage
@@ -277,15 +277,15 @@ async function pickModel(
   }
   const pool = await createModelPool({ task });
   if (!pool) {
-    log.warn(`${STAGE_LABEL[stage]}层没有可用的分档模型，改用对话页选定的那个`);
+    log.warn(`${STAGE_LABEL[stage]}層沒有可用的分檔模型，改用對話頁選定的那個`);
     return {};
   }
-  // 窗口必须跟着干活那个模型走（第 13 条）。
+  // 視窗必須跟著幹活那個模型走（第 13 條）。
   return { provider: pool.primary, budget: pool.primaryBudget };
 }
 
 function describeCapabilities(): string {
-  // 审稿（五期）这个工具不做：不写进说明，免得模型照着说明去试。
+  // 審稿（五期）這個工具不做：不寫進說明，免得模型照著說明去試。
   return CAPABILITIES.filter((c) => c !== 'review').map((c) => `${c}=${CAPABILITY_LABEL[c]}`).join('，');
 }
 
@@ -295,9 +295,9 @@ function toPositiveInt(value: unknown): number | undefined {
 }
 
 /**
- * 路径 → 层与目标。章节路径认成正文层（target 以这一章细纲的路径为身份——正文镜像到
- * `summaries/` 下的那一份，还没有时就是它应该在的位置）；角色目录、设定目录本身认成架构 · 角色图谱 / 设定清单；
- * 其余交给 `kindOfPath`（一条设定条目它直接给出单条设定这个目标——展开，走 `setting` 档，不用特判）。
+ * 路徑 → 層與目標。章節路徑認成正文層（target 以這一章細綱的路徑為身份——正文映象到
+ * `summaries/` 下的那一份，還沒有時就是它應該在的位置）；角色目錄、設定目錄本身認成架構 · 角色圖譜 / 設定清單；
+ * 其餘交給 `kindOfPath`（一條設定條目它直接給出單條設定這個目標——展開，走 `setting` 檔，不用特判）。
  */
 async function resolveTargetPath(project: NovelProject, rel: string): Promise<PathKind> {
   const dir = settingDirPath(project, rel);
@@ -309,7 +309,7 @@ async function resolveTargetPath(project: NovelProject, rel: string): Promise<Pa
     return path;
   }
   const exists = (await project.listChapters()).some((c) => c.relPath === path.rel);
-  // 还不存在的章节路径（`chapters/021.md`）不拿来镜像：这一章的细纲可能早已排在子目录里。
+  // 還不存在的章節路徑（`chapters/021.md`）不拿來映象：這一章的細綱可能早已排在子目錄裡。
   const plotRelPath = exists ? project.plotPathForChapter(path.rel!) : await project.plotPathOfNo(path.no);
   return {
     ...path,
@@ -320,9 +320,9 @@ async function resolveTargetPath(project: NovelProject, rel: string): Promise<Pa
 }
 
 /**
- * 架构里没有自己文件的两件：角色目录本身（`.novelwarden/characters`）= 角色图谱，设定目录本身（`.novelwarden/lore`）=
- * 设定清单（`pathOfTarget` 的落点就是它们，工程页「故事架构」那两行的路径也是）。**只在这个工具里认**：网关的种类表
- * （`kindOfPath`）不把一个目录当成可写的产物——写入、改名、删除都不该落在它上面。
+ * 架構裡沒有自己檔案的兩件：角色目錄本身（`.novelwarden/characters`）= 角色圖譜，設定目錄本身（`.novelwarden/lore`）=
+ * 設定清單（`pathOfTarget` 的落點就是它們，工程頁「故事架構」那兩行的路徑也是）。**只在這個工具裡認**：閘道器的種類表
+ * （`kindOfPath`）不把一個目錄當成可寫的產物——寫入、改名、刪除都不該落在它上面。
  */
 function settingDirPath(project: NovelProject, rel: string): PathKind | undefined {
   const normalized = normalizeRel(rel);

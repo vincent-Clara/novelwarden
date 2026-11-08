@@ -1,9 +1,9 @@
 /**
- * 有序模型清单的编辑器。四处复用同一份渲染：
- * 「默认模型」一份，加上快速 / 均衡 / 精标三档各一份。
+ * 有序模型清單的編輯器。四處複用同一份渲染：
+ * 「預設模型」一份，加上快速 / 均衡 / 精標三檔各一份。
  *
- * 清单是**排好序**的——第一个是首选，工程页任务串行时用它、失败随机换后面的
- * 重试，并发时在清单里轮转。所以顺序本身是配置的一部分，必须能调。
+ * 清單是**排好序**的——第一個是首選，工程頁任務序列時用它、失敗隨機換後面的
+ * 重試，併發時在清單裡輪轉。所以順序本身是配置的一部分，必須能調。
  */
 import { el as mk, maybeById } from '../../dom';
 import { MODEL_TIERS, TIER_HINT, TIER_LABEL } from '../../protocol';
@@ -12,14 +12,14 @@ import { smallBtn } from '../buttons';
 import { toast } from '../toast';
 import { allRefs, draft, touch } from './draft';
 
-/** 一份清单要能读、能写、能说出自己空着时该显示什么。 */
+/** 一份清單要能讀、能寫、能說出自己空著時該顯示什麼。 */
 interface ListSpec {
   containerId: string;
   get(): string[];
   set(next: string[]): void;
-  /** 清单为空时的说明。档位的空态是「沿用默认模型」，不是「还没配」。 */
+  /** 清單為空時的說明。檔位的空態是「沿用預設模型」，不是「還沒配」。 */
   emptyHint: string;
-  /** 加进这份清单时的 toast。 */
+  /** 加進這份清單時的 toast。 */
   onAdd(ref: string, size: number): string;
 }
 
@@ -29,8 +29,8 @@ const DEFAULT_LIST: ListSpec = {
   set: (next) => {
     draft.models = next;
   },
-  emptyHint: '还没有选默认模型。',
-  onAdd: (ref, size) => (size === 1 ? `已设为首选模型：${ref}` : `已添加 ${ref}，记得保存。`),
+  emptyHint: '還沒有選預設模型。',
+  onAdd: (ref, size) => (size === 1 ? `已設為首選模型：${ref}` : `已新增 ${ref}，記得儲存。`),
 };
 
 const TIER_LISTS: ListSpec[] = MODEL_TIERS.map((tier) => ({
@@ -39,22 +39,22 @@ const TIER_LISTS: ListSpec[] = MODEL_TIERS.map((tier) => ({
   set: (next) => {
     draft.tierModels[tier] = next;
   },
-  // 空档位不是「坏了」，而是一个明确的语义：这一档的任务沿用默认模型。
-  // 说清楚才不会让人以为归在这档的任务跑不起来。
-  emptyHint: `留空＝归在${TIER_LABEL[tier]}的任务沿用上面的「默认模型」。`,
-  onAdd: (ref) => `已加入${TIER_LABEL[tier]}：${ref}，记得保存。`,
+  // 空檔位不是「壞了」，而是一個明確的語義：這一檔的任務沿用預設模型。
+  // 說清楚才不會讓人以為歸在這檔的任務跑不起來。
+  emptyHint: `留空＝歸在${TIER_LABEL[tier]}的任務沿用上面的「預設模型」。`,
+  onAdd: (ref) => `已加入${TIER_LABEL[tier]}：${ref}，記得儲存。`,
 }));
 
 const ALL_LISTS: ListSpec[] = [DEFAULT_LIST, ...TIER_LISTS];
 
-/** 档位说明，渲染在每档标题下面。 */
+/** 檔位說明，渲染在每檔標題下面。 */
 export function tierHint(tier: ModelTier): string {
   return TIER_HINT[tier];
 }
 
 /**
- * 服务商列表变了要跟着刷新（模型可能被删掉），由 renderProviders 统一调用。
- * 四份清单一起重画——删掉一个服务商可能同时影响默认模型与某几档。
+ * 服務商列表變了要跟著重新整理（模型可能被刪掉），由 renderProviders 統一呼叫。
+ * 四份清單一起重畫——刪掉一個服務商可能同時影響預設模型與某幾檔。
  */
 export function renderModelList(): void {
   for (const spec of ALL_LISTS) {
@@ -65,7 +65,7 @@ export function renderModelList(): void {
 function renderOne(spec: ListSpec): void {
   const box = maybeById<HTMLElement>(spec.containerId);
   if (!box) {
-    // 插件形态与独立版共用这份代码，容器不在就跳过。
+    // 外掛形態與獨立版共用這份程式碼，容器不在就跳過。
     return;
   }
   box.innerHTML = '';
@@ -74,7 +74,7 @@ function renderOne(spec: ListSpec): void {
 
   if (list.length === 0) {
     box.appendChild(
-      mk('div', 'hint', available.length === 0 ? '还没有可选的模型，先在上面添加服务商。' : spec.emptyHint)
+      mk('div', 'hint', available.length === 0 ? '還沒有可選的模型，先在上面新增服務商。' : spec.emptyHint)
     );
   }
 
@@ -94,13 +94,13 @@ function buildRow(spec: ListSpec, ref: string, index: number, available: string[
   row.appendChild(name);
 
   if (index === 0) {
-    row.appendChild(mk('span', 'model-tag', '首选'));
+    row.appendChild(mk('span', 'model-tag', '首選'));
   }
-  // 引用指向已删掉的模型时留着并标出来，不静默丢弃——
-  // 用户得知道自己配的那个模型没了，而不是发现列表莫名其妙短了一截。
+  // 引用指向已刪掉的模型時留著並標出來，不靜默丟棄——
+  // 使用者得知道自己配的那個模型沒了，而不是發現列表莫名其妙短了一截。
   if (!available.includes(ref)) {
     const bad = mk('span', 'model-tag danger', '未配置');
-    bad.title = '这个引用在上面的服务商列表里找不到，保存时会被移除。';
+    bad.title = '這個引用在上面的服務商列表裡找不到，儲存時會被移除。';
     row.appendChild(bad);
   }
 
@@ -136,7 +136,7 @@ function moveBtn(spec: ListSpec, text: string, index: number, delta: number): HT
   return b;
 }
 
-/** 「添加模型」下拉：只列尚未入列的引用。 */
+/** 「新增模型」下拉：只列尚未入列的引用。 */
 function buildAdder(spec: ListSpec, available: string[]): HTMLElement {
   const wrap = mk('div', 'model-add');
   const list = spec.get();
@@ -145,12 +145,12 @@ function buildAdder(spec: ListSpec, available: string[]): HTMLElement {
   const sel = document.createElement('select');
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = rest.length === 0 ? '（没有可添加的模型）' : '＋ 添加模型…';
+  placeholder.textContent = rest.length === 0 ? '（沒有可新增的模型）' : '＋ 新增模型…';
   sel.appendChild(placeholder);
 
   for (const ref of rest) {
     const opt = document.createElement('option');
-    // 显示完整引用——与对话页下拉框口径一致，它才是配置里存的东西。
+    // 顯示完整引用——與對話頁下拉框口徑一致，它才是配置裡存的東西。
     opt.value = opt.textContent = ref;
     sel.appendChild(opt);
   }

@@ -1,31 +1,31 @@
 /**
- * 标签上的名字（纯函数，零 DOM）：类型短标记 + 名字，**仍然同名的再加最短的区分目录**（像 VS Code 那样）。
+ * 標籤上的名字（純函式，零 DOM）：型別短標記 + 名字，**仍然同名的再加最短的區分目錄**（像 VS Code 那樣）。
  *
- * 短标记与名字来自后端（`EditorFileView.label`，`views/editorLabel.ts`）——同一章的正文、细纲、草稿
- * 从前三个标签都写「003-夜访.md」，现在是「003-夜访」「细纲 003-夜访」「草稿 003-夜访」。还撞名的是
- * 同一种、不同目录的两份（两卷里各有一个「003-夜访」）：给每一份找它与其余几份**都不一样**的最短
- * 目录后缀（从紧挨着文件的那一级往上加），写在名字后面淡一点的那一格里。
+ * 短標記與名字來自後端（`EditorFileView.label`，`views/editorLabel.ts`）——同一章的正文、細綱、草稿
+ * 從前三個標籤都寫「003-夜访.md」，現在是「003-夜訪」「細綱 003-夜訪」「草稿 003-夜訪」。還撞名的是
+ * 同一種、不同目錄的兩份（兩卷裡各有一個「003-夜訪」）：給每一份找它與其餘幾份**都不一樣**的最短
+ * 目錄字尾（從緊挨著檔案的那一級往上加），寫在名字後面淡一點的那一格里。
  *
- * 两块编辑区里开着的文件放在一起比——「▾」列表里两块的文件排在一起，各写各的就分不清了。
+ * 兩塊編輯區裡開著的檔案放在一起比——「▾」列表裡兩塊的檔案排在一起，各寫各的就分不清了。
  */
 import type { EditorFileLabel } from '../protocol';
 
 export interface TabNameSource {
   path: string;
-  /** 文件名（后端没给称呼时的退路）。 */
+  /** 檔名（後端沒給稱呼時的退路）。 */
   name: string;
   label?: EditorFileLabel;
 }
 
 export interface TabName {
-  /** 类型短标记，正文不带（空串）。 */
+  /** 型別短標記，正文不帶（空串）。 */
   tag: string;
   title: string;
-  /** 区分用的目录，不撞名时是空串。 */
+  /** 區分用的目錄，不撞名時是空串。 */
   desc: string;
 }
 
-/** 每份文件在标签上怎么写。 */
+/** 每份檔案在標籤上怎麼寫。 */
 export function tabNames(files: readonly TabNameSource[]): Map<string, TabName> {
   const out = new Map<string, TabName>();
   const groups = new Map<string, TabNameSource[]>();
@@ -48,8 +48,8 @@ export function tabNames(files: readonly TabNameSource[]): Map<string, TabName> 
 }
 
 /**
- * `path` 与 `others` 都不一样的最短目录后缀。目录完全一样（同一个目录里 `003-夜访.md` 与 `003-夜访.txt`）
- * 时退到文件名本身——那是唯一的区别。
+ * `path` 與 `others` 都不一樣的最短目錄字尾。目錄完全一樣（同一個目錄裡 `003-夜访.md` 與 `003-夜访.txt`）
+ * 時退到檔名本身——那是唯一的區別。
  */
 export function distinguish(path: string, others: readonly string[]): string {
   const dirs = dirsOf(path);

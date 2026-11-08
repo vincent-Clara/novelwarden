@@ -1,33 +1,33 @@
 /**
- * 全书查找（独立版「编辑 → 全书查找替换…」）：按范围逐份读盘、匹配，给出按文件分组的结果。**只读**，一个字节都不写；
- * 替换在 `features/bookReplace.ts`。一份文件里哪些字不搜、每一处的上下文在 `model/bookFind.ts`，匹配口径是
- * `model/textFind.ts`（与内置编辑器的查找条同一份）。
+ * 全書查詢（獨立版「編輯 → 全書查詢替換…」）：按範圍逐份讀盤、匹配，給出按檔案分組的結果。**只讀**，一個位元組都不寫；
+ * 替換在 `features/bookReplace.ts`。一份檔案裡哪些字不搜、每一處的上下文在 `model/bookFind.ts`，匹配口徑是
+ * `model/textFind.ts`（與內建編輯器的查詢條同一份）。
  *
- * ## 读了哪些盘（每搜一次）
+ * ## 讀了哪些盤（每搜一次）
  *
- * 不建索引、不缓存文件内容：作者在编辑器里存了一章，下一次搜到的就是新的。所以**每搜一次，范围里的每一份文件读一次**
- * （到了上限就停，后面的不读）：
+ * 不建索引、不快取檔案內容：作者在編輯器裡存了一章，下一次搜到的就是新的。所以**每搜一次，範圍裡的每一份檔案讀一次**
+ * （到了上限就停，後面的不讀）：
  *
- * - **正文 / 细纲**：先要一份章节 / 细纲列表（`NovelProject.listChapters()` / `listPlots()`，工程上缓存着，每次
- *   `pushState` 都填上，作者打开面板时几乎总是热的——热的时候列表这一步**零读盘**；冷的时候各递归扫一遍、每份读一次），
- *   然后按章号逐份读一次。三百章的正文约三百次读盘，每份几 KB，加起来几十毫秒。
- * - **草稿**：递归列 `drafts/`（只列不读），文件名像章节的按章号排，逐份读一次；二进制扩展名（与章节同一张黑名单）不读。
- * - **角色卡 / 设定条目**：递归列各自的区（只认 `.md`，只列不读），逐份读一次。
- * - **其他创作文件**：情节大纲、架构三件、文风指南、全文大纲六个固定路径，有的读一次；叙事线目录这一层的各条线
- *   （只列不读），逐份读一次。
- * - 单份超过 2 MB（网关的大小上限）不读，列进 `skipped`；读不了（权限、刚被删）同样。
+ * - **正文 / 細綱**：先要一份章節 / 細綱列表（`NovelProject.listChapters()` / `listPlots()`，工程上快取著，每次
+ *   `pushState` 都填上，作者開啟面板時幾乎總是熱的——熱的時候列表這一步**零讀盤**；冷的時候各遞迴掃一遍、每份讀一次），
+ *   然後按章號逐份讀一次。三百章的正文約三百次讀盤，每份幾 KB，加起來幾十毫秒。
+ * - **草稿**：遞迴列 `drafts/`（只列不讀），檔名像章節的按章號排，逐份讀一次；二進位制副檔名（與章節同一張黑名單）不讀。
+ * - **角色卡 / 設定條目**：遞迴列各自的區（只認 `.md`，只列不讀），逐份讀一次。
+ * - **其他創作檔案**：情節大綱、架構三件、文風指南、全文大綱六個固定路徑，有的讀一次；敘事線目錄這一層的各條線
+ *   （只列不讀），逐份讀一次。
+ * - 單份超過 2 MB（閘道器的大小上限）不讀，列進 `skipped`；讀不了（許可權、剛被刪）同樣。
  *
- * 前端在输入停顿 300ms 之后才发请求，新的一次发出之前先叫停上一次（`cancelled`，在两份文件之间看一眼）。
+ * 前端在輸入停頓 300ms 之後才發請求，新的一次發出之前先叫停上一次（`cancelled`，在兩份檔案之間看一眼）。
  *
  * ## 上限
  *
- * 列满 {@link BOOK_FIND_LIMIT} 处就停：这一份里多出来的不列（`count` 照实说一共几处），后面的文件不再读，`truncated`
- * 说停在哪一份上。替换也只作用于列出来的这些（预览里看过的才换），换完再搜一次接着换。
+ * 列滿 {@link BOOK_FIND_LIMIT} 處就停：這一份裡多出來的不列（`count` 照實說一共幾處），後面的檔案不再讀，`truncated`
+ * 說停在哪一份上。替換也只作用於列出來的這些（預覽裡看過的才換），換完再搜一次接著換。
  *
- * ## 用的是磁盘上的内容（⚑）
+ * ## 用的是磁碟上的內容（⚑）
  *
- * 编辑器里开着、有未保存修改的文件，这里搜的仍是磁盘上那一份——后端看不到编辑区，前端在结果上把那几份标出来
- * （「未保存：列的是磁盘上的」），替换时跳过它们。
+ * 編輯器裡開著、有未儲存修改的檔案，這裡搜的仍是磁碟上那一份——後端看不到編輯區，前端在結果上把那幾份標出來
+ * （「未儲存：列的是磁碟上的」），替換時跳過它們。
  */
 import * as path from 'node:path';
 import { scoped } from '../runtime/logger';
@@ -42,15 +42,15 @@ import type { ArtifactKind } from '../workspace';
 import { describeEditorFile } from './editorLabel';
 import type { BookFindFile, BookFindQuery, BookFindResult, BookFindSkip } from '../protocol';
 
-const log = scoped('全书查找');
+const log = scoped('全書查詢');
 
-/** 一份要搜的文件。 */
+/** 一份要搜的檔案。 */
 export interface BookTarget {
   path: string;
   scope: BookFindScope;
 }
 
-/** 网关的种类 → 全书查找的范围。不在任何一个范围里的（技能、`other`）是 undefined。 */
+/** 閘道器的種類 → 全書查詢的範圍。不在任何一個範圍裡的（技能、`other`）是 undefined。 */
 export function scopeOfKind(kind: ArtifactKind): BookFindScope | undefined {
   switch (kind) {
     case 'chapter':
@@ -69,7 +69,7 @@ export function scopeOfKind(kind: ArtifactKind): BookFindScope | undefined {
   }
 }
 
-/** 结果上怎么称呼这份文件：编辑器标签上的短标记 + 面包屑最后一段（「细纲 · 第 3 章 夜访」「角色 · 林晚」「情节大纲」）。 */
+/** 結果上怎麼稱呼這份檔案：編輯器標籤上的短標記 + 麵包屑最後一段（「細綱 · 第 3 章 夜訪」「角色 · 林晚」「情節大綱」）。 */
 export function bookFileLabel(project: NovelProject, rel: string): string {
   const label = describeEditorFile(project, rel);
   const leaf = label.crumbs[label.crumbs.length - 1]?.label ?? label.title;
@@ -77,8 +77,8 @@ export function bookFileLabel(project: NovelProject, rel: string): string {
 }
 
 /**
- * 按范围列出要搜的文件，顺序就是结果的顺序：范围按面板上的顺序（正文、细纲、草稿、角色卡、设定、其他），
- * 正文 / 细纲 / 草稿按章号，角色卡、设定按路径，其他按固定顺序。只列，不读内容（正文与细纲的列表借工程上的缓存）。
+ * 按範圍列出要搜的檔案，順序就是結果的順序：範圍按面板上的順序（正文、細綱、草稿、角色卡、設定、其他），
+ * 正文 / 細綱 / 草稿按章號，角色卡、設定按路徑，其他按固定順序。只列，不讀內容（正文與細綱的列表借工程上的快取）。
  */
 export async function listBookTargets(project: NovelProject, scopes: readonly BookFindScope[]): Promise<BookTarget[]> {
   const wanted = new Set(scopes.filter(isBookFindScope));
@@ -112,12 +112,12 @@ async function pathsOf(project: NovelProject, scope: BookFindScope): Promise<str
     case 'lore':
       return (await listMarkdownDeep(project.loreDir)).map((abs) => project.relPath(abs));
     case 'doc': {
-      // 情节大纲不在里面：它是各章细纲梗概的汇总，没有文件——搜细纲就搜到了。
+      // 情節大綱不在裡面：它是各章細綱梗概的彙總，沒有檔案——搜細綱就搜到了。
       const fixed = [project.configPath, project.premisePath, project.worldPath, project.stylePath];
       const present = await Promise.all([...fixed, project.globalSummaryPath].map((abs) => exists(abs)));
       return [
         ...fixed.filter((_, i) => present[i]).map((abs) => project.relPath(abs)),
-        // 叙事线一条线一个文件：排在文风后面、全文大纲前面（从前单文件 `threads.md` 的位置）。
+        // 敘事線一條線一個檔案：排在文風後面、全文大綱前面（從前單檔案 `threads.md` 的位置）。
         ...(await project.listThreadPaths()),
         ...(present[fixed.length] ? [project.relPath(project.globalSummaryPath)] : []),
       ];
@@ -126,15 +126,15 @@ async function pathsOf(project: NovelProject, scope: BookFindScope): Promise<str
 }
 
 export interface SearchBookOptions {
-  /** 叫停了没有。在两份文件之间看一眼，叫停了就不再往下读。 */
+  /** 叫停了沒有。在兩份檔案之間看一眼，叫停了就不再往下讀。 */
   cancelled?: () => boolean;
-  /** 最多列多少处（测试用，缺省 {@link BOOK_FIND_LIMIT}）。 */
+  /** 最多列多少處（測試用，預設 {@link BOOK_FIND_LIMIT}）。 */
   limit?: number;
 }
 
 /**
- * 搜一遍。叫停了返回 undefined（不回话——前端早就不等这一份了）。正则写错、查找串为空、一个范围都没勾时不读盘，
- * 照实返回（`error` / 空结果）。
+ * 搜一遍。叫停了返回 undefined（不回話——前端早就不等這一份了）。正則寫錯、查詢串為空、一個範圍都沒勾時不讀盤，
+ * 照實返回（`error` / 空結果）。
  */
 export async function searchBook(
   project: NovelProject,
@@ -165,7 +165,7 @@ export async function searchBook(
 
   for (const target of targets) {
     if (opts.cancelled?.()) {
-      log.debug(`叫停了：「${clip(query)}」`, `读了 ${scanned} / ${targets.length} 份`);
+      log.debug(`叫停了：「${clip(query)}」`, `讀了 ${scanned} / ${targets.length} 份`);
       return undefined;
     }
     let text: string;
@@ -186,7 +186,7 @@ export async function searchBook(
     }
     const room = limit - listed;
     if (room <= 0) {
-      // 上一份正好把上限列满：这一份有命中，说明后面还有——停在这里，这一份不列。
+      // 上一份正好把上限列滿：這一份有命中，說明後面還有——停在這裡，這一份不列。
       truncated = { limit, at: bookFileLabel(project, target.path) };
       break;
     }
@@ -209,8 +209,8 @@ export async function searchBook(
   }
 
   log.debug(
-    `${preview !== undefined ? '预览替换' : '全书查找'}「${clip(query)}」`,
-    `${files.length} 个文件 ${listed} 处｜读了 ${scanned} / ${targets.length} 份｜${Date.now() - started}ms${truncated ? `｜到上限停在 ${truncated.at}` : ''}`
+    `${preview !== undefined ? '預覽替換' : '全書查詢'}「${clip(query)}」`,
+    `${files.length} 個檔案 ${listed} 處｜讀了 ${scanned} / ${targets.length} 份｜${Date.now() - started}ms${truncated ? `｜到上限停在 ${truncated.at}` : ''}`
   );
   return { files, listed, scanned, skipped, ...(truncated ? { truncated } : {}) };
 }
@@ -218,16 +218,16 @@ export async function searchBook(
 function skipReason(err: unknown): string {
   if (err instanceof WsError) {
     if (err.code === 'tooLarge') {
-      return '超过 2 MB，没有搜';
+      return '超過 2 MB，沒有搜';
     }
     if (err.code === 'notFound' || err.code === 'notFile') {
-      return '刚才还在，读的时候没有了';
+      return '剛才還在，讀的時候沒有了';
     }
   }
-  return `读不了：${err instanceof Error ? err.message : String(err)}`;
+  return `讀不了：${err instanceof Error ? err.message : String(err)}`;
 }
 
-/** 日志里的查找串（第 11 条：日志里不出现正文全文；查找串本来就短，再截一下）。存档点的备注截得更短（`max`）。 */
+/** 日誌裡的查詢串（第 11 條：日誌裡不出現正文全文；查詢串本來就短，再截一下）。存檔點的備註截得更短（`max`）。 */
 export function clip(text: string, max = 30): string {
   const one = text.replace(/\s+/g, ' ');
   return one.length > max ? `${one.slice(0, max)}…` : one;

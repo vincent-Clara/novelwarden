@@ -1,15 +1,15 @@
 /**
- * 「转到…」（Ctrl+P）的索引（`src/core/views/quickOpen.ts`），真临时工程。
+ * 「轉到…」（Ctrl+P）的索引（`src/core/views/quickOpen.ts`），真臨時工程。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 章节 | 一个章号一条：章号、标题（细纲优先，回落标题给空串）、卷目录、正文 / 细纲路径（没有就缺席）、字数；`.txt` 正文也是章；只有细纲的章；细纲按路径配对（改了名的正文不冒认旧细纲） |
- * | 角色 / 设定 | 名字与别名、设定标题、路径（子目录里的也在） |
- * | 文档 | 架构三件、大纲、文风、叙事线、全文大纲，**有文件的才列** |
- * | 草稿 | 路径、文件名、文件名里的章号 |
- * | 还不是小说工程 | `initialized: false`，列表全空 |
- * | 读盘 | 章节与细纲借缓存（热的时候一章都不读）；冷的时候每个文件至多读一次；草稿只列不读 |
- * | controller | `requestQuickOpen` 回 `quickOpenIndex`，带同一个 `requestId` |
+ * | 章節 | 一個章號一條：章號、標題（細綱優先，回落標題給空串）、卷目錄、正文 / 細綱路徑（沒有就缺席）、字數；`.txt` 正文也是章；只有細綱的章；細綱按路徑配對（改了名的正文不冒認舊細綱） |
+ * | 角色 / 設定 | 名字與別名、設定標題、路徑（子目錄裡的也在） |
+ * | 文件 | 架構三件、大綱、文風、敘事線、全文大綱，**有檔案的才列** |
+ * | 草稿 | 路徑、檔名、檔名裡的章號 |
+ * | 還不是小說工程 | `initialized: false`，列表全空 |
+ * | 讀盤 | 章節與細綱借快取（熱的時候一章都不讀）；冷的時候每個檔案至多讀一次；草稿只列不讀 |
+ * | controller | `requestQuickOpen` 回 `quickOpenIndex`，帶同一個 `requestId` |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,7 +27,7 @@ let t;
 let project;
 
 const plot = (no, title) =>
-  `---\nno: ${no}\ntitle: ${title}\n---\n\n# ${title}\n\n## 梗概\n梗概\n\n## 关键事件\n事件\n`;
+  `---\nno: ${no}\ntitle: ${title}\n---\n\n# ${title}\n\n## 梗概\n梗概\n\n## 關鍵事件\n事件\n`;
 
 before(async () => {
   bundle = loadBundle({
@@ -39,36 +39,36 @@ before(async () => {
     db: './src/core/runtime/db.ts',
   });
   bundle.host.initHost(makeFakeHost({ settings: () => ({}) }).host);
-  t = await makeTempProject(bundle.project, { prefix: 'quick-open', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'quick-open', title: '青雲劍錄' });
   project = t.project;
 
-  // 第 1 章：根下，有正文有细纲。
+  // 第 1 章：根下，有正文有細綱。
   t.write('chapters/001-楔子.md', '# 楔子\n\n雨下了三天。');
   t.write('.novelwarden/summaries/001-楔子.md', plot(1, '楔子'));
-  // 第 2 章：第一卷里，细纲的标题与正文的不一样——细纲优先。
-  t.write('chapters/第一卷/002-入镇.md', '# 入镇\n\n他走进镇子。');
-  t.write('.novelwarden/summaries/第一卷/002-入镇.md', plot(2, '入镇（改）'));
-  // 第 3 章：.txt 正文，没有细纲。
-  t.write('chapters/第一卷/003-夜访.txt', '夜里有人敲门。');
-  // 第 4 章：只有细纲，在第二卷。
+  // 第 2 章：第一卷裡，細綱的標題與正文的不一樣——細綱優先。
+  t.write('chapters/第一卷/002-入鎮.md', '# 入鎮\n\n他走進鎮子。');
+  t.write('.novelwarden/summaries/第一卷/002-入鎮.md', plot(2, '入鎮（改）'));
+  // 第 3 章：.txt 正文，沒有細綱。
+  t.write('chapters/第一卷/003-夜訪.txt', '夜裡有人敲門。');
+  // 第 4 章：只有細綱，在第二卷。
   t.write('.novelwarden/summaries/第二卷/004-北行.md', plot(4, '北行'));
-  // 第 5 章：纯序号的正文，没有标题。
+  // 第 5 章：純序號的正文，沒有標題。
   t.write('chapters/第二卷/005.md', '正文');
-  // 第 6 章：正文在外面改了名，旧细纲成了孤儿——不冒认。
+  // 第 6 章：正文在外面改了名，舊細綱成了孤兒——不冒認。
   t.write('chapters/第二卷/006-新名.md', '# 新名\n\n正文');
-  t.write('.novelwarden/summaries/第二卷/006-旧名.md', plot(6, '旧名'));
+  t.write('.novelwarden/summaries/第二卷/006-舊名.md', plot(6, '舊名'));
 
   t.write('.novelwarden/characters/林昭.md', '---\nname: 林昭\naliases: [阿昭, 小林]\n---\n\n# 林昭\n');
   t.write('.novelwarden/characters/配角/李叔.md', '# 李叔\n');
-  t.write('.novelwarden/lore/门派/青云宗.md', '---\ntitle: 青云宗\nkeywords: [门派]\n---\n\n# 青云宗\n');
-  t.write('drafts/第一卷/002-入镇.md', '草稿');
-  t.write('drafts/随手记.md', '随手记');
-  t.write('.novelwarden/threads/林昭与沈青.md', '---\nkind: 感情线\n---\n\n# 林昭与沈青\n');
-  t.write('.novelwarden/threads/未归属的伏笔.md', '# 未归属的伏笔\n');
-  t.write('.novelwarden/threads/主线.md', '---\nkind: 主线\n---\n\n# 主线\n');
-  // 七期的单文件不认：不列。
-  t.write('.novelwarden/threads.md', '# 叙事线\n');
-  // 世界观删掉：没有文件的不列。
+  t.write('.novelwarden/lore/門派/青雲宗.md', '---\ntitle: 青雲宗\nkeywords: [門派]\n---\n\n# 青雲宗\n');
+  t.write('drafts/第一卷/002-入鎮.md', '草稿');
+  t.write('drafts/隨手記.md', '隨手記');
+  t.write('.novelwarden/threads/林昭與沈青.md', '---\nkind: 感情線\n---\n\n# 林昭與沈青\n');
+  t.write('.novelwarden/threads/未归属的伏笔.md', '# 未歸屬的伏筆\n');
+  t.write('.novelwarden/threads/主線.md', '---\nkind: 主線\n---\n\n# 主線\n');
+  // 七期的單檔案不認：不列。
+  t.write('.novelwarden/threads.md', '# 敘事線\n');
+  // 世界觀刪掉：沒有檔案的不列。
   fs.rmSync(t.rel('.novelwarden/world.md'));
   project.invalidate();
 });
@@ -83,15 +83,15 @@ describe('views/quickOpen › 索引', () => {
     index = await bundle.quickOpen.buildQuickOpenIndex(project);
   });
 
-  test('是小说工程', () => {
+  test('是小說工程', () => {
     assert.equal(index.initialized, true);
   });
 
-  test('一个章号一条，按章号升序', () => {
+  test('一個章號一條，按章號升序', () => {
     assert.deepEqual(index.chapters.map((c) => c.no), [1, 2, 3, 4, 5, 6]);
   });
 
-  test('根下的章：卷目录是空串，正文与细纲都在，字数是正文的', () => {
+  test('根下的章：卷目錄是空串，正文與細綱都在，字數是正文的', () => {
     assert.deepEqual(index.chapters[0], {
       no: 1,
       title: '楔子',
@@ -102,23 +102,23 @@ describe('views/quickOpen › 索引', () => {
     });
   });
 
-  test('卷里的章：卷目录、细纲镜像正文的路径、标题取细纲的', () => {
+  test('卷裡的章：卷目錄、細綱映象正文的路徑、標題取細綱的', () => {
     const c = index.chapters[1];
     assert.equal(c.volume, '第一卷');
-    assert.equal(c.title, '入镇（改）');
-    assert.equal(c.chapterPath, 'chapters/第一卷/002-入镇.md');
-    assert.equal(c.plotPath, '.novelwarden/summaries/第一卷/002-入镇.md');
+    assert.equal(c.title, '入鎮（改）');
+    assert.equal(c.chapterPath, 'chapters/第一卷/002-入鎮.md');
+    assert.equal(c.plotPath, '.novelwarden/summaries/第一卷/002-入鎮.md');
   });
 
-  test('.txt 正文也是一章；没有细纲时 plotPath 缺席，标题取文件名', () => {
+  test('.txt 正文也是一章；沒有細綱時 plotPath 缺席，標題取檔名', () => {
     const c = index.chapters[2];
-    assert.equal(c.chapterPath, 'chapters/第一卷/003-夜访.txt');
+    assert.equal(c.chapterPath, 'chapters/第一卷/003-夜訪.txt');
     assert.equal('plotPath' in c, false);
-    assert.equal(c.title, '夜访');
+    assert.equal(c.title, '夜訪');
     assert.equal(c.words, 6);
   });
 
-  test('只有细纲的章：chapterPath 缺席、字数 0、卷目录取细纲所在的', () => {
+  test('只有細綱的章：chapterPath 缺席、字數 0、卷目錄取細綱所在的', () => {
     const c = index.chapters[3];
     assert.equal('chapterPath' in c, false);
     assert.equal(c.plotPath, '.novelwarden/summaries/第二卷/004-北行.md');
@@ -127,63 +127,63 @@ describe('views/quickOpen › 索引', () => {
     assert.equal(c.title, '北行');
   });
 
-  test('没有标题的章：标题是空串（不把「第 5 章」当标题）', () => {
+  test('沒有標題的章：標題是空串（不把「第 5 章」當標題）', () => {
     assert.equal(index.chapters[4].title, '');
   });
 
-  test('正文改过名的章不冒认旧细纲（按路径配对）', () => {
+  test('正文改過名的章不冒認舊細綱（按路徑配對）', () => {
     const c = index.chapters[5];
     assert.equal(c.chapterPath, 'chapters/第二卷/006-新名.md');
     assert.equal('plotPath' in c, false);
     assert.equal(c.title, '新名');
   });
 
-  test('角色卡：名字、别名、路径（子目录里的也在）', () => {
+  test('角色卡：名字、別名、路徑（子目錄裡的也在）', () => {
     const byName = (name) => index.characters.find((c) => c.name === name);
     assert.equal(index.characters.length, 2);
     assert.deepEqual(byName('林昭'), { name: '林昭', aliases: ['阿昭', '小林'], path: '.novelwarden/characters/林昭.md' });
     assert.deepEqual(byName('李叔'), { name: '李叔', aliases: [], path: '.novelwarden/characters/配角/李叔.md' });
   });
 
-  test('设定条目：标题与路径', () => {
-    assert.deepEqual(index.lore, [{ title: '青云宗', path: '.novelwarden/lore/门派/青云宗.md' }]);
+  test('設定條目：標題與路徑', () => {
+    assert.deepEqual(index.lore, [{ title: '青雲宗', path: '.novelwarden/lore/門派/青雲宗.md' }]);
   });
 
-  test('文档：有文件的才列（世界观删了不在），按架构 → 大纲 → 文风 → 叙事线 → 全文大纲；叙事线一条线一项（按文件名）、未归属的伏笔排最后', () => {
+  test('檔案：有檔案的才列（世界觀刪了不在），按架構 → 大綱 → 文風 → 敘事線 → 全文大綱；敘事線一條線一項（按檔名）、未歸屬的伏筆排最後', () => {
     assert.deepEqual(
       index.docs.map((d) => [d.key, d.label, d.path]),
       [
-        ['config', '小说配置', '.novelwarden/config.md'],
+        ['config', '小說配置', '.novelwarden/config.md'],
         ['premise', '故事前提', '.novelwarden/premise.md'],
-        ['outline', '情节大纲', '.novelwarden/outline.md'],
-        ['style', '文风指南', '.novelwarden/style.md'],
-        ['threads', '林昭与沈青', '.novelwarden/threads/林昭与沈青.md'],
-        ['threads', '主线', '.novelwarden/threads/主线.md'],
-        ['threads', '未归属的伏笔', '.novelwarden/threads/未归属的伏笔.md'],
-        ['globalSummary', '全文大纲', '.novelwarden/summaries/global.md'],
+        ['outline', '情節大綱', '.novelwarden/outline.md'],
+        ['style', '文風指南', '.novelwarden/style.md'],
+        ['threads', '林昭與沈青', '.novelwarden/threads/林昭與沈青.md'],
+        ['threads', '主線', '.novelwarden/threads/主線.md'],
+        ['threads', '未歸屬的伏筆', '.novelwarden/threads/未归属的伏笔.md'],
+        ['globalSummary', '全文大綱', '.novelwarden/summaries/global.md'],
       ]
     );
   });
 
-  test('每份文档的称呼与内置编辑器标签上的一字不差（views/editorLabel.ts 同一张表）', () => {
+  test('每份文件的稱呼與內建編輯器標籤上的一字不差（views/editorLabel.ts 同一張表）', () => {
     for (const doc of index.docs) {
       assert.equal(bundle.editorLabel.describeEditorFile(project, doc.path).title, doc.label, doc.path);
     }
   });
 
-  test('草稿：路径、文件名、文件名里的章号（认不出就缺席）', () => {
+  test('草稿：路徑、檔名、檔名裡的章號（認不出就缺席）', () => {
     assert.deepEqual(index.drafts, [
-      { path: 'drafts/第一卷/002-入镇.md', name: '002-入镇.md', no: 2 },
-      { path: 'drafts/随手记.md', name: '随手记.md' },
+      { path: 'drafts/第一卷/002-入鎮.md', name: '002-入鎮.md', no: 2 },
+      { path: 'drafts/隨手記.md', name: '隨手記.md' },
     ]);
   });
 
-  test('全文大纲不当成一章（summaries/global.md 没有数字前缀）', () => {
+  test('全文大綱不當成一章（summaries/global.md 沒有數字字首）', () => {
     assert.ok(!index.chapters.some((c) => c.plotPath === '.novelwarden/summaries/global.md'));
   });
 });
 
-describe('views/quickOpen › 还不是小说工程', () => {
+describe('views/quickOpen › 還不是小說工程', () => {
   test('initialized: false，列表全空', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'novelwarden-quick-open-bare-'));
     try {
@@ -204,8 +204,8 @@ describe('views/quickOpen › 还不是小说工程', () => {
   });
 });
 
-describe('views/quickOpen › 读盘', () => {
-  /** 量一次构建读了哪些文件（相对工程根）、各几次。 */
+describe('views/quickOpen › 讀盤', () => {
+  /** 量一次構建讀了哪些檔案（相對工程根）、各幾次。 */
   async function measure() {
     const original = fsp.readFile;
     const reads = new Map();
@@ -222,14 +222,14 @@ describe('views/quickOpen › 读盘', () => {
     return reads;
   }
 
-  test('冷的时候：每个文件至多读一次', async () => {
+  test('冷的時候：每個檔案至多讀一次', async () => {
     project.invalidate();
     const reads = await measure();
     const repeated = [...reads].filter(([, n]) => n > 1).map(([f]) => f);
     assert.deepEqual(repeated, []);
   });
 
-  test('章节与细纲借工程上的缓存：热的时候一章正文、一份细纲都不读', async () => {
+  test('章節與細綱借工程上的快取：熱的時候一章正文、一份細綱都不讀', async () => {
     project.invalidate();
     await Promise.all([project.listChapters(), project.listPlots()]);
     const reads = await measure();
@@ -237,7 +237,7 @@ describe('views/quickOpen › 读盘', () => {
     assert.deepEqual(touched, []);
   });
 
-  test('草稿、叙事线只列不读；大纲、配置、manifest 的内容一律不读', async () => {
+  test('草稿、敘事線只列不讀；大綱、配置、manifest 的內容一律不讀', async () => {
     const reads = await measure();
     const touched = [...reads.keys()].filter(
       (f) =>
@@ -250,7 +250,7 @@ describe('views/quickOpen › 读盘', () => {
 });
 
 describe('controller › requestQuickOpen', () => {
-  test('回 quickOpenIndex，带同一个 requestId', async () => {
+  test('回 quickOpenIndex，帶同一個 requestId', async () => {
     const posted = [];
     const controller = new bundle.controller.ChatController(project);
     controller.attach({ kind: 'sidebar', post: (m) => posted.push(m), reveal() {} });

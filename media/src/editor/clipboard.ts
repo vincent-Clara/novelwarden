@@ -1,21 +1,21 @@
 /**
- * 正文区右键菜单的剪切 / 复制 / 粘贴。
+ * 正文區右鍵選單的剪下 / 複製 / 貼上。
  *
- * 之所以要自己实现这三样：全局 `contextmenu` 监听无条件 `preventDefault()`
- * （菜单风格统一），原生的复制/粘贴菜单不会出现，代价就是这里得补回来。
+ * 之所以要自己實現這三樣：全域 `contextmenu` 監聽無條件 `preventDefault()`
+ * （選單風格統一），原生的複製/貼上選單不會出現，代價就是這裡得補回來。
  *
- * - **复制**不改正文：优先 `execCommand('copy')`（同步、在用户手势里最稳），不行再 Clipboard API。
- * - **剪切 / 粘贴**要改正文，一律经 `Pane.applyEdit`——编辑区唯一的程序改写入口，记一步撤销、
- *   更新脏标记与草稿。从前这里优先 `execCommand('cut' / 'insertText')` 是为了保住 textarea 的
- *   原生撤销栈；撤销现在由编辑器自己记（`history.ts`），这条理由没了，直接拼 `value` 的兜底更是
- *   会绕过记账，一并删掉。
+ * - **複製**不改正文：優先 `execCommand('copy')`（同步、在使用者手勢裡最穩），不行再 Clipboard API。
+ * - **剪下 / 貼上**要改正文，一律經 `Pane.applyEdit`——編輯區唯一的程式改寫入口，記一步撤銷、
+ *   更新髒標記與草稿。從前這裡優先 `execCommand('cut' / 'insertText')` 是為了保住 textarea 的
+ *   原生撤銷棧；撤銷現在由編輯器自己記（`history.ts`），這條理由沒了，直接拼 `value` 的兜底更是
+ *   會繞過記賬，一併刪掉。
  *
- * 键盘上的 Ctrl+X / Ctrl+V 不经这里：浏览器自己改 textarea、发 `input`，由 `pane.ts` 照常记账。
+ * 鍵盤上的 Ctrl+X / Ctrl+V 不經這裡：瀏覽器自己改 textarea、發 `input`，由 `pane.ts` 照常記賬。
  */
 import { toast } from '../globals';
 import type { Pane } from './store';
 
-/** 复制选中的文字。返回是否交给了剪贴板（异步写入事后失败只会提示，返回时还不知道）。 */
+/** 複製選中的文字。返回是否交給了剪貼簿（非同步寫入事後失敗只會提示，返回時還不知道）。 */
 export function areaCopy(area: HTMLTextAreaElement): boolean {
   area.focus();
   if (document.execCommand?.('copy')) {
@@ -23,14 +23,14 @@ export function areaCopy(area: HTMLTextAreaElement): boolean {
   }
   const text = area.value.slice(area.selectionStart, area.selectionEnd);
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).catch(() => toast('复制失败，请手动选中复制。', true));
+    navigator.clipboard.writeText(text).catch(() => toast('複製失敗，請手動選中複製。', true));
     return true;
   }
-  toast('当前环境不支持剪贴板。', true);
+  toast('當前環境不支援剪貼簿。', true);
   return false;
 }
 
-/** 剪切：先复制，复制交出去了才删——剪切丢字比不剪切糟得多（删了也能撤销回来）。 */
+/** 剪下：先複製，複製交出去了才刪——剪下丟字比不剪下糟得多（刪了也能撤銷回來）。 */
 export function areaCut(pane: Pane): void {
   const area = pane.area;
   const start = area.selectionStart;
@@ -43,14 +43,14 @@ export function areaCut(pane: Pane): void {
 
 export async function areaPaste(pane: Pane): Promise<void> {
   if (!navigator.clipboard?.readText) {
-    toast('当前环境不支持剪贴板读取。', true);
+    toast('當前環境不支援剪貼簿讀取。', true);
     return;
   }
   let text: string;
   try {
     text = await navigator.clipboard.readText();
   } catch {
-    toast('粘贴失败：浏览器未授权剪贴板读取。', true);
+    toast('貼上失敗：瀏覽器未授權剪貼簿讀取。', true);
     return;
   }
   const area = pane.area;

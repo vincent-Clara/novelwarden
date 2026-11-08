@@ -1,18 +1,18 @@
 /**
- * 「转到…」面板（`media/src/editor/quickOpen.ts`）与标题栏「文件 → 转到…」（`media/src/view/quickOpenMenu.ts`）。
- * 索引由后端推来（`quickOpenIndex`），这里按消息造；匹配与排序的口径在 tests/unit/editor/quickOpenCore.test.js。
+ * 「轉到…」面板（`media/src/editor/quickOpen.ts`）與標題欄「檔案 → 轉到…」（`media/src/view/quickOpenMenu.ts`）。
+ * 索引由後端推來（`quickOpenIndex`），這裡按訊息造；匹配與排序的口徑在 tests/unit/editor/quickOpenCore.test.js。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 打开 / 关闭 | Ctrl+P（Mac 的 Cmd+P）打开、拦下「打印」、焦点进输入框、发 `requestQuickOpen`；Esc 关掉且焦点还回去；点外面关；不是全屏遮罩 |
- * | 过滤与选择 | 过滤串从输入框的值算；↑↓ 换选中；匹配的字高亮 |
- * | 打开什么 | 章节发 `openChapter`（与工程页点章节行同一条，没有正文时给细纲路径）；Ctrl+Enter 开到第二块；角色等发 `openEditor`；点一行也能开；之后焦点进编辑区 |
- * | 焦点在别处 | 焦点在对话输入框里时照样打开；输入法组字中不响应（全局与面板里都是） |
- * | 菜单 | 「文件 → 转到…」紧跟「打开文件…」、写着 Ctrl+P、点了打开 |
- * | 没开工程 | 不开、不发请求、说一句；菜单项置灰 |
- * | 最近打开的 | 编辑器里开过的文件按工程记在 localStorage，空输入时列在前面 |
- * | 插件形态 | 没有 `#wbEditor` 就不装 |
- * | 与临时标签 | 从这里打开的不带 `preview`，开成正常标签、不换掉别的临时标签；打开一份已经开成临时标签的，它就此转正 |
+ * | 開啟 / 關閉 | Ctrl+P（Mac 的 Cmd+P）開啟、攔下「列印」、焦點進輸入框、發 `requestQuickOpen`；Esc 關掉且焦點還回去；點外面關；不是全屏遮罩 |
+ * | 過濾與選擇 | 過濾串從輸入框的值算；↑↓ 換選中；匹配的字高亮 |
+ * | 開啟什麼 | 章節發 `openChapter`（與工程頁點章節行同一條，沒有正文時給細綱路徑）；Ctrl+Enter 開到第二塊；角色等發 `openEditor`；點一行也能開；之後焦點進編輯區 |
+ * | 焦點在別處 | 焦點在對話輸入框裡時照樣開啟；輸入法組字中不響應（全域與面板裡都是） |
+ * | 選單 | 「檔案 → 轉到…」緊跟「開啟檔案…」、寫著 Ctrl+P、點了開啟 |
+ * | 沒開工程 | 不開、不發請求、說一句；選單項置灰 |
+ * | 最近開啟的 | 編輯器裡開過的檔案按工程記在 localStorage，空輸入時列在前面 |
+ * | 外掛形態 | 沒有 `#wbEditor` 就不裝 |
+ * | 與臨時標籤 | 從這裡開啟的不帶 `preview`，開成正常標籤、不換掉別的臨時標籤；開啟一份已經開成臨時標籤的，它就此轉正 |
  */
 const { describe, test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
@@ -20,21 +20,21 @@ const { mount, JSDOM_SKIP, file, viewState } = require('../../helpers/dom');
 
 const URL = 'http://localhost/?project=%2Ftmp%2F%E9%9D%92%E4%BA%91';
 
-/** 一份索引：分卷的章、只有细纲的第 4 章、角色、设定、文档、草稿。 */
+/** 一份索引：分卷的章、只有細綱的第 4 章、角色、設定、文件、草稿。 */
 function index(extra = {}) {
   return {
     initialized: true,
     chapters: [
       { no: 1, title: '楔子', volume: '', chapterPath: 'chapters/001-楔子.md', plotPath: '.novelwarden/summaries/001-楔子.md', words: 300 },
-      { no: 2, title: '入镇', volume: '第一卷', chapterPath: 'chapters/第一卷/002-入镇.md', words: 2980 },
-      { no: 3, title: '夜访', volume: '第一卷', chapterPath: 'chapters/第一卷/003-夜访.md', plotPath: '.novelwarden/summaries/第一卷/003-夜访.md', words: 3100 },
+      { no: 2, title: '入鎮', volume: '第一卷', chapterPath: 'chapters/第一卷/002-入鎮.md', words: 2980 },
+      { no: 3, title: '夜訪', volume: '第一卷', chapterPath: 'chapters/第一卷/003-夜訪.md', plotPath: '.novelwarden/summaries/第一卷/003-夜訪.md', words: 3100 },
       { no: 4, title: '北行', volume: '第一卷', plotPath: '.novelwarden/summaries/第一卷/004-北行.md', words: 0 },
-      { no: 12, title: '夜入青云', volume: '第二卷', chapterPath: 'chapters/第二卷/012-夜入青云.md', plotPath: '.novelwarden/summaries/第二卷/012-夜入青云.md', words: 3012 },
+      { no: 12, title: '夜入青雲', volume: '第二卷', chapterPath: 'chapters/第二卷/012-夜入青雲.md', plotPath: '.novelwarden/summaries/第二卷/012-夜入青雲.md', words: 3012 },
     ],
     characters: [{ name: '林昭', aliases: ['阿昭'], path: '.novelwarden/characters/林昭.md' }],
-    lore: [{ title: '青云宗', path: '.novelwarden/lore/青云宗.md' }],
-    docs: [{ key: 'outline', label: '情节大纲', path: '.novelwarden/outline.md' }],
-    drafts: [{ path: 'drafts/第一卷/003-夜访.md', name: '003-夜访.md', no: 3 }],
+    lore: [{ title: '青雲宗', path: '.novelwarden/lore/青雲宗.md' }],
+    docs: [{ key: 'outline', label: '情節大綱', path: '.novelwarden/outline.md' }],
+    drafts: [{ path: 'drafts/第一卷/003-夜訪.md', name: '003-夜訪.md', no: 3 }],
     ...extra,
   };
 }
@@ -68,7 +68,7 @@ function harness(opts = {}) {
       return n && !n.classList.contains('hidden') ? n.textContent : '';
     },
     mainArea: () => doc.getElementById('edArea'),
-    /** 按一下键，返回事件（看 defaultPrevented）。 */
+    /** 按一下鍵，返回事件（看 defaultPrevented）。 */
     key(target, key, init = {}) {
       const ev = new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
       target.dispatchEvent(ev);
@@ -81,18 +81,18 @@ function harness(opts = {}) {
       h.input().value = text;
       h.input().dispatchEvent(new window.Event('input', { bubbles: true }));
     },
-    /** 后端回索引（回最近那一次请求）。 */
+    /** 後端回索引（回最近那一次請求）。 */
     respond(idx = index()) {
       const req = ui.last('requestQuickOpen');
-      assert.ok(req, '没发 requestQuickOpen');
+      assert.ok(req, '沒發 requestQuickOpen');
       ui.post({ type: 'quickOpenIndex', requestId: req.requestId, index: idx });
     },
-    /** Ctrl+P 打开并回索引。 */
+    /** Ctrl+P 開啟並回索引。 */
     open(idx) {
       h.ctrlP();
       h.respond(idx);
     },
-    /** 第 n 条之后发出去的消息（拷成本 realm 的普通对象，deepStrictEqual 才比得上）。 */
+    /** 第 n 條之後發出去的訊息（拷成本 realm 的普通物件，deepStrictEqual 才比得上）。 */
     sentAfter(n) {
       return JSON.parse(JSON.stringify(ui.sent.slice(n)));
     },
@@ -100,50 +100,50 @@ function harness(opts = {}) {
   return h;
 }
 
-describe('「转到…」面板 · 打开与关闭', { skip: JSDOM_SKIP }, () => {
+describe('「轉到…」面板 · 開啟與關閉', { skip: JSDOM_SKIP }, () => {
   let h;
   beforeEach(() => {
     h = harness();
   });
 
-  test('Ctrl+P 打开面板、拦下「打印」、焦点进输入框、发 requestQuickOpen', () => {
+  test('Ctrl+P 開啟面板、攔下「列印」、焦點進輸入框、發 requestQuickOpen', () => {
     const ev = h.ctrlP();
-    assert.ok(h.panel(), '没开面板');
+    assert.ok(h.panel(), '沒開面板');
     assert.equal(ev.defaultPrevented, true);
     assert.equal(h.doc.activeElement, h.input());
     const req = h.ui.last('requestQuickOpen');
     assert.ok(req && typeof req.requestId === 'string' && req.requestId !== '');
   });
 
-  test('Mac 的 Cmd+P 也一样', () => {
+  test('Mac 的 Cmd+P 也一樣', () => {
     h.key(h.doc.body, 'p', { metaKey: true });
     assert.ok(h.panel());
   });
 
-  test('Ctrl+Shift+P、Ctrl+Alt+P 不开', () => {
+  test('Ctrl+Shift+P、Ctrl+Alt+P 不開', () => {
     h.ctrlP(h.doc.body, { shiftKey: true });
     h.ctrlP(h.doc.body, { altKey: true });
     assert.equal(h.panel(), null);
   });
 
-  test('索引到之前说在读，到了列出前几章', () => {
+  test('索引到之前說在讀，到了列出前幾章', () => {
     h.ctrlP();
-    assert.match(h.note(), /正在读取/);
+    assert.match(h.note(), /正在讀取/);
     assert.deepEqual(h.rows(), []);
     h.respond();
-    assert.deepEqual(h.names(), ['楔子', '入镇', '夜访', '北行', '夜入青云']);
-    assert.deepEqual(h.sections(), ['章节']);
+    assert.deepEqual(h.names(), ['楔子', '入鎮', '夜訪', '北行', '夜入青雲']);
+    assert.deepEqual(h.sections(), ['章節']);
     assert.equal(h.activeName(), '楔子');
   });
 
-  test('不是全屏遮罩：挂在 body 上的一块，没有 modal-overlay', () => {
+  test('不是全屏遮罩：掛在 body 上的一塊，沒有 modal-overlay', () => {
     h.open();
     assert.equal(h.panel().parentElement, h.doc.body);
     assert.equal(h.panel().closest('.modal-overlay'), null);
     assert.equal(h.doc.querySelector('.modal-overlay:not(.hidden)'), null);
   });
 
-  test('Esc 关掉，焦点还回打开之前的地方', () => {
+  test('Esc 關掉，焦點還回開啟之前的地方', () => {
     const chat = h.doc.getElementById('input');
     chat.focus();
     h.ctrlP(chat);
@@ -155,7 +155,7 @@ describe('「转到…」面板 · 打开与关闭', { skip: JSDOM_SKIP }, () =>
     assert.equal(h.doc.activeElement, chat);
   });
 
-  test('点面板外面关掉；点面板里面不关', () => {
+  test('點面板外面關掉；點面板裡面不關', () => {
     h.open();
     h.input().dispatchEvent(new h.ui.window.MouseEvent('mousedown', { bubbles: true }));
     assert.ok(h.panel());
@@ -163,7 +163,7 @@ describe('「转到…」面板 · 打开与关闭', { skip: JSDOM_SKIP }, () =>
     assert.equal(h.panel(), null);
   });
 
-  test('开着时再按 Ctrl+P 不另开一个，输入框里的字全选上', () => {
+  test('開著時再按 Ctrl+P 不另開一個，輸入框裡的字全選上', () => {
     h.open();
     h.type('夜');
     h.ctrlP(h.input());
@@ -172,7 +172,7 @@ describe('「转到…」面板 · 打开与关闭', { skip: JSDOM_SKIP }, () =>
     assert.equal(h.input().selectionEnd, 1);
   });
 
-  test('再打开时先拿上一份索引画出来，同时再要一份新的', () => {
+  test('再開啟時先拿上一份索引畫出來，同時再要一份新的', () => {
     h.open();
     h.key(h.input(), 'Escape');
     const before = h.ui.sent.filter((m) => m.type === 'requestQuickOpen').length;
@@ -183,30 +183,30 @@ describe('「转到…」面板 · 打开与关闭', { skip: JSDOM_SKIP }, () =>
     assert.deepEqual(h.names(), ['楔子']);
   });
 
-  test('新的索引到了、输入没变：停在原来选中的那一条上', () => {
+  test('新的索引到了、輸入沒變：停在原來選中的那一條上', () => {
     h.open();
     h.key(h.input(), 'Escape');
     h.ctrlP();
     h.key(h.input(), 'ArrowDown');
     h.key(h.input(), 'ArrowDown');
-    assert.equal(h.activeName(), '夜访');
+    assert.equal(h.activeName(), '夜訪');
     h.respond();
-    assert.equal(h.activeName(), '夜访');
+    assert.equal(h.activeName(), '夜訪');
   });
 
-  test('别的页面的 requestId 不认', () => {
+  test('別的頁面的 requestId 不認', () => {
     h.ctrlP();
     h.ui.post({ type: 'quickOpenIndex', requestId: 'someone-else', index: index() });
     assert.deepEqual(h.rows(), []);
-    assert.match(h.note(), /正在读取/);
+    assert.match(h.note(), /正在讀取/);
   });
 
-  test('还不是小说工程：照实说', () => {
+  test('還不是小說工程：照實說', () => {
     h.open({ initialized: false, chapters: [], characters: [], lore: [], docs: [], drafts: [] });
-    assert.match(h.note(), /还不是小说工程/);
+    assert.match(h.note(), /還不是小說工程/);
   });
 
-  test('页内对话框或弹窗开着时不开', () => {
+  test('頁內對話方塊或彈窗開著時不開', () => {
     const overlay = h.doc.getElementById('providerModal');
     overlay.classList.remove('hidden');
     h.ctrlP();
@@ -215,118 +215,118 @@ describe('「转到…」面板 · 打开与关闭', { skip: JSDOM_SKIP }, () =>
   });
 });
 
-describe('「转到…」面板 · 过滤与选择', { skip: JSDOM_SKIP }, () => {
+describe('「轉到…」面板 · 過濾與選擇', { skip: JSDOM_SKIP }, () => {
   let h;
   beforeEach(() => {
     h = harness();
     h.open();
   });
 
-  test('输入过滤：标题子串排第一，匹配的字高亮', () => {
-    h.type('夜访');
-    assert.equal(h.names()[0], '夜访');
+  test('輸入過濾：標題子串排第一，匹配的字高亮', () => {
+    h.type('夜訪');
+    assert.equal(h.names()[0], '夜訪');
     const marks = [...h.rows()[0].querySelectorAll('.qo-name mark')].map((m) => m.textContent);
-    assert.deepEqual(marks, ['夜访']);
+    assert.deepEqual(marks, ['夜訪']);
   });
 
-  test('第十二章直接命中第 12 章，小字写「第 12 章 · 第二卷 · 3012 字」', () => {
+  test('第十二章直接命中第 12 章，小字寫「第 12 章 · 第二卷 · 3012 字」', () => {
     h.type('第十二章');
-    assert.equal(h.names()[0], '夜入青云');
+    assert.equal(h.names()[0], '夜入青雲');
     assert.equal(h.rows()[0].querySelector('.qo-detail').textContent, '第 12 章 · 第二卷 · 3012 字');
     assert.equal(h.rows()[0].querySelector('.qo-detail mark').textContent, '第 12 章');
   });
 
-  test('每一条有类型标记与一行小字（角色写别名）', () => {
+  test('每一條有型別標記與一行小字（角色寫別名）', () => {
     h.type('阿昭');
     const row = h.rows()[0];
     assert.equal(row.querySelector('.qo-badge').textContent, '角色');
     assert.equal(row.querySelector('.qo-name').textContent, '林昭');
-    assert.equal(row.querySelector('.qo-detail').textContent, '别名 阿昭');
+    assert.equal(row.querySelector('.qo-detail').textContent, '別名 阿昭');
   });
 
-  test('没有匹配的说一句', () => {
+  test('沒有匹配的說一句', () => {
     h.type('zzzz');
     assert.deepEqual(h.rows(), []);
-    assert.match(h.note(), /没有匹配/);
+    assert.match(h.note(), /沒有匹配/);
   });
 
-  test('↓↑ 换选中、到头绕回；改了输入回到第一条', () => {
+  test('↓↑ 換選中、到頭繞回；改了輸入回到第一條', () => {
     assert.equal(h.activeName(), '楔子');
     h.key(h.input(), 'ArrowDown');
-    assert.equal(h.activeName(), '入镇');
+    assert.equal(h.activeName(), '入鎮');
     h.key(h.input(), 'ArrowUp');
     h.key(h.input(), 'ArrowUp');
-    assert.equal(h.activeName(), '夜入青云');
+    assert.equal(h.activeName(), '夜入青雲');
     h.type('夜');
     assert.equal(h.rows()[0].classList.contains('active'), true);
   });
 
-  test('选中的那一条标 aria-selected，输入框指向它', () => {
+  test('選中的那一條標 aria-selected，輸入框指向它', () => {
     h.key(h.input(), 'ArrowDown');
     const active = h.doc.querySelector('.qo-item.active');
     assert.equal(active.getAttribute('aria-selected'), 'true');
     assert.equal(h.input().getAttribute('aria-activedescendant'), active.id);
   });
 
-  test('超过上限只列前 50 条并说一共几条', () => {
+  test('超過上限只列前 50 條並說一共幾條', () => {
     h.key(h.input(), 'Escape');
     const many = Array.from({ length: 120 }, (_, i) => ({
-      no: i + 1, title: `风雪${i + 1}`, volume: '', chapterPath: `chapters/${i + 1}.md`, words: 1,
+      no: i + 1, title: `風雪${i + 1}`, volume: '', chapterPath: `chapters/${i + 1}.md`, words: 1,
     }));
     h.open(index({ chapters: many }));
-    h.type('风雪');
+    h.type('風雪');
     assert.equal(h.rows().length, 50);
-    assert.match(h.note(), /只列出前 50 条（一共 120 条）/);
+    assert.match(h.note(), /只列出前 50 條（一共 120 條）/);
   });
 
-  test('Tab 不把焦点带出面板', () => {
+  test('Tab 不把焦點帶出面板', () => {
     const ev = h.key(h.input(), 'Tab');
     assert.equal(ev.defaultPrevented, true);
     assert.ok(h.panel());
   });
 });
 
-describe('「转到…」面板 · 打开什么', { skip: JSDOM_SKIP }, () => {
+describe('「轉到…」面板 · 開啟什麼', { skip: JSDOM_SKIP }, () => {
   let h;
   beforeEach(() => {
     h = harness();
     h.open();
   });
 
-  test('章节：Enter 发 openChapter（与工程页点章节行同一条），面板关掉', () => {
-    h.type('夜访');
+  test('章節：Enter 發 openChapter（與工程頁點章節行同一條），面板關掉', () => {
+    h.type('夜訪');
     const n = h.ui.sent.length;
     h.key(h.input(), 'Enter');
-    assert.deepEqual(h.sentAfter(n), [{ type: 'openChapter', plotRelPath: 'chapters/第一卷/003-夜访.md' }]);
+    assert.deepEqual(h.sentAfter(n), [{ type: 'openChapter', plotRelPath: 'chapters/第一卷/003-夜訪.md' }]);
     assert.equal(h.panel(), null);
   });
 
-  test('只有细纲的章：openChapter 给的是细纲路径', () => {
+  test('只有細綱的章：openChapter 給的是細綱路徑', () => {
     h.type('北行');
     const n = h.ui.sent.length;
     h.key(h.input(), 'Enter');
     assert.deepEqual(h.sentAfter(n), [{ type: 'openChapter', plotRelPath: '.novelwarden/summaries/第一卷/004-北行.md' }]);
   });
 
-  test('章节：Ctrl+Enter 把正文开到第二块编辑区', () => {
-    h.type('夜访');
+  test('章節：Ctrl+Enter 把正文開到第二塊編輯區', () => {
+    h.type('夜訪');
     const n = h.ui.sent.length;
     h.key(h.input(), 'Enter', { ctrlKey: true });
-    assert.deepEqual(h.sentAfter(n), [{ type: 'openEditor', path: 'chapters/第一卷/003-夜访.md', pane: 'draft' }]);
+    assert.deepEqual(h.sentAfter(n), [{ type: 'openEditor', path: 'chapters/第一卷/003-夜訪.md', pane: 'draft' }]);
   });
 
-  test('角色：Enter 发 openEditor 开那张卡（主区），不带别的标记', () => {
+  test('角色：Enter 發 openEditor 開那張卡（主區），不帶別的標記', () => {
     h.type('林昭');
     const n = h.ui.sent.length;
     h.key(h.input(), 'Enter');
     assert.deepEqual(h.sentAfter(n), [{ type: 'openEditor', path: '.novelwarden/characters/林昭.md', pane: 'main' }]);
   });
 
-  test('设定、文档、草稿：Ctrl+Enter 开到第二块', () => {
+  test('設定、檔案、草稿：Ctrl+Enter 開到第二塊', () => {
     for (const [q, path] of [
-      ['青云宗', '.novelwarden/lore/青云宗.md'],
-      ['情节大纲', '.novelwarden/outline.md'],
-      ['003-夜访.md', 'drafts/第一卷/003-夜访.md'],
+      ['青雲宗', '.novelwarden/lore/青雲宗.md'],
+      ['情節大綱', '.novelwarden/outline.md'],
+      ['003-夜訪.md', 'drafts/第一卷/003-夜訪.md'],
     ]) {
       if (!h.panel()) {
         h.ctrlP();
@@ -338,7 +338,7 @@ describe('「转到…」面板 · 打开什么', { skip: JSDOM_SKIP }, () => {
     }
   });
 
-  test('点一行也能开；Ctrl+点击开到第二块', () => {
+  test('點一行也能開；Ctrl+點選開到第二塊', () => {
     h.type('林昭');
     let n = h.ui.sent.length;
     h.ui.clickEl(h.rows()[0]);
@@ -350,42 +350,42 @@ describe('「转到…」面板 · 打开什么', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual(h.sentAfter(n), [{ type: 'openEditor', path: '.novelwarden/characters/林昭.md', pane: 'draft' }]);
   });
 
-  test('按下鼠标不把焦点从输入框拿走', () => {
+  test('按下滑鼠不把焦點從輸入框拿走', () => {
     h.type('夜');
     const ev = new h.ui.window.MouseEvent('mousedown', { bubbles: true, cancelable: true });
     h.rows()[0].dispatchEvent(ev);
     assert.equal(ev.defaultPrevented, true);
   });
 
-  test('打开章节之后焦点进正文那一块，并排的细纲随后到了也不把焦点抢走', () => {
+  test('開啟章節之後焦點進正文那一塊，並排的細綱隨後到了也不把焦點搶走', () => {
     h.doc.getElementById('input').focus();
     h.ctrlP(h.doc.getElementById('input'));
-    h.type('夜访');
+    h.type('夜訪');
     h.key(h.input(), 'Enter');
-    h.ui.post({ type: 'editorOpen', file: file('chapters/第一卷/003-夜访.md', '正文', { kind: 'chapter' }) });
+    h.ui.post({ type: 'editorOpen', file: file('chapters/第一卷/003-夜訪.md', '正文', { kind: 'chapter' }) });
     assert.equal(h.doc.activeElement, h.mainArea());
-    h.ui.post({ type: 'editorOpen', file: file('.novelwarden/summaries/第一卷/003-夜访.md', '细纲', { kind: 'plot' }), pane: 'draft' });
+    h.ui.post({ type: 'editorOpen', file: file('.novelwarden/summaries/第一卷/003-夜訪.md', '細綱', { kind: 'plot' }), pane: 'draft' });
     assert.equal(h.doc.activeElement, h.mainArea());
-    // 当前那一块（Ctrl+S 存的就是它）也是正文那一块。
+    // 當前那一塊（Ctrl+S 存的就是它）也是正文那一塊。
     const status = { hasFile: false, path: null };
     h.ui.window.dispatchEvent(new h.ui.window.CustomEvent('nf-editor-query', { detail: status }));
-    assert.equal(status.path, 'chapters/第一卷/003-夜访.md');
+    assert.equal(status.path, 'chapters/第一卷/003-夜訪.md');
   });
 
-  // 后端的 openChapter 在一条消息里先开正文、再开细纲（按顺序推）；就算哪天两份回来的先后反了
-  // （独立版对每条 WebSocket 消息并发处理，连发两条打开请求时就是这样），焦点也还是落在正文那一块。
-  test('细纲先到、正文后到：焦点照样落在正文那一块', () => {
-    h.type('夜访');
+  // 後端的 openChapter 在一條訊息裡先開正文、再開細綱（按順序推）；就算哪天兩份回來的先後反了
+  // （獨立版對每條 WebSocket 訊息併發處理，連發兩條開啟請求時就是這樣），焦點也還是落在正文那一塊。
+  test('細綱先到、正文後到：焦點照樣落在正文那一塊', () => {
+    h.type('夜訪');
     h.key(h.input(), 'Enter');
-    h.ui.post({ type: 'editorOpen', file: file('.novelwarden/summaries/第一卷/003-夜访.md', '细纲', { kind: 'plot' }), pane: 'draft' });
-    h.ui.post({ type: 'editorOpen', file: file('chapters/第一卷/003-夜访.md', '正文', { kind: 'chapter' }) });
+    h.ui.post({ type: 'editorOpen', file: file('.novelwarden/summaries/第一卷/003-夜訪.md', '細綱', { kind: 'plot' }), pane: 'draft' });
+    h.ui.post({ type: 'editorOpen', file: file('chapters/第一卷/003-夜訪.md', '正文', { kind: 'chapter' }) });
     assert.equal(h.doc.activeElement, h.mainArea());
     const status = { hasFile: false, path: null };
     h.ui.window.dispatchEvent(new h.ui.window.CustomEvent('nf-editor-query', { detail: status }));
-    assert.equal(status.path, 'chapters/第一卷/003-夜访.md');
+    assert.equal(status.path, 'chapters/第一卷/003-夜訪.md');
   });
 
-  test('Ctrl+Enter 之后焦点进第二块编辑区', () => {
+  test('Ctrl+Enter 之後焦點進第二塊編輯區', () => {
     h.type('林昭');
     h.key(h.input(), 'Enter', { ctrlKey: true });
     h.ui.post({ type: 'editorOpen', file: file('.novelwarden/characters/林昭.md', '# 林昭', { kind: 'character' }), pane: 'draft' });
@@ -393,7 +393,7 @@ describe('「转到…」面板 · 打开什么', { skip: JSDOM_SKIP }, () => {
     assert.equal(h.doc.activeElement, draftArea);
   });
 
-  test('别处打开的文件不抢焦点（只认从面板打开的那一份）', () => {
+  test('別處開啟的檔案不搶焦點（只認從面板開啟的那一份）', () => {
     h.key(h.input(), 'Escape');
     const chat = h.doc.getElementById('input');
     chat.focus();
@@ -402,13 +402,13 @@ describe('「转到…」面板 · 打开什么', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('「转到…」面板 · 焦点在别处与输入法', { skip: JSDOM_SKIP }, () => {
+describe('「轉到…」面板 · 焦點在別處與輸入法', { skip: JSDOM_SKIP }, () => {
   let h;
   beforeEach(() => {
     h = harness();
   });
 
-  test('焦点在左侧对话输入框里时 Ctrl+P 照样打开', () => {
+  test('焦點在左側對話輸入框裡時 Ctrl+P 照樣開啟', () => {
     const chat = h.doc.getElementById('input');
     chat.focus();
     const ev = h.ctrlP(chat);
@@ -416,14 +416,14 @@ describe('「转到…」面板 · 焦点在别处与输入法', { skip: JSDOM_S
     assert.equal(ev.defaultPrevented, true);
   });
 
-  test('焦点在编辑区里也能打开', () => {
+  test('焦點在編輯區裡也能開啟', () => {
     h.ui.post({ type: 'editorOpen', file: file('chapters/001-楔子.md', '正文', { kind: 'chapter' }) });
     h.mainArea().focus();
     h.ctrlP(h.mainArea());
     assert.ok(h.panel());
   });
 
-  test('输入法组字中的 Ctrl+P 不响应（isComposing / keyCode 229）', () => {
+  test('輸入法組字中的 Ctrl+P 不響應（isComposing / keyCode 229）', () => {
     const chat = h.doc.getElementById('input');
     const ev = h.ctrlP(chat, { isComposing: true });
     assert.equal(h.panel(), null);
@@ -432,7 +432,7 @@ describe('「转到…」面板 · 焦点在别处与输入法', { skip: JSDOM_S
     assert.equal(h.panel(), null);
   });
 
-  test('面板里组字中的 Enter、↑↓ 交给输入法', () => {
+  test('面板裡組字中的 Enter、↑↓ 交給輸入法', () => {
     h.open();
     h.type('夜');
     const n = h.ui.sent.length;
@@ -444,7 +444,7 @@ describe('「转到…」面板 · 焦点在别处与输入法', { skip: JSDOM_S
     assert.equal(down.defaultPrevented, false);
   });
 
-  test('组字中途的 input 不重算，上屏（compositionend）之后再算', () => {
+  test('組字中途的 input 不重算，上屏（compositionend）之後再算', () => {
     h.open();
     const before = h.names();
     h.input().value = 'lin';
@@ -456,8 +456,8 @@ describe('「转到…」面板 · 焦点在别处与输入法', { skip: JSDOM_S
   });
 });
 
-describe('「文件 → 转到…」', { skip: JSDOM_SKIP }, () => {
-  /** 打开「文件」菜单，取一项。 */
+describe('「檔案 → 轉到…」', { skip: JSDOM_SKIP }, () => {
+  /** 開啟「檔案」選單，取一項。 */
   function fileItems(h) {
     h.ui.closeMenu();
     h.ui.clickEl(h.doc.querySelector('[data-menu="file"]'));
@@ -465,19 +465,19 @@ describe('「文件 → 转到…」', { skip: JSDOM_SKIP }, () => {
   }
   const label = (b) => b.querySelector('.wb-menu-label').textContent;
 
-  test('紧跟「打开文件…」，写着 Ctrl+P', () => {
+  test('緊跟「開啟檔案…」，寫著 Ctrl+P', () => {
     const h = harness();
     const items = fileItems(h);
-    const at = items.findIndex((b) => label(b) === '转到…');
+    const at = items.findIndex((b) => label(b) === '轉到…');
     assert.ok(at > 0, items.map(label).join('、'));
-    assert.equal(label(items[at - 1]), '打开文件…');
+    assert.equal(label(items[at - 1]), '開啟檔案…');
     assert.equal(items[at].querySelector('.wb-menu-kbd').textContent, 'Ctrl+P');
     assert.equal(items[at].disabled, false);
   });
 
-  test('点了打开面板、发 requestQuickOpen', () => {
+  test('點了開啟面板、發 requestQuickOpen', () => {
     const h = harness();
-    const item = fileItems(h).find((b) => label(b) === '转到…');
+    const item = fileItems(h).find((b) => label(b) === '轉到…');
     h.ui.clickEl(item);
     assert.ok(h.panel());
     assert.equal(h.doc.activeElement, h.input());
@@ -485,51 +485,51 @@ describe('「文件 → 转到…」', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('「转到…」 · 没开工程', { skip: JSDOM_SKIP }, () => {
-  test('Ctrl+P 不开面板、不发请求，说一句；也不弹打印', () => {
+describe('「轉到…」 · 沒開工程', { skip: JSDOM_SKIP }, () => {
+  test('Ctrl+P 不開面板、不發請求，說一句；也不彈列印', () => {
     const h = harness({ empty: true });
     const ev = h.ctrlP();
     assert.equal(h.panel(), null);
     assert.equal(h.ui.last('requestQuickOpen'), undefined);
-    assert.match(h.toasts.join('\n'), /先打开一个工程/);
+    assert.match(h.toasts.join('\n'), /先開啟一個工程/);
     assert.equal(ev.defaultPrevented, true);
   });
 
-  test('「文件 → 转到…」置灰，提示说为什么', () => {
+  test('「檔案 → 轉到…」置灰，提示說為什麼', () => {
     const h = harness({ empty: true });
     h.ui.clickEl(h.doc.querySelector('[data-menu="file"]'));
     const item = [...h.doc.querySelectorAll('.wb-menu-drop .wb-menu-item')].find(
-      (b) => b.querySelector('.wb-menu-label').textContent === '转到…'
+      (b) => b.querySelector('.wb-menu-label').textContent === '轉到…'
     );
     assert.equal(item.disabled, true);
-    assert.match(item.title, /先打开一个工程/);
+    assert.match(item.title, /先開啟一個工程/);
   });
 });
 
-describe('「转到…」 · 最近打开的', { skip: JSDOM_SKIP }, () => {
+describe('「轉到…」 · 最近開啟的', { skip: JSDOM_SKIP }, () => {
   const KEY = 'novelforge.quickopen.recent@/tmp/青云';
 
-  test('编辑器里开过的文件记在按工程分开的 localStorage 里，新的在前', () => {
+  test('編輯器裡開過的檔案記在按工程分開的 localStorage 裡，新的在前', () => {
     const h = harness();
     h.ui.post({ type: 'editorOpen', file: file('.novelwarden/characters/林昭.md', '# 林昭', { kind: 'character' }) });
-    h.ui.post({ type: 'editorOpen', file: file('chapters/第一卷/003-夜访.md', '正文', { kind: 'chapter' }) });
+    h.ui.post({ type: 'editorOpen', file: file('chapters/第一卷/003-夜訪.md', '正文', { kind: 'chapter' }) });
     assert.deepEqual(JSON.parse(h.ui.window.localStorage.getItem(KEY)), [
-      'chapters/第一卷/003-夜访.md',
+      'chapters/第一卷/003-夜訪.md',
       '.novelwarden/characters/林昭.md',
     ]);
   });
 
-  test('空输入时「最近打开的」列在前面，后面接前几章（已列过的不重复）', () => {
+  test('空輸入時「最近開啟的」列在前面，後面接前幾章（已列過的不重複）', () => {
     const h = harness();
     h.ui.post({ type: 'editorOpen', file: file('.novelwarden/characters/林昭.md', '# 林昭', { kind: 'character' }) });
-    h.ui.post({ type: 'editorOpen', file: file('.novelwarden/summaries/第一卷/003-夜访.md', '细纲', { kind: 'plot' }) });
+    h.ui.post({ type: 'editorOpen', file: file('.novelwarden/summaries/第一卷/003-夜訪.md', '細綱', { kind: 'plot' }) });
     h.open();
-    assert.deepEqual(h.sections(), ['最近打开的', '章节']);
-    assert.deepEqual(h.names(), ['夜访', '林昭', '楔子', '入镇', '北行', '夜入青云']);
-    assert.equal(h.activeName(), '夜访');
+    assert.deepEqual(h.sections(), ['最近開啟的', '章節']);
+    assert.deepEqual(h.names(), ['夜訪', '林昭', '楔子', '入鎮', '北行', '夜入青雲']);
+    assert.equal(h.activeName(), '夜訪');
   });
 
-  test('从面板打开的也记下（经编辑器激活那一下），下次排第一', () => {
+  test('從面板開啟的也記下（經編輯器啟用那一下），下次排第一', () => {
     const h = harness();
     h.open();
     h.type('林昭');
@@ -538,32 +538,32 @@ describe('「转到…」 · 最近打开的', { skip: JSDOM_SKIP }, () => {
     h.ctrlP();
     h.respond();
     assert.equal(h.names()[0], '林昭');
-    assert.deepEqual(h.sections()[0], '最近打开的');
+    assert.deepEqual(h.sections()[0], '最近開啟的');
   });
 
-  test('记不进 localStorage（about:blank）时不报错，只是没有「最近打开的」', () => {
+  test('記不進 localStorage（about:blank）時不報錯，只是沒有「最近開啟的」', () => {
     const h = harness({ url: undefined });
     h.ui.post({ type: 'editorOpen', file: file('.novelwarden/characters/林昭.md', '# 林昭', { kind: 'character' }) });
     h.open();
-    assert.deepEqual(h.sections(), ['章节']);
+    assert.deepEqual(h.sections(), ['章節']);
   });
 });
 
-describe('「转到…」 · 与临时标签', { skip: JSDOM_SKIP }, () => {
+describe('「轉到…」 · 與臨時標籤', { skip: JSDOM_SKIP }, () => {
   let h;
   const previews = () => [...h.doc.querySelectorAll('.ed-tab.preview')].map((t) => t.dataset.path);
   const tabs = () => [...h.doc.querySelectorAll('.wb-editor')][0].querySelectorAll('.ed-tab');
-  /** 后端照请求回 editorOpen（不带 preview——请求上就没有）。 */
+  /** 後端照請求回 editorOpen（不帶 preview——請求上就沒有）。 */
   const echo = (msg) =>
     h.ui.post({ type: 'editorOpen', file: file(msg.path ?? msg.plotRelPath, '正文'), ...(msg.pane ? { pane: msg.pane } : {}), ...(msg.preview ? { preview: true } : {}) });
 
   beforeEach(() => {
     h = harness();
-    // 工程页 / 文件页单击打开的：第 1 章正文是临时标签。
+    // 工程頁 / 檔案頁單擊開啟的：第 1 章正文是臨時標籤。
     h.ui.post({ type: 'editorOpen', file: file('chapters/001-楔子.md', '正文'), preview: true });
   });
 
-  test('打开章节：openChapter 不带 preview', () => {
+  test('開啟章節：openChapter 不帶 preview', () => {
     h.open();
     h.key(h.input(), 'Enter');
     const msg = h.ui.last('openChapter');
@@ -571,7 +571,7 @@ describe('「转到…」 · 与临时标签', { skip: JSDOM_SKIP }, () => {
     assert.equal('preview' in msg, false);
   });
 
-  test('打开的正是那个临时标签：它就此转正（被不带 preview 的打开请求打开一次）', () => {
+  test('開啟的正是那個臨時標籤：它就此轉正（被不帶 preview 的開啟請求開啟一次）', () => {
     assert.deepEqual(previews(), ['chapters/001-楔子.md']);
     h.open();
     h.key(h.input(), 'Enter');
@@ -579,7 +579,7 @@ describe('「转到…」 · 与临时标签', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual(previews(), []);
   });
 
-  test('打开别的文件：开成正常标签，不换掉那个临时标签', () => {
+  test('開啟別的檔案：開成正常標籤，不換掉那個臨時標籤', () => {
     h.open();
     h.type('林昭');
     h.key(h.input(), 'Enter');
@@ -592,8 +592,8 @@ describe('「转到…」 · 与临时标签', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('「转到…」 · 插件形态', { skip: JSDOM_SKIP }, () => {
-  test('没有 #wbEditor（插件的 webview）就不装：Ctrl+P 什么都不做', () => {
+describe('「轉到…」 · 外掛形態', { skip: JSDOM_SKIP }, () => {
+  test('沒有 #wbEditor（外掛的 webview）就不裝：Ctrl+P 什麼都不做', () => {
     const ui = mount({ body: 'webview', scripts: ['view.js', 'editor.js'] });
     const ev = new ui.window.KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true, cancelable: true });
     ui.doc.body.dispatchEvent(ev);

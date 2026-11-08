@@ -1,32 +1,32 @@
 /**
- * 生成：装配上下文 → 调模型 → 解析产物 → 交出一份 Draft。
+ * 生成：裝配上下文 → 調模型 → 解析產物 → 交出一份 Draft。
  *
- * ## 无状态
+ * ## 無狀態
  *
- * 这里没有类、没有字段、没有「当前有没有在生成」。并发控制是**调度**的
- * 责任，不是生成的责任——对话页与 MCP 调用都由 `ChatController` 管
- * （同一时刻只许一个）。所以 `signal` 由调用方给，本模块只往下透传。
+ * 這裡沒有類、沒有欄位、沒有「當前有沒有在生成」。併發控制是**排程**的
+ * 責任，不是生成的責任——對話頁與 MCP 呼叫都由 `ChatController` 管
+ * （同一時刻只許一個）。所以 `signal` 由呼叫方給，本模組只往下透傳。
  *
- * ## 一个字都不写磁盘
+ * ## 一個字都不寫磁碟
  *
- * `generate` 产出的是 `Draft`：一份**尚未落盘**的产物。落盘在
- * `workspace/`，且只在用户点了采纳之后（AGENTS 第 19 条：产物落盘前必须
- * 过一遍人）。唯一的例外是失败记账（`recordFailure` / `clearFailures`），
- * 它写的是痕迹库不是内容（第 17 条）。
+ * `generate` 產出的是 `Draft`：一份**尚未落盤**的產物。落盤在
+ * `workspace/`，且只在使用者點了採納之後（AGENTS 第 19 條：產物落盤前必須
+ * 過一遍人）。唯一的例外是失敗記賬（`recordFailure` / `clearFailures`），
+ * 它寫的是痕跡庫不是內容（第 17 條）。
  *
- * ## 解析并进生成
+ * ## 解析並進生成
  *
- * 从前的流程是「生成 → 前端拿到文本 → 后端再 parse 一次画卡片 → 采纳时
- * 第三次 parse」，中间那次纯属多余。现在 `Draft` 出厂就带 `artifact` 与
- * `summary`。**采纳时仍然重新解析**——用户可能在气泡里改过文本，
+ * 從前的流程是「生成 → 前端拿到文字 → 後端再 parse 一次畫卡片 → 採納時
+ * 第三次 parse」，中間那次純屬多餘。現在 `Draft` 出廠就帶 `artifact` 與
+ * `summary`。**採納時仍然重新解析**——使用者可能在氣泡裡改過文字，
  * `draft.artifact` 只是生成那一刻的快照。
  *
- * ## 一件产物可能要调几次
+ * ## 一件產物可能要調幾次
  *
- * 小说配置、角色图谱、细纲批次要分几次调用才拼得出来（截断重来、两段式、拆半重试），
- * 第一次流式调用之后接上 `structured.ts` 的那条链，后面几次照样流进同一个气泡，
- * 最后气泡换成规范化结果（将要落盘的样子）。每一次降级记进 `Draft.notes`，
- * 落盘卡片上列出来（第 2 条）。
+ * 小說配置、角色圖譜、細綱批次要分幾次呼叫才拼得出來（截斷重來、兩段式、拆半重試），
+ * 第一次流式呼叫之後接上 `structured.ts` 的那條鏈，後面幾次照樣流進同一個氣泡，
+ * 最後氣泡換成規範化結果（將要落盤的樣子）。每一次降級記進 `Draft.notes`，
+ * 落盤卡片上列出來（第 2 條）。
  */
 import { BuildRequest, BuiltContext, buildContext } from '../context/builder';
 import { StopSignal } from '../llm/provider';
@@ -92,49 +92,49 @@ import { completeRevision } from './revision';
 import { ReviewReport, freezeGoals } from '../model/review';
 import { basename } from 'node:path';
 
-const log = scoped('创作');
+const log = scoped('創作');
 
-/** 一次生成的产出。**尚未落盘**，采纳时才写。 */
+/** 一次生成的產出。**尚未落盤**，採納時才寫。 */
 export interface Draft {
   id: string;
   action: CreationAction;
   target: CreationTarget;
-  /** 模型原样输出（正文层已过 `cleanOutput`）。 */
+  /** 模型原樣輸出（正文層已過 `cleanOutput`）。 */
   raw: string;
-  /** 解析出的结构化产物。讨论（唯一的 text 类能力）没有。 */
+  /** 解析出的結構化產物。討論（唯一的 text 類能力）沒有。 */
   artifact?: Artifact;
-  /** 一句话形状描述，如「细纲 · 3/3 节」。有 artifact 才有。 */
+  /** 一句話形狀描述，如「細綱 · 3/3 節」。有 artifact 才有。 */
   summary?: string;
   words: number;
-  /** 推理模型的思考过程。**不是正文，采纳时不取。** */
+  /** 推理模型的思考過程。**不是正文，採納時不取。** */
   reasoning?: string;
   createdAt: string;
   /**
-   * 这一步覆盖的章号区间：细纲批次（给了就是一批）与续写的那一段大纲。采纳时要它——
-   * 细纲按批次解码、大纲按区间合并。
+   * 這一步覆蓋的章號區間：細綱批次（給了就是一批）與續寫的那一段大綱。採納時要它——
+   * 細綱按批次解碼、大綱按區間合併。
    */
   range?: ChapterRange;
-  /** 这一路上的降级与说明（截断重来、拆半重试、漏字段……）。落盘卡片上列出来。 */
+  /** 這一路上的降級與說明（截斷重來、拆半重試、漏欄位……）。落盤卡片上列出來。 */
   notes?: string[];
-  /** 这一次一共调了几次模型。 */
+  /** 這一次一共調了幾次模型。 */
   calls?: number;
   /**
-   * 正文的写法（model/pipeline.ts 的 `WriteMode`）。**采纳时按它落盘**：`continue` 追加、
-   * 其余在已有正文时覆盖审阅。生成那一刻按磁盘定的，采纳时不再猜。
+   * 正文的寫法（model/pipeline.ts 的 `WriteMode`）。**採納時按它落盤**：`continue` 追加、
+   * 其餘在已有正文時覆蓋審閱。生成那一刻按磁碟定的，採納時不再猜。
    */
   writeMode?: WriteMode;
-  /** 正文写了多长：这一章写完后的总字数、目标、这一次新写的、续写了几轮、够不够八成。 */
+  /** 正文寫了多長：這一章寫完後的總字數、目標、這一次新寫的、續寫了幾輪、夠不夠八成。 */
   length?: DraftLength;
-  /** 新稿开头与上一章结尾重合的那一段原文（context/replay.ts）。卡片标红、写入要点两下。 */
+  /** 新稿開頭與上一章結尾重合的那一段原文（context/replay.ts）。卡片標紅、寫入要點兩下。 */
   replay?: string;
   /**
-   * 删修饰真删了字时：删之前那一版（与 `raw` 对应，只含这一次新写的）。写入卡片点了「写入」之后，
-   * 合并视图拿它与气泡里那份逐段对照，作者可以把删改退回原文。
+   * 刪修飾真刪了字時：刪之前那一版（與 `raw` 對應，只含這一次新寫的）。寫入卡片點了「寫入」之後，
+   * 合併檢視拿它與氣泡裡那份逐段對照，作者可以把刪改退回原文。
    */
   untrimmed?: string;
   /**
-   * 审稿报告（五期）。审稿那一轮**没有 `artifact`**：报告不落盘，随会话保存（D22），
-   * 作者在报告卡上勾选之后再发起修稿。
+   * 審稿報告（五期）。審稿那一輪**沒有 `artifact`**：報告不落盤，隨會話儲存（D22），
+   * 作者在報告卡上勾選之後再發起修稿。
    */
   review?: ReviewReport;
 }
@@ -144,65 +144,65 @@ export interface DraftLength {
   target?: number;
   added: number;
   rounds: number;
-  /** 到了目标的八成（没有目标时恒为 true：有字就算写够）。 */
+  /** 到了目標的八成（沒有目標時恆為 true：有字就算寫夠）。 */
   reached: boolean;
 }
 
 export interface GenerateHandlers {
   onDelta(delta: string, full: string): void;
-  /** 推理模型的思考增量。正文之前可能先想很久，界面靠它给出反馈。 */
+  /** 推理模型的思考增量。正文之前可能先想很久，介面靠它給出反饋。 */
   onReasoning?(delta: string, full: string): void;
   onDone(full: string): void;
   onError(message: string): void;
   onCancelled(): void;
-  /** 写正文的进度：第几轮、写到多少字、目标多少。流式期间约 300ms 一次，每一轮开始时一次。 */
+  /** 寫正文的進度：第幾輪、寫到多少字、目標多少。流式期間約 300ms 一次，每一輪開始時一次。 */
   onProgress?(p: WriteProgress): void;
-  /** 气泡退回到这一份（续写丢弃一轮时）。 */
+  /** 氣泡退回到這一份（續寫丟棄一輪時）。 */
   onReset?(full: string): void;
 }
 
 export interface GenerateOptions {
   signal: AbortSignal;
   /**
-   * 用哪个模型。缺省用对话页选定的那个（`config.active`）。
+   * 用哪個模型。預設用對話頁選定的那個（`config.active`）。
    *
-   * **正文层永远不许传别的**（AGENTS 第 12 条：中途换人会让文风断掉）。
-   * 这个参数给 agent 的 `generate` 工具让非正文层走分档池。
+   * **正文層永遠不許傳別的**（AGENTS 第 12 條：中途換人會讓文風斷掉）。
+   * 這個引數給 agent 的 `generate` 工具讓非正文層走分檔池。
    */
   provider?: LlmProvider;
   /**
-   * 装配与输出的 token 预算。缺省用 `config` 里那一份（对话页选定模型的窗口）。
+   * 裝配與輸出的 token 預算。預設用 `config` 裡那一份（對話頁選定模型的視窗）。
    *
-   * **传了 `provider` 就必须一起传它**（AGENTS 第 13 条）：`config.contextWindow`
-   * 跟着对话页选定的模型走，拿 200k 写作模型的窗口去给快速档的 32k 模型装配
-   * 上下文会稳定超窗。分档池的 `primaryBudget` 正是这一份。
+   * **傳了 `provider` 就必須一起傳它**（AGENTS 第 13 條）：`config.contextWindow`
+   * 跟著對話頁選定的模型走，拿 200k 寫作模型的視窗去給快速檔的 32k 模型裝配
+   * 上下文會穩定超窗。分檔池的 `primaryBudget` 正是這一份。
    */
   budget?: { contextWindow: number; maxOutputTokens: number };
   /**
-   * 让模型想多深。缺省不带思考参数（服务商默认）。
+   * 讓模型想多深。預設不帶思考引數（服務商預設）。
    *
-   * 对话页把作者在会话里选的那一档递进来；工程页的批量任务不递——第 12 条
-   * 那条理由的同一面：那一档模型是作者按成本挑的，替他把七十六章的摘要
-   * 都升级成深思考，账单上看不出是谁决定的。
+   * 對話頁把作者在會話裡選的那一檔遞進來；工程頁的批次任務不遞——第 12 條
+   * 那條理由的同一面：那一檔模型是作者按成本挑的，替他把七十六章的摘要
+   * 都升級成深思考，賬單上看不出是誰決定的。
    */
   thinking?: ThinkingDepth;
 }
 
 export interface GenerateResult {
-  /** 失败或模型引用无效时缺席。 */
+  /** 失敗或模型引用無效時缺席。 */
   draft?: Draft;
-  /** 装配明细。装配之前就失败时缺席。 */
+  /** 裝配明細。裝配之前就失敗時缺席。 */
   built?: BuiltContext;
 }
 
-/** 只装配上下文，不调用模型——面板里的「预览上下文」。 */
+/** 只裝配上下文，不呼叫模型——面板裡的「預覽上下文」。 */
 export async function previewContext(
   project: NovelProject,
   request: Omit<BuildRequest, 'providerMaxInputTokens'>
 ): Promise<BuiltContext> {
   const config = readConfig();
   let providerMaxInputTokens: number | undefined;
-  // vscode-lm 有硬配额，预览时也要按真实上限算，否则预览与实际不符。
+  // vscode-lm 有硬配額，預覽時也要按真實上限算，否則預覽與實際不符。
   if (config.active?.profile.kind === 'vscode-lm') {
     const provider = await resolveProvider();
     providerMaxInputTokens = await provider?.maxInputTokens();
@@ -211,10 +211,10 @@ export async function previewContext(
 }
 
 /**
- * 把一次生成的输出解析成产物。**不写盘。**
+ * 把一次生成的輸出解析成產物。**不寫盤。**
  *
- * 讨论（唯一的 text 类能力）没有可采纳的东西，返回 undefined；
- * 解析出来是空的也返回 undefined——写一个空产物比不写更糟，作者会以为存下了。
+ * 討論（唯一的 text 類能力）沒有可採納的東西，返回 undefined；
+ * 解析出來是空的也返回 undefined——寫一個空產物比不寫更糟，作者會以為存下了。
  */
 export function parseDraftArtifact(
   action: CreationAction,
@@ -225,14 +225,14 @@ export function parseDraftArtifact(
   if (outputKindOf(action) !== 'artifact') {
     return undefined;
   }
-  // 架构层要看 target 才分得清是哪一件（五件同属一个阶段）；细纲与大纲还要看区间。
+  // 架構層要看 target 才分得清是哪一件（五件同屬一個階段）；細綱與大綱還要看區間。
   const artifact = parseArtifact(action, raw, target, range);
   return isArtifactEmpty(artifact) ? undefined : artifact;
 }
 
 /**
- * 作者在确认框上为这一次指定了模型（`pinnedModel`，runtime/callScope.ts；工程页「重写…」「展开…」走的是对话页这条路）：
- * 缺省的「对话页选定的那个」换成它，窗口也换成它的（第 13 条）。引用无效时 `active` 缺席，照常报错。
+ * 作者在確認框上為這一次指定了模型（`pinnedModel`，runtime/callScope.ts；工程頁「重寫…」「展開…」走的是對話頁這條路）：
+ * 預設的「對話頁選定的那個」換成它，視窗也換成它的（第 13 條）。引用無效時 `active` 缺席，照常報錯。
  */
 function withPinnedModel(config: NovelConfig): NovelConfig {
   const ref = config.pinnedModel ?? config.model;
@@ -248,10 +248,10 @@ function withPinnedModel(config: NovelConfig): NovelConfig {
 }
 
 /**
- * 装配 + 调模型 + 解析。**一个字都不写磁盘。**
+ * 裝配 + 調模型 + 解析。**一個字都不寫磁碟。**
  *
- * 失败时往 `errorLog` 记一条挂在目标细纲上，成功时清掉（第 16 条）。
- * 取消不算失败——那是用户自己点的。
+ * 失敗時往 `errorLog` 記一條掛在目標細綱上，成功時清掉（第 16 條）。
+ * 取消不算失敗——那是使用者自己點的。
  */
 export async function generate(
   project: NovelProject,
@@ -260,8 +260,8 @@ export async function generate(
   options: GenerateOptions
 ): Promise<GenerateResult> {
   let request = requested;
-  // 干活那个模型的窗口优先：换了 provider 却拿对话页那个模型的窗口切上下文，
-  // 是第 13 条明确点名的错法。
+  // 幹活那個模型的視窗優先：換了 provider 卻拿對話頁那個模型的視窗切上下文，
+  // 是第 13 條明確點名的錯法。
   const base = readConfig();
   const own = !options.provider && base.pinnedModel ? withPinnedModel(base) : base;
   const config = options.budget ? { ...own, ...options.budget } : own;
@@ -269,7 +269,7 @@ export async function generate(
   if (!provider) {
     if (!config.active) {
       const issue = describeModelIssue(config.providers, config.model);
-      log.error(`模型引用无效：${issue}`, `当前引用 ${config.model || '（空）'}`);
+      log.error(`模型引用無效：${issue}`, `當前引用 ${config.model || '（空）'}`);
       handlers.onError(issue);
       return {};
     }
@@ -277,7 +277,7 @@ export async function generate(
     if (!provider) {
       log.error(`未配置「${providerLabel(config.active.profile)}」的 API Key`);
       handlers.onError(
-        `未配置「${providerLabel(config.active.profile)}」的 API Key。可在设置页录入，或换一个已配置好的模型。`
+        `未配置「${providerLabel(config.active.profile)}」的 API Key。可在設定頁錄入，或換一個已配置好的模型。`
       );
       return {};
     }
@@ -288,31 +288,31 @@ export async function generate(
   const what = `${STAGE_LABEL[stage]}·${CAPABILITY_LABEL[capability]}`;
   const where = await describe(project, request.target);
   log.info(
-    `开始${what}：${where}`,
-    `模型 ${provider.label}${request.targetWords ? `｜目标 ${request.targetWords} 字` : ''}` +
-      `${request.attachments?.length ? `｜引用 ${request.attachments.length} 项` : ''}` +
-      `${request.history?.length ? `｜历史 ${request.history.length} 轮` : ''}`
+    `開始${what}：${where}`,
+    `模型 ${provider.label}${request.targetWords ? `｜目標 ${request.targetWords} 字` : ''}` +
+      `${request.attachments?.length ? `｜引用 ${request.attachments.length} 項` : ''}` +
+      `${request.history?.length ? `｜歷史 ${request.history.length} 輪` : ''}`
   );
 
-  // 写正文：写法、目标字数、上一版与上一章结尾都按磁盘定好了再装配（三期计划 §1–§2）。
+  // 寫正文：寫法、目標字數、上一版與上一章結尾都按磁碟定好了再裝配（三期計劃 §1–§2）。
   const writing = stage === 'manuscript' && capability === 'generate' ? await planWriting(project, request) : undefined;
   if (writing && request.writeMode === 'revise' && writing.mode !== 'revise') {
-    log.warn('修稿时这一章已经没有正文了', where);
-    handlers.onError('这一章已经没有正文了，没法修稿。');
+    log.warn('修稿時這一章已經沒有正文了', where);
+    handlers.onError('這一章已經沒有正文了，沒法修稿。');
     return {};
   }
-  // 审稿：这一章的正文与冻结的目标清单也在装配之前定好（契约里给模型的与链上校验用的是同一份）。
+  // 審稿：這一章的正文與凍結的目標清單也在裝配之前定好（契約裡給模型的與鏈上校驗用的是同一份）。
   const reviewing = stage === 'manuscript' && capability === 'review' ? await planReview(project, request) : undefined;
   if (stage === 'manuscript' && capability === 'review') {
     if (!reviewing) {
-      log.warn('这一章还没有正文，没法审稿', where);
-      handlers.onError('这一章还没有正文，没法审稿。');
+      log.warn('這一章還沒有正文，沒法審稿', where);
+      handlers.onError('這一章還沒有正文，沒法審稿。');
       return {};
     }
     request = { ...request, reviewGoals: [...reviewing.goals] };
-    log.info(`审稿：${where}`, `正文 ${countWords(reviewing.text)} 字｜目标 ${reviewing.goals.length} 项`);
+    log.info(`審稿：${where}`, `正文 ${countWords(reviewing.text)} 字｜目標 ${reviewing.goals.length} 項`);
   }
-  // 开着删修饰时往多写一点，删完落在目标附近（修稿不删修饰，原稿多长就多长）。
+  // 開著刪修飾時往多寫一點，刪完落在目標附近（修稿不刪修飾，原稿多長就多長）。
   const aim = writing && writing.mode !== 'revise' ? writingAim(writing.target, config.trimModifiers) : writing?.target;
   if (writing) {
     request = {
@@ -320,14 +320,14 @@ export async function generate(
       writeMode: writing.mode,
       targetWords: aim,
       revision: writing.mode === 'revise' ? writing.revision : request.revision ?? writing.revision,
-      // 执行卡后面「本章不出场」那一行与写完查的是同一份（五期补遗 §1.2）。
+      // 執行卡後面「本章不出場」那一行與寫完查的是同一份（五期補遺 §1.2）。
       notYet: writing.notYet.map(({ name, no }) => ({ name, no })),
-      // 【本章边界】里点名不许用的词，与写完数的同一份。
+      // 【本章邊界】裡點名不許用的詞，與寫完數的同一份。
       ...(writing.banned.length > 0 ? { banned: writing.banned } : {}),
     };
     log.info(
-      `写法：${WRITE_MODE_LABEL[writing.mode]}`,
-      `${writing.target ? `目标 ${writing.target} 字` : '没有目标字数（不自动续写）'}` +
+      `寫法：${WRITE_MODE_LABEL[writing.mode]}`,
+      `${writing.target ? `目標 ${writing.target} 字` : '沒有目標字數（不自動續寫）'}` +
         `${writing.existing ? `｜已有 ${countWords(writing.existing)} 字` : ''}`
     );
   }
@@ -338,8 +338,8 @@ export async function generate(
   logAssembly(built, buildStart);
 
   let reasoning = '';
-  // 一次请求一份用量：同一次请求里服务商分几次回报（Anthropic 输入/输出分开给），按字段合并；续写、修复重试、
-  // 删修饰各是一次新的请求，各记各的，最后再加总（合到一份里只会剩最后那次）。
+  // 一次請求一份用量：同一次請求裡服務商分幾次回報（Anthropic 輸入/輸出分開給），按欄位合併；續寫、修復重試、
+  // 刪修飾各是一次新的請求，各記各的，最後再加總（合到一份裡只會剩最後那次）。
   const usages: TokenUsage[] = [];
   const streamOptions: StreamOptions = {
     maxOutputTokens: config.maxOutputTokens,
@@ -374,7 +374,7 @@ export async function generate(
       if (ev.type === 'text') {
         if (!firstDeltaAt) {
           firstDeltaAt = Date.now();
-          log.debug('首个分片已到达', `首字延迟 ${elapsed(startedAt, firstDeltaAt)}`);
+          log.debug('首個分片已到達', `首字延遲 ${elapsed(startedAt, firstDeltaAt)}`);
         }
         text += ev.text;
         if (opts.quiet) {
@@ -382,7 +382,7 @@ export async function generate(
         }
         full += ev.text;
         handlers.onDelta(ev.text, full);
-        // 数字随流一起涨，但不必每个分片都数一遍：几千个分片 × 几千字是平方级的活。
+        // 數字隨流一起漲，但不必每個分片都數一遍：幾千個分片 × 幾千字是平方級的活。
         if (Date.now() - reportedAt >= PROGRESS_INTERVAL_MS) {
           report();
         }
@@ -414,25 +414,25 @@ export async function generate(
         messages: built.messages,
         build: async (patch) => (await buildContext(project, { ...request, ...patch, providerMaxInputTokens }, config)).messages,
         call: async (messages, label, opts) => {
-          // 后面几次照样流进同一个气泡，前面一行说清这一次在补什么（第 11 条：不闷着干活）。
-          // 正文续写只空一行：读起来得是同一章。
+          // 後面幾次照樣流進同一個氣泡，前面一行說清這一次在補什麼（第 11 條：不悶著幹活）。
+          // 正文續寫只空一行：讀起來得是同一章。
           const head = opts?.separator ?? `\n\n——${label}——\n\n`;
           full += head;
           handlers.onDelta(head, full);
           log.info(`${what}：${label}`);
           return streamOnce(messages, opts?.progress, { quiet: opts?.quiet, temperature: opts?.temperature });
         },
-        // 转写（细纲试点）：不跟对话页选的模型，走「转写」那一档（model/tiers.ts）。气泡里只加一行，JSON 在链结束时整份换上去。
+        // 轉寫（細綱試點）：不跟對話頁選的模型，走「轉寫」那一檔（model/tiers.ts）。氣泡裡只加一行，JSON 在鏈結束時整份換上去。
         transcribe: async (messages, label) => {
           const own = await transcriber();
           const head = `\n\n——${label}${own ? `（${own.label}）` : ''}——\n\n`;
           full += head;
           handlers.onDelta(head, full);
           if (!own) {
-            log.warn(`${what}：${label}`, '转写那一档没有可用的模型，改用干活那个模型转写');
+            log.warn(`${what}：${label}`, '轉寫那一檔沒有可用的模型，改用幹活那個模型轉寫');
             return streamOnce(messages, undefined, { quiet: true, temperature: TRANSCRIBE_TEMPERATURE });
           }
-          log.info(`${what}：${label}`, `转写模型 ${own.label}`);
+          log.info(`${what}：${label}`, `轉寫模型 ${own.label}`);
           const r = await transcribeWith(own, messages, label, config.requestTimeoutMs, options.signal);
           usages.push(r.usage);
           return { text: r.text, stop: r.stopReason };
@@ -472,8 +472,8 @@ export async function generate(
         result = await runChain(project, chain, request, first, io);
       }
     } else {
-      // 清理只对正文做：JSON 产物里的 ``` 由 stripCodeFence 在解析时处理，
-      // 在这里剥会把「去掉开场白」那几条正则用到 JSON 上，可能切坏结构。
+      // 清理只對正文做：JSON 產物裡的 ``` 由 stripCodeFence 在解析時處理，
+      // 在這裡剝會把「去掉開場白」那幾條正則用到 JSON 上，可能切壞結構。
       const raw = stage === 'manuscript' ? cleanOutput(first.text) : first.text.trim();
       result = { raw, notes: singleShotNotes(stage, raw, first.stop, request.range), calls: 1 };
     }
@@ -511,54 +511,54 @@ export async function generate(
         : {}),
     };
     if (result.notes.length > 0) {
-      log.warn(`${what}：${result.notes.length} 处降级或说明`, result.notes.join('\n'));
+      log.warn(`${what}：${result.notes.length} 處降級或說明`, result.notes.join('\n'));
     }
-    // 有实测用量就记一笔：估算准不准，只有对着服务商的账单才看得出来。
+    // 有實測用量就記一筆：估算準不準，只有對著服務商的賬單才看得出來。
     recordUsages(built.usedTokens, usages);
     const usageNote = describeUsages(built.usedTokens, usages);
     log.info(
       `${what}完成`,
-      `产出 ${full.length} 字，调用 ${result.calls} 次，用时 ${elapsed(startedAt)}` +
+      `產出 ${full.length} 字，呼叫 ${result.calls} 次，用時 ${elapsed(startedAt)}` +
         `${reasoning ? `；另有思考 ${reasoning.length} 字` : ''}` +
         `${usageNote ? `；${usageNote}` : ''}`
     );
     await clearFailure(project, request.target);
   } catch (err) {
     if (err instanceof CancelledError || options.signal.aborted) {
-      log.warn('生成被取消', `已产出内容，用时 ${elapsed(startedAt)}`);
+      log.warn('生成被取消', `已產出內容，用時 ${elapsed(startedAt)}`);
       handlers.onCancelled();
     } else if (err instanceof ChainError) {
-      // 链走不下去：已经收到的输出留在气泡里（作者能拿去手改），不出落盘卡片。
+      // 鏈走不下去：已經收到的輸出留在氣泡裡（作者能拿去手改），不出落盤卡片。
       handlers.onDone(full.trim());
-      // 请求都发出去了，用量照样记。
+      // 請求都發出去了，用量照樣記。
       recordUsages(built.usedTokens, usages);
       const usageNote = describeUsages(built.usedTokens, usages);
-      log.error(`${what}失败：${err.message}`, [`调用 ${err.calls} 次`, ...(usageNote ? [usageNote] : []), ...err.notes].join('\n'));
+      log.error(`${what}失敗：${err.message}`, [`呼叫 ${err.calls} 次`, ...(usageNote ? [usageNote] : []), ...err.notes].join('\n'));
       handlers.onError(err.message);
-      await noteFailure(project, request.target, `${what}失败：${err.message}`, `位置 ${where}；调用 ${err.calls} 次`);
+      await noteFailure(project, request.target, `${what}失敗：${err.message}`, `位置 ${where}；呼叫 ${err.calls} 次`);
     } else {
-      log.error(`${what}失败：${describeError(err)}`, err);
+      log.error(`${what}失敗：${describeError(err)}`, err);
       handlers.onError(describeError(err));
-      await noteFailure(project, request.target, `${what}失败：${describeError(err)}`, `位置 ${where}`);
+      await noteFailure(project, request.target, `${what}失敗：${describeError(err)}`, `位置 ${where}`);
     }
   }
 
   return { draft, built };
 }
 
-// ---------------------------------------------------------------- 内部
+// ---------------------------------------------------------------- 內部
 
 /**
- * 记下这次生成每一次请求的实测用量。估算只算了第一次请求的上下文（`built.usedTokens`），所以只有第一次拿来
- * 对估算偏差；后面续写、修复重试、删修饰的输入是另一份，估算记 0——`recordUsage` 据此只加输出、不进偏差样本。
+ * 記下這次生成每一次請求的實測用量。估算只算了第一次請求的上下文（`built.usedTokens`），所以只有第一次拿來
+ * 對估算偏差；後面續寫、修復重試、刪修飾的輸入是另一份，估算記 0——`recordUsage` 據此只加輸出、不進偏差樣本。
  */
 function recordUsages(estimated: number, usages: readonly TokenUsage[]): void {
-  usages.forEach((u, i) => recordUsage('创作', i === 0 ? estimated : 0, u));
+  usages.forEach((u, i) => recordUsage('創作', i === 0 ? estimated : 0, u));
 }
 
 /**
- * 「完成」那一行的用量：只有一次请求时照旧一句；多次时偏差仍拿第一次比，另报几次请求的合计。有的请求没回报
- * 用量（有的网关不给）时说出来，不把一部分的和当成全部。
+ * 「完成」那一行的用量：只有一次請求時照舊一句；多次時偏差仍拿第一次比，另報幾次請求的合計。有的請求沒回報
+ * 用量（有的閘道器不給）時說出來，不把一部分的和當成全部。
  */
 function describeUsages(estimated: number, usages: readonly TokenUsage[]): string | undefined {
   const first = describeUsage(estimated, usages[0] ?? {});
@@ -571,14 +571,14 @@ function describeUsages(estimated: number, usages: readonly TokenUsage[]): strin
   }
   const total = sumUsage(reported);
   const parts = [
-    total.inputTokens !== undefined ? `输入 ${total.inputTokens}` : '',
-    total.outputTokens !== undefined ? `输出 ${total.outputTokens}` : '',
+    total.inputTokens !== undefined ? `輸入 ${total.inputTokens}` : '',
+    total.outputTokens !== undefined ? `輸出 ${total.outputTokens}` : '',
   ].filter(Boolean);
-  const partial = reported.length < usages.length ? `（其中 ${reported.length} 次回报了用量）` : '';
-  return `${first ? `第一次请求${first}；` : ''}${usages.length} 次请求合计${parts.join('、')} token${partial}`;
+  const partial = reported.length < usages.length ? `（其中 ${reported.length} 次回報了用量）` : '';
+  return `${first ? `第一次請求${first}；` : ''}${usages.length} 次請求合計${parts.join('、')} token${partial}`;
 }
 
-/** 按产物种类接上对应的那条链（generation/structured.ts）。 */
+/** 按產物種類接上對應的那條鏈（generation/structured.ts）。 */
 async function runChain(
   project: NovelProject,
   chain: NonNullable<ReturnType<typeof chainOf>>,
@@ -590,8 +590,8 @@ async function runChain(
     case 'config':
       return completeConfig(first, io, {
         existing: await project.readBookConfig(),
-        // 只有一句话弹窗发起时，作者这句话才是「一句话」那一节本身；在对话里说的
-        // 「把金手指改狠一点」是修改意见，写进「一句话」就错了。
+        // 只有一句話彈窗發起時，作者這句話才是「一句話」那一節本身；在對話裡說的
+        // 「把金手指改狠一點」是修改意見，寫進「一句話」就錯了。
         idea: request.setup ? request.ask.trim() || undefined : undefined,
         setup: request.setup,
       });
@@ -609,15 +609,15 @@ async function runChain(
       return completePlot(first, io, await plotNoOf(project, request));
     case 'manuscript':
     case 'revision':
-      // 正文那一条要的东西（写法、已有正文、上一章结尾）在 `planWriting` 里，走不到这里。
-      throw new Error('正文的续写链缺了写法。');
+      // 正文那一條要的東西（寫法、已有正文、上一章結尾）在 `planWriting` 裡，走不到這裡。
+      throw new Error('正文的續寫鏈缺了寫法。');
     case 'review':
-      throw new Error('审稿链缺了待审的正文。');
+      throw new Error('審稿鏈缺了待審的正文。');
   }
 }
 
 /**
- * 单章细纲是第几章：细纲在磁盘上就按它认，还没有就看文件名，再不行用请求里的章号。转写合同要它（原文不写章号时就是这一章）。
+ * 單章細綱是第幾章：細綱在磁碟上就按它認，還沒有就看檔名，再不行用請求裡的章號。轉寫合同要它（原文不寫章號時就是這一章）。
  */
 async function plotNoOf(project: NovelProject, request: Omit<BuildRequest, 'providerMaxInputTokens'>): Promise<number | undefined> {
   const relPath = plotOfTarget(request.target);
@@ -626,8 +626,8 @@ async function plotNoOf(project: NovelProject, request: Omit<BuildRequest, 'prov
 }
 
 /**
- * 设定清单那条链要对照的：本书的目录树（照用、只补缺的）、已有条目（照抄名字）、角色卡上的人
- * （人不是设定）。对话页与补齐架构（features/pipelineBatch.ts）共用。
+ * 設定清單那條鏈要對照的：本書的目錄樹（照用、只補缺的）、已有條目（照抄名字）、角色卡上的人
+ * （人不是設定）。對話頁與補齊架構（features/pipelineBatch.ts）共用。
  */
 export async function loreListKnown(project: NovelProject): Promise<LoreListKnown> {
   const [categories, entries, cards] = await Promise.all([project.listLoreCategories(), project.listLore(), project.listCharacters()]);
@@ -635,8 +635,8 @@ export async function loreListKnown(project: NovelProject): Promise<LoreListKnow
 }
 
 /**
- * 展开一条设定那条链要对照的：这一条的标题、全部条目（子条目名字已有条目的不另建，别的条目的标题不进关键词）、
- * 角色卡上的人（人不是设定）、名录里另记着的名字（不进关键词，同建条目、整合）。对话页与批量展开
+ * 展開一條設定那條鏈要對照的：這一條的標題、全部條目（子條目名字已有條目的不另建，別的條目的標題不進關鍵詞）、
+ * 角色卡上的人（人不是設定）、名錄裡另記著的名字（不進關鍵詞，同建條目、整合）。對話頁與批次展開
  * （features/lore.ts 的 `expandLoreEntries`）共用。
  */
 export async function loreExpandKnown(project: NovelProject, target: CreationTarget): Promise<LoreExpandKnown> {
@@ -652,8 +652,8 @@ export async function loreExpandKnown(project: NovelProject, target: CreationTar
 }
 
 /**
- * 落定设定那条链要对照的：全部条目（认出改的是哪一条；别的条目的标题不进关键词）、角色卡上的人（人不是设定）、
- * 名录里另记着的名字（不进关键词）。
+ * 落定設定那條鏈要對照的：全部條目（認出改的是哪一條；別的條目的標題不進關鍵詞）、角色卡上的人（人不是設定）、
+ * 名錄裡另記著的名字（不進關鍵詞）。
  */
 async function loreSettleKnown(project: NovelProject): Promise<LoreSettleKnown> {
   const [entries, cards] = await Promise.all([project.listLore(), project.listCharacters()]);
@@ -661,48 +661,48 @@ async function loreSettleKnown(project: NovelProject): Promise<LoreSettleKnown> 
   return { entries, people: cards.flatMap((c) => [c.name, ...c.aliases]), recorded: unknown.map((u) => u.name) };
 }
 
-// ---------------------------------------------------------------- 写正文
+// ---------------------------------------------------------------- 寫正文
 
-/** 流式期间多久报一次进度。 */
+/** 流式期間多久報一次進度。 */
 const PROGRESS_INTERVAL_MS = 300;
 
 const WRITE_MODE_LABEL: Record<WriteMode, string> = {
-  write: '新写一章',
-  continue: '接着写（追加）',
-  rewrite: '重写（覆盖前审阅）',
-  revise: '按审稿意见修稿（覆盖前审阅）',
+  write: '新寫一章',
+  continue: '接著寫（追加）',
+  rewrite: '重寫（覆蓋前審閱）',
+  revise: '按審稿意見修稿（覆蓋前審閱）',
 };
 
 /**
- * 重写时交给 `revision` 层的那句修改意见。作者这一轮说的话已经在「补充要求」与执行卡里，
- * 这里不再抄一遍。
+ * 重寫時交給 `revision` 層的那句修改意見。作者這一輪說的話已經在「補充要求」與執行卡裡，
+ * 這裡不再抄一遍。
  */
-const REWRITE_FEEDBACK = '照本章细纲与上面的补充要求重写这一章。上一版里与细纲不冲突、写得好的段落可以保留。';
+const REWRITE_FEEDBACK = '照本章細綱與上面的補充要求重寫這一章。上一版裡與細綱不衝突、寫得好的段落可以保留。';
 
 export interface WritingPlan {
   mode: WriteMode;
-  /** 目标字数。修稿时是原稿的字数：只给进度条用，不据此续写。 */
+  /** 目標字數。修稿時是原稿的字數：只給進度條用，不據此續寫。 */
   target?: number;
-  /** `continue` 写法下本章已有的正文；其余是空串。 */
+  /** `continue` 寫法下本章已有的正文；其餘是空串。 */
   existing: string;
   prevEnding?: string;
   revision?: { previousDraft: string; feedback: string };
   /**
-   * 后面几章才登场的人（带角色卡上的专属称呼）：写完查有没有提前写进来（§1.2）。与执行卡里
-   * 「本章不出场」那一行同一个函数、同一个窗口算的（context/layers/dialog.ts 的 `promptFactsOf`）。
+   * 後面幾章才登場的人（帶角色卡上的專屬稱呼）：寫完查有沒有提前寫進來（§1.2）。與執行卡裡
+   * 「本章不出場」那一行同一個函式、同一個視窗算的（context/layers/dialog.ts 的 `promptFactsOf`）。
    */
   notYet: (NotYet & { aliases: string[] })[];
-  /** 这本书写正文时不该用的词（文风指南的禁用词表、全局要求里禁止的词、古代题材的现代说法）：写完数一遍。 */
+  /** 這本書寫正文時不該用的詞（文風指南的禁用詞表、全域要求裡禁止的詞、古代題材的現代說法）：寫完數一遍。 */
   banned: string[];
 }
 
 /**
- * 写法按磁盘定：这一章还没有正文 → `write`；明说了接着写 → `continue`；明说了修稿 → `revise`；
- * 其余 → `rewrite`。
+ * 寫法按磁碟定：這一章還沒有正文 → `write`；明說了接著寫 → `continue`；明說了修稿 → `revise`；
+ * 其餘 → `rewrite`。
  *
- * 纯函数单列出来：「对话里发写正文、这一章已经有正文」从前是追加，现在是覆盖审阅——
- * 这条改动的判据只在这里（见 model/pipeline.ts 的 `WriteMode`）。修稿要一章已有的正文，
- * 没有正文时它不成立，调用方据此报错（不会退成「新写一章」）。
+ * 純函式單列出來：「對話裡發寫正文、這一章已經有正文」從前是追加，現在是覆蓋審閱——
+ * 這條改動的判據只在這裡（見 model/pipeline.ts 的 `WriteMode`）。修稿要一章已有的正文，
+ * 沒有正文時它不成立，呼叫方據此報錯（不會退成「新寫一章」）。
  */
 export function resolveWriteMode(body: string, requested?: WriteMode): WriteMode {
   if (!body.trim()) {
@@ -712,14 +712,14 @@ export function resolveWriteMode(body: string, requested?: WriteMode): WriteMode
 }
 
 /**
- * 写正文之前要从磁盘知道的事。
+ * 寫正文之前要從磁碟知道的事。
  *
- * - **目标字数**：请求给了用请求的，否则细纲的 `targetWords`，再否则配置的每章字数（D6）。
- *   agent 工具与快速续写不传它，从此也有目标。
- * - **上一章结尾**：按磁盘现读（重演检测用），不取上下文里那一份——那一份可能被整章全文
- *   取代、或被作者取消勾选。
+ * - **目標字數**：請求給了用請求的，否則細綱的 `targetWords`，再否則配置的每章字數（D6）。
+ *   agent 工具與快速續寫不傳它，從此也有目標。
+ * - **上一章結尾**：按磁碟現讀（重演檢測用），不取上下文裡那一份——那一份可能被整章全文
+ *   取代、或被作者取消勾選。
  *
- * 批量写章（features/pipelineBatch.ts）也走这一份：两条路的写法、目标与重演检测必须同源。
+ * 批次寫章（features/pipelineBatch.ts）也走這一份：兩條路的寫法、目標與重演檢測必須同源。
  */
 export async function planWriting(project: NovelProject, request: Omit<BuildRequest, 'providerMaxInputTokens'>): Promise<WritingPlan> {
   const relPath = plotOfTarget(request.target);
@@ -727,7 +727,7 @@ export async function planWriting(project: NovelProject, request: Omit<BuildRequ
   const no = plot?.no ?? (relPath ? parsePlotFileName(basename(relPath))?.no : undefined) ?? request.targetNo;
   const book = await project.readBookConfig();
   const target = request.targetWords ?? plot?.targetWords ?? book.wordsPerChapter;
-  // 与内置编辑器的写作体检同一个函数、同一份输入（views/checkTerms.ts）：编辑器里标出来的就是这里写完数的。
+  // 與內建編輯器的寫作體檢同一個函式、同一份輸入（views/checkTerms.ts）：編輯器裡標出來的就是這裡寫完數的。
   const banned = await readBannedTerms(project, { book });
   const chapter = no ? await project.getChapter(no) : undefined;
   const body = chapter ? await project.readChapterText(chapter) : '';
@@ -735,7 +735,7 @@ export async function planWriting(project: NovelProject, request: Omit<BuildRequ
   const prev = no && no > 1 ? await project.getChapter(no - 1) : undefined;
   const prevText = prev ? await project.readChapterText(prev) : '';
   if (mode === 'revise') {
-    // 修稿的「上一版」就是磁盘上此刻这一章：清单是按它定位过的（controller 在发起前重新定位过）。
+    // 修稿的「上一版」就是磁碟上此刻這一章：清單是按它定位過的（controller 在發起前重新定位過）。
     return {
       mode,
       target: countWords(body),
@@ -758,8 +758,8 @@ export async function planWriting(project: NovelProject, request: Omit<BuildRequ
 }
 
 /**
- * 第 `no` 章「本章不出场」的人，带角色卡上的专属称呼。窗口与装配器的 `plotAhead` 一样：后
- * {@link AHEAD_PLOTS} 章里排过细纲的。本章细纲自己提到了的人不算（`dropMentioned`）。
+ * 第 `no` 章「本章不出場」的人，帶角色卡上的專屬稱呼。視窗與裝配器的 `plotAhead` 一樣：後
+ * {@link AHEAD_PLOTS} 章裡排過細綱的。本章細綱自己提到了的人不算（`dropMentioned`）。
  */
 async function notYetOf(project: NovelProject, no: number, plot: Plot | undefined): Promise<(NotYet & { aliases: string[] })[]> {
   const plots = await project.listChapterPlots();
@@ -777,8 +777,8 @@ async function notYetOf(project: NovelProject, no: number, plot: Plot | undefine
 }
 
 /**
- * 审稿之前要从磁盘知道的事：这一章的正文（去掉标题行）与指纹、冻结的目标清单。
- * 这一章还没有正文时 undefined——没有东西可审。
+ * 審稿之前要從磁碟知道的事：這一章的正文（去掉標題行）與指紋、凍結的目標清單。
+ * 這一章還沒有正文時 undefined——沒有東西可審。
  */
 export async function planReview(
   project: NovelProject,
@@ -805,8 +805,8 @@ export async function planReview(
 /**
  * Draft id。
  *
- * 与 `makeTurnId` 同一套理由：它是会话文件里的外键，同一毫秒内连开两份
- * （agent 一轮里生成两次）必须保证不撞。
+ * 與 `makeTurnId` 同一套理由：它是會話檔案裡的外來鍵，同一毫秒內連開兩份
+ * （agent 一輪裡生成兩次）必須保證不撞。
  */
 let draftCounter = 0;
 export function makeDraftId(): string {
@@ -814,7 +814,7 @@ export function makeDraftId(): string {
   return `d${Date.now().toString(36)}-${draftCounter.toString(36)}`;
 }
 
-/** 目标的人话描述，日志与失败记录共用。 */
+/** 目標的人話描述，日誌與失敗記錄共用。 */
 async function describe(project: NovelProject, target: CreationTarget): Promise<string> {
   const relPath = plotOfTarget(target);
   if (!relPath) {
@@ -825,8 +825,8 @@ async function describe(project: NovelProject, target: CreationTarget): Promise<
 }
 
 /**
- * 失败挂在**细纲**上（工程页那一行）；展开一条设定失败挂在那一条设定上（第 16 条，同整合）。
- * 大纲没有归属行，只进日志。
+ * 失敗掛在**細綱**上（工程頁那一行）；展開一條設定失敗掛在那一條設定上（第 16 條，同整合）。
+ * 大綱沒有歸屬行，只進日誌。
  */
 async function noteFailure(
   project: NovelProject,
@@ -839,7 +839,7 @@ async function noteFailure(
     return;
   }
   await recordFailure(project, {
-    scope: '创作',
+    scope: '創作',
     targetKind: owner.kind,
     targetKey: owner.key,
     severity: 'error',
@@ -866,11 +866,11 @@ function failureOwnerOf(target: CreationTarget): { kind: 'plot' | 'lore'; key: s
 }
 
 /**
- * 把这次装配的结果写进日志。
+ * 把這次裝配的結果寫進日誌。
  *
- * 只记条目名与 token 数，**绝不记 prompt 全文**——那是十万字级的东西，
- * 一次就能把整个日志缓冲挤空。降级/丢弃的条目单列一段，对应
- * 「不静默截断」那条承诺：界面上的明细折叠着，日志里得看得见。
+ * 只記條目名與 token 數，**絕不記 prompt 全文**——那是十萬字級的東西，
+ * 一次就能把整個日誌緩衝擠空。降級/丟棄的條目單列一段，對應
+ * 「不靜默截斷」那條承諾：介面上的明細摺疊著，日誌裡得看得見。
  */
 function logAssembly(built: BuiltContext, startedAtMs: number): void {
   const kept = built.items.filter((i) => i.status === 'included' || i.status === 'degraded');
@@ -878,18 +878,18 @@ function logAssembly(built: BuiltContext, startedAtMs: number): void {
   const percent = built.budget > 0 ? Math.round((built.usedTokens / built.budget) * 100) : 0;
 
   log.info(
-    `上下文已装配：${built.usedTokens}/${built.budget} token（${percent}%），${kept.length} 项`,
-    `${built.messages.length} 条消息，用时 ${elapsed(startedAtMs)}｜上下文详细度 ${CONTEXT_DETAIL_LABEL[built.detail]}` +
-      `${built.budgetClampedByProvider ? '｜预算被服务商配额压低' : ''}`
+    `上下文已裝配：${built.usedTokens}/${built.budget} token（${percent}%），${kept.length} 項`,
+    `${built.messages.length} 條訊息，用時 ${elapsed(startedAtMs)}｜上下文詳細度 ${CONTEXT_DETAIL_LABEL[built.detail]}` +
+      `${built.budgetClampedByProvider ? '｜預算被服務商配額壓低' : ''}`
   );
   if (lost.length > 0) {
     log.warn(
-      `${lost.length} 项被降级或丢弃`,
+      `${lost.length} 項被降級或丟棄`,
       lost.map((i) => `${statusLabel(i.status)} ${i.label}${i.note ? `——${i.note}` : ''}`).join('\n')
     );
   }
 }
 
 function statusLabel(status: string): string {
-  return status === 'degraded' ? '[降级]' : status === 'dropped' ? '[丢弃]' : `[${status}]`;
+  return status === 'degraded' ? '[降級]' : status === 'dropped' ? '[丟棄]' : `[${status}]`;
 }

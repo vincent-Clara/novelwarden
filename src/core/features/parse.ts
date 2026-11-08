@@ -1,10 +1,10 @@
-/** 剥掉包住整段模型输出的 Markdown 代码围栏，并清理首尾空白。 */
+/** 剝掉包住整段模型輸出的 Markdown 程式碼圍欄，並清理首尾空白。 */
 export function stripCodeFence(text: string): string {
   const m = /^\s*```(?:\w+)?\r?\n([\s\S]*?)\r?\n?```\s*$/.exec(text.trim());
   return (m ? m[1] : text).trim();
 }
 
-/** 从可能夹杂废话的文本里抠出最外层 JSON 对象。 */
+/** 從可能夾雜廢話的文字裡摳出最外層 JSON 物件。 */
 export function extractJsonObject(text: string): string | undefined {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
@@ -14,7 +14,7 @@ export function extractJsonObject(text: string): string | undefined {
   return text.slice(start, end + 1);
 }
 
-/** 从可能夹杂废话的文本里抠出最外层 JSON 数组。 */
+/** 從可能夾雜廢話的文字裡摳出最外層 JSON 陣列。 */
 export function extractJsonArray(text: string): string | undefined {
   const start = text.indexOf('[');
   const end = text.lastIndexOf(']');
@@ -24,7 +24,7 @@ export function extractJsonArray(text: string): string | undefined {
   return text.slice(start, end + 1);
 }
 
-/** 从文本中抠出最先出现的 JSON 对象或数组。 */
+/** 從文字中摳出最先出現的 JSON 物件或陣列。 */
 export function extractJson(text: string): string | undefined {
   const arrayStart = text.indexOf('[');
   const objectStart = text.indexOf('{');
@@ -38,8 +38,8 @@ export function extractJson(text: string): string | undefined {
 }
 
 /**
- * 去掉 `]` / `}` 前面多出来的逗号（`["甲", "乙",]`）。模型最常见的 JSON 语法错就是这一个，
- * 它不改任何值，可以放心地自己修，不必为它再调一次模型。字符串里的逗号不动。
+ * 去掉 `]` / `}` 前面多出來的逗號（`["甲", "乙",]`）。模型最常見的 JSON 語法錯就是這一個，
+ * 它不改任何值，可以放心地自己修，不必為它再調一次模型。字串裡的逗號不動。
  */
 export function stripTrailingCommas(json: string): string {
   let out = '';
@@ -72,11 +72,11 @@ export function stripTrailingCommas(json: string): string {
 }
 
 /**
- * 模型交回来的 JSON 里取那一组：`{"threads":[…]}` / `{"events":[…]}` / `{"conflicts":[…]}`，也认上游的
- * `{"candidates":[…]}` 与直接一个数组。解不出返回 undefined。
+ * 模型交回來的 JSON 裡取那一組：`{"threads":[…]}` / `{"events":[…]}` / `{"conflicts":[…]}`，也認上游的
+ * `{"candidates":[…]}` 與直接一個陣列。解不出返回 undefined。
  *
- * 从前放在 features/threads.ts（七期排线与判事件用），写前冲突检查（features/plotCheck.ts）也借它；
- * 叙事线重做之后那一份要整个换掉，宽松取一组 JSON 这件事本来就属于这里。
+ * 從前放在 features/threads.ts（七期排線與判事件用），寫前衝突檢查（features/plotCheck.ts）也借它；
+ * 敘事線重做之後那一份要整個換掉，寬鬆取一組 JSON 這件事本來就屬於這裡。
  */
 export function jsonList(raw: string, key: string): unknown[] | undefined {
   const text = stripCodeFence(raw);
@@ -102,17 +102,17 @@ export function jsonList(raw: string, key: string): unknown[] | undefined {
   return undefined;
 }
 
-/** 清理字符串并按首次出现顺序去重。 */
+/** 清理字串並按首次出現順序去重。 */
 export function unique(values: string[]): string[] {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
-/** 数字去重并升序排列。 */
+/** 數字去重並升序排列。 */
 export function uniqueNumbers(values: number[]): number[] {
   return [...new Set(values)].sort((a, b) => a - b);
 }
 
-/** 把模型常见的字符串数组或分隔字符串归一成字符串数组。 */
+/** 把模型常見的字串陣列或分隔字串歸一成字串陣列。 */
 export function stringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean);

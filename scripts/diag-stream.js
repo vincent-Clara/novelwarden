@@ -1,10 +1,10 @@
 /**
- * 排查「界面不是流式」的现场脚本：直接打真实服务商，看它到底是
- * 逐块吐还是一次性吐完。界面只能显示服务器给的东西——如果上游把
- * 整段憋到最后一次响应，前端再怎么改也变不出流式。
+ * 排查「介面不是流式」的現場指令碼：直接打真實服務商，看它到底是
+ * 逐塊吐還是一次性吐完。介面只能顯示伺服器給的東西——如果上游把
+ * 整段憋到最後一次響應，前端再怎麼改也變不出流式。
  *
  * 用法：node scripts/diag-stream.js [模型引用]
- * 读 ~/.novelwarden/config.json 里已配的服务商与 Key（旧 ~/.novelforge/ 兜底）。
+ * 讀 ~/.novelwarden/config.json 裡已配的服務商與 Key（舊 ~/.novelforge/ 兜底）。
  */
 const path = require('path');
 const esbuild = require('esbuild');
@@ -45,7 +45,7 @@ function readJson(file) {
 (async () => {
   const cfg = readJson(path.join(HOME, 'config.json'));
   if (!cfg) {
-    console.log(`读不到 ${path.join(HOME, 'config.json')}。先在设置页保存一次配置。`);
+    console.log(`讀不到 ${path.join(HOME, 'config.json')}。先在設定頁儲存一次配置。`);
     process.exit(1);
   }
   const providers = P.normalizeProviders(cfg.providers ?? []);
@@ -60,7 +60,7 @@ function readJson(file) {
   const key = secrets[`novel-forge.apiKey.provider.${active.profile.id}`]
     ?? secrets[`novel-forge.apiKey.${active.profile.id}`];
   if (!key && active.profile.kind !== 'vscode-lm') {
-    console.log(`没找到「${active.profile.id}」的 API Key（${path.join(HOME, 'secrets.json')}）。`);
+    console.log(`沒找到「${active.profile.id}」的 API Key（${path.join(HOME, 'secrets.json')}）。`);
     process.exit(1);
   }
 
@@ -69,17 +69,17 @@ function readJson(file) {
     ? new AnthropicProvider(baseUrl, active.model.name, key)
     : new OpenAiProvider(baseUrl, active.model.name, key);
 
-  // 上游会按提示词缓存：同一句话第二次问就是瞬间返回整段，
-  // 那不是「不流式」，是根本没跑模型。每次塞一个唯一串避开缓存。
+  // 上游會按提示詞快取：同一句話第二次問就是瞬間返回整段，
+  // 那不是「不流式」，是根本沒跑模型。每次塞一個唯一串避開快取。
   const nonce = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const prompt =
-    `（忽略这行编号 ${nonce}）写一段 300 字左右的中文场景描写：` +
-    '深夜的旧书店，店主在整理最后一排书架。只输出正文。';
+    `（忽略這行編號 ${nonce}）寫一段 300 字左右的中文場景描寫：` +
+    '深夜的舊書店，店主在整理最後一排書架。只輸出正文。';
 
   console.log(`模型 ${ref}`);
   console.log(`地址 ${baseUrl}`);
-  console.log(`防缓存 nonce ${nonce}`);
-  console.log('请求一段 300 字场景描写…\n');
+  console.log(`防快取 nonce ${nonce}`);
+  console.log('請求一段 300 字場景描寫…\n');
 
   const t0 = Date.now();
   const marks = [];
@@ -87,47 +87,47 @@ function readJson(file) {
   try {
     for await (const ev of provider.stream(
       [{ role: 'user', content: prompt }],
-      // temperature 拉高一点，进一步降低命中语义缓存的可能。
+      // temperature 拉高一點，進一步降低命中語義快取的可能。
       { maxOutputTokens: 800, temperature: 0.9, timeoutMs: 180000 }
     )) {
-      // 这个脚本只看正文的到达节奏，思考与用量事件不计入分块统计。
+      // 這個指令碼只看正文的到達節奏，思考與用量事件不計入分塊統計。
       if (ev.type !== 'text') continue;
       marks.push({ at: Date.now() - t0, len: ev.text.length });
       full += ev.text;
-      // 实时打印，直观看到是不是一段段来的
+      // 實時列印，直觀看到是不是一段段來的
       process.stdout.write(ev.text);
     }
   } catch (err) {
-    console.log(`\n\n请求失败：${err && err.message ? err.message : err}`);
+    console.log(`\n\n請求失敗：${err && err.message ? err.message : err}`);
     process.exit(1);
   }
 
   console.log('\n');
   console.log('─'.repeat(60));
   if (marks.length === 0) {
-    console.log('一个增量都没收到——服务器没有返回内容。');
+    console.log('一個增量都沒收到——伺服器沒有返回內容。');
     process.exit(1);
   }
   const first = marks[0].at;
   const last = marks[marks.length - 1].at;
-  console.log(`增量块数   ${marks.length}`);
-  console.log(`首块到达   +${first}ms`);
-  console.log(`末块到达   +${last}ms`);
+  console.log(`增量塊數   ${marks.length}`);
+  console.log(`首塊到達   +${first}ms`);
+  console.log(`末塊到達   +${last}ms`);
   console.log(`跨度       ${last - first}ms`);
-  console.log(`总字数     ${full.length}`);
+  console.log(`總字數     ${full.length}`);
   console.log('─'.repeat(60));
 
   if (marks.length === 1) {
-    console.log('结论：上游一次性返回了全部内容（只有 1 个增量块）。');
-    console.log('      注意先排除缓存命中——本脚本已加 nonce，但若上游做的是');
-    console.log('      语义缓存仍可能命中。可用 curl 看 x-omniroute-cache-hit。');
-    console.log('      确认非缓存后，多半是反代缓冲了 SSE，或该服务不支持 stream。');
-    console.log('      若走 Nginx，检查 proxy_buffering off; 与 X-Accel-Buffering: no。');
+    console.log('結論：上游一次性返回了全部內容（只有 1 個增量塊）。');
+    console.log('      注意先排除快取命中——本指令碼已加 nonce，但若上游做的是');
+    console.log('      語義快取仍可能命中。可用 curl 看 x-omniroute-cache-hit。');
+    console.log('      確認非快取後，多半是反代緩衝了 SSE，或該服務不支援 stream。');
+    console.log('      若走 Nginx，檢查 proxy_buffering off; 與 X-Accel-Buffering: no。');
   } else if (last - first < 200) {
-    console.log('结论：分块了，但几乎同时到达（跨度 < 200ms）。');
-    console.log('      要么是缓存命中（整段已备好），要么被反代整体缓冲后一次放行。');
+    console.log('結論：分塊了，但幾乎同時到達（跨度 < 200ms）。');
+    console.log('      要麼是快取命中（整段已備好），要麼被反代整體緩衝後一次放行。');
   } else {
-    console.log('结论：上游确实在逐块流式返回，链路正常。');
-    console.log('      若界面仍是「等全部生成完才显示」，问题在前端渲染。');
+    console.log('結論：上游確實在逐塊流式返回，鏈路正常。');
+    console.log('      若介面仍是「等全部生成完才顯示」，問題在前端渲染。');
   }
 })();

@@ -1,9 +1,9 @@
 /*
- * 高亮镜像层（editor/highlight.ts）：textarea 背后一层排得一模一样的文字，只画 <mark> 的底色。
+ * 高亮映象層（editor/highlight.ts）：textarea 背後一層排得一模一樣的文字，只畫 <mark> 的底色。
  *
- * 字体、字号、行高、内边距与 textarea 读同一组变量（look.css 里那一条共用的规则）；字距、断行规则、tab-size
- * 这些再由脚本每次渲染时从 textarea 的计算样式抄过来——这里**不写死**，写死了 .mono 文件或改了外观就对不齐。
- * textarea 自己背景透明、压在上面（editor.css 的 .ed-area），所以底色透得上来，光标、选区、输入法、点击仍然全是
+ * 字型、字號、行高、內邊距與 textarea 讀同一組變數（look.css 裡那一條共用的規則）；字距、斷行規則、tab-size
+ * 這些再由指令碼每次渲染時從 textarea 的計算樣式抄過來——這裡**不寫死**，寫死了 .mono 檔案或改了外觀就對不齊。
+ * textarea 自己背景透明、壓在上面（editor.css 的 .ed-area），所以底色透得上來，游標、選區、輸入法、點選仍然全是
  * textarea 的。
  */
 
@@ -25,12 +25,12 @@
   overflow-wrap: break-word;
 }
 
-/* 量某个字的纵向位置用的那一份（scrollToOffset）：要排版，但不许被看见。 */
+/* 量某個字的縱向位置用的那一份（scrollToOffset）：要排版，但不許被看見。 */
 .ed-mirror-probe {
   visibility: hidden;
 }
 
-/* 镜像按行分块（一行一个 div，editor/highlight.ts）。textarea 的 text-indent 只管全文第一行，所以只留给第一块。 */
+/* 映象按行分塊（一行一個 div，editor/highlight.ts）。textarea 的 text-indent 只管全文第一行，所以只留給第一塊。 */
 .ed-mirror-content > div {
   margin: 0;
   padding: 0;
@@ -40,7 +40,7 @@
   text-indent: 0;
 }
 
-/* 只有底色：不许加内边距、边框、字重——任何一样都会让镜像与 textarea 排得不一样。 */
+/* 只有底色：不許加內邊距、邊框、字重——任何一樣都會讓映象與 textarea 排得不一樣。 */
 .ed-mirror mark {
   margin: 0;
   padding: 0;
@@ -49,7 +49,7 @@
   color: transparent;
 }
 
-/* ---- 各图层的颜色。新图层（禁用词、段落聚焦……）在这里加一组。 */
+/* ---- 各圖層的顏色。新圖層（禁用詞、段落聚焦……）在這裡加一組。 */
 
 .ed-mirror mark.ed-hl-find {
   background: var(--nf-find-match);
@@ -59,8 +59,8 @@
   background: var(--nf-find-current);
 }
 
-/* 段落聚焦（editor/paragraphFocus.ts）：这一层不画底色，用实色画字——textarea 的字整体调淡了（focus.css），
-   当前那一段在底下用实色再画一遍，淡字叠在实色字上看起来就是实色。只改颜色，不碰排版。 */
+/* 段落聚焦（editor/paragraphFocus.ts）：這一層不畫底色，用實色畫字——textarea 的字整體調淡了（focus.css），
+   當前那一段在底下用實色再畫一遍，淡字疊在實色字上看起來就是實色。只改顏色，不碰排版。 */
 .ed-mirror mark.ed-hl-focus {
   color: var(--vscode-foreground);
 }

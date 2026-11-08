@@ -1,10 +1,10 @@
 /**
- * 两块编辑区之间共享的那点东西：登记表、当前是哪一块、待恢复的草稿，
- * 以及刷新恢复用的 localStorage 读写。
+ * 兩塊編輯區之間共享的那點東西：登記表、當前是哪一塊、待恢復的草稿，
+ * 以及重新整理恢復用的 localStorage 讀寫。
  *
- * 单独一层的理由是打破环：`pane.ts`（一块编辑区的行为）要调 `persist()`、
- * 要认下自己是 activePane；而「有哪几块」这件事又得等 pane 造出来才知道。
- * 把状态放这儿，方向就只剩 index → pane → store 一条。
+ * 單獨一層的理由是打破環：`pane.ts`（一塊編輯區的行為）要調 `persist()`、
+ * 要認下自己是 activePane；而「有哪幾塊」這件事又得等 pane 造出來才知道。
+ * 把狀態放這兒，方向就只剩 index → pane → store 一條。
  */
 import { announceEditorActive, projectStorageKey } from '../globals';
 import type { MenuItem } from '../globals';
@@ -12,184 +12,184 @@ import type { EditorFileView, EditorOpenIntent, InMessage } from '../protocol';
 import type { TextSelection } from './history';
 import type { CarriedDraft, OpenFile, PaneId } from './paneElements';
 
-/** `Pane.applyEdit` 的选项。 */
+/** `Pane.applyEdit` 的選項。 */
 export interface ApplyEditOptions {
   /**
-   * 并进上一步撤销，而不是另起一步——例如成对标点补上的后半个，撤销时与前半个一起退。
-   * 只往**刚记下的那一步**里并：上一步不存在、或中间撤销 / 重做过时照常另起一步。
+   * 並進上一步撤銷，而不是另起一步——例如成對標點補上的後半個，撤銷時與前半個一起退。
+   * 只往**剛記下的那一步**裡並：上一步不存在、或中間撤銷 / 重做過時照常另起一步。
    */
   join?: boolean;
   /**
-   * 这一下是作者在名词补全里挑了一个名字（`names.ts`）：`edit` 事件的 `source` 报 `completion` 而不是 `program`，
-   * 码字统计据此当作者打的字算（⚑，见 `writingStats.ts`）。别的程序改写不给。
+   * 這一下是作者在名詞補全裡挑了一個名字（`names.ts`）：`edit` 事件的 `source` 報 `completion` 而不是 `program`，
+   * 碼字統計據此當作者打的字算（⚑，見 `writingStats.ts`）。別的程式改寫不給。
    */
   source?: 'completion';
 }
 
-/** 一块编辑区对外的样子。createPane 的返回值实现它。 */
+/** 一塊編輯區對外的樣子。createPane 的返回值實現它。 */
 export interface Pane {
   readonly id: PaneId;
-  /** 这块区的根节点，供整块显示/隐藏。 */
+  /** 這塊區的根節點，供整塊顯示/隱藏。 */
   readonly root: HTMLElement;
   /**
-   * 这块区的 textarea（所有标签共用一个，显示的是当前文件）。**只读**它的 value 与选区；
-   * 改内容一律走 `applyEdit`，直接写 `value` 会绕过撤销记账与脏标记。
+   * 這塊區的 textarea（所有標籤共用一個，顯示的是當前檔案）。**只讀**它的 value 與選區；
+   * 改內容一律走 `applyEdit`，直接寫 `value` 會繞過撤銷記賬與髒標記。
    */
   readonly area: HTMLTextAreaElement;
   readonly files: Map<string, OpenFile>;
   activePath: string | null;
   activeFile(): OpenFile | undefined;
-  /** 当前这一份是不是在 Markdown 预览里（textarea 藏着，收不到按键）。每个标签各记各的（`OpenFile.markdownPreview`）。 */
+  /** 當前這一份是不是在 Markdown 預覽裡（textarea 藏著，收不到按鍵）。每個標籤各記各的（`OpenFile.markdownPreview`）。 */
   isPreviewing(): boolean;
-  /** 当前这一份有没有 Markdown 可预览（`.md` / `.markdown`）。 */
+  /** 當前這一份有沒有 Markdown 可預覽（`.md` / `.markdown`）。 */
   canPreview(): boolean;
   /**
-   * 当前这一份切到预览 / 切回编辑，两边滚到同一处（编辑区视口顶上那一行 ↔ 预览里对应的那一块，`previewSync.ts`）。
-   * 要「先切回编辑」的地方（查找、体检、对比合并、点引文……）调 `setPreviewing(false)`——`activate` 只切标签、不改预览。
-   * 没开文件、要预览的不是 Markdown 时返回 false。`focus: false`：焦点不动（缺省进正文区 / 预览）。
+   * 當前這一份切到預覽 / 切回編輯，兩邊滾到同一處（編輯區視口頂上那一行 ↔ 預覽裡對應的那一塊，`previewSync.ts`）。
+   * 要「先切回編輯」的地方（查詢、體檢、對比合併、點引文……）調 `setPreviewing(false)`——`activate` 只切標籤、不改預覽。
+   * 沒開檔案、要預覽的不是 Markdown 時返回 false。`focus: false`：焦點不動（預設進正文區 / 預覽）。
    */
   setPreviewing(on: boolean, opts?: { focus?: boolean }): boolean;
   hasDirty(): boolean;
   snapshot(): PaneSnapshot;
   /**
-   * 切到这份文件（认下这一块、焦点进正文区；这一份在预览里就照旧在预览里、焦点进预览）。`focus: false`：只换这一块显示的
-   * 那份，不抢「当前这一块」与焦点。
+   * 切到這份檔案（認下這一塊、焦點進正文區；這一份在預覽裡就照舊在預覽裡、焦點進預覽）。`focus: false`：只換這一塊顯示的
+   * 那份，不搶「當前這一塊」與焦點。
    */
   activate(path: string, opts?: { focus?: boolean }): void;
-  /** 关一个标签。有未保存的修改时先问「保存 / 不保存 / 取消」（`closing.ts`），所以可能过一会儿才关、或者不关。 */
+  /** 關一個標籤。有未儲存的修改時先問「儲存 / 不儲存 / 取消」（`closing.ts`），所以可能過一會兒才關、或者不關。 */
   closeFile(path: string): void;
-  /** 关掉这几份，不再问（`closing.ts` 已经问过了）。不在这块里的跳过。 */
+  /** 關掉這幾份，不再問（`closing.ts` 已經問過了）。不在這塊裡的跳過。 */
   discard(paths: string[]): void;
   /**
-   * 不问不提示地移走一个文件。用于「同一路径被另一块编辑区接管」——
-   * 那不是关闭，是搬家：返回要带过去的东西（未保存内容与撤销历史）好让新的一块接上；
-   * 没开着这个文件时返回 false。
+   * 不問不提示地移走一個檔案。用於「同一路徑被另一塊編輯區接管」——
+   * 那不是關閉，是搬家：返回要帶過去的東西（未儲存內容與撤銷歷史）好讓新的一塊接上；
+   * 沒開著這個檔案時返回 false。
    */
   closeSilently(path: string): CarriedDraft | false;
   /**
-   * 「移到另一侧」的搬出一半：不经后端，把这份文件连同未保存内容、撤销历史、冲突条、「磁盘上没了」、
-   * 光标一起交出来（`carried.local`），`view` 是它此刻的基线（不重读磁盘）。没开着时 undefined。
+   * 「移到另一側」的搬出一半：不經後端，把這份檔案連同未儲存內容、撤銷歷史、衝突條、「磁碟上沒了」、
+   * 游標一起交出來（`carried.local`），`view` 是它此刻的基線（不重讀磁碟）。沒開著時 undefined。
    */
   moveOut(path: string): { view: EditorFileView; carried: CarriedDraft } | undefined;
   /**
-   * 收一份文件（`editorOpen`，或「移到另一侧」从另一块搬来）。`intent` 是打开请求上带的那两个标记，
-   * 后端原样带回：`preview` 开成临时标签（换掉这一块现有的临时标签），`replace` 没改过就在原位置换掉那一份。
+   * 收一份檔案（`editorOpen`，或「移到另一側」從另一塊搬來）。`intent` 是開啟請求上帶的那兩個標記，
+   * 後端原樣帶回：`preview` 開成臨時標籤（換掉這一塊現有的臨時標籤），`replace` 沒改過就在原位置換掉那一份。
    */
   upsertFile(incoming: EditorFileView, carried?: CarriedDraft, intent?: EditorOpenIntent): void;
-  /** 临时标签转正（双击标签、右键「固定」、关掉「单击打开为临时标签」）。不是临时的什么都不做。 */
+  /** 臨時標籤轉正（雙擊標籤、右鍵「固定」、關掉「單擊開啟為臨時標籤」）。不是臨時的什麼都不做。 */
   pin(path: string): void;
   /**
-   * **编辑区里唯一的程序改写入口**（缩进、成对标点、一键排版、全部替换、剪切 / 粘贴……都走它，
-   * 不许直接写 `textarea.value`）。作用于这块区的**当前文件**。
+   * **編輯區裡唯一的程式改寫入口**（縮排、成對標點、一鍵排版、全部替換、剪下 / 貼上……都走它，
+   * 不許直接寫 `textarea.value`）。作用於這塊區的**當前檔案**。
    *
-   * - **范围**：把 `[start, end)` 换成 `text`。位置按编辑区里**当下显示的文字**算，即
-   *   `area.value` 的下标（与 `selectionStart` / `selectionEnd` 同一套）；越界的夹进去，
-   *   `start > end` 时对调。整份替换就传 `0, area.value.length`。`text` 里的 `\r\n` / `\r`
-   *   归一成 `\n`（textarea 只认 `\n`）。
-   * - **选区**：`selection` 是改完之后的选区，位置按**新文字**算；缺省是光标落在插入文字末尾
-   *   （`start + text.length`）。越界的夹进去。
-   * - **撤销**：一次调用记**一步**，不与前后的打字合并（`opts.join` 例外，见 `ApplyEditOptions`）。
-   *   撤销回到改之前的文字与改之前的选区，重做回到改之后的文字与 `selection`。
-   * - **其余**：同时更新 `file.draft`、脏标记、状态栏、标签圆点、草稿持久化，清掉过期的冲突条，
-   *   并发一条 `onEditorChange` 的 `edit`（`source: 'program'`；名词补全给了 `opts.source` 时是 `completion`）。
-   *   预览模式下也能用，预览跟着重画。
+   * - **範圍**：把 `[start, end)` 換成 `text`。位置按編輯區裡**當下顯示的文字**算，即
+   *   `area.value` 的下標（與 `selectionStart` / `selectionEnd` 同一套）；越界的夾進去，
+   *   `start > end` 時對調。整份替換就傳 `0, area.value.length`。`text` 裡的 `\r\n` / `\r`
+   *   歸一成 `\n`（textarea 只認 `\n`）。
+   * - **選區**：`selection` 是改完之後的選區，位置按**新文字**算；預設是游標落在插入文字末尾
+   *   （`start + text.length`）。越界的夾進去。
+   * - **撤銷**：一次呼叫記**一步**，不與前後的打字合併（`opts.join` 例外，見 `ApplyEditOptions`）。
+   *   撤銷回到改之前的文字與改之前的選區，重做回到改之後的文字與 `selection`。
+   * - **其餘**：同時更新 `file.draft`、髒標記、狀態列、標籤圓點、草稿持久化，清掉過期的衝突條，
+   *   併發一條 `onEditorChange` 的 `edit`（`source: 'program'`；名詞補全給了 `opts.source` 時是 `completion`）。
+   *   預覽模式下也能用，預覽跟著重畫。
    *
-   * 返回内容是否真的变了：没开文件、或替换前后一字不差时返回 false（这时只设选区，不记撤销）。
+   * 返回內容是否真的變了：沒開檔案、或替換前後一字不差時返回 false（這時只設選區，不記撤銷）。
    */
   applyEdit(start: number, end: number, text: string, selection?: TextSelection, opts?: ApplyEditOptions): boolean;
-  /** 撤销当前文件的一步。没有可撤销的返回 false。 */
+  /** 撤銷當前檔案的一步。沒有可撤銷的返回 false。 */
   undo(): boolean;
-  /** 重做当前文件的一步。没有可重做的返回 false。 */
+  /** 重做當前檔案的一步。沒有可重做的返回 false。 */
   redo(): boolean;
   save(force: boolean): void;
-  /** 保存这一份（经 `saving.ts`：同一份同一时刻只有一个保存在路上；磁盘上没了的先问要不要重建）。 */
+  /** 儲存這一份（經 `saving.ts`：同一份同一時刻只有一個儲存在路上；磁碟上沒了的先問要不要重建）。 */
   savePath(path: string, force: boolean): void;
   /**
-   * 切到这份文件、选中这一句并滚到它（五期：点审稿报告上的引文）。定位按 `locateQuote`——与后端
-   * 校验引文同一个归一化。找不到返回 false。
+   * 切到這份檔案、選中這一句並滾到它（五期：點審稿報告上的引文）。定位按 `locateQuote`——與後端
+   * 校驗引文同一個歸一化。找不到返回 false。
    */
   reveal(path: string, quote: string): boolean;
   applySaved(incoming: EditorFileView): void;
   applyConflict(path: string, diskText: string, diskHash: string): void;
   /**
-   * 磁盘上这一份变了（`editorDiskChanged`；或别的窗口存了它，那条 `editorSaved` 不是这边要的）。
-   * 没改过的标签就地换成新内容（记一步撤销、光标与滚动夹进新长度、正看着的在状态栏说一句），
-   * 改过的一个字不动、挂冲突条、标签上标出来。**不切标签、不抢焦点。**
+   * 磁碟上這一份變了（`editorDiskChanged`；或別的視窗存了它，那條 `editorSaved` 不是這邊要的）。
+   * 沒改過的標籤就地換成新內容（記一步撤銷、游標與滾動夾進新長度、正看著的在狀態列說一句），
+   * 改過的一個字不動、掛衝突條、標籤上標出來。**不切標籤、不搶焦點。**
    */
   applyDiskChange(incoming: EditorFileView): void;
-  /** 磁盘上已经没有这一份了（`editorDiskGone`）：标签标成已删除，正在路上的那次保存就此作罢。 */
+  /** 磁碟上已經沒有這一份了（`editorDiskGone`）：標籤標成已刪除，正在路上的那次儲存就此作罷。 */
   markGone(path: string): void;
   /**
-   * 编辑器知道的这一份在磁盘上的 hash，核对磁盘时带给后端：标成已删除的给空串（磁盘上又出现了就会回话），
-   * 见过一份还没载入的磁盘新版就给那一份的（同一个新版不必再报一次），否则是保存基线。
+   * 編輯器知道的這一份在磁碟上的 hash，核對磁碟時帶給後端：標成已刪除的給空串（磁碟上又出現了就會回話），
+   * 見過一份還沒載入的磁碟新版就給那一份的（同一個新版不必再報一次），否則是儲存基線。
    */
   knownDiskHash(path: string): string;
-  /** 重画标签与状态栏（保存状态变了，`saving.ts` 调）。 */
+  /** 重畫標籤與狀態列（儲存狀態變了，`saving.ts` 調）。 */
   refresh(): void;
   /**
-   * 换掉这份文件的乐观锁基线（`text` / `hash`，即「磁盘上是什么」），并收起它的冲突条。编辑区里的内容
-   * 不动。冲突时「对比合并」采纳之后用（`editor/replace.ts`）：作者看过了磁盘上的那一份，之后照常保存。
+   * 換掉這份檔案的樂觀鎖基線（`text` / `hash`，即「磁碟上是什麼」），並收起它的衝突條。編輯區裡的內容
+   * 不動。衝突時「對比合併」採納之後用（`editor/replace.ts`）：作者看過了磁碟上的那一份，之後照常儲存。
    */
   rebase(path: string, text: string, hash: string): void;
-  /** 这一块开着的特殊标签（不对应文件，见 {@link SpecialTab}），按打开的先后。 */
+  /** 這一塊開著的特殊標籤（不對應檔案，見 {@link SpecialTab}），按開啟的先後。 */
   readonly specials: readonly string[];
   /**
-   * 正显示着的特殊标签。显示它的时候这一块**没有当前文件**（`activePath` 是 null、`activeFile()` 是 undefined）：
-   * 保存、查找、体检、历史版本这些「对当前文件做事」的都当这一块没开文件，不会对着藏在后面的那一份动手。
+   * 正顯示著的特殊標籤。顯示它的時候這一塊**沒有當前檔案**（`activePath` 是 null、`activeFile()` 是 undefined）：
+   * 儲存、查詢、體檢、歷史版本這些「對當前檔案做事」的都當這一塊沒開檔案，不會對著藏在後面的那一份動手。
    */
   activeSpecial(): string | null;
   /**
-   * 打开（已经开着就切到）一个特殊标签。同一个特殊标签同一时刻只在一块里：开在另一块里的先从那边拿走（同「一个路径只属于
-   * 一块」）。`focus: false`：不认下「当前这一块」；`background`：只把标签放上标签条、不切过去（刷新恢复那些没在显示的）；
-   * `restoring`：刷新恢复时打开的，不写 localStorage（文件还没回来，这时写下去会把它们从待恢复的清单里冲掉）。
+   * 開啟（已經開著就切到）一個特殊標籤。同一個特殊標籤同一時刻只在一塊裡：開在另一塊裡的先從那邊拿走（同「一個路徑只屬於
+   * 一塊」）。`focus: false`：不認下「當前這一塊」；`background`：只把標籤放上標籤條、不切過去（重新整理恢復那些沒在顯示的）；
+   * `restoring`：重新整理恢復時開啟的，不寫 localStorage（檔案還沒回來，這時寫下去會把它們從待恢復的清單裡沖掉）。
    */
   openSpecial(id: string, opts?: { focus?: boolean; background?: boolean; restoring?: boolean }): void;
   /**
-   * 关掉一个特殊标签；它正显示着就回到切过去之前的那份文件（还开着的话，否则最后一份）。`quiet`：换工程时一并关掉，
-   * 不写 localStorage、不广播。
+   * 關掉一個特殊標籤；它正顯示著就回到切過去之前的那份檔案（還開著的話，否則最後一份）。`quiet`：換工程時一併關掉，
+   * 不寫 localStorage、不廣播。
    */
   closeSpecial(id: string, opts?: { quiet?: boolean }): void;
 }
 
 export interface PaneSnapshot {
   open: { path: string; hash: string; draft?: string; preview?: boolean; markdownPreview?: boolean }[];
-  /** 当前那份文件。特殊标签正显示着时是切过去之前的那一份（关掉特殊标签回到它）。 */
+  /** 當前那份檔案。特殊標籤正顯示著時是切過去之前的那一份（關掉特殊標籤回到它）。 */
   active: string | null;
-  /** 开着的特殊标签（叙事线总览，三期）。 */
+  /** 開著的特殊標籤（敘事線總覽，三期）。 */
   specials?: string[];
-  /** 正显示着的特殊标签。 */
+  /** 正顯示著的特殊標籤。 */
   special?: string;
 }
 
-// ---------------------------------------------------------------- 特殊标签
+// ---------------------------------------------------------------- 特殊標籤
 
 /**
- * 编辑区里**不对应文件**的标签（叙事线重做三期：「叙事线总览」；之后有「时间线总览」与「版本」的对比标签）。编辑区原本
- * 只认文件——标签就是一份打开的文件、显示的是 textarea——这是给它开的唯一一道口子：`pane.ts` 只认这个接口，不知道里面
- * 画的是什么；画的东西挂在这一块的 `.ed-stage` 上，盖住正文区（模块自己现造、自己藏）。
+ * 編輯區裡**不對應檔案**的標籤（敘事線重做三期：「敘事線總覽」；之後有「時間線總覽」與「版本」的對比標籤）。編輯區原本
+ * 只認檔案——標籤就是一份開啟的檔案、顯示的是 textarea——這是給它開的唯一一道口子：`pane.ts` 只認這個介面，不知道里面
+ * 畫的是什麼；畫的東西掛在這一塊的 `.ed-stage` 上，蓋住正文區（模組自己現造、自己藏）。
  *
- * - 标签排在文件标签前面，写 `label().title`，没有脏标记；点了切过去、× 与中键关掉、右键「关闭」加 `menu()` 给的几项。
- * - 切过去时这一块没有当前文件（见 `Pane.activeSpecial`）；切回一份文件、或从别处打开一份文件到这一块，它就藏起来。
- * - 刷新记着（`PaneSnapshot.specials` / `special`），恢复时先于文件打开，陆续回来的文件不把正显示着的它换下去；`transient` 的不记。
+ * - 標籤排在檔案標籤前面，寫 `label().title`，沒有髒標記；點了切過去、× 與中鍵關掉、右鍵「關閉」加 `menu()` 給的幾項。
+ * - 切過去時這一塊沒有當前檔案（見 `Pane.activeSpecial`）；切回一份檔案、或從別處開啟一份檔案到這一塊，它就藏起來。
+ * - 重新整理記著（`PaneSnapshot.specials` / `special`），恢復時先於檔案開啟，陸續回來的檔案不把正顯示著的它換下去；`transient` 的不記。
  */
 export interface SpecialTab {
-  /** 稳定的 id，记进 localStorage。 */
+  /** 穩定的 id，記進 localStorage。 */
   readonly id: string;
-  /** 标签上写什么、悬停看什么。 */
+  /** 標籤上寫什麼、懸停看什麼。 */
   label(): { title: string; tip: string };
-  /** 这一块要显示它：挂上覆盖层（第一次现造）、露出来。每次重画都会调，要便宜、可以重复调。 */
+  /** 這一塊要顯示它：掛上覆蓋層（第一次現造）、露出來。每次重畫都會調，要便宜、可以重複調。 */
   show(pane: Pane): void;
-  /** 这一块不再显示它（切到了一份文件、关掉了、搬到了另一块）。 */
+  /** 這一塊不再顯示它（切到了一份檔案、關掉了、搬到了另一塊）。 */
   hide(pane: Pane): void;
-  /** 标签右键「关闭」之后的那几项。 */
+  /** 標籤右鍵「關閉」之後的那幾項。 */
   menu?(pane: Pane): MenuItem[];
-  /** 不进刷新恢复（「版本」的对比标签：看的是哪两版只在这一页里记着，刷新之后没有可画的）。 */
+  /** 不進重新整理恢復（「版本」的對比標籤：看的是哪兩版只在這一頁裡記著，重新整理之後沒有可畫的）。 */
   readonly transient?: boolean;
 }
 
 const specialTabs = new Map<string, SpecialTab>();
 
-/** 登记一种特殊标签（模块装的时候）。 */
+/** 登記一種特殊標籤（模組裝的時候）。 */
 export function registerSpecialTab(tab: SpecialTab): void {
   specialTabs.set(tab.id, tab);
 }
@@ -198,33 +198,33 @@ export function specialTabOf(id: string): SpecialTab | undefined {
   return specialTabs.get(id);
 }
 
-/** 哪一块开着这个特殊标签。同一时刻至多一块。 */
+/** 哪一塊開著這個特殊標籤。同一時刻至多一塊。 */
 export function paneWithSpecial(id: string): Pane | undefined {
   return Object.values(panes).find((p) => p.specials.includes(id));
 }
 
 const STORE_KEY = 'novelforge.editor.v1';
 
-/** path -> 待恢复的未保存内容，等对应的 editorOpen 到达时消费。 */
+/** path -> 待恢復的未儲存內容，等對應的 editorOpen 到達時消費。 */
 export const pendingDrafts = new Map<string, CarriedDraft>();
 
-/** paneId -> 恢复完成后应该激活的 path。 */
+/** paneId -> 恢復完成後應該啟用的 path。 */
 export const pendingActive = new Map<PaneId, string | null>();
 
-/** 已经造出来的编辑区。草稿区惰性创建，一开始只有主区。 */
+/** 已經造出來的編輯區。草稿區惰性建立，一開始只有主區。 */
 export const panes: Partial<Record<PaneId, Pane>> = {};
 
-/** 把新造的一块登记进来。造与登记分开，createPane 就不必知道这张表。 */
+/** 把新造的一塊登記進來。造與登記分開，createPane 就不必知道這張表。 */
 export function registerPane(pane: Pane): Pane {
   panes[pane.id] = pane;
   return pane;
 }
 
-/** 由 index.ts 在启动时装上。 */
+/** 由 index.ts 在啟動時裝上。 */
 let post: (msg: InMessage) => void = () => {};
-/** 草稿区没有打开的文件时，连同那条分隔条一起收起来。 */
+/** 草稿區沒有開啟的檔案時，連同那條分隔條一起收起來。 */
 let draftResizer: HTMLElement | undefined;
-/** 第二块编辑区惰性创建：要往那里搬东西的模块（「移到另一侧」）经它拿，没有就现造。 */
+/** 第二塊編輯區惰性建立：要往那裡搬東西的模組（「移到另一側」）經它拿，沒有就現造。 */
 let makePane: (id: PaneId) => Pane = (id) => panes[id]!;
 
 export function bindStore(deps: {
@@ -239,20 +239,20 @@ export function bindStore(deps: {
   }
 }
 
-/** 另一块编辑区。`create`：第二块还没造出来时现造（往那边搬东西时）；否则没有就是 undefined。 */
+/** 另一塊編輯區。`create`：第二塊還沒造出來時現造（往那邊搬東西時）；否則沒有就是 undefined。 */
 export function otherPane(pane: Pane, create = false): Pane | undefined {
   const id: PaneId = pane.id === 'main' ? 'draft' : 'main';
   return panes[id] ?? (create ? makePane(id) : undefined);
 }
 
-/** 两块编辑区里开着的全部文件（标签上同名的要放在一起比，见 `tabLabels.ts`）。 */
+/** 兩塊編輯區裡開著的全部檔案（標籤上同名的要放在一起比，見 `tabLabels.ts`）。 */
 export function allOpenFiles(): OpenFile[] {
   return Object.values(panes).flatMap((p) => [...p.files.values()]);
 }
 
 /**
- * 一块的文件开了 / 关了，另一块的标签可能要改写法（同名的区分目录）。开着的每一块都重画一遍标签
- * （`Pane.refresh`：只画标签与状态栏，正文不动）。
+ * 一塊的檔案開了 / 關了，另一塊的標籤可能要改寫法（同名的區分目錄）。開著的每一塊都重畫一遍標籤
+ * （`Pane.refresh`：只畫標籤與狀態列，正文不動）。
  */
 export function refreshOtherTabs(except: Pane): void {
   for (const pane of Object.values(panes)) {
@@ -262,11 +262,11 @@ export function refreshOtherTabs(except: Pane): void {
   }
 }
 
-// ---------------------------------------------------------------- 关掉之后的光标与滚动
+// ---------------------------------------------------------------- 關掉之後的游標與滾動
 
 /**
- * 关掉的（含被换掉的临时标签、搬去另一块的）文件最后的光标与滚动：这一页里再打开它时放回去，不从顶上重新找。
- * 单击浏览章节时临时标签一直在被换掉，回到看过的那一章应该还在原处。按路径记、两块共用，不进 localStorage。
+ * 關掉的（含被換掉的臨時標籤、搬去另一塊的）檔案最後的游標與滾動：這一頁裡再開啟它時放回去，不從頂上重新找。
+ * 單擊瀏覽章節時臨時標籤一直在被換掉，回到看過的那一章應該還在原處。按路徑記、兩塊共用，不進 localStorage。
  */
 export interface FileView {
   caret: number;
@@ -284,20 +284,20 @@ export function rememberView(path: string, view: FileView): void {
   }
 }
 
-/** 取走这份文件关掉时记下的光标与滚动（取一次就没了：开着时由 `OpenFile` 自己记）。 */
+/** 取走這份檔案關掉時記下的游標與滾動（取一次就沒了：開著時由 `OpenFile` 自己記）。 */
 export function takeView(path: string): FileView | undefined {
   const view = closedViews.get(path);
   closedViews.delete(path);
   return view;
 }
 
-// ---------------------------------------------------------------- 最近关闭
+// ---------------------------------------------------------------- 最近關閉
 
-/** 最近关掉的标签，**按块记**（最新的在最后）。只记作者亲手关的（关标签、关闭其它……），搬家、换掉临时标签不算。 */
+/** 最近關掉的標籤，**按塊記**（最新的在最後）。只記作者親手關的（關標籤、關閉其它……），搬家、換掉臨時標籤不算。 */
 export interface ClosedTab {
   path: string;
   pane: PaneId;
-  /** 关掉那一刻标签上写的名字（「▾」列表与右键菜单上说「重新打开 003-夜访」）。 */
+  /** 關掉那一刻標籤上寫的名字（「▾」列表與右鍵選單上說「重新開啟 003-夜訪」）。 */
   title: string;
 }
 
@@ -312,7 +312,7 @@ export function noteClosed(entry: ClosedTab): void {
   }
 }
 
-/** 又开着了（不论从哪条路）：从最近关闭里拿掉。 */
+/** 又開著了（不論從哪條路）：從最近關閉裡拿掉。 */
 export function forgetClosed(path: string): void {
   const i = closedTabs.findIndex((c) => c.path === path);
   if (i >= 0) {
@@ -320,7 +320,7 @@ export function forgetClosed(path: string): void {
   }
 }
 
-/** 这一块最近关掉的那一个。 */
+/** 這一塊最近關掉的那一個。 */
 export function lastClosed(pane: PaneId): ClosedTab | undefined {
   for (let i = closedTabs.length - 1; i >= 0; i--) {
     if (closedTabs[i].pane === pane) {
@@ -330,28 +330,28 @@ export function lastClosed(pane: PaneId): ClosedTab | undefined {
   return undefined;
 }
 
-/** 最近关掉的几个，新的在前。 */
+/** 最近關掉的幾個，新的在前。 */
 export function recentClosed(limit = 8): ClosedTab[] {
   return closedTabs.slice(-limit).reverse();
 }
 
-/** 重新打开：开回它原来那一块（正常标签）。 */
+/** 重新開啟：開回它原來那一塊（正常標籤）。 */
 export function reopenClosed(entry: ClosedTab): void {
   forgetClosed(entry.path);
   post({ type: 'openEditor', path: entry.path, pane: entry.pane });
 }
 
-/** 换工程：上一个工程关掉的那些不再有意义。 */
+/** 換工程：上一個工程關掉的那些不再有意義。 */
 export function clearClosed(): void {
   closedTabs.length = 0;
 }
 
-/** 发一条消息给后端（不在某一块编辑区里的模块用：保存、核对磁盘）。 */
+/** 發一條訊息給後端（不在某一塊編輯區裡的模組用：儲存、核對磁碟）。 */
 export function postToHost(msg: InMessage): void {
   post(msg);
 }
 
-/** 当前这一块——Ctrl+S / Ctrl+W 作用于它。 */
+/** 當前這一塊——Ctrl+S / Ctrl+W 作用於它。 */
 export let activePane: Pane;
 
 export function setActivePane(pane: Pane): void {
@@ -359,16 +359,16 @@ export function setActivePane(pane: Pane): void {
 }
 
 /**
- * 广播「现在编辑的是哪个文件」。资源管理器据此高亮那一行。
+ * 廣播「現在編輯的是哪個檔案」。資源管理器據此高亮那一行。
  *
- * `activePane` 每次易主都要跟一句，否则高亮会停在上一个文件上。
+ * `activePane` 每次易主都要跟一句，否則高亮會停在上一個檔案上。
  */
 export function announceActive(): void {
   const file = activePane?.activeFile();
   announceEditorActive(file ? file.path : null);
 }
 
-/** 哪一块编辑区持有这个路径。单 pane 拥有权保证结果唯一。 */
+/** 哪一塊編輯區持有這個路徑。單 pane 擁有權保證結果唯一。 */
 export function paneOwning(path: string): Pane | undefined {
   for (const pane of Object.values(panes)) {
     if (pane.files.has(path)) {
@@ -378,7 +378,7 @@ export function paneOwning(path: string): Pane | undefined {
   return undefined;
 }
 
-/** 草稿区里没有打开的文件（也没有特殊标签）时整块收起来，连同那条分隔条。 */
+/** 草稿區裡沒有開啟的檔案（也沒有特殊標籤）時整塊收起來，連同那條分隔條。 */
 export function syncDraftVisibility(): void {
   const draft = panes.draft;
   const open = !!draft && (draft.files.size > 0 || draft.specials.length > 0);
@@ -389,8 +389,8 @@ export function syncDraftVisibility(): void {
 // ---------------------------------------------------------------- 持久化
 
 /**
- * 刷新页面不该丢掉未保存的修改——浏览器里 F5 太容易按到。
- * 存的是草稿与基线 hash，重连后重新拉一次文件再比对。
+ * 重新整理頁面不該丟掉未儲存的修改——瀏覽器裡 F5 太容易按到。
+ * 存的是草稿與基線 hash，重連後重新拉一次檔案再比對。
  */
 export function persist(): void {
   try {
@@ -403,30 +403,30 @@ export function persist(): void {
     };
     localStorage.setItem(projectStorageKey(STORE_KEY), JSON.stringify(data));
   } catch {
-    /* 隐私模式下 localStorage 可能不可写，丢了也不影响主流程 */
+    /* 隱私模式下 localStorage 可能不可寫，丟了也不影響主流程 */
   }
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | undefined;
 
-/** 敲字时每次都写 localStorage 太浪费，攒一下。 */
+/** 敲字時每次都寫 localStorage 太浪費，攢一下。 */
 export function schedulePersist(): void {
   clearTimeout(persistTimer);
   persistTimer = setTimeout(persist, 400);
 }
 
-/** 换工程时：攒着的那一次不写了——它记的是上一个工程的标签页，写下去会落到新工程的键上。 */
+/** 換工程時：攢著的那一次不寫了——它記的是上一個工程的標籤頁，寫下去會落到新工程的鍵上。 */
 export function cancelScheduledPersist(): void {
   clearTimeout(persistTimer);
   persistTimer = undefined;
 }
 
 /**
- * 刷新后重开上次的标签页。
+ * 重新整理後重開上次的標籤頁。
  *
- * 这里只发 `openEditor`、把草稿记进 `pendingDrafts`；真正贴回去由
- * `upsertFile` 在文件到达时做，并且要比对 hash——磁盘变过就丢弃草稿，
- * 不拿旧内容盖新内容。
+ * 這裡只發 `openEditor`、把草稿記進 `pendingDrafts`；真正貼回去由
+ * `upsertFile` 在檔案到達時做，並且要比對 hash——磁碟變過就丟棄草稿，
+ * 不拿舊內容蓋新內容。
  */
 export function restore(): void {
   if (document.body.classList.contains('no-workspace')) {
@@ -444,15 +444,15 @@ export function restore(): void {
   const raw = saved as { open?: unknown; active?: unknown; panes?: unknown };
   type StoredPane = { open?: unknown; active?: unknown; specials?: unknown; special?: unknown };
 
-  // v1 只有一块编辑区，形状是 { open, active }——老用户的标签页不该在
-  // 升级后凭空消失，按主区读进来。
+  // v1 只有一塊編輯區，形狀是 { open, active }——老使用者的標籤頁不該在
+  // 升級後憑空消失，按主區讀進來。
   const stored: Record<string, StoredPane> = Array.isArray(raw.open)
     ? { main: { open: raw.open, active: raw.active } }
     : ((raw.panes as Record<string, StoredPane>) ?? {});
 
   for (const paneId of ['main', 'draft'] as const) {
     const data = stored[paneId];
-    // 特殊标签（叙事线总览）：认得出的才开、同一个只开一次（记坏了的、改过名的不认，至多少一个标签，不崩）。
+    // 特殊標籤（敘事線總覽）：認得出的才開、同一個只開一次（記壞了的、改過名的不認，至多少一個標籤，不崩）。
     const specials = Array.isArray(data?.specials)
       ? (data!.specials as unknown[]).filter(
           (id): id is string => typeof id === 'string' && !!specialTabOf(id) && !paneWithSpecial(id)
@@ -462,7 +462,7 @@ export function restore(): void {
     if (!data || (!hasFiles && specials.length === 0)) {
       continue;
     }
-    // 先开特殊标签：正显示着的那一个先切过去，之后陆续回来的文件不把它换下去（`claimActivePath`）。
+    // 先開特殊標籤：正顯示著的那一個先切過去，之後陸續回來的檔案不把它換下去（`claimActivePath`）。
     const shown = typeof data.special === 'string' && specials.includes(data.special) ? data.special : undefined;
     if (specials.length > 0) {
       const pane = makePane(paneId);
@@ -478,8 +478,8 @@ export function restore(): void {
       if (!item || typeof item.path !== 'string') {
         continue;
       }
-      // 临时标签记着（⚑）：刷新前斜体的那一个，刷新后还是它。在预览里的也照旧在预览里（⚑）。
-      // 两个标记都只记在前端，不随打开请求发出去。
+      // 臨時標籤記著（⚑）：重新整理前斜體的那一個，重新整理後還是它。在預覽裡的也照舊在預覽裡（⚑）。
+      // 兩個標記都只記在前端，不隨開啟請求發出去。
       pendingDrafts.set(item.path, {
         hash: typeof item.hash === 'string' ? item.hash : undefined,
         draft: typeof item.draft === 'string' ? item.draft : undefined,
@@ -492,8 +492,8 @@ export function restore(): void {
 }
 
 /**
- * 文件改名/搬家后，把 localStorage 里的旧路径条目改写成新路径，草稿不丢。
- * 读不下/写不进都无所谓，最坏退化为丢一次刷新恢复。
+ * 檔案改名/搬家後，把 localStorage 裡的舊路徑條目改寫成新路徑，草稿不丟。
+ * 讀不下/寫不進都無所謂，最壞退化為丟一次重新整理恢復。
  */
 export function rekeyStorage(from: string, to: string): void {
   try {

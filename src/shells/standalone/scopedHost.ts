@@ -8,8 +8,8 @@ import { EditorFileCheck, EditorOpenIntent, EditorPane } from '../../core/protoc
 import { FileHost } from './fileHost';
 
 /**
- * 一次调用是替哪个窗口做的：弹窗、toast、打开编辑器都该落到那几个网页上。
- * `owner` 是工程根，空窗口没有。
+ * 一次呼叫是替哪個視窗做的：彈窗、toast、開啟編輯器都該落到那幾個網頁上。
+ * `owner` 是工程根，空視窗沒有。
  */
 export interface WindowScope {
   host: FileHost;
@@ -18,7 +18,7 @@ export interface WindowScope {
 
 const scopes = new AsyncLocalStorage<WindowScope>();
 
-/** 在这个窗口的上下文里跑 `fn`。它里面（含所有 await 之后）的 `getHost()` 都落到 `scope.host`。 */
+/** 在這個視窗的上下文裡跑 `fn`。它裡面（含所有 await 之後）的 `getHost()` 都落到 `scope.host`。 */
 export function runInScope<T>(scope: WindowScope, fn: () => T): T {
   return scopes.run(scope, fn);
 }
@@ -28,11 +28,11 @@ export function currentScope(): WindowScope | undefined {
 }
 
 /**
- * 独立版注册给 core 的那个全局 Host。
+ * 獨立版註冊給 core 的那個全域 Host。
  *
- * core 里到处是 `getHost().toast(...)`、`getHost().confirm(...)`，而一个进程同时开着几个工程、
- * 几个窗口：这一层按调用所在的上下文（{@link runInScope}）转给那个窗口自己的 `FileHost`。
- * 不在任何上下文里（启动期）就落到 `fallback`，它广播给所有网页。
+ * core 裡到處是 `getHost().toast(...)`、`getHost().confirm(...)`，而一個程序同時開著幾個工程、
+ * 幾個視窗：這一層按呼叫所在的上下文（{@link runInScope}）轉給那個視窗自己的 `FileHost`。
+ * 不在任何上下文裡（啟動期）就落到 `fallback`，它廣播給所有網頁。
  */
 export class ScopedHost implements Host {
   readonly name = 'standalone' as const;

@@ -1,42 +1,43 @@
+import { traditionalLabel } from './labels';
 /**
- * 审稿报告（五期）：一次调用出一份逐条引证的报告，本章细纲冻结成目标清单逐项核对。
+ * 審稿報告（五期）：一次呼叫出一份逐條引證的報告，本章細綱凍結成目標清單逐項核對。
  *
- * **纯类型 + 纯函数，零 import**（与 pipeline.ts 同类）：前端要拿同一份定位函数去编辑器里
- * 选中引文（「点引文就在编辑器里定位到那句」），报告卡上的标签与默认勾选也得与后端同源。
+ * **純型別 + 純函式，零 import**（與 pipeline.ts 同類）：前端要拿同一份定位函式去編輯器裡
+ * 選中引文（「點引文就在編輯器裡定位到那句」），報告卡上的標籤與預設勾選也得與後端同源。
  *
  * 移植自 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）：
  *
- * - JSON 合同与长度上限：`review-chapter.command.ts`（RV:36-119）、`consistency_check`
+ * - JSON 合同與長度上限：`review-chapter.command.ts`（RV:36-119）、`consistency_check`
  *   模板的 systemSuffix（PT:917-970）；
- * - 目标冻结与逐项核对：`shared/chapter-goal-review.ts`（`freezeChapterGoals` /
+ * - 目標凍結與逐項核對：`shared/chapter-goal-review.ts`（`freezeChapterGoals` /
  *   `normalizeChapterGoalReview`，:24-115）；
- * - 修稿清单：`shared/human-confirmed-review.ts` 的 `renderHumanConfirmedReviewBrief`（:202-252）。
+ * - 修稿清單：`shared/human-confirmed-review.ts` 的 `renderHumanConfirmedReviewBrief`（:202-252）。
  *
- * ## 与上游不同的两处（五期计划 §3 ⚑）
+ * ## 與上游不同的兩處（五期計劃 §3 ⚑）
  *
- * 1. **引文归一化之后再找。** 上游只容忍多出一对引号——模型抄原文时改一个逗号、并一个空格，
- *    那一句就认不出了。这里 NFKC、去掉全部空白与标点符号之后比。归一后不到
- *    {@link MIN_QUOTE_CHARS} 个字的引文当「找不到」：两三个字到处都能命中，证明不了什么。
- * 2. **普通问题的引文找不到就丢掉。** 上游只校验目标核对的引文，普通问题原样留着。没有原文
- *    撑着的「问题」多半是模型编的——留着，作者会照着去改一段根本不存在的话。丢了哪几条
- *    留在报告里（`dropped`），卡片上折叠列出（第 2 条）。
+ * 1. **引文歸一化之後再找。** 上游只容忍多出一對引號——模型抄原文時改一個逗號、並一個空格，
+ *    那一句就認不出了。這裡 NFKC、去掉全部空白與標點符號之後比。歸一後不到
+ *    {@link MIN_QUOTE_CHARS} 個字的引文當「找不到」：兩三個字到處都能命中，證明不了什麼。
+ * 2. **普通問題的引文找不到就丟掉。** 上游只校驗目標核對的引文，普通問題原樣留著。沒有原文
+ *    撐著的「問題」多半是模型編的——留著，作者會照著去改一段根本不存在的話。丟了哪幾條
+ *    留在報告裡（`dropped`），卡片上摺疊列出（第 2 條）。
  */
 
-// ---------------------------------------------------------------- 类型
+// ---------------------------------------------------------------- 型別
 
-/** 可以修的两档。`pass`（这一维查过、没问题）不是问题，单独收着。 */
+/** 可以修的兩檔。`pass`（這一維查過、沒問題）不是問題，單獨收著。 */
 export type ReviewSeverity = 'error' | 'warning';
 
 export const SEVERITY_LABEL: Record<ReviewSeverity, string> = {
-  error: '严重',
-  warning: '建议',
+  error: '嚴重',
+  warning: '建議',
 };
 
 /**
- * 一条问题。`quote` 是正文里找得到的那一句（模型给的原样，不是归一形）。
+ * 一條問題。`quote` 是正文裡找得到的那一句（模型給的原樣，不是歸一形）。
  *
- * 报告卡的编辑模式（五期补遗 §3）：`origin: 'author'` 是作者自己加的（引文可以空着）；`edited`
- * 是模型给的、作者改过的（改引文时找不到就保留原来那一句）。
+ * 報告卡的編輯模式（五期補遺 §3）：`origin: 'author'` 是作者自己加的（引文可以空著）；`edited`
+ * 是模型給的、作者改過的（改引文時找不到就保留原來那一句）。
  */
 export interface ReviewIssue {
   id: string;
@@ -48,13 +49,13 @@ export interface ReviewIssue {
   edited?: boolean;
 }
 
-/** 查过、没发现问题的一维。只展示，不能勾。 */
+/** 查過、沒發現問題的一維。只展示，不能勾。 */
 export interface ReviewPass {
   category: string;
   description: string;
 }
 
-/** 因为引文站不住而丢掉的问题。卡片上折叠列出——丢了什么要看得见。 */
+/** 因為引文站不住而丟掉的問題。卡片上摺疊列出——丟了什麼要看得見。 */
 export interface DroppedIssue {
   category: string;
   severity: ReviewSeverity;
@@ -64,20 +65,20 @@ export interface DroppedIssue {
 }
 
 /**
- * 目标核对的三种结论。**「没写到」只能是 `unknown`**：`unmet` 要有正文证据（明确的延期、
- * 拒绝或相反结果），拿不出证据的一律降成待核实（上游 `chapter-goal-review.ts:50-52`）。
+ * 目標核對的三種結論。**「沒寫到」只能是 `unknown`**：`unmet` 要有正文證據（明確的延期、
+ * 拒絕或相反結果），拿不出證據的一律降成待核實（上游 `chapter-goal-review.ts:50-52`）。
  */
 export type GoalStatus = 'completed' | 'unmet' | 'unknown';
 
 export const GOAL_STATUS_LABEL: Record<GoalStatus, string> = {
   completed: '已完成',
   unmet: '未完成',
-  unknown: '待核实',
+  unknown: '待核實',
 };
 
 /**
- * 冻结的一项目标：本章细纲「关键事件」里的一条（与上游一样只冻结 keyEvents）。从前细纲单列的
- * 「章末钩子」也冻结成最后一项；它并进「看点」之后，看点里还有爽点，不是一件件到期的动作，不冻结。
+ * 凍結的一專案標：本章細綱「關鍵事件」裡的一條（與上游一樣只凍結 keyEvents）。從前細綱單列的
+ * 「章末鉤子」也凍結成最後一項；它並進「看點」之後，看點裡還有爽點，不是一件件到期的動作，不凍結。
  */
 export interface FrozenGoal {
   id: string;
@@ -86,24 +87,24 @@ export interface FrozenGoal {
 
 export interface ReviewGoal extends FrozenGoal {
   status: GoalStatus;
-  /** 模型给的逐个子动作的判断；降级时换成一句「请人工核实」。 */
+  /** 模型給的逐個子動作的判斷；降級時換成一句「請人工核實」。 */
   judgment: string;
-  /** 找得到的引文。降级时清空。 */
+  /** 找得到的引文。降級時清空。 */
   quotes: string[];
 }
 
 /**
- * 目标核对完不完整：`complete` 每一项都有且只有一份判断；`partial` 有漏项、重复或认不出的 id；
- * `none` 本章细纲里没有可核对的关键事件。**完整不等于全部完成。**
+ * 目標核對完不完整：`complete` 每一項都有且只有一份判斷；`partial` 有漏項、重複或認不出的 id；
+ * `none` 本章細綱裡沒有可核對的關鍵事件。**完整不等於全部完成。**
  */
 export type GoalCoverage = 'complete' | 'partial' | 'none';
 
 export interface ReviewReport {
   chapterNo: number;
   chapterTitle?: string;
-  /** 审的是哪一份正文。点引文要打开它，修稿要读它。 */
+  /** 審的是哪一份正文。點引文要開啟它，修稿要讀它。 */
   chapterRelPath: string;
-  /** 审稿那一刻正文的指纹。修稿时对不上就重新定位每一条勾选项（{@link relocatePicks}）。 */
+  /** 審稿那一刻正文的指紋。修稿時對不上就重新定位每一條勾選項（{@link relocatePicks}）。 */
   chapterHash: string;
   summary: string;
   issues: ReviewIssue[];
@@ -113,26 +114,26 @@ export interface ReviewReport {
   dropped: DroppedIssue[];
 }
 
-// ---------------------------------------------------------------- 长度上限
+// ---------------------------------------------------------------- 長度上限
 
-/** 上游 RV:36-38：总评、每条说明、每句引文的上限（按字符数，不按字节）。 */
+/** 上游 RV:36-38：總評、每條說明、每句引文的上限（按字元數，不按位元組）。 */
 export const REVIEW_SUMMARY_MAX = 120;
 export const REVIEW_DESCRIPTION_MAX = 200;
 export const REVIEW_QUOTE_MAX = 160;
-/** 一份报告最多几条（上游 1–10 条，含通过项）。 */
+/** 一份報告最多幾條（上游 1–10 條，含通過項）。 */
 export const REVIEW_ITEMS_MAX = 10;
-/** 引文归一之后至少这么多字才认（见文件头）。 */
+/** 引文歸一之後至少這麼多字才認（見檔案頭）。 */
 export const MIN_QUOTE_CHARS = 4;
 
-// ---------------------------------------------------------------- 目标冻结
+// ---------------------------------------------------------------- 目標凍結
 
 /**
- * 本章细纲冻结成目标清单。关键事件**只按显式的边界切**：换行与分号（`；` `;`），行首的
- * 列表记号去掉，不按句号切、不改写一个字（上游 `freezeChapterGoals` 同一条：
+ * 本章細綱凍結成目標清單。關鍵事件**只按顯式的邊界切**：換行與分號（`；` `;`），行首的
+ * 列表記號去掉，不按句號切、不改寫一個字（上游 `freezeChapterGoals` 同一條：
  * 「only explicit list boundaries are split; prose is not semantically rewritten」）。
- * 一整段写成的关键事件就是一项，模型在判断里逐个列子动作。
+ * 一整段寫成的關鍵事件就是一項，模型在判斷裡逐個列子動作。
  *
- * id 从 `g1` 起按顺序编。
+ * id 從 `g1` 起按順序編。
  */
 export function freezeGoals(keyEvents: string): FrozenGoal[] {
   return (keyEvents ?? '')
@@ -143,10 +144,10 @@ export function freezeGoals(keyEvents: string): FrozenGoal[] {
 }
 
 function isPlaceholder(text: string): boolean {
-  return /^[（(]待补充[）)]$/u.test(text.trim());
+  return /^[（(]待(?:补|補)充[）)]$/u.test(text.trim());
 }
 
-/** 交给模型的冻结清单：一项一行「- g1：目标原文」（2026-10-25 起审稿写自然语言，清单也不再是一段 JSON）。 */
+/** 交給模型的凍結清單：一項一行「- g1：目標原文」（2026-10-25 起審稿寫自然語言，清單也不再是一段 JSON）。 */
 export function frozenGoalsList(goals: readonly FrozenGoal[]): string {
   return goals.map((g) => `- ${g.id}：${g.text}`).join('\n');
 }
@@ -154,14 +155,14 @@ export function frozenGoalsList(goals: readonly FrozenGoal[]): string {
 // ---------------------------------------------------------------- 引文
 
 /**
- * 一个字符的归一形：NFKC、小写、去掉空白与标点符号。**逐个码点做**——定位时要把归一形里的
- * 位置映射回原文，整串 NFKC 之后就对不回去了。中文不受影响（NFKC 对汉字是恒等的）。
+ * 一個字元的歸一形：NFKC、小寫、去掉空白與標點符號。**逐個碼點做**——定位時要把歸一形裡的
+ * 位置對映回原文，整串 NFKC 之後就對不回去了。中文不受影響（NFKC 對漢字是恆等的）。
  */
 function normChar(ch: string): string {
   return ch.normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
 }
 
-/** 一段文字的归一形（引文校验与定位共用这一个）。 */
+/** 一段文字的歸一形（引文校驗與定位共用這一個）。 */
 export function normalizeQuote(text: string): string {
   let out = '';
   for (const ch of text ?? '') {
@@ -170,7 +171,7 @@ export function normalizeQuote(text: string): string {
   return out;
 }
 
-/** 一份正文的归一形与「归一形第 k 个字在原文里从哪开始、到哪结束」。 */
+/** 一份正文的歸一形與「歸一形第 k 個字在原文裡從哪開始、到哪結束」。 */
 export interface QuoteIndex {
   norm: string;
   starts: number[];
@@ -194,16 +195,16 @@ export function indexText(text: string): QuoteIndex {
   return { norm, starts, ends };
 }
 
-/** 引文在这份正文里找不找得到（归一之后，至少 {@link MIN_QUOTE_CHARS} 个字）。 */
+/** 引文在這份正文裡找不找得到（歸一之後，至少 {@link MIN_QUOTE_CHARS} 個字）。 */
 export function quoteFound(index: QuoteIndex, quote: string): boolean {
   const q = normalizeQuote(quote);
   return q.length >= MIN_QUOTE_CHARS && index.norm.includes(q);
 }
 
 /**
- * 引文在原文里的位置 `{ start, end }`（UTF-16 下标，`end` 不含）。找不到是 undefined。
- * 编辑器选中它、VS Code 的 `revealRange` 都用这一份——与校验同一个归一化，
- * 报告里说找得到的，点下去就一定定位得到。
+ * 引文在原文裡的位置 `{ start, end }`（UTF-16 下標，`end` 不含）。找不到是 undefined。
+ * 編輯器選中它、VS Code 的 `revealRange` 都用這一份——與校驗同一個歸一化，
+ * 報告裡說找得到的，點下去就一定定位得到。
  */
 export function locateQuote(text: string, quote: string): { start: number; end: number } | undefined {
   const q = normalizeQuote(quote);
@@ -220,7 +221,7 @@ export function locateQuote(text: string, quote: string): { start: number; end: 
 
 // ---------------------------------------------------------------- 解析
 
-/** 模型交回来的一条，还没校验。 */
+/** 模型交回來的一條，還沒校驗。 */
 export interface RawReviewItem {
   category: string;
   severity: ReviewSeverity | 'pass';
@@ -238,38 +239,38 @@ export interface RawGoalReview {
 export interface RawReview {
   summary: string;
   items: RawReviewItem[];
-  /** 缺席 = 模型根本没交目标核对（与交了一个空数组不同：前者整张清单都待核实）。 */
+  /** 缺席 = 模型根本沒交目標核對（與交了一個空陣列不同：前者整張清單都待核實）。 */
   goalReviews?: RawGoalReview[];
-  /** 解析时顺手做的修整：截断了几处、跳过了几条认不出的。 */
+  /** 解析時順手做的修整：截斷了幾處、跳過了幾條認不出的。 */
   warnings: string[];
 }
 
 /**
- * 读审稿 JSON（2026-10-25 起是转写模型照抄出来的那份，generation/review.ts；模型自己给了 JSON、老会话也走这里）。
- * **宽松**（第 1 条：模型不听话是常态）：认代码围栏、认前后多余的话
- * （取第一个 `{` 到最后一个 `}`）、`critical / severe` 当严重、`minor / warn` 当建议，结论认中文词，
- * 单条坏了跳过那一条。只有「根本不是 JSON 对象」或「没有 items 数组」才算不合格——
- * 那时审稿链先重转、还不行再按格式重写一次（generation/review.ts）。
+ * 讀審稿 JSON（2026-10-25 起是轉寫模型照抄出來的那份，generation/review.ts；模型自己給了 JSON、老會話也走這裡）。
+ * **寬鬆**（第 1 條：模型不聽話是常態）：認程式碼圍欄、認前後多餘的話
+ * （取第一個 `{` 到最後一個 `}`）、`critical / severe` 當嚴重、`minor / warn` 當建議，結論認中文詞，
+ * 單條壞了跳過那一條。只有「根本不是 JSON 物件」或「沒有 items 陣列」才算不合格——
+ * 那時審稿鏈先重轉、還不行再按格式重寫一次（generation/review.ts）。
  */
 export function parseReviewJson(raw: string): { ok: true; value: RawReview } | { ok: false; reason: string } {
   const text = (raw ?? '').trim().replace(/^```(?:json)?[ \t]*\r?\n?/iu, '').replace(/\r?\n?```\s*$/u, '');
   const from = text.indexOf('{');
   const to = text.lastIndexOf('}');
   if (from < 0 || to <= from) {
-    return { ok: false, reason: '输出里没有 JSON 对象' };
+    return { ok: false, reason: '輸出裡沒有 JSON 物件' };
   }
   let root: unknown;
   try {
     root = JSON.parse(text.slice(from, to + 1));
   } catch {
-    return { ok: false, reason: 'JSON 解析失败' };
+    return { ok: false, reason: 'JSON 解析失敗' };
   }
   if (!root || typeof root !== 'object' || Array.isArray(root)) {
-    return { ok: false, reason: '根不是一个对象' };
+    return { ok: false, reason: '根不是一個物件' };
   }
   const o = root as Record<string, unknown>;
   if (!Array.isArray(o.items)) {
-    return { ok: false, reason: '缺少 items 数组' };
+    return { ok: false, reason: '缺少 items 陣列' };
   }
   const warnings: string[] = [];
   let clipped = 0;
@@ -301,7 +302,7 @@ export function parseReviewJson(raw: string): { ok: true; value: RawReview } | {
     });
   }
   if (skipped > 0) {
-    warnings.push(`${skipped} 条认不出严重度或没有说明，已跳过`);
+    warnings.push(`${skipped} 條認不出嚴重度或沒有說明，已跳過`);
   }
 
   let goalReviews: RawGoalReview[] | undefined;
@@ -322,7 +323,7 @@ export function parseReviewJson(raw: string): { ok: true; value: RawReview } | {
   }
   const summary = clip(o.summary, REVIEW_SUMMARY_MAX);
   if (clipped > 0) {
-    warnings.push(`${clipped} 处超长的总评、说明或引文已按上限截断`);
+    warnings.push(`${clipped} 處超長的總評、說明或引文已按上限截斷`);
   }
   return { ok: true, value: { summary, items, ...(goalReviews ? { goalReviews } : {}), warnings } };
 }
@@ -341,28 +342,28 @@ function normalizeSeverity(value: unknown): ReviewSeverity | 'pass' | undefined 
   return undefined;
 }
 
-/** 目标核对的结论：代码原样（小写），转写漏对的中文词也认（报告卡上的说法，{@link GOAL_STATUS_LABEL}）。 */
+/** 目標核對的結論：程式碼原樣（小寫），轉寫漏對的中文詞也認（報告卡上的說法，{@link GOAL_STATUS_LABEL}）。 */
 function normalizeStatus(value: unknown): string {
   const s = typeof value === 'string' ? value.trim().toLowerCase() : '';
-  const zh = (Object.keys(GOAL_STATUS_LABEL) as GoalStatus[]).find((k) => GOAL_STATUS_LABEL[k] === s);
+  const zh = (Object.keys(GOAL_STATUS_LABEL) as GoalStatus[]).find((k) => traditionalLabel(GOAL_STATUS_LABEL[k]) === traditionalLabel(s));
   return zh ?? s;
 }
 
-// ---------------------------------------------------------------- 校验
+// ---------------------------------------------------------------- 校驗
 
-/** 降级时那一项的判断换成这一句（上游同一句的意思）。 */
-export const GOAL_UNVERIFIED = '这一项缺少有效的逐项判断或可定位的正文证据，请人工核实。';
+/** 降級時那一項的判斷換成這一句（上游同一句的意思）。 */
+export const GOAL_UNVERIFIED = '這一項缺少有效的逐項判斷或可定位的正文證據，請人工核實。';
 
 /**
- * 校验一份报告：普通问题的引文找不到就丢；目标逐项核对，站不住的降成待核实。返回报告与
- * 一路上的说明（进 Draft 的 notes，第 2 条）。
+ * 校驗一份報告：普通問題的引文找不到就丟；目標逐項核對，站不住的降成待核實。返回報告與
+ * 一路上的說明（進 Draft 的 notes，第 2 條）。
  *
- * 目标核对的规矩（上游 `normalizeChapterGoalReview`）：
+ * 目標核對的規矩（上游 `normalizeChapterGoalReview`）：
  *
- * - 一项目标恰好一份判断才算数；漏了、重复了 → 这一项待核实，覆盖记 `partial`；
- * - 认不出的 id → 覆盖记 `partial`（不算进任何一项）；
- * - `completed` / `unmet` 必须至少有一句找得到的引文；**任何一句找不到**，整项降成待核实、
- *   引文清空、判断换成 {@link GOAL_UNVERIFIED}——剩下几句找得到的也救不回它（上游测试 :101）。
+ * - 一專案標恰好一份判斷才算數；漏了、重複了 → 這一項待核實，覆蓋記 `partial`；
+ * - 認不出的 id → 覆蓋記 `partial`（不算進任何一項）；
+ * - `completed` / `unmet` 必須至少有一句找得到的引文；**任何一句找不到**，整項降成待核實、
+ *   引文清空、判斷換成 {@link GOAL_UNVERIFIED}——剩下幾句找得到的也救不回它（上游測試 :101）。
  */
 export function verifyReview(
   raw: RawReview,
@@ -386,36 +387,36 @@ export function verifyReview(
     }
     const base = { category: item.category, severity: item.severity, description: item.description };
     if (!item.quote) {
-      dropped.push({ ...base, why: '没有给引文' });
+      dropped.push({ ...base, why: '沒有給引文' });
       continue;
     }
     if (!quoteFound(index, item.quote)) {
       dropped.push({
         ...base,
         quote: item.quote,
-        why: normalizeQuote(item.quote).length < MIN_QUOTE_CHARS ? `引文太短（不到 ${MIN_QUOTE_CHARS} 个字），认不出是哪一句` : '引文在正文里找不到',
+        why: normalizeQuote(item.quote).length < MIN_QUOTE_CHARS ? `引文太短（不到 ${MIN_QUOTE_CHARS} 個字），認不出是哪一句` : '引文在正文裡找不到',
       });
       continue;
     }
     issues.push({ id: `i${issues.length + 1}`, ...base, quote: item.quote });
   }
   if (over > 0) {
-    notes.push(`报告超过 ${REVIEW_ITEMS_MAX} 条，后面 ${over} 条没有收`);
+    notes.push(`報告超過 ${REVIEW_ITEMS_MAX} 條，後面 ${over} 條沒有收`);
   }
   if (dropped.length > 0) {
     notes.push(
-      `丢掉 ${dropped.length} 条引文站不住的意见（${dropped.map((d) => `「${clipText(d.description, 24)}」${d.why}`).join('；')}）`
+      `丟掉 ${dropped.length} 條引文站不住的意見（${dropped.map((d) => `「${clipText(d.description, 24)}」${d.why}`).join('；')}）`
     );
   }
 
   const { goals, coverage, downgraded } = verifyGoals(raw.goalReviews, ctx.goals, index);
   if (coverage === 'none') {
-    notes.push('本章细纲里没有可核对的关键事件，没有做目标核对');
+    notes.push('本章細綱裡沒有可核對的關鍵事件，沒有做目標核對');
   } else if (coverage === 'partial') {
-    notes.push('目标核对不完整：模型漏了、重复了或写错了某几项的 id，那几项按待核实处理');
+    notes.push('目標核對不完整：模型漏了、重複了或寫錯了某幾項的 id，那幾項按待核實處理');
   }
   if (downgraded > 0) {
-    notes.push(`${downgraded} 项目标的判断没有可定位的正文证据，降成待核实`);
+    notes.push(`${downgraded} 專案標的判斷沒有可定位的正文證據，降成待核實`);
   }
 
   return {
@@ -476,27 +477,27 @@ function clipText(text: string, max: number): string {
   return chars.length > max ? `${chars.slice(0, max).join('')}…` : chars.join('');
 }
 
-// ---------------------------------------------------------------- 勾选
+// ---------------------------------------------------------------- 勾選
 
 /**
- * 报告卡上默认勾哪几条：严重与建议全勾，**未完成**的目标也勾（它们要补的正是细纲里定下的事）；
- * 待核实默认不勾（证据不足不代表有问题，W10）；通过与已完成没有可勾的东西。
+ * 報告卡上預設勾哪幾條：嚴重與建議全勾，**未完成**的目標也勾（它們要補的正是細綱裡定下的事）；
+ * 待核實預設不勾（證據不足不代表有問題，W10）；通過與已完成沒有可勾的東西。
  *
- * ⚑ 上游连未完成的目标也默认不勾（ReviewReport.tsx:301-325）；总计划 W10 只说「待核实默认不勾」。
+ * ⚑ 上游連未完成的目標也預設不勾（ReviewReport.tsx:301-325）；總計劃 W10 只說「待核實預設不勾」。
  */
 export function defaultPicks(report: ReviewReport): string[] {
   return [...report.issues.map((i) => i.id), ...report.goals.filter((g) => g.status === 'unmet').map((g) => g.id)];
 }
 
-/** 能勾的条目：全部问题，加上未完成与待核实的目标。 */
+/** 能勾的條目：全部問題，加上未完成與待核實的目標。 */
 export function pickableIds(report: ReviewReport): string[] {
   return [...report.issues.map((i) => i.id), ...report.goals.filter((g) => g.status !== 'completed').map((g) => g.id)];
 }
 
 /**
- * 修稿之前正文又被改过（指纹对不上）：逐条重新定位勾选的问题。找不到的那几条作废——
- * 拿一句已经不在正文里的原文去让模型「改这里」，它只能凭空编一处出来改。
- * 目标不受影响：它们来自细纲，不来自正文。
+ * 修稿之前正文又被改過（指紋對不上）：逐條重新定位勾選的問題。找不到的那幾條作廢——
+ * 拿一句已經不在正文裡的原文去讓模型「改這裡」，它只能憑空編一處出來改。
+ * 目標不受影響：它們來自細綱，不來自正文。
  */
 export function relocatePicks(
   report: ReviewReport,
@@ -508,7 +509,7 @@ export function relocatePicks(
   const lost: ReviewIssue[] = [];
   for (const id of picks) {
     const issue = report.issues.find((i) => i.id === id);
-    // 没有引文的（作者加的）没什么可重新定位的，照旧交给模型。
+    // 沒有引文的（作者加的）沒什麼可重新定位的，照舊交給模型。
     if (issue && issue.quote && !quoteFound(index, issue.quote)) {
       lost.push(issue);
       continue;
@@ -521,9 +522,9 @@ export function relocatePicks(
 }
 
 /**
- * 交给修稿那一次的清单：**只有勾选的**，按报告里的顺序。移植自
- * `renderHumanConfirmedReviewBrief`：原始报告与总评不发——作者没勾的那些不该出现在模型眼前。
- * 勾了待核实项时前面加上游那句边界，免得模型把「证据不足」当成「确认有错」去补一段前史。
+ * 交給修稿那一次的清單：**只有勾選的**，按報告裡的順序。移植自
+ * `renderHumanConfirmedReviewBrief`：原始報告與總評不發——作者沒勾的那些不該出現在模型眼前。
+ * 勾了待核實項時前面加上游那句邊界，免得模型把「證據不足」當成「確認有錯」去補一段前史。
  */
 export function renderRevisionBrief(report: ReviewReport, picks: readonly string[]): string {
   const chosen = new Set(picks);
@@ -532,18 +533,18 @@ export function renderRevisionBrief(report: ReviewReport, picks: readonly string
   for (const issue of report.issues) {
     if (chosen.has(issue.id)) {
       n++;
-      // 作者加的分类缺省就是「作者补充」，那时不必再标一遍。
-      const tag = issue.origin === 'author' && issue.category !== AUTHOR_CATEGORY ? ' · 作者补充' : '';
-      const quote = issue.quote ? `\n   相关原文：${issue.quote}` : '';
+      // 作者加的分類預設就是「作者補充」，那時不必再標一遍。
+      const tag = issue.origin === 'author' && issue.category !== AUTHOR_CATEGORY ? ' · 作者補充' : '';
+      const quote = issue.quote ? `\n   相關原文：${issue.quote}` : '';
       lines.push(`${n}. [${issue.category} / ${SEVERITY_LABEL[issue.severity]}${tag}] ${issue.description}${quote}`);
     }
   }
   for (const goal of report.goals) {
     if (chosen.has(goal.id) && goal.status !== 'completed') {
       n++;
-      const head = `关键事件：${goal.text}`;
-      const quote = goal.quotes.length > 0 ? `\n   相关原文：${goal.quotes.join(' / ')}` : '';
-      lines.push(`${n}. [本章目标 / ${GOAL_STATUS_LABEL[goal.status]}] ${head}\n   判断：${goal.judgment}${quote}`);
+      const head = `關鍵事件：${goal.text}`;
+      const quote = goal.quotes.length > 0 ? `\n   相關原文：${goal.quotes.join(' / ')}` : '';
+      lines.push(`${n}. [本章目標 / ${GOAL_STATUS_LABEL[goal.status]}] ${head}\n   判斷：${goal.judgment}${quote}`);
     }
   }
   if (lines.length === 0) {
@@ -552,27 +553,27 @@ export function renderRevisionBrief(report: ReviewReport, picks: readonly string
   const sections: string[] = [];
   if (report.goals.some((g) => chosen.has(g.id) && g.status === 'unknown')) {
     sections.push(
-      '【待核实项处理边界】作者纳入待核实项不等于确认其为错误。不得据此编造缺失前史或事实；仅按作者已有指导及正文证据处理，证据不足时保留不确定性。'
+      '【待核實項處理邊界】作者納入待核實項不等於確認其為錯誤。不得據此編造缺失前史或事實；僅按作者已有指導及正文證據處理，證據不足時保留不確定性。'
     );
   }
-  sections.push(['【已确认纳入本次修稿的审稿项】', ...lines].join('\n'));
+  sections.push(['【已確認納入本次修稿的審稿項】', ...lines].join('\n'));
   return sections.join('\n\n');
 }
 
-/** 用户气泡上那几行（`/按审稿修稿` 下面）：一条一行，不带引文。 */
+/** 使用者氣泡上那幾行（`/按審稿修稿` 下面）：一條一行，不帶引文。 */
 export function describePicks(report: ReviewReport, picks: readonly string[]): string[] {
   const chosen = new Set(picks);
   return [
     ...report.issues.filter((i) => chosen.has(i.id)).map((i) => `[${SEVERITY_LABEL[i.severity]}] ${i.category}：${i.description}`),
     ...report.goals
       .filter((g) => chosen.has(g.id) && g.status !== 'completed')
-      .map((g) => `[${GOAL_STATUS_LABEL[g.status]}] 关键事件：${g.text}`),
+      .map((g) => `[${GOAL_STATUS_LABEL[g.status]}] 關鍵事件：${g.text}`),
   ];
 }
 
-// ---------------------------------------------------------------- 编辑（五期补遗 §3）
+// ---------------------------------------------------------------- 編輯（五期補遺 §3）
 
-/** 报告卡编辑模式交回来的一条。`id` 缺席或认不出 = 作者新加的。 */
+/** 報告卡編輯模式交回來的一條。`id` 缺席或認不出 = 作者新加的。 */
 export interface ReviewIssueEdit {
   id?: string;
   category: string;
@@ -581,19 +582,19 @@ export interface ReviewIssueEdit {
   quote?: string;
 }
 
-/** 作者加的条目缺省的分类。 */
-export const AUTHOR_CATEGORY = '作者补充';
+/** 作者加的條目預設的分類。 */
+export const AUTHOR_CATEGORY = '作者補充';
 
 /**
- * 把报告卡上编辑过的问题表合回报告。移植上游 `ReviewReport.tsx` 的编辑模式（:462-503），几处不同：
+ * 把報告卡上編輯過的問題表合回報告。移植上游 `ReviewReport.tsx` 的編輯模式（:462-503），幾處不同：
  *
- * - **模型给的不能删**：表里漏了它就原样留着（不想修就别勾，上游同样只给「忽略」）；改过任何一项
- *   标 `edited`。说明改成空的不算数，保留原来那句。
- * - **作者加的**（`id` 缺席或认不出）：编号接着 `a1`、`a2`… 往下，标 `origin: 'author'`，分类空着就是
- *   「作者补充」，说明空的整条丢掉；表里漏了已有的作者条目 = 删掉它。
- * - **引文按审稿时同一个归一化去正文里找**：作者加的找不到就清空（没有原文撑着的引文交给修稿只会
- *   让它凭空找地方改）；模型条目改出来的找不到就保留原来那一句。都写进说明（第 2 条）。
- * - 长度按审稿合同的上限截断。顺序：模型的在前（原来的顺序），作者加的跟在后面（表里的顺序）。
+ * - **模型給的不能刪**：表裡漏了它就原樣留著（不想修就別勾，上游同樣只給「忽略」）；改過任何一項
+ *   標 `edited`。說明改成空的不算數，保留原來那句。
+ * - **作者加的**（`id` 缺席或認不出）：編號接著 `a1`、`a2`… 往下，標 `origin: 'author'`，分類空著就是
+ *   「作者補充」，說明空的整條丟掉；表裡漏了已有的作者條目 = 刪掉它。
+ * - **引文按審稿時同一個歸一化去正文裡找**：作者加的找不到就清空（沒有原文撐著的引文交給修稿只會
+ *   讓它憑空找地方改）；模型條目改出來的找不到就保留原來那一句。都寫進說明（第 2 條）。
+ * - 長度按審稿合同的上限截斷。順序：模型的在前（原來的順序），作者加的跟在後面（表裡的順序）。
  */
 export function applyReviewEdits(
   report: ReviewReport,
@@ -617,11 +618,11 @@ export function applyReviewEdits(
     }
     const description = cut(e.description, REVIEW_DESCRIPTION_MAX) || issue.description;
     if (!cut(e.description, REVIEW_DESCRIPTION_MAX)) {
-      notes.push(`「${clipText(issue.description, 24)}」的说明不能是空的，保留原来那句`);
+      notes.push(`「${clipText(issue.description, 24)}」的說明不能是空的，保留原來那句`);
     }
     let quote = cut(e.quote, REVIEW_QUOTE_MAX);
     if (quote !== issue.quote && quote && !quoteFound(index, quote)) {
-      notes.push(`「${clipText(description, 24)}」改过的引文在正文里找不到，保留原来那一句`);
+      notes.push(`「${clipText(description, 24)}」改過的引文在正文裡找不到，保留原來那一句`);
       quote = issue.quote;
     }
     const next: ReviewIssue = {
@@ -636,7 +637,7 @@ export function applyReviewEdits(
     model.push(changed || issue.edited ? { ...next, edited: true } : issue);
   }
 
-  // 作者加的：已有的按 id 认，新加的接着编号。
+  // 作者加的：已有的按 id 認，新加的接著編號。
   let n = report.issues.reduce((max, i) => Math.max(max, Number(/^a(\d+)$/.exec(i.id)?.[1] ?? 0)), 0);
   const authored: ReviewIssue[] = [];
   let removed = 0;
@@ -661,7 +662,7 @@ export function applyReviewEdits(
     }
     let quote = cut(e.quote, REVIEW_QUOTE_MAX);
     if (quote && !quoteFound(index, quote)) {
-      notes.push(`「${clipText(description, 24)}」的引文在正文里找不到，按没有引文处理`);
+      notes.push(`「${clipText(description, 24)}」的引文在正文裡找不到，按沒有引文處理`);
       quote = '';
     }
     const id = existing?.id ?? `a${++n}`;
@@ -676,10 +677,10 @@ export function applyReviewEdits(
     });
   }
   if (blank > 0) {
-    notes.push(`${blank} 条新加的问题没写说明，没有收`);
+    notes.push(`${blank} 條新加的問題沒寫說明，沒有收`);
   }
   if (removed > 0) {
-    notes.push(`删掉了 ${removed} 条作者加的问题`);
+    notes.push(`刪掉了 ${removed} 條作者加的問題`);
   }
   return { report: { ...report, issues: [...model, ...authored] }, notes };
 }
@@ -687,11 +688,11 @@ export function applyReviewEdits(
 // ---------------------------------------------------------------- 渲染
 
 /**
- * 给人读的一份（气泡正文、「复制」取它）。报告卡画的是结构，这一份是它的文字版——
- * 气泡里摆一段 JSON，作者复制出来也没法用。
+ * 給人讀的一份（氣泡正文、「複製」取它）。報告卡畫的是結構，這一份是它的文字版——
+ * 氣泡裡擺一段 JSON，作者複製出來也沒法用。
  */
 export function renderReport(report: ReviewReport): string {
-  const head = `第 ${report.chapterNo} 章${report.chapterTitle ? `《${report.chapterTitle}》` : ''}审稿`;
+  const head = `第 ${report.chapterNo} 章${report.chapterTitle ? `《${report.chapterTitle}》` : ''}審稿`;
   const lines: string[] = [`# ${head}`];
   if (report.summary) {
     lines.push('', report.summary);
@@ -701,7 +702,7 @@ export function renderReport(report: ReviewReport): string {
     if (list.length > 0) {
       lines.push('', `## ${SEVERITY_LABEL[sev]}（${list.length}）`);
       for (const i of list) {
-        const tag = i.origin === 'author' ? '（作者补充）' : i.edited ? '（已改）' : '';
+        const tag = i.origin === 'author' ? '（作者補充）' : i.edited ? '（已改）' : '';
         lines.push(`- [${i.category}] ${i.description}${tag}`);
         if (i.quote) {
           lines.push(`  > ${i.quote}`);
@@ -710,22 +711,22 @@ export function renderReport(report: ReviewReport): string {
     }
   }
   if (report.goals.length > 0) {
-    lines.push('', '## 本章目标');
+    lines.push('', '## 本章目標');
     for (const g of report.goals) {
-      lines.push(`- ${GOAL_STATUS_LABEL[g.status]}｜关键事件：${g.text}`, `  ${g.judgment}`);
+      lines.push(`- ${GOAL_STATUS_LABEL[g.status]}｜關鍵事件：${g.text}`, `  ${g.judgment}`);
       for (const q of g.quotes) {
         lines.push(`  > ${q}`);
       }
     }
   }
   if (report.passes.length > 0) {
-    lines.push('', '## 通过');
+    lines.push('', '## 通過');
     for (const p of report.passes) {
       lines.push(`- [${p.category}] ${p.description}`);
     }
   }
   if (report.dropped.length > 0) {
-    lines.push('', `## 丢掉的意见（${report.dropped.length}，引文站不住）`);
+    lines.push('', `## 丟掉的意見（${report.dropped.length}，引文站不住）`);
     for (const d of report.dropped) {
       lines.push(`- [${d.category}] ${d.description}（${d.why}）`);
     }
@@ -733,24 +734,24 @@ export function renderReport(report: ReviewReport): string {
   return lines.join('\n');
 }
 
-/** 「2 严重 · 1 建议 · 目标 3/4 已完成」——报告卡顶上与日志里的那一句。 */
+/** 「2 嚴重 · 1 建議 · 目標 3/4 已完成」——報告卡頂上與日誌裡的那一句。 */
 export function describeReport(report: ReviewReport): string {
   const errors = report.issues.filter((i) => i.severity === 'error').length;
   const warnings = report.issues.length - errors;
-  const parts = [`${errors} 严重`, `${warnings} 建议`];
+  const parts = [`${errors} 嚴重`, `${warnings} 建議`];
   if (report.goals.length > 0) {
     const done = report.goals.filter((g) => g.status === 'completed').length;
     const pending = report.goals.filter((g) => g.status === 'unknown').length;
-    parts.push(`目标 ${done}/${report.goals.length} 已完成${pending > 0 ? `（${pending} 项待核实）` : ''}`);
+    parts.push(`目標 ${done}/${report.goals.length} 已完成${pending > 0 ? `（${pending} 項待核實）` : ''}`);
   }
   return parts.join(' · ');
 }
 
-// ---------------------------------------------------------------- 容错读取
+// ---------------------------------------------------------------- 容錯讀取
 
 /**
- * 会话文件里那份报告的容错读取（第 1 条：会话 JSON 作者可能手改过）。认不出章号或正文路径
- * 就整份不要——报告卡上点引文、按勾选修稿都要靠这两样；其余字段坏了按空补。
+ * 會話檔案裡那份報告的容錯讀取（第 1 條：會話 JSON 作者可能手改過）。認不出章號或正文路徑
+ * 就整份不要——報告卡上點引文、按勾選修稿都要靠這兩樣；其餘欄位壞了按空補。
  */
 export function normalizeReport(raw: unknown): ReviewReport | undefined {
   const o = (raw ?? {}) as Record<string, unknown>;
@@ -771,7 +772,7 @@ export function normalizeReport(raw: unknown): ReviewReport | undefined {
     chapterHash: str(o.chapterHash),
     summary: str(o.summary),
     issues: list(o.issues)
-      // 没有引文的只认作者加的与作者改过的：模型交回的条目引文是校验过的，缺了就是文件坏了。
+      // 沒有引文的只認作者加的與作者改過的：模型交回的條目引文是校驗過的，缺了就是檔案壞了。
       .filter((i) => str(i.id) && (str(i.quote) || i.origin === 'author' || i.edited === true))
       .map((i) => ({
         id: str(i.id),

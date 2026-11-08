@@ -20,19 +20,19 @@ import {
 const log = scoped('模型');
 
 /**
- * OpenAI 的 **Responses API**（`/responses`）流式实现——Codex 走的那一套。
+ * OpenAI 的 **Responses API**（`/responses`）流式實現——Codex 走的那一套。
  *
- * ## 为什么不是 /chat/completions
+ * ## 為什麼不是 /chat/completions
  *
- * 思考深度（`reasoning.effort`）只在这条协议上。老的 `/chat/completions` 里
- * 推理档位是模型名的一部分或者干脆没有，界面上给作者一个「想多深」的下拉框
- * 就无处落地。既然这个功能是本层存在的理由，openai 这种 kind 一律走
- * `/responses`，不再保留两条协议——两条并存意味着每个字段都要判一次「现在是
- * 哪一条」，而作者在设置页也要先答一道自己答不上来的题。
+ * 思考深度（`reasoning.effort`）只在這條協議上。老的 `/chat/completions` 裡
+ * 推理檔位是模型名的一部分或者乾脆沒有，介面上給作者一個「想多深」的下拉框
+ * 就無處落地。既然這個功能是本層存在的理由，openai 這種 kind 一律走
+ * `/responses`，不再保留兩條協議——兩條並存意味著每個欄位都要判一次「現在是
+ * 哪一條」，而作者在設定頁也要先答一道自己答不上來的題。
  *
- * **代价说清楚**：只认 `/chat/completions` 的服务商（DeepSeek、智谱、Kimi、
- * 通义、本地 Ollama 等）在这条路上会 404。它们的落点是配一个自己那侧的
- * 兼容网关，或者用 Anthropic 那种 kind。404 的提示里点了这件事。
+ * **代價說清楚**：只認 `/chat/completions` 的服務商（DeepSeek、智谱、Kimi、
+ * 通义、本地 Ollama 等）在這條路上會 404。它們的落點是配一個自己那側的
+ * 相容閘道器，或者用 Anthropic 那種 kind。404 的提示裡點了這件事。
  */
 export class OpenAiProvider implements LlmProvider {
   readonly id = 'openai' as const;
@@ -48,7 +48,7 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async maxInputTokens(): Promise<number | undefined> {
-    return undefined; // 以用户设置的 contextWindow 为准
+    return undefined; // 以使用者設定的 contextWindow 為準
   }
 
   async *stream(messages: ChatMessage[], options: StreamOptions): AsyncIterable<StreamEvent> {
@@ -57,8 +57,8 @@ export class OpenAiProvider implements LlmProvider {
       const { instructions, input } = toResponsesInput(messages);
       const quirk = quirksOf(this.baseUrl, this.model);
       let stream: ReadableStream<Uint8Array> | undefined;
-      // 上游拒了某个字段就拿掉它再发（见 negotiate）——**不是重试同一个请求**，
-      // 所以次数上限只有三次，且每次的请求体都比上一次少一个字段。
+      // 上游拒了某個欄位就拿掉它再發（見 negotiate）——**不是重試同一個請求**，
+      // 所以次數上限只有三次，且每次的請求體都比上一次少一個欄位。
       for (let attempt = 0; ; attempt += 1) {
         const sent = buildBody(this.model, instructions, input, options, quirk);
         const response = await fetch(`${this.baseUrl}/responses`, {
@@ -74,10 +74,10 @@ export class OpenAiProvider implements LlmProvider {
           stream = response.body;
           break;
         }
-        // 响应体只读一次：字段协商要看它，报错也要看它。
+        // 響應體只讀一次：欄位協商要看它，報錯也要看它。
         const detail = await readBody(response);
-        // 只为**这一次真带了**的字段做协商：没带 reasoning 却按「它不认 effort」
-        // 降一档，等于把一个真正的错误推迟两个来回才报出来。
+        // 只為**這一次真帶了**的欄位做協商：沒帶 reasoning 卻按「它不認 effort」
+        // 降一檔，等於把一個真正的錯誤推遲兩個來回才報出來。
         if (attempt < 2 && negotiate(response.status, detail, sent, quirk, this.label)) {
           continue;
         }
@@ -90,7 +90,7 @@ export class OpenAiProvider implements LlmProvider {
         try {
           event = JSON.parse(payload) as ResponsesEvent;
         } catch {
-          continue; // 心跳或非 JSON 行，跳过
+          continue; // 心跳或非 JSON 行，跳過
         }
         for (const ev of readResponsesEvent(event, this.label)) {
           yield ev;
@@ -104,24 +104,24 @@ export class OpenAiProvider implements LlmProvider {
   }
 }
 
-// ---------------------------------------------------------------- 请求体
+// ---------------------------------------------------------------- 請求體
 
-/** 上游明确拒过的字段。同一个模型只吃一次亏，之后每次请求都不再带它。 */
+/** 上游明確拒過的欄位。同一個模型只吃一次虧，之後每次請求都不再帶它。 */
 interface Quirks {
   /** 拒收 `temperature`（推理模型一律如此）。 */
   noTemperature: boolean;
-  /** 认得的最高档。作者选了更高的档就按这个发。 */
+  /** 認得的最高檔。作者選了更高的檔就按這個發。 */
   maxDepth: ThinkingDepth;
-  /** 「输出上限太小」那句话已经说过了。同一个模型只说一次。 */
+  /** 「輸出上限太小」那句話已經說過了。同一個模型只說一次。 */
   warnedRoom: boolean;
 }
 
 /**
- * 每个「接口地址 + 模型」一份。
+ * 每個「介面地址 + 模型」一份。
  *
- * 记在内存里而不是配置里：这是**上游的事实**（这个模型认不认 xhigh），不是
- * 作者的偏好，写进设置页只会多一个他答不上来的问题。进程重启后重新学一遍，
- * 代价是一次 400。
+ * 記在記憶體裡而不是配置裡：這是**上游的事實**（這個模型認不認 xhigh），不是
+ * 作者的偏好，寫進設定頁只會多一個他答不上來的問題。程序重啟後重新學一遍，
+ * 代價是一次 400。
  */
 const QUIRKS = new Map<string, Quirks>();
 
@@ -151,25 +151,25 @@ function buildBody(
     ...(instructions ? { instructions } : {}),
     max_output_tokens: options.maxOutputTokens,
     stream: true,
-    // 不让上游存这次对话：历史由本地会话文件负责，服务端再存一份只是
-    // 多一个副本。
+    // 不讓上游存這次對話：歷史由本地會話檔案負責，服務端再存一份只是
+    // 多一個副本。
     store: false,
     ...(effort
       ? {
-          // summary: 'auto' 才会有 reasoning_summary 的增量——界面上那段
-          // 「正在思考」靠它，没有它作者只能对着空气等几十秒。
+          // summary: 'auto' 才會有 reasoning_summary 的增量——介面上那段
+          // 「正在思考」靠它，沒有它作者只能對著空氣等幾十秒。
           reasoning: { effort, summary: 'auto' },
         }
       : {}),
-    // 推理模型拒收 temperature。思考开着时一律不带（它必然是推理模型），
-    // 关着时带上——非推理模型上它仍然是有效的文风旋钮。
+    // 推理模型拒收 temperature。思考開著時一律不帶（它必然是推理模型），
+    // 關著時帶上——非推理模型上它仍然是有效的文風旋鈕。
     ...(effort || quirk.noTemperature ? {} : { temperature: options.temperature }),
   };
 }
 
 /**
- * 思考的 token 算在输出上限里：上限太小，模型想完就没额度说话了。
- * 说一次就够——每轮都刷会把日志页淹掉，而作者能改的地方只有一个。
+ * 思考的 token 算在輸出上限裡：上限太小，模型想完就沒額度說話了。
+ * 說一次就夠——每輪都刷會把日誌頁淹掉，而作者能改的地方只有一個。
  */
 function warnRoom(depth: ThinkingDepth, maxOutputTokens: number, quirk: Quirks, model: string): void {
   if (quirk.warnedRoom || !outputRoomTooSmall(depth, maxOutputTokens)) {
@@ -177,8 +177,8 @@ function warnRoom(depth: ThinkingDepth, maxOutputTokens: number, quirk: Quirks, 
   }
   quirk.warnedRoom = true;
   log.warn(
-    `${model} 开着「${THINKING_LABEL[depth]}」，但输出上限只有 ${maxOutputTokens} token`,
-    '思考的 token 算在输出上限里，回答可能被挤短。可在设置页把这个模型的「输出上限」调大。'
+    `${model} 開著「${THINKING_LABEL[depth]}」，但輸出上限只有 ${maxOutputTokens} token`,
+    '思考的 token 算在輸出上限裡，回答可能被擠短。可在設定頁把這個模型的「輸出上限」調大。'
   );
 }
 
@@ -192,11 +192,11 @@ function capDepth(depth: ThinkingDepth | undefined, max: ThinkingDepth): Thinkin
 }
 
 /**
- * 400 了：是我们带了它不认的字段，还是真出错了？
+ * 400 了：是我們帶了它不認的欄位，還是真出錯了？
  *
- * 返回 true 表示「已经把那个字段记下来了，换一份请求体再发一次」。其余情况
- * 返回 false，由调用方按 HTTP 错误报出来。**只认 400**：401/404/429 与字段
- * 无关，改请求体再发只是白等一次。
+ * 返回 true 表示「已經把那個欄位記下來了，換一份請求體再發一次」。其餘情況
+ * 返回 false，由呼叫方按 HTTP 錯誤報出來。**只認 400**：401/404/429 與欄位
+ * 無關，改請求體再發只是白等一次。
  */
 function negotiate(
   status: number,
@@ -213,8 +213,8 @@ function negotiate(
     quirk.noTemperature = true;
     return true;
   }
-  // 「不认这个 effort 值」：新梯子上的 xhigh 老模型没有。降一档再试，
-  // 一路降到不带 reasoning 为止——降级过的档位会记住，不会每轮都撞一次。
+  // 「不認這個 effort 值」：新梯子上的 xhigh 老模型沒有。降一檔再試，
+  // 一路降到不帶 reasoning 為止——降級過的檔位會記住，不會每輪都撞一次。
   if (
     'reasoning' in sent &&
     (detail.includes('effort') || detail.includes('reasoning')) &&
@@ -222,7 +222,7 @@ function negotiate(
   ) {
     quirk.maxDepth = downgradeDepth(quirk.maxDepth);
     log.warn(
-      `${label} 不认这一档思考深度，降到「${THINKING_LABEL[quirk.maxDepth]}」再发一次`,
+      `${label} 不認這一檔思考深度，降到「${THINKING_LABEL[quirk.maxDepth]}」再發一次`,
       detail.slice(0, 200)
     );
     return true;
@@ -231,13 +231,13 @@ function negotiate(
 }
 
 
-// ---------------------------------------------------------------- 消息转换
+// ---------------------------------------------------------------- 訊息轉換
 
 /**
  * `ChatMessage[]` → Responses 的 `instructions` + `input[]`。
  *
- * 与 chat/completions 不同的一处：**system 走 `instructions` 顶层字段**，
- * 不再是 input 里的一条消息。
+ * 與 chat/completions 不同的一處：**system 走 `instructions` 頂層欄位**，
+ * 不再是 input 裡的一條訊息。
  */
 export function toResponsesInput(messages: ChatMessage[]): {
   instructions: string;
@@ -261,14 +261,14 @@ export function toResponsesInput(messages: ChatMessage[]): {
 
 // ---------------------------------------------------------------- 事件解析
 
-/** Responses 流里的一条事件。字段按 `type` 各取所需，认不出的类型一律忽略。 */
+/** Responses 流裡的一條事件。欄位按 `type` 各取所需，認不出的型別一律忽略。 */
 export interface ResponsesEvent {
   type?: string;
   delta?: string;
   response?: {
     usage?: { input_tokens?: number; output_tokens?: number };
     error?: { message?: string };
-    /** `completed` / `incomplete` / ……。有的网关在 `response.completed` 里也写 `incomplete`。 */
+    /** `completed` / `incomplete` / ……。有的閘道器在 `response.completed` 裡也寫 `incomplete`。 */
     status?: string;
     /** 只在 `response.incomplete` 上：`max_output_tokens` / `content_filter`。 */
     incomplete_details?: { reason?: string };
@@ -278,11 +278,11 @@ export interface ResponsesEvent {
 }
 
 /**
- * 一条事件 → 若干 `StreamEvent`。
+ * 一條事件 → 若干 `StreamEvent`。
  *
- * **认不出的类型一律忽略**：这条协议的事件种类有二十来个（item 的增删、
- * 各种 `.done`、注解、内容部分的开合），我们只关心其中几类。为未知类型报错
- * 会让上游加一个新事件就炸掉整轮生成。
+ * **認不出的型別一律忽略**：這條協議的事件種類有二十來個（item 的增刪、
+ * 各種 `.done`、註解、內容部分的開合），我們只關心其中幾類。為未知型別報錯
+ * 會讓上游加一個新事件就炸掉整輪生成。
  */
 export function readResponsesEvent(event: ResponsesEvent, label: string): StreamEvent[] {
   const out: StreamEvent[] = [];
@@ -292,8 +292,8 @@ export function readResponsesEvent(event: ResponsesEvent, label: string): Stream
         out.push({ type: 'text', text: event.delta });
       }
       return out;
-    // 思考的两种流法：给人看的摘要（summary: 'auto' 才有），以及少数模型
-    // 直接吐的推理正文。两者都不是正文，走 reasoning 事件给界面。
+    // 思考的兩種流法：給人看的摘要（summary: 'auto' 才有），以及少數模型
+    // 直接吐的推理正文。兩者都不是正文，走 reasoning 事件給介面。
     case 'response.reasoning_summary_text.delta':
     case 'response.reasoning_text.delta':
       if (event.delta) {
@@ -309,9 +309,9 @@ export function readResponsesEvent(event: ResponsesEvent, label: string): Stream
           usage: { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens },
         });
       }
-      // `completed` 也要报 `end`：正文续写链（generation/continuation.ts）要分清「模型自己收了尾」
-      // 与「网关没说」——前者说明这一章已经收了尾，不够八成时先回退再写（五期补遗 §1.1），
-      // 后者不敢回退。
+      // `completed` 也要報 `end`：正文續寫鏈（generation/continuation.ts）要分清「模型自己收了尾」
+      // 與「閘道器沒說」——前者說明這一章已經收了尾，不夠八成時先回退再寫（五期補遺 §1.1），
+      // 後者不敢回退。
       if (event.type === 'response.incomplete' || event.response?.status === 'incomplete') {
         const reason = event.response?.incomplete_details?.reason;
         out.push({ type: 'stop', reason: reason === 'max_output_tokens' ? 'maxTokens' : 'other' });
@@ -321,9 +321,9 @@ export function readResponsesEvent(event: ResponsesEvent, label: string): Stream
       return out;
     }
     case 'response.failed':
-      throw new LlmError(`${label} 返回错误：${event.response?.error?.message ?? '未知错误'}`);
+      throw new LlmError(`${label} 返回錯誤：${event.response?.error?.message ?? '未知錯誤'}`);
     case 'error':
-      throw new LlmError(`${label} 返回错误：${event.error?.message ?? event.message ?? '未知错误'}`);
+      throw new LlmError(`${label} 返回錯誤：${event.error?.message ?? event.message ?? '未知錯誤'}`);
     default:
       return out;
   }
@@ -341,7 +341,7 @@ export async function describeHttpError(response: Response, label: string): Prom
   return describeHttpBody(response.status, await readBody(response), label);
 }
 
-/** 响应体读一次就没了，所以读它的地方只有这一个。读不出来当空字符串。 */
+/** 響應體讀一次就沒了，所以讀它的地方只有這一個。讀不出來當空字串。 */
 export async function readBody(response: Response): Promise<string> {
   try {
     return await response.text();
@@ -350,14 +350,14 @@ export async function readBody(response: Response): Promise<string> {
   }
 }
 
-/** 已经读出来的响应体 → 一句人话。两家 provider 共用。 */
+/** 已經讀出來的響應體 → 一句人話。兩家 provider 共用。 */
 export function describeHttpBody(
   status: number,
   body: string,
   label: string,
   /**
-   * 这一家打的是哪个接口。404 那句提示要指名道姓——两条协议共用这个函数，
-   * 而对着 Anthropic 那条路说「没有 /responses 接口」会把人往反方向带。
+   * 這一家打的是哪個介面。404 那句提示要指名道姓——兩條協議共用這個函式，
+   * 而對著 Anthropic 那條路說「沒有 /responses 介面」會把人往反方向帶。
    */
   endpoint = '/responses'
 ): string {
@@ -366,18 +366,18 @@ export function describeHttpBody(
     const json = JSON.parse(body) as { error?: { message?: string }; message?: string };
     detail = json.error?.message ?? json.message ?? body;
   } catch {
-    /* 不是 JSON 就原样用 */
+    /* 不是 JSON 就原樣用 */
   }
   detail = detail.slice(0, 400);
 
   const hint =
     status === 401 || status === 403
-      ? '（API Key 可能无效，可在设置页重新录入该服务商的 Key）'
+      ? '（API Key 可能無效，可在設定頁重新錄入該服務商的 Key）'
       : status === 404
-        ? `（接口地址或模型名可能填错了；也可能是这个服务商没有 ${endpoint} 接口——` +
-          '只认 /chat/completions 的服务商请配它自己那侧的兼容网关）'
+        ? `（介面地址或模型名可能填錯了；也可能是這個服務商沒有 ${endpoint} 介面——` +
+          '只認 /chat/completions 的服務商請配它自己那側的相容閘道器）'
         : status === 429
-          ? '（触发限流，稍后再试）'
+          ? '（觸發限流，稍後再試）'
           : '';
 
   return `${label} 返回 HTTP ${status}${hint}${detail ? `：${detail}` : ''}`;

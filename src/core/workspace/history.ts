@@ -1,60 +1,60 @@
 /**
- * 历史版本：网关**覆盖一份已存在的创作产物之前**，把磁盘上的旧内容存成一个快照。
+ * 歷史版本：閘道器**覆蓋一份已存在的創作產物之前**，把磁碟上的舊內容存成一個快照。
  *
- * 「不静默覆盖」（第 3 条）管的是落盘之前那一问；问过了、写下去了，作者回头发现「刚才那一版其实更好」，
- * 从前只有定稿写回细纲会在回收站里留一份旧的。这一层让**每一条走网关的覆盖**（编辑器保存、重写 / 修稿
- * 落盘、定稿写回、MCP 的 `edit`、一键排版之后的保存……）都先把旧内容留一版。
+ * 「不靜默覆蓋」（第 3 條）管的是落盤之前那一問；問過了、寫下去了，作者回頭髮現「剛才那一版其實更好」，
+ * 從前只有定稿寫回細綱會在回收站裡留一份舊的。這一層讓**每一條走閘道器的覆蓋**（編輯器儲存、重寫 / 修稿
+ * 落盤、定稿寫回、MCP 的 `edit`、一鍵排版之後的儲存……）都先把舊內容留一版。
  *
- * ## 布局
+ * ## 佈局
  *
  * ```
  * .novelwarden/history/
- * ├── .gitignore                            第一次存快照时放进来，内容 `*`（Git 默认不收；想收就删掉它，之后不再补）
- * ├── chapters/第一卷/003-深处.txt/          每份文件一个目录：原文件的相对路径（连扩展名）原样当目录名
- * │   ├── 2026-10-18_14-32-05+0800.txt      每个快照一个文件：被覆盖那一刻的本地时间与时区
- * │   └── 2026-10-18_14-32-05+0800-2.txt    同一秒里的第二个
+ * ├── .gitignore                            第一次存快照時放進來，內容 `*`（Git 預設不收；想收就刪掉它，之後不再補）
+ * ├── chapters/第一卷/003-深处.txt/          每份檔案一個目錄：原檔案的相對路徑（連副檔名）原樣當目錄名
+ * │   ├── 2026-10-18_14-32-05+0800.txt      每個快照一個檔案：被覆蓋那一刻的本地時間與時區
+ * │   └── 2026-10-18_14-32-05+0800-2.txt    同一秒裡的第二個
  * └── .novelwarden/summaries/第一卷/003-深处.md/
- *     └── …                                  `.novelwarden/` 里的文件（细纲、角色卡、大纲……）同样镜像
+ *     └── …                                  `.novelwarden/` 裡的檔案（細綱、角色卡、大綱……）同樣映象
  * ```
  *
- * - **一一对应、不撞车**：目录名就是原文件的相对路径（含扩展名），`003.md` 与 `003.txt` 各是各的目录。
- * - **快照一律 `.txt`，字节原样拷贝**（不转码，GBK 的旧稿存下来还是 GBK）：不是 `.md`，插件壳的
- *   `.novelwarden/**\/*.md` 监听就不会每存一版多跑一轮全量重扫；内置编辑器与「文件」页照样打得开。
- * - **时间从文件名读**（带时区，换了时区也排得对），不看 mtime——拷来拷去 mtime 会变。
+ * - **一一對應、不撞車**：目錄名就是原檔案的相對路徑（含副檔名），`003.md` 與 `003.txt` 各是各的目錄。
+ * - **快照一律 `.txt`，位元組原樣複製**（不轉碼，GBK 的舊稿存下來還是 GBK）：不是 `.md`，外掛殼的
+ *   `.novelwarden/**\/*.md` 監聽就不會每存一版多跑一輪全量重掃；內建編輯器與「檔案」頁照樣打得開。
+ * - **時間從檔名讀**（帶時區，換了時區也排得對），不看 mtime——拷來拷去 mtime 會變。
  *
  * ## 存不存（{@link decideSnapshot}）
  *
- * - 只管创作产物：`kindOfPath` 不是 `other` 的（章节、草稿、细纲、角色卡、设定、架构、大纲、文风、叙事线、
- *   全文大纲、技能）；还不是小说工程（没有 `.novelwarden/`）的目录里不存——不替作者凭空建出一个工程目录。
- * - 新内容与旧内容一样（什么都没覆盖）、旧内容与最新一个快照一样：不存。
- * - **节流**：最新一个快照不到 {@link HISTORY_QUIET_MS}（10 分钟），而且「旧内容 ↔ 最新快照」「旧内容 ↔ 新内容」
- *   两处改动都在 {@link HISTORY_SMALL_CHANGE}（300 字）以内——不存。自动保存每两秒存一次时攒不出几百个快照；
- *   **大改总是存**：整章重写、修稿、一键排版、定稿写回，新内容和旧内容一比就超出这个数。改动按公共前后缀粗算
+ * - 只管創作產物：`kindOfPath` 不是 `other` 的（章節、草稿、細綱、角色卡、設定、架構、大綱、文風、敘事線、
+ *   全文大綱、技能）；還不是小說工程（沒有 `.novelwarden/`）的目錄裡不存——不替作者憑空建出一個工程目錄。
+ * - 新內容與舊內容一樣（什麼都沒覆蓋）、舊內容與最新一個快照一樣：不存。
+ * - **節流**：最新一個快照不到 {@link HISTORY_QUIET_MS}（10 分鐘），而且「舊內容 ↔ 最新快照」「舊內容 ↔ 新內容」
+ *   兩處改動都在 {@link HISTORY_SMALL_CHANGE}（300 字）以內——不存。自動儲存每兩秒存一次時攢不出幾百個快照；
+ *   **大改總是存**：整章重寫、修稿、一鍵排版、定稿寫回，新內容和舊內容一比就超出這個數。改動按公共前字尾粗算
  *   （{@link changedChars}）。
- * - 「现在存一版」（{@link snapshotNow}）跳过节流，但和最新快照一字不差时照样不重复存。
+ * - 「現在存一版」（{@link snapshotNow}）跳過節流，但和最新快照一字不差時照樣不重複存。
  *
  * ## 保留
  *
- * 每份文件最多留最近 {@link HISTORY_KEEP} 个，多的删掉最旧的。**这些是网关自己存的副本，不是作者的文件**，
- * 删它们不违背第 6 条「不真删」——第 6 条护的是作者的东西（章节、角色卡、会话……），而这里删的是网关为了
- * 「找得回来」额外抄的那几份，作者自己的文件一个字节都没动。
+ * 每份檔案最多留最近 {@link HISTORY_KEEP} 個，多的刪掉最舊的。**這些是閘道器自己存的副本，不是作者的檔案**，
+ * 刪它們不違背第 6 條「不真刪」——第 6 條護的是作者的東西（章節、角色卡、會話……），而這裡刪的是閘道器為了
+ * 「找得回來」額外抄的那幾份，作者自己的檔案一個位元組都沒動。
  *
- * ## 改名 / 搬家：快照跟着走（{@link moveHistory}）
+ * ## 改名 / 搬家：快照跟著走（{@link moveHistory}）
  *
- * 快照按路径存。网关 `move` 成功之后（连同它带走的草稿、细纲，以及 `writePlot` 换了文件名的细纲），快照目录挪到新路径下；
- * 新路径下已经有快照就两边合并（撞名加序号、合并完按保留上限修剪）。搬不动只记 warn，**不挡搬家、不回滚**。删除（进回收站）
- * 不搬：快照留在原路径，文件从回收站搬回原处，历史也就回来了。
+ * 快照按路徑存。閘道器 `move` 成功之後（連同它帶走的草稿、細綱，以及 `writePlot` 換了檔名的細綱），快照目錄挪到新路徑下；
+ * 新路徑下已經有快照就兩邊合併（撞名加序號、合併完按保留上限修剪）。搬不動只記 warn，**不擋搬家、不回滾**。刪除（進回收站）
+ * 不搬：快照留在原路徑，檔案從回收站搬回原處，歷史也就回來了。
  *
- * ## 绝不挡住保存
+ * ## 絕不擋住儲存
  *
- * 存快照的任何一步失败（磁盘满、`.novelwarden/history` 被占成了文件、权限……）都只记一条 warn，照常写盘
- * （第 1 条：容错优先）。{@link snapshotBeforeWrite} 不抛。
+ * 存快照的任何一步失敗（磁碟滿、`.novelwarden/history` 被佔成了檔案、許可權……）都只記一條 warn，照常寫盤
+ * （第 1 條：容錯優先）。{@link snapshotBeforeWrite} 不拋。
  *
- * ## 不进上下文、不触发重扫
+ * ## 不進上下文、不觸發重掃
  *
- * `kindOfPath` 把这里的东西判成 `other`（装配器只按种类与固定目录读，碰不到它）；全文检索跳过它（与
- * `.trash/` 同理：搜出来的是一份旧稿）；`watchPolicy` 挡掉它的变动；`isProtectedPath` 把这个目录列为固定目录，
- * 类文件操作搬不走、删不掉它。「文件」页照常看得见、点得开。
+ * `kindOfPath` 把這裡的東西判成 `other`（裝配器只按種類與固定目錄讀，碰不到它）；全文檢索跳過它（與
+ * `.trash/` 同理：搜出來的是一份舊稿）；`watchPolicy` 擋掉它的變動；`isProtectedPath` 把這個目錄列為固定目錄，
+ * 類檔案操作搬不走、刪不掉它。「檔案」頁照常看得見、點得開。
  */
 import { constants as fsConstants } from 'node:fs';
 import * as fs from 'node:fs/promises';
@@ -66,22 +66,22 @@ import { NovelProject } from '../model/project';
 import { MAX_EDITABLE_BYTES, WsError } from './guard';
 import { kindOfPath, normalizeRel } from './kind';
 
-const log = scoped('历史版本');
+const log = scoped('歷史版本');
 
-/** 每份文件最多留几个快照。 */
+/** 每份檔案最多留幾個快照。 */
 export const HISTORY_KEEP = 50;
-/** 最新一个快照「还新」的时长：这之内的小改动不另存。 */
+/** 最新一個快照「還新」的時長：這之內的小改動不另存。 */
 export const HISTORY_QUIET_MS = 10 * 60 * 1000;
-/** 「小改动」的上限（字符数，按公共前后缀粗算）。 */
+/** 「小改動」的上限（字元數，按公共前字尾粗算）。 */
 export const HISTORY_SMALL_CHANGE = 300;
-/** 第一次存快照时放进 `.novelwarden/history/` 的 `.gitignore`。 */
+/** 第一次存快照時放進 `.novelwarden/history/` 的 `.gitignore`。 */
 export const HISTORY_GITIGNORE = '*\n';
 
-// ---------------------------------------------------------------- 纯函数
+// ---------------------------------------------------------------- 純函式
 
 /**
- * 这份文件的快照放在哪个目录（工程内相对路径）：`.novelwarden/history/<原文件的相对路径>`，扩展名原样
- * 留在目录名里。越界给 undefined。纯函数，零 I/O。
+ * 這份檔案的快照放在哪個目錄（工程內相對路徑）：`.novelwarden/history/<原檔案的相對路徑>`，副檔名原樣
+ * 留在目錄名裡。越界給 undefined。純函式，零 I/O。
  */
 export function historyDirOf(project: NovelProject, rel: string): string | undefined {
   const normalized = normalizeRel(rel);
@@ -91,7 +91,7 @@ export function historyDirOf(project: NovelProject, rel: string): string | undef
 const pad = (n: number, w = 2) => String(n).padStart(w, '0');
 
 /**
- * 快照的文件名：被覆盖那一刻的本地时间 + 时区，`dup > 1` 时带序号（同一秒里的第二个）。
+ * 快照的檔名：被覆蓋那一刻的本地時間 + 時區，`dup > 1` 時帶序號（同一秒裡的第二個）。
  * 例：`2026-10-18_14-32-05+0800.txt`、`2026-10-18_14-32-05+0800-2.txt`。
  */
 export function snapshotFileName(at: Date, dup = 1): string {
@@ -107,7 +107,7 @@ export function snapshotFileName(at: Date, dup = 1): string {
 
 const SNAPSHOT_RE = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})([+-])(\d{2})(\d{2})(?:-(\d+))?\.txt$/;
 
-/** 读快照文件名：那一刻（毫秒时间戳）与序号。不是快照的名字（作者放进来的别的文件、子目录）给 undefined。 */
+/** 讀快照檔名：那一刻（毫秒時間戳）與序號。不是快照的名字（作者放進來的別的檔案、子目錄）給 undefined。 */
 export function parseSnapshotFileName(name: string): { time: number; dup: number } | undefined {
   const m = SNAPSHOT_RE.exec(name);
   if (!m) {
@@ -122,7 +122,7 @@ export function parseSnapshotFileName(name: string): { time: number; dup: number
   return { time, dup: m[10] ? Number(m[10]) : 1 };
 }
 
-/** 快照文件名按时刻排，新的在前；不是快照的名字丢掉。 */
+/** 快照檔名按時刻排，新的在前；不是快照的名字丟掉。 */
 export function sortSnapshotNames(names: readonly string[]): string[] {
   return names
     .map((name) => ({ name, at: parseSnapshotFileName(name) }))
@@ -131,14 +131,14 @@ export function sortSnapshotNames(names: readonly string[]): string[] {
     .map((x) => x.name);
 }
 
-/** 超出保留数的那几个（最旧的），要删掉。 */
+/** 超出保留數的那幾個（最舊的），要刪掉。 */
 export function snapshotsToPrune(names: readonly string[], keep = HISTORY_KEEP): string[] {
   return sortSnapshotNames(names).slice(Math.max(0, keep));
 }
 
 /**
- * 两份文字差了多少：去掉公共前缀与公共后缀之后，剩下那段中间较长的一边有几个字符。粗算——一处改动
- * 是准的；首尾各改一处会把中间全算进去（宁可多存一版）。
+ * 兩份文字差了多少：去掉公共字首與公共字尾之後，剩下那段中間較長的一邊有幾個字元。粗算——一處改動
+ * 是準的；首尾各改一處會把中間全算進去（寧可多存一版）。
  */
 export function changedChars(a: string, b: string): number {
   if (a === b) {
@@ -163,8 +163,8 @@ export type SnapshotDecision =
   | { save: false; reason: SnapshotSkip };
 
 /**
- * 存不存这一版（规则见文件头）。`old` 是磁盘上要被覆盖的内容，`next` 是要写下去的（「现在存一版」没有），
- * `latest` 是最新一个快照，`now` 是此刻。
+ * 存不存這一版（規則見檔案頭）。`old` 是磁碟上要被覆蓋的內容，`next` 是要寫下去的（「現在存一版」沒有），
+ * `latest` 是最新一個快照，`now` 是此刻。
  */
 export function decideSnapshot(input: {
   old: string;
@@ -197,40 +197,40 @@ export function decideSnapshot(input: {
   return { save: true, reason: 'bigChange' };
 }
 
-// ---------------------------------------------------------------- 读
+// ---------------------------------------------------------------- 讀
 
 export interface SnapshotInfo {
-  /** 快照的文件名，也是读它、对比它时的身份。 */
+  /** 快照的檔名，也是讀它、對比它時的身份。 */
   id: string;
-  /** 那一刻（毫秒时间戳）：这一版在磁盘上被覆盖掉的时候。 */
+  /** 那一刻（毫秒時間戳）：這一版在磁碟上被覆蓋掉的時候。 */
   time: number;
   words: number;
   bytes: number;
 }
 
 /**
- * 这份文件能不能存历史版本。能就给 undefined，不能给一句给人看的原因（界面上禁用按钮时说的就是它）。
- * 越界、不是创作产物、还不是小说工程，都不能。
+ * 這份檔案能不能存歷史版本。能就給 undefined，不能給一句給人看的原因（介面上禁用按鈕時說的就是它）。
+ * 越界、不是創作產物、還不是小說工程，都不能。
  */
 export async function historyUnavailable(project: NovelProject, rel: string): Promise<string | undefined> {
   const normalized = normalizeRel(rel);
   if (normalized === undefined) {
-    return `路径超出工程目录：${rel}`;
+    return `路徑超出工程目錄：${rel}`;
   }
   const kind = kindOfPath(project, normalized).kind;
   if (kind === 'other') {
-    return '这份文件不是工程里的创作产物（章节、草稿、细纲、角色卡、设定、架构、文风、叙事线……），不存历史版本。';
+    return '這份檔案不是工程裡的創作產物（章節、草稿、細綱、角色卡、設定、架構、文風、敘事線……），不存歷史版本。';
   }
   if (kind === 'outline') {
-    return '情节大纲没有文件，是各章细纲「梗概」的汇总：它自己不存历史版本。存回去时改了哪一章，那一章的细纲各自存了一版（打开那一章的细纲看「历史」）。';
+    return '情節大綱沒有檔案，是各章細綱「梗概」的彙總：它自己不存歷史版本。存回去時改了哪一章，那一章的細綱各自存了一版（開啟那一章的細綱看「歷史」）。';
   }
   if (!(await isDir(project.novelDir))) {
-    return '这个目录还不是小说工程（没有 .novelwarden/），不存历史版本。';
+    return '這個目錄還不是小說工程（沒有 .novelwarden/），不存歷史版本。';
   }
   return undefined;
 }
 
-/** 列出这份文件的快照，新的在前。没有就是空数组；读不动的那一个跳过，不抛。 */
+/** 列出這份檔案的快照，新的在前。沒有就是空陣列；讀不動的那一個跳過，不拋。 */
 export async function listSnapshots(project: NovelProject, rel: string): Promise<SnapshotInfo[]> {
   const relDir = historyDirOf(project, rel);
   if (relDir === undefined) {
@@ -243,39 +243,39 @@ export async function listSnapshots(project: NovelProject, rel: string): Promise
       const buf = await fs.readFile(path.join(dir, name));
       out.push({ id: name, time: parseSnapshotFileName(name)!.time, words: countWords(decodeFileText(buf)), bytes: buf.length });
     } catch {
-      // 列的时候刚被裁掉、或者作者手删了：跳过这一个。
+      // 列的時候剛被裁掉、或者作者手刪了：跳過這一個。
     }
   }
   return out;
 }
 
-/** 读某一个快照的全文。`id` 只认快照文件名（防 `../`）；不存在抛 `WsError('notFound')`。 */
+/** 讀某一個快照的全文。`id` 只認快照檔名（防 `../`）；不存在拋 `WsError('notFound')`。 */
 export async function readSnapshot(project: NovelProject, rel: string, id: string): Promise<string> {
   const relDir = historyDirOf(project, rel);
   if (relDir === undefined || id.includes('/') || id.includes('\\') || !parseSnapshotFileName(id)) {
-    throw new WsError('notFound', `找不到这一版：${id}`);
+    throw new WsError('notFound', `找不到這一版：${id}`);
   }
   try {
     return decodeFileText(await fs.readFile(path.join(project.pathOf(relDir), id)));
   } catch {
-    throw new WsError('notFound', `找不到这一版（可能已经被裁掉了）：${id}`);
+    throw new WsError('notFound', `找不到這一版（可能已經被裁掉了）：${id}`);
   }
 }
 
 // ---------------------------------------------------------------- 存
 
 export interface SnapshotResult {
-  /** 存下来的快照文件名。 */
+  /** 存下來的快照檔名。 */
   saved?: string;
-  /** 为什么没存。 */
+  /** 為什麼沒存。 */
   skipped?: SnapshotSkip | 'notTracked' | 'missing' | 'tooLarge';
-  /** 存的时候出错了（已经记了 warn）。 */
+  /** 存的時候出錯了（已經記了 warn）。 */
   error?: string;
 }
 
 /**
- * 网关覆盖 `rel` 之前调：磁盘上那份旧内容该存就存一版（规则见文件头）。`next` 是马上要写下去的内容。
- * **绝不抛**：任何一步失败都只记 warn，调用方照常写盘。
+ * 閘道器覆蓋 `rel` 之前調：磁碟上那份舊內容該存就存一版（規則見檔案頭）。`next` 是馬上要寫下去的內容。
+ * **絕不拋**：任何一步失敗都只記 warn，呼叫方照常寫盤。
  */
 export async function snapshotBeforeWrite(
   project: NovelProject,
@@ -287,12 +287,12 @@ export async function snapshotBeforeWrite(
     return await snapshot(project, rel, next, opts);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    log.warn(`没能给 ${rel} 存历史版本，照常写盘`, message);
+    log.warn(`沒能給 ${rel} 存歷史版本，照常寫盤`, message);
     return { error: message };
   }
 }
 
-/** 「现在存一版」：把**磁盘上当前**这份强制存一个快照（跳过节流；与最新快照一字不差时不重复存）。 */
+/** 「現在存一版」：把**磁碟上當前**這份強制存一個快照（跳過節流；與最新快照一字不差時不重複存）。 */
 export function snapshotNow(project: NovelProject, rel: string): Promise<SnapshotResult> {
   return snapshotBeforeWrite(project, rel, undefined, { force: true });
 }
@@ -304,7 +304,7 @@ async function snapshot(
   opts: { force?: boolean; now?: number }
 ): Promise<SnapshotResult> {
   const normalized = normalizeRel(rel);
-  // 情节大纲没有文件（各章细纲梗概的汇总）：磁盘上残留的老 `outline.md` 不是现在的书，不存。
+  // 情節大綱沒有檔案（各章細綱梗概的彙總）：磁碟上殘留的老 `outline.md` 不是現在的書，不存。
   const kind = normalized === undefined ? 'other' : kindOfPath(project, normalized).kind;
   if (normalized === undefined || kind === 'other' || kind === 'outline') {
     return { skipped: 'notTracked' };
@@ -348,14 +348,14 @@ async function snapshot(
   await ensureHistoryRoot(project);
   await fs.mkdir(dir, { recursive: true });
   const name = await writeUnique(dir, new Date(now), buf);
-  log.debug(`存了一版 ${normalized}`, `${name}｜${buf.length} 字节｜${decision.reason}`);
+  log.debug(`存了一版 ${normalized}`, `${name}｜${buf.length} 位元組｜${decision.reason}`);
 
   const pruned = snapshotsToPrune([name, ...names]);
   for (const stale of pruned) {
     await fs.unlink(path.join(dir, stale)).catch(() => undefined);
   }
   if (pruned.length > 0) {
-    log.debug(`裁掉 ${normalized} 最旧的 ${pruned.length} 个历史版本`, `只留最近 ${HISTORY_KEEP} 个`);
+    log.debug(`裁掉 ${normalized} 最舊的 ${pruned.length} 個歷史版本`, `只留最近 ${HISTORY_KEEP} 個`);
   }
   return { saved: name };
 }
@@ -363,25 +363,25 @@ async function snapshot(
 // ---------------------------------------------------------------- 搬
 
 /**
- * 网关把 `from` 搬到了 `to`（一份文件或整个目录，`move` 本身与它连带搬走的草稿、细纲）之后，把快照目录也搬过去：
- * 在新路径上打开「历史」面板，看得到改名之前存的那几版。目录搬的是整棵——分卷目录改名，下面每份文件的快照都跟着走。
+ * 閘道器把 `from` 搬到了 `to`（一份檔案或整個目錄，`move` 本身與它連帶搬走的草稿、細綱）之後，把快照目錄也搬過去：
+ * 在新路徑上開啟「歷史」面板，看得到改名之前存的那幾版。目錄搬的是整棵——分卷目錄改名，下面每份檔案的快照都跟著走。
  *
- * - 新路径下还没有快照目录：整个挪过去。
- * - 已经有（以前那里有过同名文件，或者从回收站搬回来过）：两边合并。撞了名的按 {@link writeUnique} 的规矩加序号
- *   （同一刻、序号往上加，绝不盖掉已有的那一个），合并完的那几个目录按 {@link HISTORY_KEEP} 修剪。
- * - 搬不动（新位置被一个文件占了、磁盘满、权限……）：只记一条 warn，**绝不抛**——搬家已经成了，不能因为几份副本
- *   让它失败或回滚，与「存快照失败不挡保存」同一个口径。没搬过去的留在旧路径下，一个不丢。
+ * - 新路徑下還沒有快照目錄：整個挪過去。
+ * - 已經有（以前那裡有過同名檔案，或者從回收站搬回來過）：兩邊合併。撞了名的按 {@link writeUnique} 的規矩加序號
+ *   （同一刻、序號往上加，絕不蓋掉已有的那一個），合併完的那幾個目錄按 {@link HISTORY_KEEP} 修剪。
+ * - 搬不動（新位置被一個檔案佔了、磁碟滿、許可權……）：只記一條 warn，**絕不拋**——搬家已經成了，不能因為幾份副本
+ *   讓它失敗或回滾，與「存快照失敗不擋儲存」同一個口徑。沒搬過去的留在舊路徑下，一個不丟。
  *
- * 删除（进回收站）不调它：快照留在原路径，作者从回收站把文件搬回原处，历史也就回来了。
- * 返回补进 `side` 的说明（没有快照目录时空数组）。
+ * 刪除（進回收站）不調它：快照留在原路徑，作者從回收站把檔案搬回原處，歷史也就回來了。
+ * 返回補進 `side` 的說明（沒有快照目錄時空陣列）。
  */
 export async function moveHistory(project: NovelProject, from: string, to: string): Promise<string[]> {
   try {
     return await carryHistory(project, from, to);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    log.warn(`没能把 ${from} 的历史版本搬到 ${to}，搬家照常`, `没搬过去的快照留在旧路径下｜${message}`);
-    return [`历史版本没能跟过去，没搬过去的留在 ${from} 的旧路径下`];
+    log.warn(`沒能把 ${from} 的歷史版本搬到 ${to}，搬家照常`, `沒搬過去的快照留在舊路徑下｜${message}`);
+    return [`歷史版本沒能跟過去，沒搬過去的留在 ${from} 的舊路徑下`];
   }
 }
 
@@ -391,7 +391,7 @@ async function carryHistory(project: NovelProject, from: string, to: string): Pr
   if (fromRel === undefined || toRel === undefined || fromRel === toRel) {
     return [];
   }
-  // 历史目录里的东西本身不存历史（`kindOfPath` 判 `other`）；搬进、搬出它都不该再套一层 `history/.novelwarden/history/…`。
+  // 歷史目錄裡的東西本身不存歷史（`kindOfPath` 判 `other`）；搬進、搬出它都不該再套一層 `history/.novelwarden/history/…`。
   const root = project.relPath(project.historyDir);
   if ([fromRel, toRel].some((r) => r === root || r.startsWith(`${root}/`))) {
     return [];
@@ -405,21 +405,21 @@ async function carryHistory(project: NovelProject, from: string, to: string): Pr
   if (!there) {
     await fs.mkdir(path.dirname(dst), { recursive: true });
     await fs.rename(src, dst);
-    log.debug(`历史版本跟着搬了`, `${fromRel} → ${toRel}`);
-    return [`历史版本 ${fromRel} → ${toRel}`];
+    log.debug(`歷史版本跟著搬了`, `${fromRel} → ${toRel}`);
+    return [`歷史版本 ${fromRel} → ${toRel}`];
   }
   if (!there.isDirectory()) {
-    throw new Error(`新路径的快照目录被一个文件占了：${project.relPath(dst)}`);
+    throw new Error(`新路徑的快照目錄被一個檔案佔了：${project.relPath(dst)}`);
   }
   const renamed = await mergeHistoryDir(src, dst);
-  log.debug(`历史版本跟着搬了，与新路径下原有的合并`, `${fromRel} → ${toRel}｜撞名加序号 ${renamed} 个`);
-  return [`历史版本 ${fromRel} → ${toRel}（与那里原有的合并）`];
+  log.debug(`歷史版本跟著搬了，與新路徑下原有的合併`, `${fromRel} → ${toRel}｜撞名加序號 ${renamed} 個`);
+  return [`歷史版本 ${fromRel} → ${toRel}（與那裡原有的合併）`];
 }
 
 /**
- * 把快照目录 `src` 并进 `dst`（两边都是目录），返回撞了名、加了序号的有几个。子目录递归（整个分卷的快照），文件一个一个
- * 拷过去再删源（拷用 `COPYFILE_EXCL`：绝不盖掉 `dst` 里已有的那一个）。并进了文件的目录按保留上限修剪；`src` 搬空了就删掉
- * （只删空目录，那是网关自己建的）。
+ * 把快照目錄 `src` 並進 `dst`（兩邊都是目錄），返回撞了名、加了序號的有幾個。子目錄遞迴（整個分卷的快照），檔案一個一個
+ * 拷過去再刪源（拷用 `COPYFILE_EXCL`：絕不蓋掉 `dst` 裡已有的那一個）。並進了檔案的目錄按保留上限修剪；`src` 搬空了就刪掉
+ * （只刪空目錄，那是閘道器自己建的）。
  */
 async function mergeHistoryDir(src: string, dst: string): Promise<number> {
   let renamed = 0;
@@ -434,7 +434,7 @@ async function mergeHistoryDir(src: string, dst: string): Promise<number> {
       } else if (there.isDirectory()) {
         renamed += await mergeHistoryDir(from, into);
       } else {
-        throw new Error(`快照目录被一个文件占了：${into}`);
+        throw new Error(`快照目錄被一個檔案佔了：${into}`);
       }
       continue;
     }
@@ -456,8 +456,8 @@ async function mergeHistoryDir(src: string, dst: string): Promise<number> {
 }
 
 /**
- * 把 `file` 拷进 `dir`，名字撞了就加序号：快照名去掉原有的序号、从 2 往上加（与 {@link writeUnique} 同一个规矩，那一刻与时区
- * 原样留着）；不是快照的名字（作者放进来的别的文件）在扩展名前加 `-2`、`-3`。返回落下的名字。
+ * 把 `file` 拷進 `dir`，名字撞了就加序號：快照名去掉原有的序號、從 2 往上加（與 {@link writeUnique} 同一個規矩，那一刻與時區
+ * 原樣留著）；不是快照的名字（作者放進來的別的檔案）在副檔名前加 `-2`、`-3`。返回落下的名字。
  */
 async function copyUnique(file: string, dir: string, name: string): Promise<string> {
   const snap = SNAPSHOT_RE.test(name);
@@ -486,8 +486,8 @@ async function statOf(abs: string): Promise<import('node:fs').Stats | undefined>
 }
 
 /**
- * 历史根第一次出现时顺手放一个 `.gitignore`（`*`）。只在**建出这个目录**的那一次放：作者删掉它就是想让
- * Git 收这些快照，之后不再补回来。
+ * 歷史根第一次出現時順手放一個 `.gitignore`（`*`）。只在**建出這個目錄**的那一次放：作者刪掉它就是想讓
+ * Git 收這些快照，之後不再補回來。
  */
 async function ensureHistoryRoot(project: NovelProject): Promise<void> {
   if (await isDir(project.historyDir)) {
@@ -497,7 +497,7 @@ async function ensureHistoryRoot(project: NovelProject): Promise<void> {
   await fs.writeFile(path.join(project.historyDir, '.gitignore'), HISTORY_GITIGNORE, { encoding: 'utf8', flag: 'wx' }).catch(() => undefined);
 }
 
-/** 按此刻起名写下去；同一秒已经有了就加序号。`wx`：绝不盖掉已有的那一个。 */
+/** 按此刻起名寫下去；同一秒已經有了就加序號。`wx`：絕不蓋掉已有的那一個。 */
 async function writeUnique(dir: string, at: Date, bytes: Buffer): Promise<string> {
   for (let dup = 1; dup < 1000; dup++) {
     const name = snapshotFileName(at, dup);
@@ -510,7 +510,7 @@ async function writeUnique(dir: string, at: Date, bytes: Buffer): Promise<string
       }
     }
   }
-  throw new Error('同一秒里存了太多版');
+  throw new Error('同一秒裡存了太多版');
 }
 
 async function snapshotNamesIn(dir: string): Promise<string[]> {

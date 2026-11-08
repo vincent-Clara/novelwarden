@@ -11,21 +11,21 @@ const SETTING_KEYS = [
   'summaryBatchSize', 'requestTimeoutMs', 'concurrency', 'fallbackAttempts',
 ];
 
-/** 0.1.x 的单服务商键，供 config.ts 的 seedFromLegacyRaw 消费。 */
+/** 0.1.x 的單服務商鍵，供 config.ts 的 seedFromLegacyRaw 消費。 */
 const LEGACY_KEYS = [
   'provider', 'openai.baseUrl', 'openai.model',
   'anthropic.baseUrl', 'anthropic.model', 'vscodeLm.family',
 ];
 
 /**
- * settings.json 的读取器，在 ~/.novelwarden/config.json 尚不可用时兜底
- *（未迁移、被删、或内容损坏——FileConfigStore.read 对坏 JSON 返回 undefined）。
+ * settings.json 的讀取器，在 ~/.novelwarden/config.json 尚不可用時兜底
+ *（未遷移、被刪、或內容損壞——FileConfigStore.read 對壞 JSON 返回 undefined）。
  *
- * 必须连**新结构**的键一起读，不能只读 0.1.x 的单服务商键：
- * 用户在 settings.json 里配好的 novel.providers 否则会被整份丢掉，
- * readConfig 只剩 0.1.x 默认值可兜底（novel.openai.model 声明了默认值
- * "gpt-4o"，cfg.get 永远拿得到值），于是界面报「服务商下没有模型」，
- * 而那个模型明明就在设置里躺着。
+ * 必須連**新結構**的鍵一起讀，不能只讀 0.1.x 的單服務商鍵：
+ * 使用者在 settings.json 裡配好的 novel.providers 否則會被整份丟掉，
+ * readConfig 只剩 0.1.x 預設值可兜底（novel.openai.model 宣告瞭預設值
+ * "gpt-4o"，cfg.get 永遠拿得到值），於是介面報「服務商下沒有模型」，
+ * 而那個模型明明就在設定裡躺著。
  */
 export const legacySettingsReader = {
   read(): PersistedSettings {
@@ -42,10 +42,10 @@ export const legacySettingsReader = {
 };
 
 /**
- * 一次性迁移：settings.json 的 novel.* + SecretStorage → ~/.novelwarden/。
- * 已迁移过（config.json 存在）则跳过。迁移成功后不删旧配置，
- * 只在 VS Code 里提示「可清理」，避免用户回滚时丢东西。
- * 返回是否真的执行了迁移。
+ * 一次性遷移：settings.json 的 novel.* + SecretStorage → ~/.novelwarden/。
+ * 已遷移過（config.json 存在）則跳過。遷移成功後不刪舊配置，
+ * 只在 VS Code 裡提示「可清理」，避免使用者回滾時丟東西。
+ * 返回是否真的執行了遷移。
  */
 export async function migrateVscodeSettings(secrets: vscode.SecretStorage): Promise<boolean> {
   const store = new FileConfigStore();
@@ -61,7 +61,7 @@ export async function migrateVscodeSettings(secrets: vscode.SecretStorage): Prom
       (settings as Record<string, unknown>)[k] = v;
     }
   }
-  // 没配过新结构：把遗留单服务商键一并搬过去（seedFromLegacyRaw 会消费带点键）。
+  // 沒配過新結構：把遺留單服務商鍵一併搬過去（seedFromLegacyRaw 會消費帶點鍵）。
   if ((settings.providers ?? []).length === 0 && !settings.model) {
     const legacy = legacySettingsReader.read();
     Object.assign(settings, legacy as Record<string, unknown>);
@@ -71,8 +71,8 @@ export async function migrateVscodeSettings(secrets: vscode.SecretStorage): Prom
   }
   await store.write(settings);
 
-  // SecretStorage → ~/.novelwarden/secrets.json。这里沿用旧的 `novel-forge.apiKey.*` 键名，
-  // 因为老用户的 Key 都存在这个前缀下；前缀若换新，registry 必须同时保留旧键的 fallback。
+  // SecretStorage → ~/.novelwarden/secrets.json。這裡沿用舊的 `novel-forge.apiKey.*` 鍵名，
+  // 因為老使用者的 Key 都存在這個字首下；字首若換新，registry 必須同時保留舊鍵的 fallback。
   const secretStore = new FileSecretStore();
   const ids = new Set<string>(normalizeProviders(settings.providers ?? []).map((p) => p.id));
   ids.add('openai');
@@ -95,11 +95,11 @@ export async function migrateVscodeSettings(secrets: vscode.SecretStorage): Prom
     }
   }
 
-  // 提示里的目录以实际落点为准：旧 ~/.novelforge/ 还活着时 FileConfigStore 就落在那里，
-  // 写死 ~/.novelwarden/ 会指错地方。
+  // 提示裡的目錄以實際落點為準：舊 ~/.novelforge/ 還活著時 FileConfigStore 就落在那裡，
+  // 寫死 ~/.novelwarden/ 會指錯地方。
   const configDir = path.dirname(store.filePath);
   void vscode.window.showInformationMessage(
-    `Novelwarden：配置与密钥已迁移到 ${configDir}，VS Code 内的旧配置可手动清理。`
+    `Novelwarden：配置與金鑰已遷移到 ${configDir}，VS Code 內的舊配置可手動清理。`
   );
   return true;
 }

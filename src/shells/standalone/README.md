@@ -1,60 +1,60 @@
-# standalone — 独立 Web 服务壳（Bun；没有 Bun 时跑在 node 上）
+# standalone — 獨立 Web 服務殼（Bun；沒有 Bun 時跑在 node 上）
 
-不装 VS Code 也能用的第二个宿主：本机起一个 Web 服务，浏览器里操作。与插件壳共用 `core/` 与
-[shared/panes.ts](../shared/panes.ts)，自己只实现 `Host` 窄接口与一层 HTTP/WebSocket 传输
-（壳的契约见 [../README.md](../README.md)）。
+不裝 VS Code 也能用的第二個宿主：本機起一個 Web 服務，瀏覽器裡操作。與外掛殼共用 `core/` 與
+[shared/panes.ts](../shared/panes.ts)，自己只實現 `Host` 窄介面與一層 HTTP/WebSocket 傳輸
+（殼的契約見 [../README.md](../README.md)）。
 
-## 文件
+## 檔案
 
-| 文件 | 职责 |
+| 檔案 | 職責 |
 |---|---|
-| [main.ts](main.ts) | 入口。`init` 装上 `TerminalHost` 后走 **core 的** `initProjectFlow`；否则先读 `NOVELWARDEN_TOKEN`（旧名 `NOVELFORGE_TOKEN` 兼容）过一遍 `exposureError`（绑非回环地址没令牌就拒绝启动），再起服务（端口被占顺延，最多 20 次）并按需开浏览器。 |
-| [cli.ts](cli.ts) | 参数解析：`novelwarden`（空窗口）/ `novelwarden [dir]` / `novelwarden init [dir]`，外加 `--port` / `--host` / `--no-open` / `--verbose`。不带位置参数时不再把当前目录当成工程。令牌不走参数（会出现在 `ps` 里）。 |
-| [auth.ts](auth.ts) | 访问控制（纯函数）：什么时候必须配令牌（`exposureError`）、Bearer / cookie 认不认、Origin 白名单、登录页与 `/login`。 |
-| [server.ts](server.ts) | 路由与收发（经 `serve.ts` 监听）：`/` 出页面、`/media/*` 出内嵌资源、`/favicon.ico`、`/ws` WebSocket、`/mcp`（外部 agent 的 MCP 入口，见 [core/mcp](../../core/mcp/README.md)）。每条 WebSocket 是一个窗口，握手地址上的 `?project=` 说它开哪个工程；不带工程的 `/` 302 到最近操作的那个工程。消息全交给 `WorkspaceHub.receive`。启动时把 core 的日志接到终端（默认 info 及以上，`--verbose` 放开 debug）。 |
-| [workspaceHub.ts](workspaceHub.ts) | 工作区登记处：同时开几个工程，每个窗口各绑一个（或空着），同一个工程的几个窗口共用一份 `ChatController`；吃掉打开/关闭文件夹与设置类消息；没有窗口的工程空闲一分钟后关（最近操作的那个留着给 MCP）。欢迎页的「新建一本书」「导入写好的书」也在这里：`createProject` 经 `core/actions.ts` 的 `createBookAt` 建文件夹并初始化、回 `projectCreated`（真实路径，打开由前端照常发 `openFolder`），`inspectBook` 回那本 txt 切得出几章；`workspaces` 另带「放在」的缺省值 `newProjectParent`（最近那本书所在的目录，没有就是家目录）。 |
-| [scopedHost.ts](scopedHost.ts) | 注册给 core 的全局 Host：按 `AsyncLocalStorage` 里的窗口上下文把 `getHost()` 转给那个窗口自己的 `FileHost`，弹窗、toast、打开编辑器只落到对应的网页上。 |
-| [windowState.ts](windowState.ts) | `~/.novelwarden/window.json`：上次打开的目录与最近打开列表。 |
-| [hostFs.ts](hostFs.ts) | 本机一层目录列举与选择器「新建文件夹」。不进 core，agent 拿不到。 |
-| [fileHost.ts](fileHost.ts) | `Host` 的实现：弹窗经 `PromptHub` 变成网页 modal（确认框一个 action 一颗按钮，回的是按钮上的字；`confirmCall` 同一个确认框带 `call`，回答另带 `choice`——作者为这一次挑的模型与详细度）；`fs.watch` 监听工程（失败退化为轮询，带 250ms 去抖）；`openFile` 走内置编辑器；`openBeside` 开在第二块编辑区。`progress` 只提供 signal——进度由 `core/runtime/progress.ts` 结构化推给网页。`bind` / `unbind` 随 Hub 热换工程根。 |
-| [promptHub.ts](promptHub.ts) | 未决网页弹窗的登记与回执匹配。WS 全部断开时一律按取消处理。 |
-| [terminalHost.ts](terminalHost.ts) | `Host` 的终端实现，只给 `novelwarden init` 用：问答走 readline，`openFile` 报一句路径。有了它，CLI 只是「第三个宿主」，「初始化工程」这条流程仍然只有一份实现。 |
-| [page.ts](page.ts) | **布局**：标题栏（文件 / 编辑 / 视图 / 帮助）+ 活动栏 + 侧栏 + 内置编辑器；无工程时编辑器区是欢迎页（开始三条路——新建一本书、导入写好的书、打开文件夹——、最近、怎么上手，「帮助 → 欢迎页面」随时再打开）。六个 pane 的 DOM 全部取自 [../shared/panes.ts](../shared/panes.ts)（含只有这里装配的「文件」页），这里没有第二份。 |
-| [serve.ts](serve.ts) | 起 HTTP + WebSocket 服务、与运行时无关的那一面：形状照 `Bun.serve` 摆（`fetch(req, ctl)` + `websocket` 三个回调），有 `Bun` 这个全局就原样交给 `Bun.serve`，没有就交给 `nodeServe.ts`。 |
-| [nodeServe.ts](nodeServe.ts) | node 上的监听：`node:http` + `ws`（开发依赖，打包进单文件）。眼下只有 Android 壳走这里（手机上只有 Termux 编的 node）。 |
-| [assets.ts](assets.ts) | `/media/*` 的字节来源（内嵌资源表）。与 `page.ts` 分开：拼一段 HTML 不该牵进那个几十 MB 的生成文件。 |
-| [systemOpen.ts](systemOpen.ts) | 交给系统默认程序打开（`explorer` / `open` / `xdg-open`）。开浏览器与编辑器的「外部打开」共用这一份。 |
-| `mediaAssets.ts` | **生成文件**（已 gitignore）。由 [../../scripts/embed-media.js](../../../scripts/embed-media.js) 把前端资源 base64 内嵌（`.js` / `.css` 取自构建产物 `dist/media/`，`icon.svg` 取自 `media/`），使单文件可执行不依赖外部资源。`npm run typecheck` / `test:e2e` / `dist` 前会自动生成。 |
+| [main.ts](main.ts) | 入口。`init` 裝上 `TerminalHost` 後走 **core 的** `initProjectFlow`；否則先讀 `NOVELWARDEN_TOKEN`（舊名 `NOVELFORGE_TOKEN` 相容）過一遍 `exposureError`（綁非迴環地址沒令牌就拒絕啟動），再起服務（埠被佔順延，最多 20 次）並按需開瀏覽器。 |
+| [cli.ts](cli.ts) | 引數解析：`novelwarden`（空視窗）/ `novelwarden [dir]` / `novelwarden init [dir]`，外加 `--port` / `--host` / `--no-open` / `--verbose`。不帶位置引數時不再把當前目錄當成工程。令牌不走引數（會出現在 `ps` 裡）。 |
+| [auth.ts](auth.ts) | 訪問控制（純函式）：什麼時候必須配令牌（`exposureError`）、Bearer / cookie 認不認、Origin 白名單、登入頁與 `/login`。 |
+| [server.ts](server.ts) | 路由與收發（經 `serve.ts` 監聽）：`/` 出頁面、`/media/*` 出內嵌資源、`/favicon.ico`、`/ws` WebSocket、`/mcp`（外部 agent 的 MCP 入口，見 [core/mcp](../../core/mcp/README.md)）。每條 WebSocket 是一個視窗，握手地址上的 `?project=` 說它開哪個工程；不帶工程的 `/` 302 到最近操作的那個工程。訊息全交給 `WorkspaceHub.receive`。啟動時把 core 的日誌接到終端（預設 info 及以上，`--verbose` 放開 debug）。 |
+| [workspaceHub.ts](workspaceHub.ts) | 工作區登記處：同時開幾個工程，每個視窗各綁一個（或空著），同一個工程的幾個視窗共用一份 `ChatController`；吃掉開啟/關閉資料夾與設定類訊息；沒有視窗的工程空閒一分鐘後關（最近操作的那個留著給 MCP）。歡迎頁的「新建一本書」「匯入寫好的書」也在這裡：`createProject` 經 `core/actions.ts` 的 `createBookAt` 建資料夾並初始化、回 `projectCreated`（真實路徑，開啟由前端照常發 `openFolder`），`inspectBook` 回那本 txt 切得出幾章；`workspaces` 另帶「放在」的預設值 `newProjectParent`（最近那本書所在的目錄，沒有就是家目錄）。 |
+| [scopedHost.ts](scopedHost.ts) | 註冊給 core 的全域 Host：按 `AsyncLocalStorage` 裡的視窗上下文把 `getHost()` 轉給那個視窗自己的 `FileHost`，彈窗、toast、開啟編輯器只落到對應的網頁上。 |
+| [windowState.ts](windowState.ts) | `~/.novelwarden/window.json`：上次開啟的目錄與最近開啟列表。 |
+| [hostFs.ts](hostFs.ts) | 本機一層目錄列舉與選擇器「新建資料夾」。不進 core，agent 拿不到。 |
+| [fileHost.ts](fileHost.ts) | `Host` 的實現：彈窗經 `PromptHub` 變成網頁 modal（確認框一個 action 一顆按鈕，回的是按鈕上的字；`confirmCall` 同一個確認框帶 `call`，回答另帶 `choice`——作者為這一次挑的模型與詳細度）；`fs.watch` 監聽工程（失敗退化為輪詢，帶 250ms 去抖）；`openFile` 走內建編輯器；`openBeside` 開在第二塊編輯區。`progress` 只提供 signal——進度由 `core/runtime/progress.ts` 結構化推給網頁。`bind` / `unbind` 隨 Hub 熱換工程根。 |
+| [promptHub.ts](promptHub.ts) | 未決網頁彈窗的登記與回執匹配。WS 全部斷開時一律按取消處理。 |
+| [terminalHost.ts](terminalHost.ts) | `Host` 的終端實現，只給 `novelwarden init` 用：問答走 readline，`openFile` 報一句路徑。有了它，CLI 只是「第三個宿主」，「初始化工程」這條流程仍然只有一份實現。 |
+| [page.ts](page.ts) | **佈局**：標題欄（檔案 / 編輯 / 檢視 / 幫助）+ 活動欄 + 側欄 + 內建編輯器；無工程時編輯器區是歡迎頁（開始三條路——新建一本書、匯入寫好的書、開啟資料夾——、最近、怎麼上手，「幫助 → 歡迎頁面」隨時再開啟）。六個 pane 的 DOM 全部取自 [../shared/panes.ts](../shared/panes.ts)（含只有這裡裝配的「檔案」頁），這裡沒有第二份。 |
+| [serve.ts](serve.ts) | 起 HTTP + WebSocket 服務、與執行時無關的那一面：形狀照 `Bun.serve` 擺（`fetch(req, ctl)` + `websocket` 三個回呼），有 `Bun` 這個全域就原樣交給 `Bun.serve`，沒有就交給 `nodeServe.ts`。 |
+| [nodeServe.ts](nodeServe.ts) | node 上的監聽：`node:http` + `ws`（開發依賴，打包進單檔案）。眼下只有 Android 殼走這裡（手機上只有 Termux 編的 node）。 |
+| [assets.ts](assets.ts) | `/media/*` 的位元組來源（內嵌資源表）。與 `page.ts` 分開：拼一段 HTML 不該牽進那個幾十 MB 的生成檔案。 |
+| [systemOpen.ts](systemOpen.ts) | 交給系統預設程式開啟（`explorer` / `open` / `xdg-open`）。開瀏覽器與編輯器的「外部開啟」共用這一份。 |
+| `mediaAssets.ts` | **生成檔案**（已 gitignore）。由 [../../scripts/embed-media.js](../../../scripts/embed-media.js) 把前端資源 base64 內嵌（`.js` / `.css` 取自構建產物 `dist/media/`，`icon.svg` 取自 `media/`），使單檔案可執行不依賴外部資源。`npm run typecheck` / `test:e2e` / `dist` 前會自動生成。 |
 
-## 关键设计
+## 關鍵設計
 
-- **单用户、缺省只绑本机，工程可空**：缺省 `127.0.0.1`、无鉴权。工作区由 [workspaceHub.ts](workspaceHub.ts) 持有，一个进程同时开几个工程，每个浏览器窗口一个；网址上的 `?project=` 跟着窗口的工程走，刷新、重连都回到它。设置「新窗口中打开项目」（默认开）决定在已有工程的窗口里打开别的工程时开新窗口还是换掉当前的。前端的 localStorage（标签页、展开的目录、输入框草稿）按工程分开存。没有工程时不造假实例，创作类消息 toast「请先打开文件夹」。设置仍可用（配置在 `~/.novelwarden`，旧机器的 `~/.novelforge` 继续 fallback）。
-- **Origin 校验**：WebSocket 不受同源策略约束，恶意网页能向本机端口发消息。`server.ts` 因此校验 `Origin` 只认本机同端口；没有 `Origin` 头的（命令行工具、冒烟测试）放过。`/mcp` 用同一条规则。规则本身在 [auth.ts](auth.ts) 的 `isAllowedOrigin`。
-- **部署到服务器：`--host` + 令牌，fail-closed**：Docker 镜像（仓库根 `Dockerfile`）绑 `0.0.0.0`，「只有本机连得进来」这道墙就没了，所以绑非回环地址必须配 `NOVELWARDEN_TOKEN`（旧名 `NOVELFORGE_TOKEN` 兼容，至少 16 位），没配 `main.ts` 直接拒绝启动。配了令牌就全站鉴权（与绑在哪无关）：网页在登录页交一次令牌换 cookie（值由令牌派生，`HttpOnly; SameSite=Lax`，经 HTTPS 反代时加 `Secure`），MCP 带 `Authorization: Bearer`；`/media/*`、`/favicon.ico`、`/login` 不设防。这时 Origin 还认同源（与 `Host` / `X-Forwarded-Host` 一致）——**只在配了令牌时认**：没令牌时认同源会放过 DNS rebinding（`evil.com:3680` 解析到本机时 Origin 与 Host 恰好一致）。令牌不进日志，带令牌的请求头写法也不打（`logger.ts` 的脱敏见到 `Bearer` 就整段抹掉）。
-- **两个运行时，路由只写一份**：平时跑在 Bun 里；Android 壳里没有 Bun，由 [../../../scripts/build-android-server.js](../../../scripts/build-android-server.js) 用 esbuild 把 `main.ts` 打成 node 单文件，监听换成 `nodeServe.ts`。差别只收在 `serve.ts` 那一层：node 那边要自己对齐 Bun 的几样行为——流式响应边到边写（MCP 的 SSE）、客户端断开时 abort `req.signal`（MCP 靠它取消调用）、升级被拒把 401 / 403 写回裸 socket、处理器抛了只打日志不让进程退出。SQLite 本来就有 `node:sqlite` 兜底（`core/runtime/db.ts`）。
-- **`/mcp` 关掉空闲超时**：一次工具调用可能跑几分钟（写一章），期间连接上一个字节都没有，而 Bun 缺省 10 秒空闲就断。`server.timeout(req, 0)` 只对这一个请求生效。MCP 调用落在地址 `?project=` 指定的那个工程上，不带就落到最近操作的那个窗口的工程；启动日志里那行 `claude mcp add …` 就是接入命令。
-- **openFile 的语义差异**：插件里是「打开 VS Code 的编辑器 tab」，这里是「在网页内置编辑器里打开」。刻意让 `openFile` 本身改道，这样 controller 里「产物落盘后打开」「点章节」「点上下文条目」三处调用点一次全对。非文本文件回落到系统默认程序。
-- **两块编辑区**：`openInEditor(rel, pane)` 的 `pane` 决定 `editorOpen` 落到哪一块，`openBeside` 就是 `pane: 'draft'`。`editorOpen` 广播时顺手带上 `draftPath`（由 `draftPathOf` 从章节路径推导），前端据此显示工具栏上的「草稿」按钮——前端不该自己复刻「什么算章节」。`editorSaved` 也必须带它，否则按钮会在首次保存后消失。同一个理由，两条消息都带 `kind`（`kindOfPath` 算的这份文件是什么）：前端拿它分「正文」（`chapter` / `draft`）与其余文件，Tab 缩进用全角还是半角就看它；没打开工程时省略，前端当非正文。还带 `label`（`core/views/editorLabel.ts`：标签上的类型短标记与去掉扩展名的名字、工具栏面包屑「细纲 › 第一卷 › 第 3 章 夜访」）——三处推文件的地方都经 `viewOf()` 拼，漏一处前端就在保存一次之后退回原始路径。打开请求上的 `preview` / `replace`（临时标签、上一章 / 下一章的原位换掉）后端不看，`openInEditor` / `openFile` / `openBeside` 的 `intent` 原样带回 `editorOpen`。
-- **文件读写全部经 [../core/files/fileEditing.ts](../../core/files/fileEditing.ts)**：路径包含校验、可编辑判定（扩展名白名单 ∪ 章节文件名规则）、大小上限、保存的 hash 乐观锁都在那里。本层只负责把异常翻译成 `editorError` / `editorConflict` / `editorDiskGone` 广播出去，不要绕过它直接 `fs.writeFile`。
-- **核对磁盘（不丢稿）**：前端每收到一条 `state`（去抖）、窗口拿回焦点时发 `checkEditorFiles { files: [{ path, hash }] }`，`checkEditorFiles()` 只读那几份，hash 对不上的推 `editorDiskChanged`（带新版，形状与 `editorOpen` 的文件一样：带 `draftPath` / `kind`），读不到的推 `editorDiskGone`，对得上的不推。**不复用 `editorOpen`**——那条会把标签切成当前的、抢焦点。回话照常广播给开着这个工程的所有窗口，各窗口按自己开着的标签认。空窗口发来的静静吃掉（`workspaceHub.ts`），不弹「请先打开文件夹」。
-- **带了基线、文件却不在：编辑器这条路不重建**。网关对这种情况当新建处理（`workspace/guard.ts` 守卫 8 的口径），`writeFileFromEditor` 收紧一档：抛 `FileGoneError`，这里推 `editorDiskGone`、一个字节不写；作者在网页上答应「在原路径重建」之后，`saveFile` 带 `recreate: true` 再来（照样带着基线，期间原路径又有了别的内容照样撞冲突）。不带基线的强制保存不受影响。
-- **多一个「文件」页**：侧栏比插件形态多一个资源管理器（[../core/files/fileTree.ts](../../core/files/fileTree.ts) 出数据，`media/src/explorer/` 渲染），列的是磁盘上的真实目录结构，**含 `.novelwarden/` 等点开头的文件夹**——插件形态里这件事由 VS Code 自己的资源管理器承担，独立版没有它，作者就没有任何入口去手改会话/`project.json`。它只读不写：新建/改名/删除仍然只在「工程」页走 `core/files/fileOps.ts`。
-- **watcher 只挡二进制，而且规则不在这里**：过滤走 [../../core/watchPolicy.ts](../../core/watchPolicy.ts) 的 `shouldIgnoreChange`（黑名单——章节可以是 `.txt`/无扩展名，目录事件也没有扩展名，白名单式过滤会让这些改动看不见）。插件壳用同一份策略的 glob 形态。因为放行面宽，`onChange` 带 250ms 去抖：它会触发 `pushState`，那是一次全量重扫。
-- **进度不再是 toast**：`FileHost.progress` 过去每收到一次 `report` 就弹一条 toast，跑一次「同步章节细纲」、同步 76 章等于刷 76 条提示、把别的消息全盖掉。现在同一份进度由 `core/runtime/progress.ts` 结构化推成 `tasks` 消息，侧栏顶上的任务条画进度条（n/N、计时、可停止，所有页签都看得见），`FileHost.progress` 只负责给出 signal 与报告失败。
-- **终端 sink 只挂一次**：端口被占时 `main.ts` 会重试着调 `startServer`，每次都 `addLogSink` 会让同一条日志打印好几遍。
-- **前端资源三处同改**：新增前端**产物**（先写好 `media/src/` 下的源码入口）后，要同时加进 `build-media.js` 的 `JS_ENTRIES` / `CSS_ENTRIES`、`embed-media.js` 的 `built` 数组和 `page.ts` 的引用，否则编译版会 404；插件也要加载时再改 `vscode/webviewHtml.ts`。（只改已有产物的源码不需要动那两个脚本。）`/media/*` 是路由名，不是磁盘路径——字节全部来自内嵌的 `MEDIA_ASSETS`。
-- **管道输入也要能跑 init**：`TerminalHost` 全程共用一个 readline，并把没人接的行排队。每问一句就新建再关掉一个（原来那份实现）会让 `printf '书名\n作者\n' | novelwarden init` 在第二问就撞上 EOF；而管道是一次全来的，两问之间夹着落盘 await，不排队那几行就白丢了。EOF 一律按「取消」处理，免得在校验失败里死循环。
+- **單使用者、預設只綁本機，工程可空**：預設 `127.0.0.1`、無鑑權。工作區由 [workspaceHub.ts](workspaceHub.ts) 持有，一個程序同時開幾個工程，每個瀏覽器視窗一個；網址上的 `?project=` 跟著視窗的工程走，重新整理、重連都回到它。設定「新視窗中開啟專案」（預設開）決定在已有工程的視窗裡開啟別的工程時開新視窗還是換掉當前的。前端的 localStorage（標籤頁、展開的目錄、輸入框草稿）按工程分開存。沒有工程時不造假例項，創作類訊息 toast「請先開啟資料夾」。設定仍可用（配置在 `~/.novelwarden`，舊機器的 `~/.novelforge` 繼續 fallback）。
+- **Origin 校驗**：WebSocket 不受同源策略約束，惡意網頁能向本機埠發訊息。`server.ts` 因此校驗 `Origin` 只認本機同埠；沒有 `Origin` 頭的（命令列工具、冒煙測試）放過。`/mcp` 用同一條規則。規則本身在 [auth.ts](auth.ts) 的 `isAllowedOrigin`。
+- **部署到伺服器：`--host` + 令牌，fail-closed**：Docker 映象（倉庫根 `Dockerfile`）綁 `0.0.0.0`，「只有本機連得進來」這道牆就沒了，所以綁非迴環地址必須配 `NOVELWARDEN_TOKEN`（舊名 `NOVELFORGE_TOKEN` 相容，至少 16 位），沒配 `main.ts` 直接拒絕啟動。配了令牌就全站鑑權（與綁在哪無關）：網頁在登入頁交一次令牌換 cookie（值由令牌派生，`HttpOnly; SameSite=Lax`，經 HTTPS 反代時加 `Secure`），MCP 帶 `Authorization: Bearer`；`/media/*`、`/favicon.ico`、`/login` 不設防。這時 Origin 還認同源（與 `Host` / `X-Forwarded-Host` 一致）——**只在配了令牌時認**：沒令牌時認同源會放過 DNS rebinding（`evil.com:3680` 解析到本機時 Origin 與 Host 恰好一致）。令牌不進日誌，帶令牌的請求頭寫法也不打（`logger.ts` 的脫敏見到 `Bearer` 就整段抹掉）。
+- **兩個執行時，路由只寫一份**：平時跑在 Bun 裡；Android 殼裡沒有 Bun，由 [../../../scripts/build-android-server.js](../../../scripts/build-android-server.js) 用 esbuild 把 `main.ts` 打成 node 單檔案，監聽換成 `nodeServe.ts`。差別只收在 `serve.ts` 那一層：node 那邊要自己對齊 Bun 的幾樣行為——流式響應邊到邊寫（MCP 的 SSE）、客戶端斷開時 abort `req.signal`（MCP 靠它取消呼叫）、升級被拒把 401 / 403 寫回裸 socket、處理器拋了只打日誌不讓程序退出。SQLite 本來就有 `node:sqlite` 兜底（`core/runtime/db.ts`）。
+- **`/mcp` 關掉空閒超時**：一次工具呼叫可能跑幾分鐘（寫一章），期間連線上一個位元組都沒有，而 Bun 預設 10 秒空閒就斷。`server.timeout(req, 0)` 只對這一個請求生效。MCP 呼叫落在地址 `?project=` 指定的那個工程上，不帶就落到最近操作的那個視窗的工程；啟動日誌裡那行 `claude mcp add …` 就是接入命令。
+- **openFile 的語義差異**：外掛裡是「開啟 VS Code 的編輯器 tab」，這裡是「在網頁內建編輯器裡開啟」。刻意讓 `openFile` 本身改道，這樣 controller 裡「產物落盤後開啟」「點章節」「點上下文條目」三處呼叫點一次全對。非文字檔案回落到系統預設程式。
+- **兩塊編輯區**：`openInEditor(rel, pane)` 的 `pane` 決定 `editorOpen` 落到哪一塊，`openBeside` 就是 `pane: 'draft'`。`editorOpen` 廣播時順手帶上 `draftPath`（由 `draftPathOf` 從章節路徑推導），前端據此顯示工具欄上的「草稿」按鈕——前端不該自己復刻「什麼算章節」。`editorSaved` 也必須帶它，否則按鈕會在首次儲存後消失。同一個理由，兩條訊息都帶 `kind`（`kindOfPath` 算的這份檔案是什麼）：前端拿它分「正文」（`chapter` / `draft`）與其餘檔案，Tab 縮排用全形還是半形就看它；沒開啟工程時省略，前端當非正文。還帶 `label`（`core/views/editorLabel.ts`：標籤上的型別短標記與去掉副檔名的名字、工具欄麵包屑「細綱 › 第一卷 › 第 3 章 夜訪」）——三處推檔案的地方都經 `viewOf()` 拼，漏一處前端就在儲存一次之後退回原始路徑。開啟請求上的 `preview` / `replace`（臨時標籤、上一章 / 下一章的原位換掉）後端不看，`openInEditor` / `openFile` / `openBeside` 的 `intent` 原樣帶回 `editorOpen`。
+- **檔案讀寫全部經 [../core/files/fileEditing.ts](../../core/files/fileEditing.ts)**：路徑包含校驗、可編輯判定（副檔名白名單 ∪ 章節檔名規則）、大小上限、儲存的 hash 樂觀鎖都在那裡。本層只負責把異常翻譯成 `editorError` / `editorConflict` / `editorDiskGone` 廣播出去，不要繞過它直接 `fs.writeFile`。
+- **核對磁碟（不丟稿）**：前端每收到一條 `state`（去抖）、視窗拿回焦點時發 `checkEditorFiles { files: [{ path, hash }] }`，`checkEditorFiles()` 只讀那幾份，hash 對不上的推 `editorDiskChanged`（帶新版，形狀與 `editorOpen` 的檔案一樣：帶 `draftPath` / `kind`），讀不到的推 `editorDiskGone`，對得上的不推。**不復用 `editorOpen`**——那條會把標籤切成當前的、搶焦點。回話照常廣播給開著這個工程的所有視窗，各視窗按自己開著的標籤認。空視窗發來的靜靜吃掉（`workspaceHub.ts`），不彈「請先開啟資料夾」。
+- **帶了基線、檔案卻不在：編輯器這條路不重建**。閘道器對這種情況當新建處理（`workspace/guard.ts` 守衛 8 的口徑），`writeFileFromEditor` 收緊一檔：拋 `FileGoneError`，這裡推 `editorDiskGone`、一個位元組不寫；作者在網頁上答應「在原路徑重建」之後，`saveFile` 帶 `recreate: true` 再來（照樣帶著基線，期間原路徑又有了別的內容照樣撞衝突）。不帶基線的強制儲存不受影響。
+- **多一個「檔案」頁**：側欄比外掛形態多一個資源管理器（[../core/files/fileTree.ts](../../core/files/fileTree.ts) 出資料，`media/src/explorer/` 渲染），列的是磁碟上的真實目錄結構，**含 `.novelwarden/` 等點開頭的資料夾**——外掛形態裡這件事由 VS Code 自己的資源管理器承擔，獨立版沒有它，作者就沒有任何入口去手改會話/`project.json`。它只讀不寫：新建/改名/刪除仍然只在「工程」頁走 `core/files/fileOps.ts`。
+- **watcher 只擋二進位制，而且規則不在這裡**：過濾走 [../../core/watchPolicy.ts](../../core/watchPolicy.ts) 的 `shouldIgnoreChange`（黑名單——章節可以是 `.txt`/無副檔名，目錄事件也沒有副檔名，白名單式過濾會讓這些改動看不見）。外掛殼用同一份策略的 glob 形態。因為放行面寬，`onChange` 帶 250ms 去抖：它會觸發 `pushState`，那是一次全量重掃。
+- **進度不再是 toast**：`FileHost.progress` 過去每收到一次 `report` 就彈一條 toast，跑一次「同步章節細綱」、同步 76 章等於刷 76 條提示、把別的訊息全蓋掉。現在同一份進度由 `core/runtime/progress.ts` 結構化推成 `tasks` 訊息，側欄頂上的任務條畫進度條（n/N、計時、可停止，所有頁籤都看得見），`FileHost.progress` 只負責給出 signal 與報告失敗。
+- **終端 sink 只掛一次**：埠被佔時 `main.ts` 會重試著調 `startServer`，每次都 `addLogSink` 會讓同一條日誌列印好幾遍。
+- **前端資源三處同改**：新增前端**產物**（先寫好 `media/src/` 下的原始碼入口）後，要同時加進 `build-media.js` 的 `JS_ENTRIES` / `CSS_ENTRIES`、`embed-media.js` 的 `built` 陣列和 `page.ts` 的引用，否則編譯版會 404；外掛也要載入時再改 `vscode/webviewHtml.ts`。（只改已有產物的原始碼不需要動那兩個指令碼。）`/media/*` 是路由名，不是磁碟路徑——位元組全部來自內嵌的 `MEDIA_ASSETS`。
+- **管道輸入也要能跑 init**：`TerminalHost` 全程共用一個 readline，並把沒人接的行排隊。每問一句就新建再關掉一個（原來那份實現）會讓 `printf '書名\n作者\n' | novelwarden init` 在第二問就撞上 EOF；而管道是一次全來的，兩問之間夾著落盤 await，不排隊那幾行就白丟了。EOF 一律按「取消」處理，免得在校驗失敗裡死迴圈。
 
-## 与插件壳的能力差异
+## 與外掛殼的能力差異
 
-`Host` 上的可选方法就是差异点：`browseFile`（这里提示输入相对路径）、`pickHostFile`（拆书选 txt：推 `prompt kind: 'file'`，网页里复用「打开文件夹」那个本机目录选择器的选文件模式，只列目录与允许的扩展名，回绝对路径；插件是 `showOpenDialog`）、`reviewReplace`（五期起推 `prompt kind: 'merge'`，网页上开段级 diff / 合并视图：网关请求合并时作者可以逐段挑、手改，交回 `{ merged }`；其余调用方只读，只有采纳 / 放弃；插件照旧 `vscode.diff`）、`revealText`（点审稿报告上的引文：先 `editorOpen` 那一章，再推 `editorReveal` 让内置编辑器选中那一句；插件是 `showTextDocument` + `revealRange`）、`openNativeSettings`（**这里不实现**，于是 `page.ts` 渲染时就不产出那颗按钮——不是渲染出来再隐藏）、`openInEditor` / `saveFromEditor` / `checkEditorFiles` / `openExternal`（只有这里实现）、`openBeside`（这里开第二块编辑区，插件是 `ViewColumn.Beside`）。`supportsVscodeLm` 为 `false`，Copilot 模型在设置页与下拉框里都被过滤掉。
+`Host` 上的可選方法就是差異點：`browseFile`（這裡提示輸入相對路徑）、`pickHostFile`（拆書選 txt：推 `prompt kind: 'file'`，網頁裡複用「開啟資料夾」那個本機目錄選擇器的選檔案模式，只列目錄與允許的副檔名，回絕對路徑；外掛是 `showOpenDialog`）、`reviewReplace`（五期起推 `prompt kind: 'merge'`，網頁上開段級 diff / 合併檢視：閘道器請求合併時作者可以逐段挑、手改，交回 `{ merged }`；其餘呼叫方只讀，只有採納 / 放棄；外掛照舊 `vscode.diff`）、`revealText`（點審稿報告上的引文：先 `editorOpen` 那一章，再推 `editorReveal` 讓內建編輯器選中那一句；外掛是 `showTextDocument` + `revealRange`）、`openNativeSettings`（**這裡不實現**，於是 `page.ts` 渲染時就不產出那顆按鈕——不是渲染出來再隱藏）、`openInEditor` / `saveFromEditor` / `checkEditorFiles` / `openExternal`（只有這裡實現）、`openBeside`（這裡開第二塊編輯區，外掛是 `ViewColumn.Beside`）。`supportsVscodeLm` 為 `false`，Copilot 模型在設定頁與下拉框裡都被過濾掉。
 
-## 验证
+## 驗證
 
-[`tests/e2e/standalone/server.test.js`](../../../tests/e2e/standalone/server.test.js)（`npm run test:e2e`，需 Bun）：静态资源、WS 首条消息、Origin 校验，内置编辑器的读写往返——保存落盘、过期基线触发冲突且不覆盖、强制保存、越界路径与非文本扩展名被拒、无扩展名章节可打开，以及草稿的按需创建与并列打开；资源管理器的目录列举——点开头的目录列得出来、目录排在文件前、`editable` 标注、一次多目录、越界与不存在的目录降级成 `error`；空窗口（不传工程目录）ready 后 `currentId` 为空、`openFolder` 热换、`mode: 'add'` 仍只有一个工作区、`closeFolder` 回到空窗口。
+[`tests/e2e/standalone/server.test.js`](../../../tests/e2e/standalone/server.test.js)（`npm run test:e2e`，需 Bun）：靜態資源、WS 首條訊息、Origin 校驗，內建編輯器的讀寫往返——儲存落盤、過期基線觸發衝突且不覆蓋、強制儲存、越界路徑與非文字副檔名被拒、無副檔名章節可開啟，以及草稿的按需建立與並列開啟；資源管理器的目錄列舉——點開頭的目錄列得出來、目錄排在檔案前、`editable` 標註、一次多目錄、越界與不存在的目錄降級成 `error`；空視窗（不傳工程目錄）ready 後 `currentId` 為空、`openFolder` 熱換、`mode: 'add'` 仍只有一個工作區、`closeFolder` 回到空視窗。
 
-node 那一半：[`tests/integration/shells/nodeServer.test.js`](../../../tests/integration/shells/nodeServer.test.js)——`nodeServe` 对齐 Bun 的那几样逐条钉住；再照 Android 构建同一条路打成单文件、子进程里用 node 起，走一遍登录、页面、WebSocket（含跨源拒绝）与 MCP。e2e 只在 Bun 下跑，覆盖不到这一半。
+node 那一半：[`tests/integration/shells/nodeServer.test.js`](../../../tests/integration/shells/nodeServer.test.js)——`nodeServe` 對齊 Bun 的那幾樣逐條釘住；再照 Android 構建同一條路打成單檔案、子程序裡用 node 起，走一遍登入、頁面、WebSocket（含跨源拒絕）與 MCP。e2e 只在 Bun 下跑，覆蓋不到這一半。
 
-令牌鉴权：纯函数在 [`tests/unit/shells/auth.test.js`](../../../tests/unit/shells/auth.test.js)（什么时候拒绝启动、Bearer / cookie、Origin 的同源与 DNS rebinding、`next` 防外跳）；整条往返在 e2e 的「令牌鉴权」一节（未登录回 401 登录页、错令牌不种 cookie、带 cookie 的 WS 收得到 init、MCP 要 Bearer）。镜像本身由 CI 的 `docker.yml` 起容器冒烟。
+令牌鑑權：純函式在 [`tests/unit/shells/auth.test.js`](../../../tests/unit/shells/auth.test.js)（什麼時候拒絕啟動、Bearer / cookie、Origin 的同源與 DNS rebinding、`next` 防外跳）；整條往返在 e2e 的「令牌鑑權」一節（未登入回 401 登入頁、錯令牌不種 cookie、帶 cookie 的 WS 收得到 init、MCP 要 Bearer）。映象本身由 CI 的 `docker.yml` 起容器冒煙。
 
-资源管理器的前端行为在 [`tests/dom/standalone/explorer.test.js`](../../../tests/dom/standalone/explorer.test.js) 里（jsdom 跑构建产物 `dist/media/explorer.js`，源码在 `media/src/explorer/`）：懒展开、折叠连带子目录、载入中占位、可编辑与否走不同消息、编辑器高亮联动、截断提示、右键菜单复用 view 的引擎。
+資源管理器的前端行為在 [`tests/dom/standalone/explorer.test.js`](../../../tests/dom/standalone/explorer.test.js) 裡（jsdom 跑構建產物 `dist/media/explorer.js`，原始碼在 `media/src/explorer/`）：懶展開、摺疊連帶子目錄、載入中佔位、可編輯與否走不同訊息、編輯器高亮聯動、截斷提示、右鍵選單複用 view 的引擎。

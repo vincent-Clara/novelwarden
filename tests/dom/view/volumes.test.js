@@ -1,25 +1,25 @@
 /**
- * 工程页「章节」页签的分卷（2026-10-23 作者要求：按卷分类、右键新建卷、新建的默认放进最新一卷）。
+ * 工程頁「章節」頁籤的分卷（2026-10-23 作者要求：按卷分類、右鍵新建卷、新建的預設放進最新一卷）。
  *
- * | 用例组 | 钉的是什么 |
+ * | 用例組 | 釘的是什麼 |
  * |---|---|
- * | 分卷画法 | 一卷一个标题行（`📂 第一卷`），后面跟这一卷的章、缩一层；副标题写章号区间与字数，空卷写「空」；新章的落点那一卷多一句「新章落这里」，空着的话卷里那一行也这么说；「去写这一章」照旧挂在下一章上 |
- * | 折叠 | 点卷名折起 / 展开，只折这一卷；重推树还折着 |
- * | 卷的右键 | 「在此卷新建章节文件」带这一卷的目录、「新建卷…」落在章节根、重命名 / 删除带卷目录，没有「移动到…」 |
- * | 未分卷 | 直接放在章节根下的章叫「未分卷」，右键新建落在章节根、不给重命名与删除 |
- * | 没分卷 | `volumes` 空：照旧平铺，没有卷标题 |
- * | 空书 | 一章都没有、只建了一卷：画出那一卷与空卷提示，下面照旧写下一步 |
+ * | 分卷畫法 | 一卷一個標題行（`📂 第一卷`），後面跟這一卷的章、縮一層；副標題寫章號區間與字數，空卷寫「空」；新章的落點那一卷多一句「新章落這裡」，空著的話卷裡那一行也這麼說；「去寫這一章」照舊掛在下一章上 |
+ * | 摺疊 | 點卷名折起 / 展開，只折這一卷；重推樹還折著 |
+ * | 卷的右鍵 | 「在此卷新建章節檔案」帶這一卷的目錄、「新建卷…」落在章節根、重新命名 / 刪除帶卷目錄，沒有「移動到…」 |
+ * | 未分卷 | 直接放在章節根下的章叫「未分卷」，右鍵新建落在章節根、不給重新命名與刪除 |
+ * | 沒分卷 | `volumes` 空：照舊平鋪，沒有卷標題 |
+ * | 空書 | 一章都沒有、只建了一卷：畫出那一卷與空卷提示，下面照舊寫下一步 |
  *
- * 卷的先后、哪一卷是落点都是后端排好的（`views/projectView.ts` 的 `buildVolumes`，见 integration/files/volumes.test.js）。
+ * 卷的先後、哪一卷是落點都是後端排好的（`views/projectView.ts` 的 `buildVolumes`，見 integration/files/volumes.test.js）。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, JSDOM_SKIP, sampleTree } = require('../../helpers/dom');
 
 /**
- * sampleTree 的五章分进两卷，另有一卷刚建、还空着（新章落进它）：
+ * sampleTree 的五章分進兩卷，另有一卷剛建、還空著（新章落進它）：
  *
- * | 卷 | 章 | 字数 |
+ * | 卷 | 章 | 字數 |
  * |---|---|---|
  * | 第一卷 | 1–3 | 3580 |
  * | 第二卷 | 4–5 | 0 |
@@ -41,7 +41,7 @@ const volumeTree = (extra) => {
 
 const chaptersGroup = (ui) => ui.doc.querySelector('#projectBody [data-group="plots"]');
 const volumeRow = (ui, relPath) => chaptersGroup(ui).querySelector(`.row-volume[data-volume="${relPath}"]`);
-/** 章节组里从上到下画了什么：卷标题写卷名，章写章号，空提示写原文。 */
+/** 章節組裡從上到下畫了什麼：卷標題寫卷名，章寫章號，空提示寫原文。 */
 const layout = (ui) =>
   [...chaptersGroup(ui).querySelector('.group-body').children].map((r) =>
     r.classList.contains('row-volume')
@@ -51,7 +51,7 @@ const layout = (ui) =>
         : r.textContent
   );
 
-describe('分卷画法', { skip: JSDOM_SKIP }, () => {
+describe('分卷畫法', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
@@ -59,46 +59,46 @@ describe('分卷画法', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'project', tree: volumeTree() });
   });
 
-  test('一卷一个标题行，后面跟这一卷的章，空卷说新章落在这里', () => {
+  test('一卷一個標題行，後面跟這一卷的章，空卷說新章落在這裡', () => {
     assert.deepEqual(layout(ui), [
-      '卷:第一卷', '章:第 1 章《楔子》', '章:第 2 章《入镇》', '章:第 3 章《夜访》',
+      '卷:第一卷', '章:第 1 章《楔子》', '章:第 2 章《入鎮》', '章:第 3 章《夜訪》',
       '卷:第二卷', '章:第 4 章《北行》', '章:第 5 章《赤星》',
-      '卷:第三卷', '（空卷：接下来新建的章落在这里）',
+      '卷:第三卷', '（空卷：接下來新建的章落在這裡）',
     ]);
   });
 
-  test('卷标题默认展开，带打开的文件夹图标', () => {
+  test('卷標題預設展開，帶開啟的資料夾圖示', () => {
     const row = volumeRow(ui, 'chapters/第一卷');
     assert.equal(row.querySelector('.caret').textContent, '▾');
     assert.equal(row.querySelector('.row-label').textContent, '📂 第一卷');
   });
 
-  test('副标题写章号区间与字数，没写正文不报字数，空卷写「空」', () => {
+  test('副標題寫章號區間與字數，沒寫正文不報字數，空卷寫「空」', () => {
     const meta = (rel) => volumeRow(ui, rel).querySelector('.meta').textContent;
     assert.equal(meta('chapters/第一卷'), '第 1–3 章 · 3580 字');
     assert.equal(meta('chapters/第二卷'), '第 4–5 章');
-    assert.equal(meta('chapters/第三卷'), '空 · 新章落这里');
+    assert.equal(meta('chapters/第三卷'), '空 · 新章落這裡');
   });
 
-  test('只有落点那一卷标着', () => {
+  test('只有落點那一卷標著', () => {
     const latest = [...chaptersGroup(ui).querySelectorAll('.row-volume.is-latest')].map((r) => r.dataset.volume);
     assert.deepEqual(latest, ['chapters/第三卷']);
   });
 
-  test('卷里的章缩进一层', () => {
+  test('卷裡的章縮排一層', () => {
     const row = chaptersGroup(ui).querySelector('.row-plot[data-plot="chapters/001-楔子.md"]');
     assert.equal(row.style.paddingLeft, '30px');
     assert.equal(volumeRow(ui, 'chapters/第一卷').style.paddingLeft, '16px');
   });
 
-  test('「去写这一章」照旧挂在下一章上', () => {
+  test('「去寫這一章」照舊掛在下一章上', () => {
     const go = [...chaptersGroup(ui).querySelectorAll('.row-go')];
     assert.equal(go.length, 1);
     assert.equal(go[0].closest('.row-plot').dataset.plot, '.novelwarden/summaries/004-北行.md');
   });
 });
 
-describe('卷的折叠', { skip: JSDOM_SKIP }, () => {
+describe('卷的摺疊', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
@@ -107,29 +107,29 @@ describe('卷的折叠', { skip: JSDOM_SKIP }, () => {
     ui.clickEl(volumeRow(ui, 'chapters/第一卷').querySelector('.row-label'));
   });
 
-  test('点卷名只折这一卷', () => {
+  test('點卷名只折這一卷', () => {
     assert.deepEqual(layout(ui), [
       '卷:第一卷',
       '卷:第二卷', '章:第 4 章《北行》', '章:第 5 章《赤星》',
-      '卷:第三卷', '（空卷：接下来新建的章落在这里）',
+      '卷:第三卷', '（空卷：接下來新建的章落在這裡）',
     ]);
     const row = volumeRow(ui, 'chapters/第一卷');
     assert.equal(row.querySelector('.caret').textContent, '▸');
     assert.equal(row.querySelector('.row-label').textContent, '📁 第一卷');
   });
 
-  test('重推树还折着', () => {
+  test('重推樹還折著', () => {
     ui.post({ type: 'project', tree: volumeTree() });
     assert.equal(layout(ui)[1], '卷:第二卷');
   });
 
-  test('右键「展开」再打开', () => {
-    ui.pick(ui.rightClick(volumeRow(ui, 'chapters/第一卷')), '展开');
+  test('右鍵「展開」再開啟', () => {
+    ui.pick(ui.rightClick(volumeRow(ui, 'chapters/第一卷')), '展開');
     assert.equal(layout(ui)[1], '章:第 1 章《楔子》');
   });
 });
 
-describe('卷的右键', { skip: JSDOM_SKIP }, () => {
+describe('卷的右鍵', { skip: JSDOM_SKIP }, () => {
   let ui;
   let items;
 
@@ -140,26 +140,26 @@ describe('卷的右键', { skip: JSDOM_SKIP }, () => {
     ui.closeMenu();
   });
 
-  test('折叠、新建、重命名、删除，没有移动', () => {
-    assert.deepEqual(items, ['折叠', '在此卷新建章节文件', '新建卷…', '重命名', '删除（移到回收站）']);
+  test('摺疊、新建、重新命名、刪除，沒有移動', () => {
+    assert.deepEqual(items, ['摺疊', '在此卷新建章節檔案', '新建卷…', '重新命名', '刪除（移到回收站）']);
   });
 
-  test('「在此卷新建章节文件」带这一卷的目录', () => {
-    ui.pick(ui.rightClick(volumeRow(ui, 'chapters/第二卷')), '在此卷新建章节文件');
+  test('「在此卷新建章節檔案」帶這一卷的目錄', () => {
+    ui.pick(ui.rightClick(volumeRow(ui, 'chapters/第二卷')), '在此卷新建章節檔案');
     const msg = ui.last('projectAction');
     assert.equal(msg.action, 'newChapter', JSON.stringify(msg));
     assert.equal(msg.dir, 'chapters/第二卷', JSON.stringify(msg));
   });
 
-  test('「新建卷…」落在章节根', () => {
+  test('「新建卷…」落在章節根', () => {
     ui.pick(ui.rightClick(volumeRow(ui, 'chapters/第二卷')), '新建卷…');
     const msg = ui.last('projectAction');
     assert.equal(msg.action, 'newFolder', JSON.stringify(msg));
     assert.equal(msg.dir, 'chapters', JSON.stringify(msg));
   });
 
-  for (const [label, action] of [['重命名', 'rename'], ['删除（移到回收站）', 'delete']]) {
-    test(`「${label}」带卷目录`, () => {
+  for (const [label, action] of [['重新命名', 'rename'], ['刪除（移到回收站）', 'delete']]) {
+    test(`「${label}」帶卷目錄`, () => {
       ui.pick(ui.rightClick(volumeRow(ui, 'chapters/第二卷')), label);
       const msg = ui.last('fileAction');
       assert.deepEqual({ ...msg }, { type: 'fileAction', action, relPath: 'chapters/第二卷' });
@@ -170,7 +170,7 @@ describe('卷的右键', { skip: JSDOM_SKIP }, () => {
 describe('未分卷', { skip: JSDOM_SKIP }, () => {
   let ui;
 
-  // 第 1 章是序章，直接放在章节根下；2–5 章在第一卷，新章跟着进第一卷。
+  // 第 1 章是序章，直接放在章節根下；2–5 章在第一卷，新章跟著進第一卷。
   before(() => {
     ui = mount();
     const base = sampleTree();
@@ -187,23 +187,23 @@ describe('未分卷', { skip: JSDOM_SKIP }, () => {
     });
   });
 
-  test('根下的章叫「未分卷」，照章号排在前面', () => {
+  test('根下的章叫「未分卷」，照章號排在前面', () => {
     assert.deepEqual(layout(ui).slice(0, 3), ['卷:未分卷', '章:第 1 章《楔子》', '卷:第一卷']);
-    assert.equal(volumeRow(ui, 'chapters/第一卷').querySelector('.meta').textContent, '第 2–5 章 · 3280 字 · 新章落这里');
+    assert.equal(volumeRow(ui, 'chapters/第一卷').querySelector('.meta').textContent, '第 2–5 章 · 3280 字 · 新章落這裡');
   });
 
-  test('右键新建落在章节根，不给重命名与删除', () => {
+  test('右鍵新建落在章節根，不給重新命名與刪除', () => {
     const menu = ui.rightClick(volumeRow(ui, 'chapters'));
-    assert.deepEqual(ui.itemsOf(menu), ['折叠', '新建章节文件（不放进卷里）', '新建卷…']);
-    ui.pick(menu, '新建章节文件（不放进卷里）');
+    assert.deepEqual(ui.itemsOf(menu), ['摺疊', '新建章節檔案（不放進卷裡）', '新建卷…']);
+    ui.pick(menu, '新建章節檔案（不放進卷裡）');
     const msg = ui.last('projectAction');
     assert.equal(msg.action, 'newChapter', JSON.stringify(msg));
     assert.equal(msg.dir, 'chapters', JSON.stringify(msg));
   });
 });
 
-describe('没分卷照旧平铺', { skip: JSDOM_SKIP }, () => {
-  test('没有卷标题，章不缩进', () => {
+describe('沒分卷照舊平鋪', { skip: JSDOM_SKIP }, () => {
+  test('沒有卷標題，章不縮排', () => {
     const ui = mount();
     ui.post({ type: 'project', tree: sampleTree() });
     assert.equal(chaptersGroup(ui).querySelectorAll('.row-volume').length, 0);
@@ -212,8 +212,8 @@ describe('没分卷照旧平铺', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('空书只建了一卷', { skip: JSDOM_SKIP }, () => {
-  test('画出那一卷与空卷提示，下面照旧写下一步', () => {
+describe('空書只建了一卷', { skip: JSDOM_SKIP }, () => {
+  test('畫出那一卷與空卷提示，下面照舊寫下一步', () => {
     const ui = mount();
     ui.post({
       type: 'project',
@@ -225,7 +225,7 @@ describe('空书只建了一卷', { skip: JSDOM_SKIP }, () => {
     });
     const rows = layout(ui);
     assert.equal(rows[0], '卷:第一卷');
-    assert.equal(rows[1], '（空卷：接下来新建的章落在这里）');
-    assert.ok(rows[2]?.startsWith('还没有章节'), JSON.stringify(rows));
+    assert.equal(rows[1], '（空卷：接下來新建的章落在這裡）');
+    assert.ok(rows[2]?.startsWith('還沒有章節'), JSON.stringify(rows));
   });
 });

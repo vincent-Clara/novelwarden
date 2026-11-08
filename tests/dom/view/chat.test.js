@@ -1,78 +1,78 @@
 /**
- * 对话气泡：流式输出、中断与报错、⋯ 菜单、空输入、产物采纳、思考过程。
+ * 對話氣泡：流式輸出、中斷與報錯、⋯ 選單、空輸入、產物採納、思考過程。
  *
- * 迁自 scripts/smoke-view.js 的这几节：
- *   == 流式输出 ==（261）           == 中断与报错 ==（300）
- *   == 气泡右上角的 ... 菜单 ==（321） == 生成中的限制 ==（368）
- *   == 空输入 ==（686）             == 产物采纳卡片 ==（828）
- *   == 思考过程（推理模型）==（891）
+ * 遷自 scripts/smoke-view.js 的這幾節：
+ *   == 流式輸出 ==（261）           == 中斷與報錯 ==（300）
+ *   == 氣泡右上角的 ... 選單 ==（321） == 生成中的限制 ==（368）
+ *   == 空輸入 ==（686）             == 產物採納卡片 ==（828）
+ *   == 思考過程（推理模型）==（891）
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, JSDOM_SKIP, turn, emptySession, viewState } = require('../../helpers/dom');
 
-describe('流式输出', { skip: JSDOM_SKIP }, () => {
+describe('流式輸出', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
     ui = mount();
     ui.post({ type: 'session', session: emptySession() });
-    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '写一段') });
-    // 控制器的真实顺序：busy=true，然后插一条空回复挂流式内容。
+    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '寫一段') });
+    // 控制器的真實順序：busy=true，然後插一條空回覆掛流式內容。
     ui.post({ type: 'busy', value: true });
     ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '') });
   });
 
-  test('先出现一个空的回复气泡', () => {
-    assert.ok(ui.bodyOf('a1'), '没有 a1 气泡');
+  test('先出現一個空的回覆氣泡', () => {
+    assert.ok(ui.bodyOf('a1'), '沒有 a1 氣泡');
     assert.equal(ui.bodyOf('a1').textContent, '');
   });
 
-  test('第一个 delta 立刻显示', () => {
+  test('第一個 delta 立刻顯示', () => {
     ui.post({ type: 'delta', turnId: 'a1', text: '第一段。' });
     assert.equal(ui.bodyOf('a1').textContent, '第一段。', JSON.stringify(ui.bodyOf('a1').textContent));
   });
 
-  test('后续 delta 逐段累加', () => {
+  test('後續 delta 逐段累加', () => {
     ui.post({ type: 'delta', turnId: 'a1', text: '第二段。' });
     ui.post({ type: 'delta', turnId: 'a1', text: '第三段。' });
     assert.equal(ui.bodyOf('a1').textContent, '第一段。第二段。第三段。',
       JSON.stringify(ui.bodyOf('a1').textContent));
   });
 
-  test('流式时带 streaming 标记（显示光标）', () => {
+  test('流式時帶 streaming 標記（顯示游標）', () => {
     assert.ok(ui.bubble('a1').classList.contains('streaming'));
   });
 
-  // 生成中不能改：contentEditable 会被后续 delta 冲掉光标，
-  // 改到一半的内容也会被 turnDone 的整体重建覆盖。
-  test('生成中不可编辑', () => {
+  // 生成中不能改：contentEditable 會被後續 delta 沖掉游標，
+  // 改到一半的內容也會被 turnDone 的整體重建覆蓋。
+  test('生成中不可編輯', () => {
     assert.notEqual(ui.bodyOf('a1').getAttribute('contenteditable'), 'true',
       String(ui.bodyOf('a1').getAttribute('contenteditable')));
   });
 
-  test('结束后内容完整', () => {
+  test('結束後內容完整', () => {
     ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '第一段。第二段。第三段。') });
     ui.post({ type: 'busy', value: false });
     assert.equal(ui.bodyOf('a1').textContent, '第一段。第二段。第三段。');
   });
 
-  test('结束后不再显示流式光标', () => {
+  test('結束後不再顯示流式游標', () => {
     assert.ok(!ui.bubble('a1').classList.contains('streaming'));
   });
 
-  test('结束后可以就地编辑', () => {
+  test('結束後可以就地編輯', () => {
     assert.equal(ui.bodyOf('a1').getAttribute('contenteditable'), 'true');
   });
 
-  // 上一轮的 streaming 状态不能粘在下一轮上。
-  test('新一轮回复默认可编辑', () => {
-    ui.post({ type: 'turnDone', turn: turn('a2', 'assistant', '另一条') });
+  // 上一輪的 streaming 狀態不能粘在下一輪上。
+  test('新一輪迴復預設可編輯', () => {
+    ui.post({ type: 'turnDone', turn: turn('a2', 'assistant', '另一條') });
     assert.equal(ui.bodyOf('a2').getAttribute('contenteditable'), 'true');
   });
 });
 
-describe('中断与报错', { skip: JSDOM_SKIP }, () => {
+describe('中斷與報錯', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
@@ -80,35 +80,35 @@ describe('中断与报错', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'session', session: emptySession() });
     ui.post({ type: 'busy', value: true });
     ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '') });
-    ui.post({ type: 'delta', turnId: 'a1', text: '写到一半' });
-    // 用户点「停止」：控制器带 interrupted 收尾，busy 落回 false。
+    ui.post({ type: 'delta', turnId: 'a1', text: '寫到一半' });
+    // 使用者點「停止」：控制器帶 interrupted 收尾，busy 落回 false。
     ui.post({ type: 'busy', value: false });
-    ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '写到一半', { interrupted: true }) });
+    ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '寫到一半', { interrupted: true }) });
   });
 
-  test('中断后保留已生成的内容', () => {
-    assert.equal(ui.bodyOf('a1').textContent, '写到一半');
+  test('中斷後保留已生成的內容', () => {
+    assert.equal(ui.bodyOf('a1').textContent, '寫到一半');
   });
 
-  test('中断后可编辑', () => {
+  test('中斷後可編輯', () => {
     assert.equal(ui.bodyOf('a1').getAttribute('contenteditable'), 'true');
   });
 
-  test('中断后不再显示流式光标', () => {
+  test('中斷後不再顯示流式游標', () => {
     assert.ok(!ui.bubble('a1').classList.contains('streaming'));
   });
 
-  test('报错气泡显示错误文案', () => {
-    ui.post({ type: 'turnDone', turn: turn('a2', 'assistant', '', { error: '连接失败' }) });
-    assert.equal(ui.bodyOf('a2').textContent, '连接失败');
+  test('報錯氣泡顯示錯誤文案', () => {
+    ui.post({ type: 'turnDone', turn: turn('a2', 'assistant', '', { error: '連線失敗' }) });
+    assert.equal(ui.bodyOf('a2').textContent, '連線失敗');
   });
 
-  test('报错气泡不可编辑', () => {
+  test('報錯氣泡不可編輯', () => {
     assert.notEqual(ui.bodyOf('a2').getAttribute('contenteditable'), 'true');
   });
 });
 
-describe('气泡右上角的 ... 菜单', { skip: JSDOM_SKIP }, () => {
+describe('氣泡右上角的 ... 選單', { skip: JSDOM_SKIP }, () => {
   let ui;
   const menuBtn = (id) => ui.bubble(id).querySelector('.msg-menu-btn');
   const linkTexts = (id) =>
@@ -117,65 +117,65 @@ describe('气泡右上角的 ... 菜单', { skip: JSDOM_SKIP }, () => {
   before(() => {
     ui = mount();
     ui.post({ type: 'session', session: emptySession() });
-    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '写一段') });
-    // 带产物：没有 artifact 的回复**行内根本不该有采纳按钮**
-    // （落点由后端算，前端猜不出这段话该写到哪一层）。
+    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '寫一段') });
+    // 帶產物：沒有 artifact 的回覆**行內根本不該有採納按鈕**
+    // （落點由後端算，前端猜不出這段話該寫到哪一層）。
     ui.post({
       type: 'turnDone',
       turn: turn('a1', 'assistant', '正文', {
         draftId: 'd1',
-        artifact: { where: '第 12 章《夜入青云》 · 正文', summary: '正文 · 1200 字', overwrites: false },
+        artifact: { where: '第 12 章《夜入青雲》 · 正文', summary: '正文 · 1200 字', overwrites: false },
       }),
     });
   });
 
-  test('用户气泡有 ... 按钮', () => {
+  test('使用者氣泡有 ... 按鈕', () => {
     assert.ok(menuBtn('u1'));
   });
 
-  test('回复气泡有 ... 按钮', () => {
+  test('回覆氣泡有 ... 按鈕', () => {
     assert.ok(menuBtn('a1'));
   });
 
-  test('... 按钮在气泡头部（右上角）', () => {
+  test('... 按鈕在氣泡頭部（右上角）', () => {
     assert.notEqual(menuBtn('a1').closest('.msg-head'), null);
   });
 
-  // 冗余的行内按钮应该没了。
-  test('行内不再有「删除」', () => {
-    assert.ok(!linkTexts('a1').includes('删除'), JSON.stringify(linkTexts('a1')));
+  // 冗餘的行內按鈕應該沒了。
+  test('行內不再有「刪除」', () => {
+    assert.ok(!linkTexts('a1').includes('刪除'), JSON.stringify(linkTexts('a1')));
   });
 
-  test('行内不再有「重新生成」', () => {
+  test('行內不再有「重新生成」', () => {
     assert.ok(!linkTexts('u1').includes('重新生成'), JSON.stringify(linkTexts('u1')));
   });
 
-  // 「复制」是常用动作，仍留在行内。写文件的按钮一个都没有——那一问在
-  // 产出的当下就问过了（气泡里的权限卡片）。
-  test('「复制」仍在行内', () => {
-    assert.ok(linkTexts('a1').includes('复制'), JSON.stringify(linkTexts('a1')));
+  // 「複製」是常用動作，仍留在行內。寫檔案的按鈕一個都沒有——那一問在
+  // 產出的當下就問過了（氣泡裡的許可權卡片）。
+  test('「複製」仍在行內', () => {
+    assert.ok(linkTexts('a1').includes('複製'), JSON.stringify(linkTexts('a1')));
   });
 
-  test('菜单默认不显示', () => {
+  test('選單預設不顯示', () => {
     assert.ok(!ui.doc.querySelector('.msg-menu'));
   });
 
-  test('点击后弹出菜单', () => {
+  test('點選後彈出選單', () => {
     ui.clickEl(menuBtn('u1'));
     assert.ok(ui.doc.querySelector('.msg-menu'));
   });
 
-  test('用户消息菜单含「重新生成」与「删除」', () => {
+  test('使用者訊息選單含「重新生成」與「刪除」', () => {
     const menu = ui.doc.querySelector('.msg-menu');
     const items = [...menu.querySelectorAll('button')].map((b) => b.textContent);
-    assert.ok(items.includes('重新生成') && items.includes('删除'), JSON.stringify(items));
+    assert.ok(items.includes('重新生成') && items.includes('刪除'), JSON.stringify(items));
   });
 
-  // 原样保留：这一条靠 `button:last-child` 取「删除」项，而不是按文案找。
-  // 它证明的是「菜单最后一项发出 deleteTurn」，**不是**「点『删除』发出
-  // deleteTurn」——菜单末尾一加项就会点到别的按钮上去，届时这条要么错误地
-  // 通过、要么以一个看不懂的理由失败。
-  test('点删除发出 deleteTurn', () => {
+  // 原樣保留：這一條靠 `button:last-child` 取「刪除」項，而不是按文案找。
+  // 它證明的是「選單最後一項發出 deleteTurn」，**不是**「點『刪除』發出
+  // deleteTurn」——選單末尾一加項就會點到別的按鈕上去，屆時這條要麼錯誤地
+  // 通過、要麼以一個看不懂的理由失敗。
+  test('點刪除發出 deleteTurn', () => {
     const menu = ui.doc.querySelector('.msg-menu');
     ui.clickEl(menu.querySelector('button:last-child'));
     const del = ui.sent.filter((m) => m.type === 'deleteTurn');
@@ -183,19 +183,19 @@ describe('气泡右上角的 ... 菜单', { skip: JSDOM_SKIP }, () => {
     assert.equal(del[0].turnId, 'u1', JSON.stringify(del));
   });
 
-  test('操作后菜单关闭', () => {
+  test('操作後選單關閉', () => {
     assert.ok(!ui.doc.querySelector('.msg-menu'));
   });
 
-  // 回复气泡的菜单里不该有「重新生成」（重来是从用户那条分叉的）。
-  test('回复消息菜单只有「删除」', () => {
+  // 回覆氣泡的選單裡不該有「重新生成」（重來是從使用者那條分叉的）。
+  test('回覆訊息選單隻有「刪除」', () => {
     ui.clickEl(menuBtn('a1'));
     const items2 = [...ui.doc.querySelectorAll('.msg-menu button')].map((b) => b.textContent);
-    assert.deepEqual(items2, ['删除'], JSON.stringify(items2));
+    assert.deepEqual(items2, ['刪除'], JSON.stringify(items2));
   });
 
-  // 点别处要能关掉。
-  test('点空白处关闭菜单', () => {
+  // 點別處要能關掉。
+  test('點空白處關閉選單', () => {
     ui.closeMenu();
     assert.ok(!ui.doc.querySelector('.msg-menu'));
   });
@@ -207,16 +207,16 @@ describe('生成中的限制', { skip: JSDOM_SKIP }, () => {
   before(() => {
     ui = mount();
     ui.post({ type: 'session', session: emptySession() });
-    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '写一段') });
+    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '寫一段') });
     ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '') });
     ui.post({ type: 'busy', value: true });
     ui.post({ type: 'delta', turnId: 'a1', text: '生成中' });
   });
 
-  // 原样保留原实现的空转风险：`regen` 找不到时整个点击被跳过，前后 retry 计数
-  // 自然相等，用例照绿。所以这一条证明的是「生成中不会多出一个 retry」，
-  // **不能**区分「按钮存在但正确地不响应」与「按钮/菜单压根没出现」。
-  test('生成中点「重新生成」不会发起新请求', () => {
+  // 原樣保留原實現的空轉風險：`regen` 找不到時整個點選被跳過，前後 retry 計數
+  // 自然相等，用例照綠。所以這一條證明的是「生成中不會多出一個 retry」，
+  // **不能**區分「按鈕存在但正確地不響應」與「按鈕/選單壓根沒出現」。
+  test('生成中點「重新生成」不會發起新請求', () => {
     ui.clickEl(ui.bubble('u1').querySelector('.msg-menu-btn'));
     const before = ui.sent.filter((m) => m.type === 'retry').length;
     const regen = [...ui.doc.querySelectorAll('.msg-menu button')]
@@ -226,10 +226,10 @@ describe('生成中的限制', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('空输入', { skip: JSDOM_SKIP }, () => {
+describe('空輸入', { skip: JSDOM_SKIP }, () => {
   let ui;
   const sends = () => ui.sent.filter((m) => m.type === 'send').length;
-  /** 从 `/` 面板挑一个命令，挑完输入框是空的。 */
+  /** 從 `/` 面板挑一個命令，挑完輸入框是空的。 */
   const pickCommand = (label) => {
     const input = ui.doc.getElementById('input');
     input.value = '/';
@@ -242,47 +242,47 @@ describe('空输入', { skip: JSDOM_SKIP }, () => {
     ui.post({
       type: 'session',
       session: emptySession({
-        target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/012-夜入青云.md' },
+        target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/012-夜入青雲.md' },
         stage: 'plot',
         capability: 'discuss',
       }),
     });
   });
 
-  // 直接发送是在当前阶段讨论，讨论的全部输入就是作者那句话——没有话就没得聊。
-  test('直接发送仍然要求先输入', () => {
+  // 直接傳送是在當前階段討論，討論的全部輸入就是作者那句話——沒有話就沒得聊。
+  test('直接傳送仍然要求先輸入', () => {
     ui.doc.getElementById('input').value = '';
     ui.clickEl(ui.doc.getElementById('sendBtn'));
     assert.equal(sends(), 0);
   });
 
-  test('有话就发 send，能力是讨论', () => {
-    ui.doc.getElementById('input').value = '这一章节奏是不是太慢';
+  test('有話就發 send，能力是討論', () => {
+    ui.doc.getElementById('input').value = '這一章節奏是不是太慢';
     ui.clickEl(ui.doc.getElementById('sendBtn'));
     assert.equal(sends(), 1, String(sends()));
     assert.equal(ui.last('send').payload.capability, 'discuss', JSON.stringify(ui.last('send').payload));
     ui.post({ type: 'busy', value: false });
   });
 
-  // 而 `/写细纲` 不需要作者再说什么——这一章该发生什么，大纲里覆盖它的那一节都写着。
-  test('生成类命令允许空输入', () => {
-    pickCommand('写细纲');
+  // 而 `/寫細綱` 不需要作者再說什麼——這一章該發生什麼，大綱裡覆蓋它的那一節都寫著。
+  test('生成類命令允許空輸入', () => {
+    pickCommand('寫細綱');
     ui.clickEl(ui.doc.getElementById('sendBtn'));
     assert.equal(sends(), 2, String(sends()));
     assert.equal(ui.last('send').payload.capability, 'generate', JSON.stringify(ui.last('send').payload));
   });
 });
 
-describe('产物那一行', { skip: JSDOM_SKIP }, () => {
+describe('產物那一行', { skip: JSDOM_SKIP }, () => {
   let ui;
   /**
-   * 气泡上**任何能写文件的按钮**。一个都不该有——写不写在产出的当下就问过了
-   * （气泡里那张权限卡片，见 `view/gate.test.js`）。从前这里是「采纳写入 /
-   * 覆盖并写入」：一颗可以永远不点的按钮，于是「产物落盘前必须过一遍人」
-   * 成了一件可以无限拖延的事。
+   * 氣泡上**任何能寫檔案的按鈕**。一個都不該有——寫不寫在產出的當下就問過了
+   * （氣泡裡那張許可權卡片，見 `view/gate.test.js`）。從前這裡是「採納寫入 /
+   * 覆蓋並寫入」：一顆可以永遠不點的按鈕，於是「產物落盤前必須過一遍人」
+   * 成了一件可以無限拖延的事。
    */
   const writeBtn = (id) =>
-    [...ui.bubble(id).querySelectorAll('.msg-actions button')].find((n) => /采纳|写入|覆盖/.test(n.textContent));
+    [...ui.bubble(id).querySelectorAll('.msg-actions button')].find((n) => /採納|寫入|覆蓋/.test(n.textContent));
   const where = (id) => ui.bubble(id).querySelector('.artifact-where');
 
   before(() => {
@@ -290,64 +290,64 @@ describe('产物那一行', { skip: JSDOM_SKIP }, () => {
     ui.post({
       type: 'session',
       session: emptySession({
-        target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/012-夜入青云.md' },
+        target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/012-夜入青雲.md' },
         stage: 'plot',
         capability: 'generate',
       }),
     });
-    ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '我建议把冲突提前。') });
+    ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '我建議把衝突提前。') });
     ui.post({
       type: 'turnDone',
-      turn: turn('a2', 'assistant', '{"目标":"进宗门"}', {
-        artifact: { where: '第 12 章《夜入青云》 · 细纲', summary: '细纲 · 3/3 节', overwrites: false },
+      turn: turn('a2', 'assistant', '{"目標":"進宗門"}', {
+        artifact: { where: '第 12 章《夜入青雲》 · 細綱', summary: '細綱 · 3/3 節', overwrites: false },
       }),
     });
   });
 
-  test('无产物时只有「复制」', () => {
+  test('無產物時只有「複製」', () => {
     assert.ok(!writeBtn('a1'),
       [...ui.bubble('a1').querySelectorAll('.msg-actions button')].map((b) => b.textContent).join('|'));
     assert.ok([...ui.bubble('a1').querySelectorAll('.msg-actions button')]
-      .some((b) => b.textContent === '复制'));
+      .some((b) => b.textContent === '複製'));
   });
 
-  // 产出过什么仍然看得见：翻回来要认得出「这一轮产出过一份第 12 章的细纲」。
-  test('产出过的说清落点与形状', () => {
+  // 產出過什麼仍然看得見：翻回來要認得出「這一輪產出過一份第 12 章的細綱」。
+  test('產出過的說清落點與形狀', () => {
     assert.ok(where('a2') && where('a2').textContent.includes('第 12 章'), where('a2')?.textContent);
-    assert.ok(where('a2').textContent.includes('3/3 节'), where('a2').textContent);
+    assert.ok(where('a2').textContent.includes('3/3 節'), where('a2').textContent);
   });
 
-  // ★ 这条就是这次改动本身。
-  test('有产物也没有任何写入按钮', () => {
+  // ★ 這條就是這次改動本身。
+  test('有產物也沒有任何寫入按鈕', () => {
     assert.ok(!writeBtn('a2'),
       [...ui.bubble('a2').querySelectorAll('.msg-actions button')].map((b) => b.textContent).join('|'));
   });
 
-  test('作者当时没同意的标一句「未采纳」', () => {
+  test('作者當時沒同意的標一句「未採納」', () => {
     ui.post({
       type: 'turnDone',
-      turn: turn('a3', 'assistant', '{"目标":"换一版"}', {
-        artifact: { where: '第 12 章《夜入青云》 · 细纲', summary: '细纲 · 3/3 节', overwrites: true, declined: true },
+      turn: turn('a3', 'assistant', '{"目標":"換一版"}', {
+        artifact: { where: '第 12 章《夜入青雲》 · 細綱', summary: '細綱 · 3/3 節', overwrites: true, declined: true },
       }),
     });
-    assert.ok(where('a3').textContent.includes('未采纳'), where('a3').textContent);
-    assert.ok(!writeBtn('a3'), '未采纳的那一轮更不该有写入按钮');
+    assert.ok(where('a3').textContent.includes('未採納'), where('a3').textContent);
+    assert.ok(!writeBtn('a3'), '未採納的那一輪更不該有寫入按鈕');
   });
 
-  test('写进去了的说落点、给「打开」', () => {
+  test('寫進去了的說落點、給「開啟」', () => {
     ui.post({
       type: 'turnDone',
       turn: turn('a4', 'assistant', 'x', {
         artifact: { where: 'y', summary: 'z', overwrites: false },
-        acceptedTo: '.novelwarden/summaries/012-夜入青云.md',
+        acceptedTo: '.novelwarden/summaries/012-夜入青雲.md',
       }),
     });
     assert.ok(ui.bubble('a4').querySelector('.accepted'));
-    assert.ok([...ui.bubble('a4').querySelectorAll('.msg-actions button')].some((b) => b.textContent === '打开'));
+    assert.ok([...ui.bubble('a4').querySelectorAll('.msg-actions button')].some((b) => b.textContent === '開啟'));
   });
 });
 
-describe('思考过程（推理模型）', { skip: JSDOM_SKIP }, () => {
+describe('思考過程（推理模型）', { skip: JSDOM_SKIP }, () => {
   let ui;
   let acceptSent;
   const det = () => ui.bubble('a1').querySelector('details.reasoning');
@@ -355,110 +355,110 @@ describe('思考过程（推理模型）', { skip: JSDOM_SKIP }, () => {
   before(() => {
     ui = mount();
     ui.post({ type: 'session', session: emptySession() });
-    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '写一段') });
+    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '寫一段') });
     ui.post({ type: 'busy', value: true });
     ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '') });
   });
 
-  test('还没思考时不显示折叠块', () => {
+  test('還沒思考時不顯示摺疊塊', () => {
     assert.ok(!det());
   });
 
-  // 推理模型常常先想几十秒才吐正文——这段时间界面必须有东西。
-  test('收到思考后出现折叠块', () => {
-    ui.post({ type: 'reasoning', turnId: 'a1', text: '先确定场景：' });
+  // 推理模型常常先想幾十秒才吐正文——這段時間介面必須有東西。
+  test('收到思考後出現摺疊塊', () => {
+    ui.post({ type: 'reasoning', turnId: 'a1', text: '先確定場景：' });
     assert.ok(det());
   });
 
-  test('默认是折叠的', () => {
+  test('預設是摺疊的', () => {
     assert.equal(det().open, false);
   });
 
-  test('思考内容已写入', () => {
-    assert.equal(det().querySelector('.reasoning-body').textContent, '先确定场景：');
+  test('思考內容已寫入', () => {
+    assert.equal(det().querySelector('.reasoning-body').textContent, '先確定場景：');
   });
 
-  test('折叠标题显示字数', () => {
-    assert.match(det().querySelector('summary').textContent, /思考过程/);
+  test('摺疊標題顯示字數', () => {
+    assert.match(det().querySelector('summary').textContent, /思考過程/);
   });
 
-  test('思考不进正文', () => {
+  test('思考不進正文', () => {
     assert.equal(ui.bodyOf('a1').textContent, '', JSON.stringify(ui.bodyOf('a1').textContent));
   });
 
-  test('思考期间也显示流式光标', () => {
+  test('思考期間也顯示流式游標', () => {
     assert.ok(ui.bubble('a1').classList.contains('streaming'));
   });
 
   test('思考增量累加', () => {
-    ui.post({ type: 'reasoning', turnId: 'a1', text: '夜里的旧书店。' });
-    assert.equal(det().querySelector('.reasoning-body').textContent, '先确定场景：夜里的旧书店。');
+    ui.post({ type: 'reasoning', turnId: 'a1', text: '夜裡的舊書店。' });
+    assert.equal(det().querySelector('.reasoning-body').textContent, '先確定場景：夜裡的舊書店。');
   });
 
-  // 用户展开后，后续增量不能把它重新收起来。
-  test('展开状态不被后续增量重置', () => {
+  // 使用者展開後，後續增量不能把它重新收起來。
+  test('展開狀態不被後續增量重置', () => {
     det().open = true;
-    ui.post({ type: 'reasoning', turnId: 'a1', text: '再补细节。' });
+    ui.post({ type: 'reasoning', turnId: 'a1', text: '再補細節。' });
     assert.equal(det().open, true);
   });
 
-  // 正文开始后，思考块仍在，正文只含正文。
-  test('正文开始后思考块仍保留', () => {
-    ui.post({ type: 'delta', turnId: 'a1', text: '灯昏。' });
+  // 正文開始後，思考塊仍在，正文只含正文。
+  test('正文開始後思考塊仍保留', () => {
+    ui.post({ type: 'delta', turnId: 'a1', text: '燈昏。' });
     assert.ok(det());
   });
 
   test('正文只含正文', () => {
-    assert.equal(ui.bodyOf('a1').textContent, '灯昏。');
+    assert.equal(ui.bodyOf('a1').textContent, '燈昏。');
   });
 
-  test('收尾后思考块还在（从 turn.reasoning 重建）', () => {
+  test('收尾後思考塊還在（從 turn.reasoning 重建）', () => {
     ui.post({
       type: 'turnDone',
-      turn: turn('a1', 'assistant', '灯昏。', {
-        reasoning: '先确定场景：夜里的旧书店。再补细节。',
+      turn: turn('a1', 'assistant', '燈昏。', {
+        reasoning: '先確定場景：夜裡的舊書店。再補細節。',
         draftId: 'd1',
-        artifact: { where: '第 12 章《夜入青云》 · 正文', summary: '正文 · 1200 字', overwrites: false },
+        artifact: { where: '第 12 章《夜入青雲》 · 正文', summary: '正文 · 1200 字', overwrites: false },
       }),
     });
     ui.post({ type: 'busy', value: false });
     assert.ok(det());
   });
 
-  test('收尾后默认仍是折叠的', () => {
+  test('收尾後預設仍是摺疊的', () => {
     assert.equal(det().open, false);
   });
 
-  test('收尾后正文可编辑', () => {
+  test('收尾後正文可編輯', () => {
     assert.equal(ui.bodyOf('a1').getAttribute('contenteditable'), 'true');
   });
 
-  // 最关键的一条：思考内容不是正文——落盘的、复制的都只该是正文。
-  // 落盘那一份由后端从 draft 取（前端连文本都不发了），这里守住它的孪生兄弟：
-  // 气泡正文里没有思考内容。
-  test('气泡正文不含思考内容', () => {
-    assert.ok(!ui.bodyOf('a1').textContent.includes('先确定场景'), ui.bodyOf('a1').textContent);
+  // 最關鍵的一條：思考內容不是正文——落盤的、複製的都只該是正文。
+  // 落盤那一份由後端從 draft 取（前端連文字都不發了），這裡守住它的孿生兄弟：
+  // 氣泡正文裡沒有思考內容。
+  test('氣泡正文不含思考內容', () => {
+    assert.ok(!ui.bodyOf('a1').textContent.includes('先確定場景'), ui.bodyOf('a1').textContent);
   });
 
-  test('气泡正文就是正文', () => {
-    assert.equal(ui.bodyOf('a1').textContent, '灯昏。');
+  test('氣泡正文就是正文', () => {
+    assert.equal(ui.bodyOf('a1').textContent, '燈昏。');
   });
 
-  // 复制同理。
-  test('复制按钮存在（不含思考）', () => {
+  // 複製同理。
+  test('複製按鈕存在（不含思考）', () => {
     const copy = [...ui.bubble('a1').querySelectorAll('.msg-actions button')]
-      .find((b) => b.textContent === '复制');
+      .find((b) => b.textContent === '複製');
     assert.ok(copy);
   });
 
-  // 没有思考的普通模型不该多出一个空折叠块。
-  test('无思考的回复不出现折叠块', () => {
-    ui.post({ type: 'turnDone', turn: turn('a2', 'assistant', '普通输出') });
+  // 沒有思考的普通模型不該多出一個空摺疊塊。
+  test('無思考的回覆不出現摺疊塊', () => {
+    ui.post({ type: 'turnDone', turn: turn('a2', 'assistant', '普通輸出') });
     assert.ok(!ui.bubble('a2').querySelector('details.reasoning'));
   });
 });
 
-describe('命令类消息的气泡', { skip: JSDOM_SKIP }, () => {
+describe('命令類訊息的氣泡', { skip: JSDOM_SKIP }, () => {
   let ui;
   const cmdTag = (id) => ui.bubble(id).querySelector('.msg-command');
 
@@ -467,48 +467,48 @@ describe('命令类消息的气泡', { skip: JSDOM_SKIP }, () => {
     ui.post({
       type: 'session',
       session: emptySession({
-        target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/012-夜入青云.md' },
+        target: { kind: 'plot', plotRelPath: '.novelwarden/summaries/012-夜入青雲.md' },
         stage: 'plot',
         capability: 'generate',
       }),
     });
   });
 
-  // 「写细纲」不需要作者说什么（该说的都在大纲里），于是 content 是空的。
-  // 但气泡不能就这么空着——翻回去看时认不出刚才点的是哪一下。
-  test('空输入的命令轮次显示命令名', () => {
-    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '', { command: '写细纲' }) });
-    assert.ok(cmdTag('u1'), '没有命令标签');
-    assert.equal(cmdTag('u1').textContent, '/写细纲', cmdTag('u1')?.textContent);
+  // 「寫細綱」不需要作者說什麼（該說的都在大綱裡），於是 content 是空的。
+  // 但氣泡不能就這麼空著——翻回去看時認不出剛才點的是哪一下。
+  test('空輸入的命令輪次顯示命令名', () => {
+    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '', { command: '寫細綱' }) });
+    assert.ok(cmdTag('u1'), '沒有命令標籤');
+    assert.equal(cmdTag('u1').textContent, '/寫細綱', cmdTag('u1')?.textContent);
   });
 
-  test('气泡不再是一片空白', () => {
+  test('氣泡不再是一片空白', () => {
     assert.ok(ui.bodyOf('u1').textContent.trim().length > 0, JSON.stringify(ui.bodyOf('u1').textContent));
   });
 
-  // 有补充要求时两样都在：命令一枚标签，正文跟在后面。
-  test('带补充要求时命令与正文都显示', () => {
-    ui.post({ type: 'turnDone', turn: turn('u2', 'user', '这一章要慢一点', { command: '写细纲' }) });
-    assert.equal(cmdTag('u2').textContent, '/写细纲');
-    assert.equal(ui.bubble('u2').querySelector('.msg-text').textContent, '这一章要慢一点');
+  // 有補充要求時兩樣都在：命令一枚標籤，正文跟在後面。
+  test('帶補充要求時命令與正文都顯示', () => {
+    ui.post({ type: 'turnDone', turn: turn('u2', 'user', '這一章要慢一點', { command: '寫細綱' }) });
+    assert.equal(cmdTag('u2').textContent, '/寫細綱');
+    assert.equal(ui.bubble('u2').querySelector('.msg-text').textContent, '這一章要慢一點');
   });
 
-  // 讨论是默认动作，后端不给 command——每条消息都挂一枚「/讨论」是纯噪声。
-  test('讨论轮次不挂命令标签', () => {
-    ui.post({ type: 'turnDone', turn: turn('u3', 'user', '这里冲突太弱') });
+  // 討論是預設動作，後端不給 command——每條訊息都掛一枚「/討論」是純噪聲。
+  test('討論輪次不掛命令標籤', () => {
+    ui.post({ type: 'turnDone', turn: turn('u3', 'user', '這裡衝突太弱') });
     assert.ok(!cmdTag('u3'));
-    assert.equal(ui.bodyOf('u3').textContent, '这里冲突太弱');
+    assert.equal(ui.bodyOf('u3').textContent, '這裡衝突太弱');
   });
 
-  // 旧会话里的空轮次（那时命令没被记下来）：留一句说明，别留一片空白。
-  test('既无话也无命令时给一句说明', () => {
+  // 舊會話裡的空輪次（那時命令沒被記下來）：留一句說明，別留一片空白。
+  test('既無話也無命令時給一句說明', () => {
     ui.post({ type: 'turnDone', turn: turn('u4', 'user', '') });
     assert.ok(ui.bubble('u4').querySelector('.msg-text-empty'), ui.bodyOf('u4')?.textContent);
   });
 
-  // 模型回复那一支必须保持成纯文本节点：流式增量走 textContent += delta，
-  // 里面有子元素的话第一片增量就会把它们冲掉。
-  test('模型回复里不插结构', () => {
+  // 模型回覆那一支必須保持成純文字節點：流式增量走 textContent += delta，
+  // 裡面有子元素的話第一片增量就會把它們沖掉。
+  test('模型回覆裡不插結構', () => {
     ui.post({ type: 'busy', value: true });
     ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '') });
     ui.post({ type: 'delta', turnId: 'a1', text: '第一段。' });
@@ -519,12 +519,12 @@ describe('命令类消息的气泡', { skip: JSDOM_SKIP }, () => {
 });
 
 /**
- * 流式输出时消息流会变高。只在原本贴着底时才跟着滚——翻上去看前面的
- * 气泡不该被每来一段的 delta 拽回底部。
+ * 流式輸出時訊息流會變高。只在原本貼著底時才跟著滾——翻上去看前面的
+ * 氣泡不該被每來一段的 delta 拽回底部。
  *
- * jsdom 没有布局，scrollHeight / clientHeight 恒为 0，要自己装一套尺寸。
+ * jsdom 沒有佈局，scrollHeight / clientHeight 恆為 0，要自己裝一套尺寸。
  */
-describe('流式输出时滚动跟随', { skip: JSDOM_SKIP }, () => {
+describe('流式輸出時滾動跟隨', { skip: JSDOM_SKIP }, () => {
   let ui;
   let box;
   const HEIGHT = 5000;
@@ -546,35 +546,35 @@ describe('流式输出时滚动跟随', { skip: JSDOM_SKIP }, () => {
     ui = mount();
     box = ui.doc.getElementById('messages');
     ui.post({ type: 'session', session: emptySession() });
-    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '写一段') });
+    ui.post({ type: 'turnDone', turn: turn('u1', 'user', '寫一段') });
     ui.post({ type: 'busy', value: true });
     ui.post({ type: 'turnDone', turn: turn('a1', 'assistant', '') });
     layout(BOTTOM);
   });
 
-  test('贴着底时 delta 跟着滚到底', () => {
+  test('貼著底時 delta 跟著滾到底', () => {
     ui.post({ type: 'delta', turnId: 'a1', text: '第一段。' });
     assert.equal(box.scrollTop, HEIGHT);
   });
 
-  test('翻上去之后 delta 不再拽回来', () => {
+  test('翻上去之後 delta 不再拽回來', () => {
     scrollTo(200);
     ui.post({ type: 'delta', turnId: 'a1', text: '第二段。' });
     assert.equal(box.scrollTop, 200);
   });
 
-  test('思考增量也不拽回来', () => {
+  test('思考增量也不拽回來', () => {
     ui.post({ type: 'reasoning', turnId: 'a1', text: '我在想。' });
     assert.equal(box.scrollTop, 200);
   });
 
-  test('再贴回底之后继续跟随', () => {
+  test('再貼回底之後繼續跟隨', () => {
     scrollTo(BOTTOM);
     ui.post({ type: 'delta', turnId: 'a1', text: '第三段。' });
     assert.equal(box.scrollTop, HEIGHT);
   });
 
-  test('切会话即使翻上去也滚到底', () => {
+  test('切會話即使翻上去也滾到底', () => {
     scrollTo(200);
     ui.post({
       type: 'session',
@@ -583,10 +583,10 @@ describe('流式输出时滚动跟随', { skip: JSDOM_SKIP }, () => {
     assert.equal(box.scrollTop, HEIGHT);
   });
 
-  test('发送即使翻上去也滚到底', () => {
+  test('傳送即使翻上去也滾到底', () => {
     ui.post({ type: 'busy', value: false });
     scrollTo(200);
-    ui.doc.getElementById('input').value = '再说一句';
+    ui.doc.getElementById('input').value = '再說一句';
     ui.clickEl(ui.doc.getElementById('sendBtn'));
     assert.equal(box.scrollTop, HEIGHT);
   });
@@ -599,12 +599,12 @@ describe('思考深度下拉框', { skip: JSDOM_SKIP }, () => {
 
   before(() => {
     ui = mount();
-    // 档位选项在 renderState 里建（跟模型下拉同一处），所以要先来一条 state。
+    // 檔位選項在 renderState 裡建（跟模型下拉同一處），所以要先來一條 state。
     ui.post({ type: 'init', state: viewState() });
     ui.post({ type: 'session', session: emptySession() });
   });
 
-  test('五个档位都在，缺省停在「不思考」', () => {
+  test('五個檔位都在，預設停在「不思考」', () => {
     const select = ui.doc.getElementById('thinkSelect');
     assert.deepEqual(
       [...select.options].map((o) => o.value),
@@ -613,15 +613,15 @@ describe('思考深度下拉框', { skip: JSDOM_SKIP }, () => {
     assert.equal(select.value, 'off');
   });
 
-  // 它是会话的属性，所以前端只发意图，值等后端那条 session 消息回填。
-  test('换一档发 setThinking，不自己改状态', () => {
+  // 它是會話的屬性，所以前端只發意圖，值等後端那條 session 訊息回填。
+  test('換一檔發 setThinking，不自己改狀態', () => {
     const select = ui.doc.getElementById('thinkSelect');
     select.value = 'high';
     select.dispatchEvent(new ui.window.Event('change'));
     assert.equal(ui.last('setThinking').depth, 'high');
   });
 
-  test('收到会话就回显它那一档（换会话不会串味）', () => {
+  test('收到會話就回顯它那一檔（換會話不會串味）', () => {
     ui.post({ type: 'session', session: emptySession({ id: 's2', thinking: 'max' }) });
     assert.equal(ui.doc.getElementById('thinkSelect').value, 'max');
     ui.post({ type: 'session', session: emptySession({ id: 's3', thinking: 'off' }) });

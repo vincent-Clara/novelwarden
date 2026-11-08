@@ -1,8 +1,8 @@
-// Novelwarden 独立版的 WebSocket 驱动：常驻连接，把 cmd.jsonl 新追加的每一行原样发给服务，
-// 收到的消息写成摘要日志与几份「最新快照」，弹窗 / 权限卡片写进 pending.json 等人（或脚本）回答。
+// Novelwarden 獨立版的 WebSocket 驅動：常駐連線，把 cmd.jsonl 新追加的每一行原樣發給服務，
+// 收到的訊息寫成摘要日誌與幾份「最新快照」，彈窗 / 許可權卡片寫進 pending.json 等人（或指令碼）回答。
 //
 // 用法：node drv.mjs [--port 36800] [--state D:/tmp/nfdrv]
-// 断线自动重连（服务重启后端口不变就能接上；服务端的批量任务不随连接断开而停）。
+// 斷線自動重連（服務重啟後埠不變就能接上；服務端的批次任務不隨連線斷開而停）。
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -31,7 +31,7 @@ function connect() {
     ws.send(JSON.stringify({ type: 'ready' }));
   };
   ws.onclose = () => {
-    // 未决的弹窗在服务端随连接断开按取消处理，这里也清掉，免得拿旧 requestId 去答。
+    // 未決的彈窗在服務端隨連線斷開按取消處理，這裡也清掉，免得拿舊 requestId 去答。
     pending.clear();
     savePending();
     log('CLOSE, reconnect in 2s');

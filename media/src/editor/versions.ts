@@ -1,31 +1,31 @@
 /**
- * 侧栏「版本」页（独立版；DOM 在 `shells/shared/panes.ts` 的 `versionsPane`，插件形态不装配）：上面「全书改动」，下面编辑区
- * 当前那份文件的时间线。点一行，编辑区里马上开对比标签（`versionDiff.ts`），不经预览、不弹窗。两块的标题点了收起 / 展开。
+ * 側欄「版本」頁（獨立版；DOM 在 `shells/shared/panes.ts` 的 `versionsPane`，外掛形態不裝配）：上面「全書改動」，下面編輯區
+ * 當前那份檔案的時間線。點一行，編輯區裡馬上開對比標籤（`versionDiff.ts`），不經預覽、不彈窗。兩塊的標題點了收起 / 展開。
  *
- * - **全书改动**（像 VS Code 源代码管理的「更改」）：跟一个存档点比，之后全书改过、新建、删掉的文件，按种类分组
- *   （`artifactKinds.ts`）。缺省跟最近一个**手动**存档点比（自动的批量动作之前都存，太密，比出来常常只剩几份），没有手动的
- *   就跟最近那一个；下拉换别的，换过就一直是它（它被裁掉了才回到缺省）。数据与存档点弹窗同一对消息：`listCheckpoints` →
- *   `checkpoints`、`checkpointDiff` → `checkpointDiff`（只认自己那个存档点的；弹窗要的、退回之后后端重推的，是这个就照收）。
- *   这一页显示着时，后端每推一次 `state`（存盘、批量动作之后都推）停一下再比一次；后端按文件的大小与修改时间记着算过的指纹，
- *   每次比不必整本重读。点一份：存档点里那一份 ↔ 现在（没开着的先开成临时标签）；之后新建的左边是空的、删掉的右边是空的。
- *   **退回不在这里**——那是直接写盘的，留在存档点弹窗里；这里只看、只在编辑区里用回。
+ * - **全書改動**（像 VS Code 原始碼管理的「更改」）：跟一個存檔點比，之後全書改過、新建、刪掉的檔案，按種類分組
+ *   （`artifactKinds.ts`）。預設跟最近一個**手動**存檔點比（自動的批次動作之前都存，太密，比出來常常只剩幾份），沒有手動的
+ *   就跟最近那一個；下拉換別的，換過就一直是它（它被裁掉了才回到預設）。資料與存檔點彈窗同一對訊息：`listCheckpoints` →
+ *   `checkpoints`、`checkpointDiff` → `checkpointDiff`（只認自己那個存檔點的；彈窗要的、退回之後後端重推的，是這個就照收）。
+ *   這一頁顯示著時，後端每推一次 `state`（存檔、批次動作之後都推）停一下再比一次；後端按檔案的大小與修改時間記著算過的指紋，
+ *   每次比不必整本重讀。點一份：存檔點裡那一份 ↔ 現在（沒開著的先開成臨時標籤）；之後新建的左邊是空的、刪掉的右邊是空的。
+ *   **退回不在這裡**——那是直接寫盤的，留在存檔點彈窗裡；這裡只看、只在編輯區裡用回。
  *
- * 当前文件的时间线：
+ * 當前檔案的時間線：
  *
- * - **一条时间线，新的在前**：最上面「还没保存的改动」（编辑器里那份与磁盘上的不一样时才有，比的是磁盘上的 ↔ 编辑器里的）；
- *   然后是快照（网关在每次覆盖之前存的，`core/workspace/history.ts`）与这份文件在各存档点里的样子（◆ 手动、◇ 自动，带备注；
- *   内容一样的连着几个只列最早那一个）混排。每行「3 分钟前 · 14:32」、多少字、比现在多 / 少几个字。
- * - **单击 = 这一版 ↔ 现在**（现在 = 编辑器里那一份，没保存的也算）。右键：跟现在比、跟后一版比（那一次改了什么）、
- *   恢复整份到编辑区。对比标签开着时，它比的那一行标成选中。
- * - **跟着编辑区当前的文件走**：换了文件就换列表；对比标签、别的特殊标签显示着时（那一块没有当前文件）留在原来那份上；
- *   那份文件关掉了才清空。保存之后（`hash` 变了）重拉——网关可能刚存了一版（自动保存几秒一次时攒一攒，一秒最多一次）。
- *   这一页藏着时不拉，切过来时拉一次（存档点可能刚存过）。
- * - **入口**：活动栏「版本」；编辑区工具栏「历史」（每块编辑区一颗，第一次重画时插到「保存」前面，与 `layout.ts` 的「排版」
- *   同一个做法）与标题栏「文件 → 历史版本…」（`view/versionsMenu.ts`，经 `nf-versions-query` / `nf-versions-command`）切到
- *   这一页，窄屏上顺手把编辑区翻下去。没开文件、没打开工程、还不是小说工程、文件不是工程里的创作产物（`kind` 是 `other`）时
- *   那两处置灰，提示里说为什么——前端不拿路径猜，后端也会再判一次（`versions.unavailable`）。
- * - 「＋」（现在存一版）把**磁盘上当前**那一份存一个快照（不是编辑器里没保存的那份）。
- * - 存档点弹窗里的「对比」也开在这里的对比标签上（经 `nf-version-diff-query` / `nf-version-diff-command`）。
+ * - **一條時間線，新的在前**：最上面「還沒儲存的改動」（編輯器裡那份與磁碟上的不一樣時才有，比的是磁碟上的 ↔ 編輯器裡的）；
+ *   然後是快照（閘道器在每次覆蓋之前存的，`core/workspace/history.ts`）與這份檔案在各存檔點裡的樣子（◆ 手動、◇ 自動，帶備註；
+ *   內容一樣的連著幾個只列最早那一個）混排。每行「3 分鐘前 · 14:32」、多少字、比現在多 / 少幾個字。
+ * - **單擊 = 這一版 ↔ 現在**（現在 = 編輯器裡那一份，沒儲存的也算）。右鍵：跟現在比、跟後一版比（那一次改了什麼）、
+ *   恢復整份到編輯區。對比標籤開著時，它比的那一行標成選中。
+ * - **跟著編輯區當前的檔案走**：換了檔案就換列表；對比標籤、別的特殊標籤顯示著時（那一塊沒有當前檔案）留在原來那份上；
+ *   那份檔案關掉了才清空。儲存之後（`hash` 變了）重拉——閘道器可能剛存了一版（自動儲存幾秒一次時攢一攢，一秒最多一次）。
+ *   這一頁藏著時不拉，切過來時拉一次（存檔點可能剛存過）。
+ * - **入口**：活動欄「版本」；編輯區工具欄「歷史」（每塊編輯區一顆，第一次重畫時插到「儲存」前面，與 `layout.ts` 的「排版」
+ *   同一個做法）與標題欄「檔案 → 歷史版本…」（`view/versionsMenu.ts`，經 `nf-versions-query` / `nf-versions-command`）切到
+ *   這一頁，窄屏上順手把編輯區翻下去。沒開檔案、沒開啟工程、還不是小說工程、檔案不是工程裡的創作產物（`kind` 是 `other`）時
+ *   那兩處置灰，提示裡說為什麼——前端不拿路徑猜，後端也會再判一次（`versions.unavailable`）。
+ * - 「＋」（現在存一版）把**磁碟上當前**那一份存一個快照（不是編輯器裡沒儲存的那份）。
+ * - 存檔點彈窗裡的「對比」也開在這裡的對比標籤上（經 `nf-version-diff-query` / `nf-version-diff-command`）。
  */
 import { maybeById, el, setHidden } from '../dom';
 import { onContextMenu, showVersionsTab } from '../globals';
@@ -54,42 +54,42 @@ interface Side {
 
 let post: (msg: InMessage) => void = () => {};
 let side: Side | undefined;
-/** 列着哪份文件、拉列表时它的 hash（保存之后 hash 变了就重拉）。 */
+/** 列著哪份檔案、拉列表時它的 hash（儲存之後 hash 變了就重拉）。 */
 let target: string | null = null;
 let targetHash: string | null = null;
-/** undefined = 载入中。 */
+/** undefined = 載入中。 */
 let entries: VersionView[] | undefined;
 let unavailable: string | undefined;
 const buttons = new Map<Pane, HTMLButtonElement>();
-/** 后端说过「还不是小说工程」（`ViewState.initialized === false`）。没收到之前不拦，后端会再判一次。 */
+/** 後端說過「還不是小說工程」（`ViewState.initialized === false`）。沒收到之前不攔，後端會再判一次。 */
 let notProject = false;
 let renderTimer: ReturnType<typeof setTimeout> | undefined;
-/** 当前文件那一块收起来了。 */
+/** 當前檔案那一塊收起來了。 */
 let fileCollapsed = false;
 
-/** 全书改动：跟哪个存档点比、比出来什么。 */
+/** 全書改動：跟哪個存檔點比、比出來什麼。 */
 const book: {
-  /** undefined = 还没拉过。 */
+  /** undefined = 還沒拉過。 */
   checkpoints?: CheckpointView[];
   unavailable?: string;
-  /** 跟哪个比。 */
+  /** 跟哪個比。 */
   base: string | null;
-  /** 作者在下拉里挑过：一直是它，它没了才回到缺省。 */
+  /** 作者在下拉里挑過：一直是它，它沒了才回到預設。 */
   picked: boolean;
-  /** 比的是 `base`；undefined = 比着呢。 */
+  /** 比的是 `base`；undefined = 比著呢。 */
   diff?: CheckpointDiffView;
   error?: string;
   collapsed: boolean;
 } = { base: null, picked: false, collapsed: false };
-/** 后端推了 `state` 之后停多久再比（连着存几次只比一次）。 */
+/** 後端推了 `state` 之後停多久再比（連著存幾次只比一次）。 */
 const BOOK_REFRESH_MS = 800;
 let bookTimer: ReturnType<typeof setTimeout> | undefined;
 
-// ---------------------------------------------------------------- 纯函数
+// ---------------------------------------------------------------- 純函式
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** 「3 分钟前 · 14:32」「昨天 · 10-17 21:05」「400 天前 · 2025-03-02 08:00」那种说法。 */
+/** 「3 分鐘前 · 14:32」「昨天 · 10-17 21:05」「400 天前 · 2025-03-02 08:00」那種說法。 */
 export function describeWhen(time: number, now = Date.now()): string {
   const d = new Date(time);
   const n = new Date(now);
@@ -100,7 +100,7 @@ export function describeWhen(time: number, now = Date.now()): string {
   const md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   let rel: string;
   if (days <= 0) {
-    rel = minutes < 1 ? '刚刚' : minutes < 60 ? `${minutes} 分钟前` : `${Math.floor(minutes / 60)} 小时前`;
+    rel = minutes < 1 ? '剛剛' : minutes < 60 ? `${minutes} 分鐘前` : `${Math.floor(minutes / 60)} 小時前`;
   } else {
     rel = days === 1 ? '昨天' : `${days} 天前`;
   }
@@ -108,84 +108,84 @@ export function describeWhen(time: number, now = Date.now()): string {
   return `${rel} · ${abs}`;
 }
 
-/** 「比现在多 120 字」「比现在少 3 字」「与现在字数相同」。 */
+/** 「比現在多 120 字」「比現在少 3 字」「與現在字數相同」。 */
 export function describeDelta(words: number, current: number): string {
   const delta = words - current;
-  return delta === 0 ? '与现在字数相同' : delta > 0 ? `比现在多 ${delta} 字` : `比现在少 ${-delta} 字`;
+  return delta === 0 ? '與現在字數相同' : delta > 0 ? `比現在多 ${delta} 字` : `比現在少 ${-delta} 字`;
 }
 
-/** 这份文件存不存历史版本；不存给原因。与后端 `historyUnavailable` 同一套说法（后端照样再判一次）。 */
+/** 這份檔案存不存歷史版本；不存給原因。與後端 `historyUnavailable` 同一套說法（後端照樣再判一次）。 */
 export function unavailableReason(file: Pick<OpenFile, 'kind'> | undefined): string | undefined {
   if (!file) {
-    return '没有打开的文件。';
+    return '沒有開啟的檔案。';
   }
   if (file.kind === undefined) {
-    return '没打开工程，不存历史版本。';
+    return '沒開啟工程，不存歷史版本。';
   }
   if (notProject) {
-    return '这个目录还不是小说工程（没有工程元数据目录），不存历史版本。';
+    return '這個目錄還不是小說工程（沒有工程後設資料目錄），不存歷史版本。';
   }
   if (file.kind === 'other') {
-    return '这份文件不是工程里的创作产物（章节、草稿、细纲、角色卡、设定、架构、大纲、文风、叙事线……），不存历史版本。';
+    return '這份檔案不是工程裡的創作產物（章節、草稿、細綱、角色卡、設定、架構、大綱、文風、敘事線……），不存歷史版本。';
   }
   return undefined;
 }
 
-/** 一行在标题、对比标签上怎么称呼：「3 分钟前 · 14:32 的快照」「存档点「第一卷完」（10-20 22:30）」。 */
+/** 一行在標題、對比標籤上怎麼稱呼：「3 分鐘前 · 14:32 的快照」「存檔點「第一卷完」（10-20 22:30）」。 */
 export function versionLabel(entry: VersionView, now = Date.now()): string {
   const when = describeWhen(entry.time, now);
   if (!entry.checkpoint) {
     return `${when} 的快照`;
   }
-  const kind = entry.checkpoint.auto ? '自动存档点' : '存档点';
+  const kind = entry.checkpoint.auto ? '自動存檔點' : '存檔點';
   return entry.checkpoint.note ? `${kind}「${entry.checkpoint.note}」（${when}）` : `${kind}（${when}）`;
 }
 
-/** 一个存档点在对比标签上怎么称呼（同时间线上存档点那几行）。 */
+/** 一個存檔點在對比標籤上怎麼稱呼（同時間線上存檔點那幾行）。 */
 export function checkpointLabel(cp: Pick<CheckpointView, 'time' | 'note' | 'auto'>, now = Date.now()): string {
   return versionLabel({ id: '', time: cp.time, words: 0, bytes: 0, checkpoint: { note: cp.note, auto: cp.auto } }, now);
 }
 
-/** 全书改动跟哪个存档点比的缺省：最近一个手动的，没有就最近那一个（`list` 新的在前）。 */
+/** 全書改動跟哪個存檔點比的預設：最近一個手動的，沒有就最近那一個（`list` 新的在前）。 */
 export function defaultBase(list: readonly Pick<CheckpointView, 'id' | 'auto'>[]): string | null {
   return (list.find((cp) => !cp.auto) ?? list[0])?.id ?? null;
 }
 
-/** 文件名去掉扩展名（全书改动里那些多半没开着，没有后端给的称呼）。 */
+/** 檔名去掉副檔名（全書改動裡那些多半沒開著，沒有後端給的稱呼）。 */
 function baseName(path: string): string {
   const name = path.slice(path.lastIndexOf('/') + 1);
   const dot = name.lastIndexOf('.');
   return dot > 0 ? name.slice(0, dot) : name;
 }
 
-// ---------------------------------------------------------------- 侧栏
+// ---------------------------------------------------------------- 側欄
 
-/** 标签上的那个称呼（后端给的，章节去掉了扩展名）；没给就是文件名。 */
+/** 標籤上的那個稱呼（後端給的，章節去掉了副檔名）；沒給就是檔名。 */
 function nameOf(file: OpenFile): string {
   return file.label?.title ?? file.name;
 }
 
 const NOTE =
-  '每次覆盖保存之前，磁盘上的旧内容先存成一版（10 分钟内的零星小改并成一版，每份文件留最近 50 版）；◆ ◇ 是存档点里的这一份。' +
-  '点一行在编辑区对比；用回、恢复都只换编辑区里的内容，存不存由你。';
-/** 自动保存开着时多说的那一句（`autosave.ts`：停笔 2 秒就存）。 */
-const AUTOSAVE_NOTE = '自动保存开着：放回编辑区的内容停笔 2 秒就会写回磁盘——被它盖掉的那一版会先存进这里，可以再恢复回来。';
+  '每次覆蓋儲存之前，磁碟上的舊內容先存成一版（10 分鐘內的零星小改併成一版，每份檔案留最近 50 版）；◆ ◇ 是存檔點裡的這一份。' +
+  '點一行在編輯區對比；用回、恢復都只換編輯區裡的內容，存不存由你。';
+/** 自動儲存開著時多說的那一句（`autosave.ts`：停筆 2 秒就存）。 */
+const AUTOSAVE_NOTE = '自動儲存開著：放回編輯區的內容停筆 2 秒就會寫回磁碟——被它蓋掉的那一版會先存進這裡，可以再恢復回來。';
 
 function visible(): boolean {
   return !!side && side.root.classList.contains('active');
 }
 
-/** 正看着的那份文件（在哪块编辑区里都行）。 */
+/** 正看著的那份檔案（在哪塊編輯區裡都行）。 */
 function targetFile(): OpenFile | undefined {
   return target ? paneOwning(target)?.files.get(target) : undefined;
 }
 
-/** 按当前文件重拉列表（藏着就只记一笔）。 */
+/** 按當前檔案重拉列表（藏著就只記一筆）。 */
 function load(): void {
   const file = targetFile();
   targetHash = file?.hash ?? null;
   unavailable = unavailableReason(file);
-  // 藏着不拉：切过来时（MutationObserver）再拉。
+  // 藏著不拉：切過來時（MutationObserver）再拉。
   if (!visible()) {
     return;
   }
@@ -196,7 +196,7 @@ function load(): void {
   render();
 }
 
-/** 换看哪份文件：编辑区当前的那一份（没有当前文件时留在原来那份上，那份关掉了才清空）。 */
+/** 換看哪份檔案：編輯區當前的那一份（沒有當前檔案時留在原來那份上，那份關掉了才清空）。 */
 function follow(): void {
   const file = activeEditor()?.file;
   const next = file ? file.path : target && paneOwning(target) ? target : null;
@@ -205,7 +205,7 @@ function follow(): void {
     entries = undefined;
     load();
   } else if (file && file.hash !== targetHash && !unavailable) {
-    // 保存过（或换了基线）：网关可能刚存了一版，重拉。
+    // 儲存過（或換了基線）：閘道器可能剛存了一版，重拉。
     targetHash = file.hash;
     relist();
   } else if (visible()) {
@@ -224,7 +224,7 @@ function render(): void {
   side.body.replaceChildren(bookSection(), fileSection(file));
 }
 
-/** 一块的标题：点了收起 / 展开。 */
+/** 一塊的標題：點了收起 / 展開。 */
 function sectionHead(title: string, count: string, collapsed: boolean, toggle: () => void, tip = ''): HTMLElement {
   const head = el('button', 'vs-section-head');
   head.type = 'button';
@@ -242,13 +242,13 @@ function sectionHead(title: string, count: string, collapsed: boolean, toggle: (
   return head;
 }
 
-// ---------------------------------------------------------------- 全书改动
+// ---------------------------------------------------------------- 全書改動
 
 function bookSection(): HTMLElement {
   const box = el('section', 'vs-section vs-book');
   const count = book.diff ? String(book.diff.entries.length) : '';
   box.appendChild(
-    sectionHead('全书改动', count, book.collapsed, () => (book.collapsed = !book.collapsed), '跟一个存档点比，之后全书改过、新建、删掉的文件')
+    sectionHead('全書改動', count, book.collapsed, () => (book.collapsed = !book.collapsed), '跟一個存檔點比，之後全書改過、新建、刪掉的檔案')
   );
   if (book.collapsed) {
     return box;
@@ -258,12 +258,12 @@ function bookSection(): HTMLElement {
     return box;
   }
   if (!book.checkpoints) {
-    box.appendChild(el('p', 'vs-empty', '载入中…'));
+    box.appendChild(el('p', 'vs-empty', '載入中…'));
     return box;
   }
   if (book.checkpoints.length === 0) {
-    box.appendChild(el('p', 'vs-empty', '还没有存档点。存一个之后，这里列出它之后全书改过的文件。'));
-    const save = el('button', 'chip-btn vs-book-save', '现在存一个存档点');
+    box.appendChild(el('p', 'vs-empty', '還沒有存檔點。存一個之後，這裡列出它之後全書改過的檔案。'));
+    const save = el('button', 'chip-btn vs-book-save', '現在存一個存檔點');
     save.type = 'button';
     save.addEventListener('click', () => post({ type: 'createCheckpoint', note: '' }));
     box.appendChild(save);
@@ -275,11 +275,11 @@ function bookSection(): HTMLElement {
     return box;
   }
   if (!book.diff) {
-    box.appendChild(el('p', 'vs-empty', '比着呢…'));
+    box.appendChild(el('p', 'vs-empty', '比著呢…'));
     return box;
   }
   if (book.diff.entries.length === 0) {
-    box.appendChild(el('p', 'vs-empty', '跟这个存档点比，全书一字没动。'));
+    box.appendChild(el('p', 'vs-empty', '跟這個存檔點比，全書一字沒動。'));
     return box;
   }
   const cp = book.checkpoints.find((c) => c.id === book.base);
@@ -297,14 +297,14 @@ function bookSection(): HTMLElement {
   return box;
 }
 
-/** 「跟 [下拉] 比」：新的在前，◆ 手动、◇ 自动。 */
+/** 「跟 [下拉] 比」：新的在前，◆ 手動、◇ 自動。 */
 function baseRow(list: CheckpointView[]): HTMLElement {
   const row = el('label', 'vs-base');
   row.appendChild(el('span', undefined, '跟'));
   const select = el('select', 'vs-base-select');
   const now = Date.now();
   for (const cp of list) {
-    const text = `${cp.auto ? '◇' : '◆'} ${cp.note || (cp.auto ? '自动存档点' : '存档点')} · ${describeWhen(cp.time, now)}`;
+    const text = `${cp.auto ? '◇' : '◆'} ${cp.note || (cp.auto ? '自動存檔點' : '存檔點')} · ${describeWhen(cp.time, now)}`;
     const option = el('option', undefined, text);
     option.value = cp.id;
     option.selected = cp.id === book.base;
@@ -322,7 +322,7 @@ function baseRow(list: CheckpointView[]): HTMLElement {
   return row;
 }
 
-const STATUS_MARK: Record<CheckpointDiffEntry['status'], string> = { changed: '改', added: '新', deleted: '删' };
+const STATUS_MARK: Record<CheckpointDiffEntry['status'], string> = { changed: '改', added: '新', deleted: '刪' };
 
 function bookRow(entry: CheckpointDiffEntry, cp: CheckpointView | undefined, shown: DiffRequest | undefined): HTMLElement {
   const item = el('button', `vs-row vs-change vs-${entry.status}`);
@@ -347,16 +347,16 @@ function bookRow(entry: CheckpointDiffEntry, cp: CheckpointView | undefined, sho
 
 function bookMeta(entry: CheckpointDiffEntry): string {
   if (entry.status === 'added') {
-    return `之后新建的 · ${entry.wordsNow ?? 0} 字`;
+    return `之後新建的 · ${entry.wordsNow ?? 0} 字`;
   }
   if (entry.status === 'deleted') {
-    return `之后删掉了 · 原来 ${entry.wordsThen ?? 0} 字`;
+    return `之後刪掉了 · 原來 ${entry.wordsThen ?? 0} 字`;
   }
   const delta = (entry.wordsNow ?? 0) - (entry.wordsThen ?? 0);
-  return delta === 0 ? '字数没变' : delta > 0 ? `多了 ${delta} 字` : `少了 ${-delta} 字`;
+  return delta === 0 ? '字數沒變' : delta > 0 ? `多了 ${delta} 字` : `少了 ${-delta} 字`;
 }
 
-/** 拉存档点列表（列表到了再比）。藏着不拉。 */
+/** 拉存檔點列表（列表到了再比）。藏著不拉。 */
 function refreshBook(): void {
   clearTimeout(bookTimer);
   if (visible()) {
@@ -391,11 +391,11 @@ function onCheckpointDiff(msg: Extract<OutMessage, { type: 'checkpointDiff' }>):
     return;
   }
   book.diff = msg.diff;
-  book.error = msg.diff ? undefined : (msg.error ?? '没比出来。');
+  book.error = msg.diff ? undefined : (msg.error ?? '沒比出來。');
   render();
 }
 
-/** 存档点弹窗里「对比」一份：开在对比标签上。 */
+/** 存檔點彈窗裡「對比」一份：開在對比標籤上。 */
 function openCheckpointFile(cmd: CheckpointFileDiffCommand): void {
   const label = checkpointLabel(cmd.checkpoint);
   openFileDiff({
@@ -407,18 +407,18 @@ function openCheckpointFile(cmd: CheckpointFileDiffCommand): void {
   revealEditor();
 }
 
-// ---------------------------------------------------------------- 当前文件
+// ---------------------------------------------------------------- 當前檔案
 
 function fileSection(file: OpenFile | undefined): HTMLElement {
   const box = el('section', 'vs-section vs-timeline');
-  const head = sectionHead(file ? nameOf(file) : '当前文件', '', fileCollapsed, () => (fileCollapsed = !fileCollapsed), file?.path);
+  const head = sectionHead(file ? nameOf(file) : '當前檔案', '', fileCollapsed, () => (fileCollapsed = !fileCollapsed), file?.path);
   head.classList.add('vs-file');
   box.appendChild(head);
   if (fileCollapsed) {
     return box;
   }
   if (!file) {
-    box.appendChild(el('p', 'vs-empty', '没有打开的文件。在编辑区打开一份稿子，这里列出它存下的各版。'));
+    box.appendChild(el('p', 'vs-empty', '沒有開啟的檔案。在編輯區開啟一份稿子，這裡列出它存下的各版。'));
     return box;
   }
   if (unavailable) {
@@ -430,7 +430,7 @@ function fileSection(file: OpenFile | undefined): HTMLElement {
     box.appendChild(unsavedRow(file, shown));
   }
   if (!entries) {
-    box.appendChild(el('p', 'vs-empty', '载入中…'));
+    box.appendChild(el('p', 'vs-empty', '載入中…'));
     return box;
   }
   if (entries.length === 0) {
@@ -438,8 +438,8 @@ function fileSection(file: OpenFile | undefined): HTMLElement {
       el(
         'p',
         'vs-empty',
-        '还没有存下的版本。第一次覆盖保存这份文件时（编辑器里保存、重写、修稿、同步……），磁盘上的旧内容会先存成一版；' +
-          '也可以点上面的「＋」把磁盘上现在这一份先存下来。存档点里有它的话，也列在这里。'
+        '還沒有存下的版本。第一次覆蓋儲存這份檔案時（編輯器裡儲存、重寫、修稿、同步……），磁碟上的舊內容會先存成一版；' +
+          '也可以點上面的「＋」把磁碟上現在這一份先存下來。存檔點裡有它的話，也列在這裡。'
       )
     );
     return box;
@@ -454,9 +454,9 @@ function unsavedRow(file: OpenFile, shown: DiffRequest | undefined): HTMLElement
   const item = el('button', 'vs-row vs-unsaved');
   item.type = 'button';
   item.classList.toggle('selected', shown?.path === file.path && shown.left === 'disk');
-  item.appendChild(el('span', 'vs-when', '● 还没保存的改动'));
-  item.appendChild(el('span', 'vs-meta', describeDelta(countWords(file.draft), countWords(file.text)).replace('现在', '磁盘上')));
-  item.title = '磁盘上的（上次保存的）↔ 编辑器里的';
+  item.appendChild(el('span', 'vs-when', '● 還沒儲存的改動'));
+  item.appendChild(el('span', 'vs-meta', describeDelta(countWords(file.draft), countWords(file.text)).replace('現在', '磁碟上')));
+  item.title = '磁碟上的（上次儲存的）↔ 編輯器裡的';
   item.addEventListener('click', () => {
     openDiff({ path: file.path, name: nameOf(file), left: 'disk', right: 'now' });
     revealEditor();
@@ -477,11 +477,11 @@ function row(file: OpenFile, entry: VersionView, index: number, current: number,
   item.appendChild(when);
   item.appendChild(el('span', 'vs-meta', `${entry.words} 字 · ${describeDelta(entry.words, current)}`));
   if (entry.checkpoint) {
-    item.appendChild(el('span', 'vs-note', entry.checkpoint.note || (entry.checkpoint.auto ? '自动存档点' : '存档点')));
+    item.appendChild(el('span', 'vs-note', entry.checkpoint.note || (entry.checkpoint.auto ? '自動存檔點' : '存檔點')));
   }
   item.title = entry.checkpoint
-    ? `${versionLabel(entry, now)}里的这一份`
-    : `这一版在 ${new Date(entry.time).toLocaleString()} 被覆盖掉之前在磁盘上`;
+    ? `${versionLabel(entry, now)}裡的這一份`
+    : `這一版在 ${new Date(entry.time).toLocaleString()} 被覆蓋掉之前在磁碟上`;
   const ref = (): VersionRef => ({ id: entry.id, label: versionLabel(entry, Date.now()) });
   item.addEventListener('click', () => {
     openDiff({ path: file.path, name: nameOf(file), left: ref(), right: 'now' });
@@ -495,15 +495,15 @@ function rowMenu(file: OpenFile, index: number, ref: () => VersionRef): MenuItem
   const newer = index > 0 ? entries?.[index - 1] : undefined;
   return [
     {
-      label: '跟现在比',
+      label: '跟現在比',
       run: () => {
         openDiff({ path: file.path, name: nameOf(file), left: ref(), right: 'now' });
         revealEditor();
       },
     },
     {
-      // 最新的那一版，后面一版就是现在。
-      label: '跟后一版比（那一次改了什么）',
+      // 最新的那一版，後面一版就是現在。
+      label: '跟後一版比（那一次改了什麼）',
       run: () => {
         const right = newer ? { id: newer.id, label: versionLabel(newer) } : ('now' as const);
         openDiff({ path: file.path, name: nameOf(file), left: ref(), right });
@@ -511,11 +511,11 @@ function rowMenu(file: OpenFile, index: number, ref: () => VersionRef): MenuItem
       },
     },
     { sep: true },
-    { label: '恢复整份到编辑区', run: () => void restoreVersion(file.path, ref()) },
+    { label: '恢復整份到編輯區', run: () => void restoreVersion(file.path, ref()) },
   ];
 }
 
-/** 保存之后重拉列表：离上一次不到一秒就挪到一秒之后（只发最后那一次）。 */
+/** 儲存之後重拉列表：離上一次不到一秒就挪到一秒之後（只發最後那一次）。 */
 const RELIST_GAP_MS = 1000;
 let relistLast = 0;
 let relistTimer: ReturnType<typeof setTimeout> | undefined;
@@ -549,9 +549,9 @@ function onVersions(msg: VersionsMessage): void {
   render();
 }
 
-// ---------------------------------------------------------------- 工具栏「历史」
+// ---------------------------------------------------------------- 工具欄「歷史」
 
-/** 切到「版本」页看这一块的那份文件（窄屏上顺手把编辑区翻下去）。 */
+/** 切到「版本」頁看這一塊的那份檔案（窄屏上順手把編輯區翻下去）。 */
 function showFor(pane: Pane | undefined): void {
   const file = pane?.activeFile();
   if (file && file.path !== target) {
@@ -563,7 +563,7 @@ function showFor(pane: Pane | undefined): void {
   load();
 }
 
-/** 每块编辑区一颗，第一次重画时插到「保存」前面。 */
+/** 每塊編輯區一顆，第一次重畫時插到「儲存」前面。 */
 function syncButton(pane: Pane): void {
   let btn = buttons.get(pane);
   if (!btn) {
@@ -571,7 +571,7 @@ function syncButton(pane: Pane): void {
     if (!toolbar) {
       return;
     }
-    btn = el('button', 'chip-btn ed-versions-btn', '历史');
+    btn = el('button', 'chip-btn ed-versions-btn', '歷史');
     btn.type = 'button';
     btn.addEventListener('click', () => showFor(pane));
     toolbar.insertBefore(btn, toolbar.querySelector('button.primary'));
@@ -579,10 +579,10 @@ function syncButton(pane: Pane): void {
   }
   const reason = unavailableReason(pane.activeFile());
   btn.disabled = !!reason;
-  btn.title = reason ?? '历史版本：在侧栏「版本」页列出这份文件存下的各版，点一行在编辑区对比';
+  btn.title = reason ?? '歷史版本：在側欄「版本」頁列出這份檔案存下的各版，點一行在編輯區對比';
 }
 
-// ---------------------------------------------------------------- 装
+// ---------------------------------------------------------------- 裝
 
 export function installVersions(postMessage: (msg: InMessage) => void): void {
   post = postMessage;
@@ -606,7 +606,7 @@ export function installVersions(postMessage: (msg: InMessage) => void): void {
       load();
       refreshBook();
     });
-    // 切到这一页（活动栏、工具栏「历史」）：拉一次——藏着时换过文件、保存过，存档点也可能刚存过。
+    // 切到這一頁（活動欄、工具欄「歷史」）：拉一次——藏著時換過檔案、儲存過，存檔點也可能剛存過。
     new MutationObserver(() => {
       if (visible()) {
         load();
@@ -622,7 +622,7 @@ export function installVersions(postMessage: (msg: InMessage) => void): void {
       follow();
       return;
     }
-    // 打字：「还没保存的改动」那一行有没有、「比现在多 / 少几个字」跟着变，攒一下再画。
+    // 打字：「還沒儲存的改動」那一行有沒有、「比現在多 / 少幾個字」跟著變，攢一下再畫。
     if (ev.file.path === target && visible()) {
       clearTimeout(renderTimer);
       renderTimer = setTimeout(render, 300);
@@ -642,7 +642,7 @@ export function installVersions(postMessage: (msg: InMessage) => void): void {
     } else if (msg.type === 'checkpointDiff') {
       onCheckpointDiff(msg);
     } else if (msg.type === 'init' || msg.type === 'state') {
-      // 磁盘上可能变过（存盘、批量动作、退回）：显示着就停一下再比一次全书。
+      // 磁碟上可能變過（存檔、批次動作、退回）：顯示著就停一下再比一次全書。
       if (visible()) {
         clearTimeout(bookTimer);
         bookTimer = setTimeout(refreshBook, BOOK_REFRESH_MS);
@@ -658,7 +658,7 @@ export function installVersions(postMessage: (msg: InMessage) => void): void {
     }
   });
 
-  // 「文件 → 自动保存」切了：底下那句说明跟着变。
+  // 「檔案 → 自動儲存」切了：底下那句說明跟著變。
   onPrefsChange(() => {
     if (visible()) {
       render();
@@ -678,7 +678,7 @@ export function installVersions(postMessage: (msg: InMessage) => void): void {
     }
   });
 
-  // 存档点弹窗里的「对比」：只有这里画得了对比标签（插件形态没有 editor.js，没人回答，按钮就不给）。
+  // 存檔點彈窗裡的「對比」：只有這裡畫得了對比標籤（外掛形態沒有 editor.js，沒人回答，按鈕就不給）。
   window.addEventListener('nf-version-diff-query', (e) => {
     e.detail.available = true;
   });

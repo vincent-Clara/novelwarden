@@ -1,14 +1,14 @@
 /**
- * webview API 的取用与消息收发。
+ * webview API 的取用與訊息收發。
  *
- * 四个产物各自打包，因此各自调用一次 `acquireVsCodeApi()`——这与改造前
- * 逐个文件调用的行为完全一致。VS Code 的 webview 里这个函数只允许调一次，
- * 所以 editor / explorer 那两个**必须**在确认自己那块 DOM 存在（即独立版）
- * 之后才走到这里；独立版的 bridge.js 每次调用都返回同一个对象，无此限制。
+ * 四個產物各自打包，因此各自呼叫一次 `acquireVsCodeApi()`——這與改造前
+ * 逐個檔案呼叫的行為完全一致。VS Code 的 webview 裡這個函式只允許調一次，
+ * 所以 editor / explorer 那兩個**必須**在確認自己那塊 DOM 存在（即獨立版）
+ * 之後才走到這裡；獨立版的 bridge.js 每次呼叫都返回同一個物件，無此限制。
  */
 import type { InMessage, OutMessage } from './protocol';
 
-/** webview 宿主给的那点 API。独立版由 bridge.js 伪装出同样的形状。 */
+/** webview 宿主給的那點 API。獨立版由 bridge.js 偽裝出同樣的形狀。 */
 export interface WebviewApi<State> {
   postMessage(message: InMessage): void;
   getState(): State | undefined;
@@ -19,7 +19,7 @@ declare global {
   function acquireVsCodeApi(): WebviewApi<unknown>;
 
   interface Window {
-    /** bridge.js 在独立版里装上的伪装实现；webview 里由宿主注入。 */
+    /** bridge.js 在獨立版裡裝上的偽裝實現；webview 裡由宿主注入。 */
     acquireVsCodeApi?: () => WebviewApi<unknown>;
   }
 }
@@ -27,19 +27,19 @@ declare global {
 /**
  * 取一次 webview API。
  *
- * 类型参数是 `getState`/`setState` 里那份 UI 状态的形状——只有 view 用得上
- * （输入框草稿），其余两块不带参数即表示不碰它。宿主那边这块存储本来就是
- * 无类型的 JSON，断言只在这一处发生，调用方拿到的是确定的形状。
+ * 型別引數是 `getState`/`setState` 裡那份 UI 狀態的形狀——只有 view 用得上
+ * （輸入框草稿），其餘兩塊不帶引數即表示不碰它。宿主那邊這塊儲存本來就是
+ * 無型別的 JSON，斷言只在這一處發生，呼叫方拿到的是確定的形狀。
  */
 export function acquireApi<State = never>(): WebviewApi<State> {
   return acquireVsCodeApi() as WebviewApi<State>;
 }
 
 /**
- * 监听后端推来的消息。
+ * 監聽後端推來的訊息。
  *
- * 三个前端产物各自挂一份监听、各自认自己关心的 `type`，互不干扰——
- * 这是改造前就有的格局（view / editor / explorer 完全解耦），保持不变。
+ * 三個前端產物各自掛一份監聽、各自認自己關心的 `type`，互不干擾——
+ * 這是改造前就有的格局（view / editor / explorer 完全解耦），保持不變。
  */
 export function onMessage(handler: (msg: OutMessage) => void): void {
   window.addEventListener('message', (event: MessageEvent<OutMessage>) => {

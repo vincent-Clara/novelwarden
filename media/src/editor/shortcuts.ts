@@ -1,225 +1,225 @@
 /**
- * 快捷键的**唯一一张表**：每个键做什么、归哪一组、在哪儿管用。纯数据加几个纯函数，零 DOM、零副作用——
- * 标题栏菜单（view.js）也打包它：菜单上那一格 `kbd` 的字、「帮助 → 快捷键一览」面板（`shortcutsPanel.ts`）、
- * 各处提示里写的键，都从这里取（`shortcutLabel` / `formatKeys`），不各写一份。
+ * 快捷鍵的**唯一一張表**：每個鍵做什麼、歸哪一組、在哪兒管用。純資料加幾個純函式，零 DOM、零副作用——
+ * 標題欄選單（view.js）也打包它：選單上那一格 `kbd` 的字、「幫助 → 快捷鍵一覽」面板（`shortcutsPanel.ts`）、
+ * 各處提示裡寫的鍵，都從這裡取（`shortcutLabel` / `formatKeys`），不各寫一份。
  *
- * **新增快捷键必须登记在这里**。各模块的按键处理照旧自己判断按键（`find.ts`、`lines.ts`……），但
- * `tests/dom/standalone/shortcuts.test.js` 守着两头：表里每一条都真的有人处理（照它的生效范围摆好场面按一下，
- * 得被接走），反过来在正文里、页面上、对话输入框里把几百种按法挨个按一遍，被接走的每一下都得在表里查得到。
- * README「内置编辑器」那张快捷键表也由测试对着这张表核（`tests/unit/editor/shortcuts.test.js`）。
+ * **新增快捷鍵必須登記在這裡**。各模組的按鍵處理照舊自己判斷按鍵（`find.ts`、`lines.ts`……），但
+ * `tests/dom/standalone/shortcuts.test.js` 守著兩頭：表裡每一條都真的有人處理（照它的生效範圍擺好場面按一下，
+ * 得被接走），反過來在正文裡、頁面上、對話輸入框裡把幾百種按法挨個按一遍，被接走的每一下都得在表裡查得到。
+ * README「內建編輯器」那張快捷鍵表也由測試對著這張表核（`tests/unit/editor/shortcuts.test.js`）。
  *
- * ## 键怎么写
+ * ## 鍵怎麼寫
  *
- * `Mod+Shift+F` 这样，最后一段是键，前面是修饰键：
- * - `Mod`：Windows / Linux 上的 Ctrl、Mac 上的 ⌘。编辑器里认它的地方一律是 `e.ctrlKey || e.metaKey`。
- * - `Ctrl`：两边都是 Control 那颗（只有「重做」的 `Ctrl+Y` 这样写——Mac 上 ⌘Y 不是重做）。
+ * `Mod+Shift+F` 這樣，最後一段是鍵，前面是修飾鍵：
+ * - `Mod`：Windows / Linux 上的 Ctrl、Mac 上的 ⌘。編輯器裡認它的地方一律是 `e.ctrlKey || e.metaKey`。
+ * - `Ctrl`：兩邊都是 Control 那顆（只有「重做」的 `Ctrl+Y` 這樣寫——Mac 上 ⌘Y 不是重做）。
  * - `Alt`（Mac 上 ⌥）、`Shift`。
- * - 键：字母、数字、标点照写；`Up` / `Down` / `Left` / `Right`、`Enter`、`Tab`、`Escape`、`PageUp` / `PageDown`、
- *   `F1`…`F12`，加号写 `Plus`。
+ * - 鍵：字母、數字、標點照寫；`Up` / `Down` / `Left` / `Right`、`Enter`、`Tab`、`Escape`、`PageUp` / `PageDown`、
+ *   `F1`…`F12`，加號寫 `Plus`。
  *
- * 显示按平台：Windows / Linux 写 `Ctrl+Shift+F`，Mac 写 `⇧⌘F`（修饰键顺序 ⌃⌥⇧⌘，与系统菜单一样）。
+ * 顯示按平臺：Windows / Linux 寫 `Ctrl+Shift+F`，Mac 寫 `⇧⌘F`（修飾鍵順序 ⌃⌥⇧⌘，與系統選單一樣）。
  */
 
-/** 分组，按面板与 README 里从上到下的顺序。 */
-export const SHORTCUT_GROUPS = ['文件与标签', '编辑', '段落', '查找替换', '名词补全', '视图', '面板与帮助', '文件页'] as const;
+/** 分組，按面板與 README 裡從上到下的順序。 */
+export const SHORTCUT_GROUPS = ['檔案與標籤', '編輯', '段落', '查詢替換', '名詞補全', '檢視', '面板與幫助', '檔案頁'] as const;
 export type ShortcutGroup = (typeof SHORTCUT_GROUPS)[number];
 
 /**
- * 在哪儿管用：
- * - `global`：哪里都行，焦点在左边的对话输入框里也认。
- * - `workbench`：编辑区里或页面上——焦点在对话输入框这类别的输入框里时不拦，留给浏览器。
- * - `editor`：光标在编辑区的正文里（`api.ts` 的 `addKeyHandler`，组字中途不收）。
- * - `context`：某个面板、浮层开着时，或某个页面上（`where` 写是哪儿）。
+ * 在哪兒管用：
+ * - `global`：哪裡都行，焦點在左邊的對話輸入框裡也認。
+ * - `workbench`：編輯區裡或頁面上——焦點在對話輸入框這類別的輸入框裡時不攔，留給瀏覽器。
+ * - `editor`：游標在編輯區的正文裡（`api.ts` 的 `addKeyHandler`，組字中途不收）。
+ * - `context`：某個面板、浮層開著時，或某個頁面上（`where` 寫是哪兒）。
  */
 export type ShortcutScope = 'global' | 'workbench' | 'editor' | 'context';
 
 export interface Shortcut {
   id: string;
-  /** 键（写法见文件头）。几种按法都算的列在一起，面板上用「 / 」隔开，菜单上只写第一种（Mac 上优先不用 Control 的那一种）。 */
+  /** 鍵（寫法見檔案頭）。幾種按法都算的列在一起，面板上用「 / 」隔開，選單上只寫第一種（Mac 上優先不用 Control 的那一種）。 */
   keys: readonly string[];
-  /** 也认、但不必写出来的按法（例如字号放大的 `Ctrl++`、小键盘的加号）。 */
+  /** 也認、但不必寫出來的按法（例如字號放大的 `Ctrl++`、小鍵盤的加號）。 */
   also?: readonly string[];
-  /** 做什么，一句话。 */
+  /** 做什麼，一句話。 */
   label: string;
   group: ShortcutGroup;
   scope: ShortcutScope;
-  /** 生效范围的说法。`context` 必须给；别的缺省按 `scope` 说（`scopeText`）。 */
+  /** 生效範圍的說法。`context` 必須給；別的預設按 `scope` 說（`scopeText`）。 */
   where?: string;
-  /** 补一句：浏览器拦不住、只对哪些文件…… */
+  /** 補一句：瀏覽器攔不住、只對哪些檔案…… */
   note?: string;
-  /** 标题栏菜单里写着这个键的那一项（`文件 › 保存`）。测试按它核对菜单上的字。 */
+  /** 標題欄選單裡寫著這個鍵的那一項（`檔案 › 儲存`）。測試按它核對選單上的字。 */
   menu?: string;
-  /** 浏览器自己做的（剪切、复制、粘贴、全选）：列出来是为了菜单与一览，编辑器不拦。 */
+  /** 瀏覽器自己做的（剪下、複製、貼上、全選）：列出來是為了選單與一覽，編輯器不攔。 */
   native?: boolean;
 }
 
-/** 浏览器拦不住、在浏览器里会被拿去干别的的说法（⚑ 键没换，桌面版里照样管用）。 */
-const BROWSER_TAKES = '浏览器多半拦不住';
-/** 剪切、复制、粘贴、全选是浏览器自己的，哪个输入框里都一样。 */
-const NATIVE_WHERE = '能打字的地方（浏览器自己的）';
+/** 瀏覽器攔不住、在瀏覽器裡會被拿去幹別的的說法（⚑ 鍵沒換，桌面版裡照樣管用）。 */
+const BROWSER_TAKES = '瀏覽器多半攔不住';
+/** 剪下、複製、貼上、全選是瀏覽器自己的，哪個輸入框裡都一樣。 */
+const NATIVE_WHERE = '能打字的地方（瀏覽器自己的）';
 
 export const SHORTCUTS = [
-  // ---------------------------------------------------------------- 文件与标签
-  { id: 'quickOpen', keys: ['Mod+P'], label: '转到一章或一个文件（「转到…」）', group: '文件与标签', scope: 'global', menu: '文件 › 转到…' },
-  { id: 'save', keys: ['Mod+S'], label: '保存当前这一份', group: '文件与标签', scope: 'global', menu: '文件 › 保存' },
+  // ---------------------------------------------------------------- 檔案與標籤
+  { id: 'quickOpen', keys: ['Mod+P'], label: '轉到一章或一個檔案（「轉到…」）', group: '檔案與標籤', scope: 'global', menu: '檔案 › 轉到…' },
+  { id: 'save', keys: ['Mod+S'], label: '儲存當前這一份', group: '檔案與標籤', scope: 'global', menu: '檔案 › 儲存' },
   {
     id: 'closeTab',
     keys: ['Mod+W'],
-    label: '关掉当前标签（有没保存的修改先问）',
-    group: '文件与标签',
+    label: '關掉當前標籤（有沒儲存的修改先問）',
+    group: '檔案與標籤',
     scope: 'global',
-    note: `${BROWSER_TAKES}：在浏览器里会关掉整个网页（有没保存的内容时浏览器先问一句）；桌面版里管用`,
+    note: `${BROWSER_TAKES}：在瀏覽器裡會關掉整個網頁（有沒儲存的內容時瀏覽器先問一句）；桌面版裡管用`,
   },
   {
     id: 'newFile',
     keys: ['Mod+N'],
-    label: '新建文件',
-    group: '文件与标签',
+    label: '新建檔案',
+    group: '檔案與標籤',
     scope: 'global',
-    note: `${BROWSER_TAKES}：在浏览器里会开一个新窗口；桌面版里管用`,
-    menu: '文件 › 新建文件',
+    note: `${BROWSER_TAKES}：在瀏覽器裡會開一個新視窗；桌面版裡管用`,
+    menu: '檔案 › 新建檔案',
   },
-  { id: 'openFolder', keys: ['Mod+O'], label: '打开文件夹…', group: '文件与标签', scope: 'global', menu: '文件 › 打开文件夹…' },
-  { id: 'prevChapter', keys: ['Alt+PageUp'], label: '上一章', group: '文件与标签', scope: 'workbench', note: '正开着某一章的正文或细纲时' },
-  { id: 'nextChapter', keys: ['Alt+PageDown'], label: '下一章', group: '文件与标签', scope: 'workbench', note: '正开着某一章的正文或细纲时' },
+  { id: 'openFolder', keys: ['Mod+O'], label: '開啟資料夾…', group: '檔案與標籤', scope: 'global', menu: '檔案 › 開啟資料夾…' },
+  { id: 'prevChapter', keys: ['Alt+PageUp'], label: '上一章', group: '檔案與標籤', scope: 'workbench', note: '正開著某一章的正文或細綱時' },
+  { id: 'nextChapter', keys: ['Alt+PageDown'], label: '下一章', group: '檔案與標籤', scope: 'workbench', note: '正開著某一章的正文或細綱時' },
 
-  // ---------------------------------------------------------------- 编辑
-  { id: 'undo', keys: ['Mod+Z'], label: '撤销（每个文件各记各的）', group: '编辑', scope: 'editor', menu: '编辑 › 撤销' },
-  { id: 'redo', keys: ['Ctrl+Y', 'Mod+Shift+Z'], label: '重做', group: '编辑', scope: 'editor', menu: '编辑 › 重做' },
-  { id: 'cut', keys: ['Mod+X'], label: '剪切', group: '编辑', scope: 'editor', where: NATIVE_WHERE, native: true, menu: '编辑 › 剪切' },
-  { id: 'copy', keys: ['Mod+C'], label: '复制', group: '编辑', scope: 'editor', where: NATIVE_WHERE, native: true, menu: '编辑 › 复制' },
-  { id: 'paste', keys: ['Mod+V'], label: '粘贴', group: '编辑', scope: 'editor', where: NATIVE_WHERE, native: true, menu: '编辑 › 粘贴' },
-  { id: 'selectAll', keys: ['Mod+A'], label: '全选', group: '编辑', scope: 'editor', where: NATIVE_WHERE, native: true, menu: '编辑 › 全选' },
+  // ---------------------------------------------------------------- 編輯
+  { id: 'undo', keys: ['Mod+Z'], label: '撤銷（每個檔案各記各的）', group: '編輯', scope: 'editor', menu: '編輯 › 撤銷' },
+  { id: 'redo', keys: ['Ctrl+Y', 'Mod+Shift+Z'], label: '重做', group: '編輯', scope: 'editor', menu: '編輯 › 重做' },
+  { id: 'cut', keys: ['Mod+X'], label: '剪下', group: '編輯', scope: 'editor', where: NATIVE_WHERE, native: true, menu: '編輯 › 剪下' },
+  { id: 'copy', keys: ['Mod+C'], label: '複製', group: '編輯', scope: 'editor', where: NATIVE_WHERE, native: true, menu: '編輯 › 複製' },
+  { id: 'paste', keys: ['Mod+V'], label: '貼上', group: '編輯', scope: 'editor', where: NATIVE_WHERE, native: true, menu: '編輯 › 貼上' },
+  { id: 'selectAll', keys: ['Mod+A'], label: '全選', group: '編輯', scope: 'editor', where: NATIVE_WHERE, native: true, menu: '編輯 › 全選' },
   {
     id: 'indent',
     keys: ['Tab'],
-    label: '缩进；选中几行时每行行首加一级',
-    group: '编辑',
+    label: '縮排；選中幾行時每行行首加一級',
+    group: '編輯',
     scope: 'editor',
-    note: '正文一级是两个全角空格，其余文件两个半角空格',
+    note: '正文一級是兩個全形空格，其餘檔案兩個半形空格',
   },
-  { id: 'outdent', keys: ['Shift+Tab'], label: '去掉一级缩进', group: '编辑', scope: 'editor' },
+  { id: 'outdent', keys: ['Shift+Tab'], label: '去掉一級縮排', group: '編輯', scope: 'editor' },
   {
     id: 'newParagraph',
     keys: ['Enter'],
     label: '另起一段',
-    group: '编辑',
+    group: '編輯',
     scope: 'editor',
-    note: '正文按这本书的分段格式（空一行或段首缩进）；Markdown 列表接着往下写',
+    note: '正文按這本書的分段格式（空一行或段首縮排）；Markdown 列表接著往下寫',
   },
-  { id: 'lineBreak', keys: ['Shift+Enter'], label: '只换行、不缩进', group: '编辑', scope: 'editor' },
+  { id: 'lineBreak', keys: ['Shift+Enter'], label: '只換行、不縮排', group: '編輯', scope: 'editor' },
 
   // ---------------------------------------------------------------- 段落
-  { id: 'moveParagraph', keys: ['Alt+Up', 'Alt+Down'], label: '这一段与上 / 下一段对调', group: '段落', scope: 'editor' },
-  { id: 'copyParagraph', keys: ['Shift+Alt+Down', 'Shift+Alt+Up'], label: '把这一段复制一份放在下面 / 上面', group: '段落', scope: 'editor' },
-  { id: 'deleteParagraph', keys: ['Mod+Shift+K'], label: '删掉这一段', group: '段落', scope: 'editor' },
-  { id: 'paragraphBelow', keys: ['Mod+Enter'], label: '不管光标在哪，在这一段下面另起一段', group: '段落', scope: 'editor' },
+  { id: 'moveParagraph', keys: ['Alt+Up', 'Alt+Down'], label: '這一段與上 / 下一段對調', group: '段落', scope: 'editor' },
+  { id: 'copyParagraph', keys: ['Shift+Alt+Down', 'Shift+Alt+Up'], label: '把這一段複製一份放在下面 / 上面', group: '段落', scope: 'editor' },
+  { id: 'deleteParagraph', keys: ['Mod+Shift+K'], label: '刪掉這一段', group: '段落', scope: 'editor' },
+  { id: 'paragraphBelow', keys: ['Mod+Enter'], label: '不管游標在哪，在這一段下面另起一段', group: '段落', scope: 'editor' },
 
-  // ---------------------------------------------------------------- 查找替换
+  // ---------------------------------------------------------------- 查詢替換
   {
     id: 'find',
     keys: ['Mod+F'],
-    label: '查找（这一份文件）',
-    group: '查找替换',
+    label: '查詢（這一份檔案）',
+    group: '查詢替換',
     scope: 'workbench',
-    note: '焦点在左边对话输入框里时还是浏览器自己的查找',
-    menu: '编辑 › 查找',
+    note: '焦點在左邊對話輸入框裡時還是瀏覽器自己的查詢',
+    menu: '編輯 › 查詢',
   },
-  { id: 'replace', keys: ['Mod+H'], label: '替换（这一份文件）', group: '查找替换', scope: 'workbench', menu: '编辑 › 替换' },
-  { id: 'findNext', keys: ['F3'], label: '下一处', group: '查找替换', scope: 'workbench' },
-  { id: 'findPrev', keys: ['Shift+F3'], label: '上一处', group: '查找替换', scope: 'workbench' },
-  { id: 'findBoxNext', keys: ['Enter'], label: '下一处', group: '查找替换', scope: 'context', where: '查找条的查找框里' },
-  { id: 'findBoxPrev', keys: ['Shift+Enter'], label: '上一处', group: '查找替换', scope: 'context', where: '查找条的查找框里' },
-  { id: 'replaceBoxEnter', keys: ['Enter'], label: '替换当前这一处、跳到下一处', group: '查找替换', scope: 'context', where: '查找条的替换框里' },
-  { id: 'bookFind', keys: ['Mod+Shift+F'], label: '全书查找', group: '查找替换', scope: 'global', menu: '编辑 › 全书查找替换…' },
-  { id: 'bookReplace', keys: ['Mod+Shift+H'], label: '全书替换（光标进替换框）', group: '查找替换', scope: 'global' },
+  { id: 'replace', keys: ['Mod+H'], label: '替換（這一份檔案）', group: '查詢替換', scope: 'workbench', menu: '編輯 › 替換' },
+  { id: 'findNext', keys: ['F3'], label: '下一處', group: '查詢替換', scope: 'workbench' },
+  { id: 'findPrev', keys: ['Shift+F3'], label: '上一處', group: '查詢替換', scope: 'workbench' },
+  { id: 'findBoxNext', keys: ['Enter'], label: '下一處', group: '查詢替換', scope: 'context', where: '查詢條的查詢框裡' },
+  { id: 'findBoxPrev', keys: ['Shift+Enter'], label: '上一處', group: '查詢替換', scope: 'context', where: '查詢條的查詢框裡' },
+  { id: 'replaceBoxEnter', keys: ['Enter'], label: '替換當前這一處、跳到下一處', group: '查詢替換', scope: 'context', where: '查詢條的替換框裡' },
+  { id: 'bookFind', keys: ['Mod+Shift+F'], label: '全書查詢', group: '查詢替換', scope: 'global', menu: '編輯 › 全書查詢替換…' },
+  { id: 'bookReplace', keys: ['Mod+Shift+H'], label: '全書替換（游標進替換框）', group: '查詢替換', scope: 'global' },
 
-  // ---------------------------------------------------------------- 名词补全
+  // ---------------------------------------------------------------- 名詞補全
   {
     id: 'names',
     keys: ['Alt+/'],
-    label: '名词补全：列出角色名、地名这些名字',
-    group: '名词补全',
+    label: '名詞補全：列出角色名、地名這些名字',
+    group: '名詞補全',
     scope: 'editor',
-    note: '只在正文、草稿、细纲、角色卡、设定、情节大纲、叙事线里',
-    menu: '视图 › 名词补全',
+    note: '只在正文、草稿、細綱、角色卡、設定、情節大綱、敘事線裡',
+    menu: '檢視 › 名詞補全',
   },
-  { id: 'namesPick', keys: ['Up', 'Down'], label: '选上一个 / 下一个名字', group: '名词补全', scope: 'context', where: '补全框开着时' },
+  { id: 'namesPick', keys: ['Up', 'Down'], label: '選上一個 / 下一個名字', group: '名詞補全', scope: 'context', where: '補全框開著時' },
   {
     id: 'namesAccept',
     keys: ['Enter', 'Tab'],
-    label: '插入选中的名字',
-    group: '名词补全',
+    label: '插入選中的名字',
+    group: '名詞補全',
     scope: 'context',
-    where: '补全框开着时',
-    note: '边打边弹出来的框只认 Tab，回车照常换段',
+    where: '補全框開著時',
+    note: '邊打邊彈出來的框只認 Tab，回車照常換段',
   },
 
-  // ---------------------------------------------------------------- 视图
+  // ---------------------------------------------------------------- 檢視
   {
     id: 'preview',
     keys: ['Mod+Shift+V'],
-    label: '预览 / 编辑切换',
-    group: '视图',
+    label: '預覽 / 編輯切換',
+    group: '檢視',
     scope: 'workbench',
-    note: '只对 Markdown（.md）文件；别的文件照常是粘贴',
+    note: '只對 Markdown（.md）檔案；別的檔案照常是貼上',
   },
   {
     id: 'zoomIn',
     keys: ['Mod+='],
     also: ['Mod+Plus'],
-    label: '正文字号放大',
-    group: '视图',
+    label: '正文字號放大',
+    group: '檢視',
     scope: 'editor',
-    note: '光标不在正文里时是浏览器自己的整页缩放',
-    menu: '视图 › 放大字号',
+    note: '游標不在正文裡時是瀏覽器自己的整頁縮放',
+    menu: '檢視 › 放大字號',
   },
-  { id: 'zoomOut', keys: ['Mod+-'], label: '正文字号缩小', group: '视图', scope: 'editor', menu: '视图 › 缩小字号' },
-  { id: 'zoomReset', keys: ['Mod+0'], label: '正文字号还原', group: '视图', scope: 'editor', menu: '视图 › 还原字号' },
-  { id: 'focusMode', keys: ['F8'], label: '专注模式：进去 / 出来', group: '视图', scope: 'global', menu: '视图 › 专注模式' },
+  { id: 'zoomOut', keys: ['Mod+-'], label: '正文字號縮小', group: '檢視', scope: 'editor', menu: '檢視 › 縮小字號' },
+  { id: 'zoomReset', keys: ['Mod+0'], label: '正文字號還原', group: '檢視', scope: 'editor', menu: '檢視 › 還原字號' },
+  { id: 'focusMode', keys: ['F8'], label: '專注模式：進去 / 出來', group: '檢視', scope: 'global', menu: '檢視 › 專注模式' },
   {
     id: 'focusExit',
     keys: ['Escape'],
-    label: '退出专注模式',
-    group: '视图',
+    label: '退出專注模式',
+    group: '檢視',
     scope: 'context',
-    where: '专注模式里',
-    note: '查找条、面板、菜单开着时先收它们',
+    where: '專注模式裡',
+    note: '查詢條、面板、選單開著時先收它們',
   },
 
-  // ---------------------------------------------------------------- 面板与帮助
-  { id: 'shortcuts', keys: ['Mod+/'], label: '快捷键一览（就是这一张）', group: '面板与帮助', scope: 'global', menu: '帮助 › 快捷键一览' },
-  { id: 'quickOpenPick', keys: ['Up', 'Down'], label: '选上一条 / 下一条', group: '面板与帮助', scope: 'context', where: '「转到…」面板里' },
-  { id: 'quickOpenOpen', keys: ['Enter'], label: '打开选中的那一条', group: '面板与帮助', scope: 'context', where: '「转到…」面板里' },
-  { id: 'quickOpenBeside', keys: ['Mod+Enter'], label: '开在右边第二块编辑区', group: '面板与帮助', scope: 'context', where: '「转到…」面板里' },
+  // ---------------------------------------------------------------- 面板與幫助
+  { id: 'shortcuts', keys: ['Mod+/'], label: '快捷鍵一覽（就是這一張）', group: '面板與幫助', scope: 'global', menu: '幫助 › 快捷鍵一覽' },
+  { id: 'quickOpenPick', keys: ['Up', 'Down'], label: '選上一條 / 下一條', group: '面板與幫助', scope: 'context', where: '「轉到…」面板裡' },
+  { id: 'quickOpenOpen', keys: ['Enter'], label: '開啟選中的那一條', group: '面板與幫助', scope: 'context', where: '「轉到…」面板裡' },
+  { id: 'quickOpenBeside', keys: ['Mod+Enter'], label: '開在右邊第二塊編輯區', group: '面板與幫助', scope: 'context', where: '「轉到…」面板裡' },
   {
     id: 'closePanel',
     keys: ['Escape'],
-    label: '收起面板、弹窗或菜单',
-    group: '面板与帮助',
+    label: '收起面板、彈窗或選單',
+    group: '面板與幫助',
     scope: 'context',
-    where: '面板、弹窗、菜单开着时',
-    note: '查找条、全书查找替换、补全框、码字统计、体检、外观面板、对话框都是',
+    where: '面板、彈窗、選單開著時',
+    note: '查詢條、全書查詢替換、補全框、碼字統計、體檢、外觀面板、對話方塊都是',
   },
 
-  // ---------------------------------------------------------------- 文件页
-  { id: 'filesCopy', keys: ['Mod+C'], label: '复制选中的文件或文件夹', group: '文件页', scope: 'context', where: '「文件」页的树上选中一行时' },
-  { id: 'filesCut', keys: ['Mod+X'], label: '剪切选中的文件或文件夹', group: '文件页', scope: 'context', where: '「文件」页的树上选中一行时' },
-  { id: 'filesPaste', keys: ['Mod+V'], label: '粘贴到选中的文件夹', group: '文件页', scope: 'context', where: '「文件」页的树上选中一行时' },
+  // ---------------------------------------------------------------- 檔案頁
+  { id: 'filesCopy', keys: ['Mod+C'], label: '複製選中的檔案或資料夾', group: '檔案頁', scope: 'context', where: '「檔案」頁的樹上選中一行時' },
+  { id: 'filesCut', keys: ['Mod+X'], label: '剪下選中的檔案或資料夾', group: '檔案頁', scope: 'context', where: '「檔案」頁的樹上選中一行時' },
+  { id: 'filesPaste', keys: ['Mod+V'], label: '貼上到選中的資料夾', group: '檔案頁', scope: 'context', where: '「檔案」頁的樹上選中一行時' },
 ] as const satisfies readonly Shortcut[];
 
 export type ShortcutId = (typeof SHORTCUTS)[number]['id'];
 
 const BY_ID = new Map<string, Shortcut>(SHORTCUTS.map((s) => [s.id, s]));
 
-/** 按 id 取一条。 */
+/** 按 id 取一條。 */
 export function shortcutById(id: ShortcutId): Shortcut {
   return BY_ID.get(id)!;
 }
 
 // ---------------------------------------------------------------- 解析
 
-/** 一种按法拆开之后。`key` 是规范名（字母小写、`Up`、`Enter`、`Plus`……）。 */
+/** 一種按法拆開之後。`key` 是規範名（字母小寫、`Up`、`Enter`、`Plus`……）。 */
 export interface KeyCombo {
   mod: boolean;
   ctrl: boolean;
@@ -228,7 +228,7 @@ export interface KeyCombo {
   key: string;
 }
 
-/** `Mod+Shift+F` → `{ mod, shift, key: 'f' }`。最后一段是键（`Mod++` 不这样写，加号写 `Plus`）。 */
+/** `Mod+Shift+F` → `{ mod, shift, key: 'f' }`。最後一段是鍵（`Mod++` 不這樣寫，加號寫 `Plus`）。 */
 export function parseKey(spec: string): KeyCombo {
   const parts = spec.split('+');
   const key = parts.pop() ?? '';
@@ -242,7 +242,7 @@ export function parseKey(spec: string): KeyCombo {
   };
 }
 
-/** 一下按键里与「是哪个键」有关的那几样（`KeyboardEvent` 本身就满足）。 */
+/** 一下按鍵裡與「是哪個鍵」有關的那幾樣（`KeyboardEvent` 本身就滿足）。 */
 export interface KeyLike {
   key: string;
   code?: string;
@@ -252,7 +252,7 @@ export interface KeyLike {
   shiftKey: boolean;
 }
 
-/** 按着 Alt（Mac 上 ⌥）时 `key` 是打出来的那个特殊字符（⌥/ 是 `÷`），这几个键改看 `code`。 */
+/** 按著 Alt（Mac 上 ⌥）時 `key` 是打出來的那個特殊字元（⌥/ 是 `÷`），這幾個鍵改看 `code`。 */
 const CODE_KEY: Record<string, string> = { Slash: '/', Minus: '-', Equal: '=', Comma: ',', Period: '.' };
 
 function keyFromCode(code: string | undefined): string | undefined {
@@ -263,7 +263,7 @@ function keyFromCode(code: string | undefined): string | undefined {
   return letter ? letter[1].toLowerCase() : CODE_KEY[code];
 }
 
-/** `KeyboardEvent.key` 换成表里的规范名。 */
+/** `KeyboardEvent.key` 換成表裡的規範名。 */
 export function keyName(e: Pick<KeyLike, 'key' | 'code' | 'altKey'>): string {
   if (e.altKey) {
     const fromCode = keyFromCode(e.code);
@@ -294,8 +294,8 @@ export function keyName(e: Pick<KeyLike, 'key' | 'code' | 'altKey'>): string {
 }
 
 /**
- * 这一下是不是这种按法。`Mod` 认 Ctrl 或 ⌘（两边编辑器里都这样认），没写 `Mod` / `Ctrl` 的两样都不许按；
- * Alt、Shift 按写的来（加号本身就是 Shift 打出来的，`Plus` 不看 Shift）。
+ * 這一下是不是這種按法。`Mod` 認 Ctrl 或 ⌘（兩邊編輯器裡都這樣認），沒寫 `Mod` / `Ctrl` 的兩樣都不許按；
+ * Alt、Shift 按寫的來（加號本身就是 Shift 打出來的，`Plus` 不看 Shift）。
  */
 export function matchesKey(e: KeyLike, spec: string): boolean {
   const want = parseKey(spec);
@@ -320,15 +320,15 @@ export function matchesKey(e: KeyLike, spec: string): boolean {
   return want.key === 'Plus' || e.shiftKey === want.shift;
 }
 
-/** 这一下是不是这一条（`keys` 与 `also` 里任一种按法）。 */
+/** 這一下是不是這一條（`keys` 與 `also` 裡任一種按法）。 */
 export function matchesShortcut(e: KeyLike, id: ShortcutId): boolean {
   const s = shortcutById(id);
   return [...s.keys, ...(s.also ?? [])].some((spec) => matchesKey(e, spec));
 }
 
-// ---------------------------------------------------------------- 显示
+// ---------------------------------------------------------------- 顯示
 
-/** 认不认作 Mac（显示 ⌘ / ⌥）。看 `navigator`，拿不到就当不是。 */
+/** 認不認作 Mac（顯示 ⌘ / ⌥）。看 `navigator`，拿不到就當不是。 */
 export function isMacPlatform(
   nav: { platform?: string; userAgent?: string; userAgentData?: { platform?: string } } | undefined = typeof navigator ===
   'undefined'
@@ -359,7 +359,7 @@ function keyText(key: string, mac: boolean): string {
   return KEY_TEXT[key] ?? (key.length === 1 ? key.toUpperCase() : key);
 }
 
-/** 一种按法怎么写：Windows / Linux `Ctrl+Shift+F`，Mac `⇧⌘F`。 */
+/** 一種按法怎麼寫：Windows / Linux `Ctrl+Shift+F`，Mac `⇧⌘F`。 */
 export function formatKey(spec: string, mac: boolean): string {
   const k = parseKey(spec);
   if (mac) {
@@ -379,33 +379,33 @@ export function formatKey(spec: string, mac: boolean): string {
   return parts.join('+');
 }
 
-/** 一条的全部按法，「 / 」隔开（面板与 README 里那样写）。 */
+/** 一條的全部按法，「 / 」隔開（面板與 README 裡那樣寫）。 */
 export function formatKeys(s: Shortcut, mac: boolean): string {
   return s.keys.map((spec) => formatKey(spec, mac)).join(' / ');
 }
 
-/** 菜单上写哪一种：第一种；Mac 上优先不用 Control 的那一种（Mac 上重做写 ⇧⌘Z，不写 ⌃Y）。 */
+/** 選單上寫哪一種：第一種；Mac 上優先不用 Control 的那一種（Mac 上重做寫 ⇧⌘Z，不寫 ⌃Y）。 */
 export function primaryKey(s: Shortcut, mac: boolean): string {
   return (mac && s.keys.find((spec) => !parseKey(spec).ctrl)) || s.keys[0];
 }
 
-/** 菜单与提示里写的那一个键（按当前平台）。 */
+/** 選單與提示裡寫的那一個鍵（按當前平臺）。 */
 export function shortcutLabel(id: ShortcutId, mac = isMacPlatform()): string {
   return formatKey(primaryKey(shortcutById(id), mac), mac);
 }
 
 const SCOPE_TEXT: Record<Exclude<ShortcutScope, 'context'>, string> = {
-  global: '哪里都行',
-  workbench: '编辑区里或页面上',
-  editor: '光标在编辑区里',
+  global: '哪裡都行',
+  workbench: '編輯區裡或頁面上',
+  editor: '游標在編輯區裡',
 };
 
-/** 在哪儿管用，面板与 README 里那一格。 */
+/** 在哪兒管用，面板與 README 裡那一格。 */
 export function scopeText(s: Shortcut): string {
   return s.where ?? (s.scope === 'context' ? '' : SCOPE_TEXT[s.scope]);
 }
 
-/** 筛选：做什么、在哪儿、补充说明、分组、按法（两种平台的写法都认），不分大小写，空白隔开的几段都得有。 */
+/** 篩選：做什麼、在哪兒、補充說明、分組、按法（兩種平臺的寫法都認），不分大小寫，空白隔開的幾段都得有。 */
 export function filterShortcuts(list: readonly Shortcut[], query: string): Shortcut[] {
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) {
@@ -417,7 +417,7 @@ export function filterShortcuts(list: readonly Shortcut[], query: string): Short
   });
 }
 
-/** 按分组排好（分组的顺序是 `SHORTCUT_GROUPS`，组里按表里的顺序），空的组不给。 */
+/** 按分組排好（分組的順序是 `SHORTCUT_GROUPS`，組裡按表裡的順序），空的組不給。 */
 export function groupShortcuts(list: readonly Shortcut[]): { group: ShortcutGroup; items: Shortcut[] }[] {
   return SHORTCUT_GROUPS.map((group) => ({ group, items: list.filter((s) => s.group === group) })).filter(
     (g) => g.items.length > 0

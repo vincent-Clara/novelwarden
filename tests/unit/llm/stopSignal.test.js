@@ -1,20 +1,20 @@
 /**
  * Anthropic 的收尾原因（`stop_reason`）→ `StopSignal`。
  *
- * 续写链靠它分清「模型自己收了尾」与「被输出上限截断」，所以：
+ * 續寫鏈靠它分清「模型自己收了尾」與「被輸出上限截斷」，所以：
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 说完了 | `stop: end` |
- * | 截断 | `stop: maxTokens` |
- * | 认不出的值 | `stop: other` |
- * | 上游不发这一条 | 一个 stop 都不交（`undefined` 有它自己的意思） |
+ * | 說完了 | `stop: end` |
+ * | 截斷 | `stop: maxTokens` |
+ * | 認不出的值 | `stop: other` |
+ * | 上游不發這一條 | 一個 stop 都不交（`undefined` 有它自己的意思） |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { loadModule } = require('../../helpers/load');
 
-/** 一段 SSE 文本 → 一个假的 fetch。 */
+/** 一段 SSE 文字 → 一個假的 fetch。 */
 function fakeFetch(sse) {
   return async () =>
     new Response(new TextEncoder().encode(sse), {
@@ -36,11 +36,11 @@ const STOP = (reason) =>
 const ENDED =
   START +
   line({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }) +
-  line({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: '他说过。' } }) +
+  line({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: '他說過。' } }) +
   line({ type: 'content_block_stop', index: 0 }) +
   STOP('end_turn');
 
-/** 压根不发 `message_delta` 的兼容实现。 */
+/** 壓根不發 `message_delta` 的相容實現。 */
 const SILENT =
   START +
   line({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }) +
@@ -57,7 +57,7 @@ describe('llm/anthropicProvider · 收尾原因', () => {
     real = globalThis.fetch;
   });
 
-  /** 收全流，只留事件类型与要断言的那几个字段。 */
+  /** 收全流，只留事件型別與要斷言的那幾個欄位。 */
   async function events(sse) {
     globalThis.fetch = fakeFetch(sse);
     try {
@@ -78,22 +78,22 @@ describe('llm/anthropicProvider · 收尾原因', () => {
 
   const stops = (evs) => evs.filter((e) => e.type === 'stop').map((e) => e.reason);
 
-  test('说完了就是 end', async () => {
+  test('說完了就是 end', async () => {
     assert.deepEqual(stops(await events(ENDED)), ['end']);
   });
 
-  // undefined 有它自己的意思：「上游没说」。补一个默认值等于替它编一句话。
-  test('上游不发这一条时一个 stop 都不交', async () => {
+  // undefined 有它自己的意思：「上游沒說」。補一個預設值等於替它編一句話。
+  test('上游不發這一條時一個 stop 都不交', async () => {
     assert.deepEqual(stops(await events(SILENT)), []);
   });
 
-  // 这个字段上游还在加值（pause_turn、refusal）。认不出的报错会让续写链因为一个
-  // 不认识的字符串就断掉。
-  test('认不出的收尾原因归到 other', async () => {
+  // 這個欄位上游還在加值（pause_turn、refusal）。認不出的報錯會讓續寫鏈因為一個
+  // 不認識的字串就斷掉。
+  test('認不出的收尾原因歸到 other', async () => {
     assert.deepEqual(stops(await events(START + STOP('pause_turn'))), ['other']);
   });
 
-  test('截断归到 maxTokens', async () => {
+  test('截斷歸到 maxTokens', async () => {
     assert.deepEqual(stops(await events(START + STOP('max_tokens'))), ['maxTokens']);
   });
 });

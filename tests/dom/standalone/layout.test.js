@@ -1,15 +1,15 @@
 /**
- * 一键排版、半角标点转全角（`media/src/editor/layout.ts`），以及标题栏「编辑」菜单里段落那一组
+ * 一鍵排版、半形標點轉全形（`media/src/editor/layout.ts`），以及標題欄「編輯」選單裡段落那一組
  * （`media/src/view/paragraphMenu.ts`）。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 工具栏「排版」 | 只对正文显示、挨着「预览」；整份按分段格式排、一步撤销、报改了几处；没变化说「已经是这个格式了」 |
- * | 有选区 | 只排 / 只转选区碰到的那几行 |
- * | 半角标点转全角 | 经菜单，一步撤销、报改了几处 |
- * | 「段落格式 ▸」 | 三项、当前那项打 ✓、点了发 `setParagraphStyle`；没开工程 / 还不是小说工程时置灰、不展开 |
- * | 「成对符号自动补全」 | 缺省打 ✓，点了关掉之后敲左半边不补 |
- * | 「一键排版」「半角标点转全角」 | 当前文件不是正文时置灰 |
+ * | 工具欄「排版」 | 只對正文顯示、挨著「預覽」；整份按分段格式排、一步撤銷、報改了幾處；沒變化說「已經是這個格式了」 |
+ * | 有選區 | 只排 / 只轉選區碰到的那幾行 |
+ * | 半形標點轉全形 | 經選單，一步撤銷、報改了幾處 |
+ * | 「段落格式 ▸」 | 三項、當前那項打 ✓、點了發 `setParagraphStyle`；沒開工程 / 還不是小說工程時置灰、不展開 |
+ * | 「成對符號自動補全」 | 預設打 ✓，點了關掉之後敲左半邊不補 |
+ * | 「一鍵排版」「半形標點轉全形」 | 當前檔案不是正文時置灰 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -25,7 +25,7 @@ function harness(opts = {}) {
     ...opts,
   });
   const toasts = [];
-  // 编辑器经 window.__nfToast 报话；换成记下来的，好断言说了什么。
+  // 編輯器經 window.__nfToast 報話；換成記下來的，好斷言說了什麼。
   ui.window.__nfToast = (m) => toasts.push(m);
   ui.doc.execCommand = () => true;
   const area = () => ui.doc.getElementById('edArea');
@@ -46,7 +46,7 @@ function harness(opts = {}) {
       area().dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true }));
     },
     formatBtn: () => ui.doc.querySelector('#edToolbar .ed-format-btn'),
-    /** 打开「编辑」菜单，按标签找一项。 */
+    /** 開啟「編輯」選單，按標籤找一項。 */
     menuItem(label) {
       ui.closeMenu();
       ui.clickEl(ui.doc.querySelector('[data-menu="edit"]'));
@@ -54,7 +54,7 @@ function harness(opts = {}) {
         (b) => b.querySelector('.wb-menu-label').textContent === label
       );
     },
-    /** 悬停「段落格式」，返回子菜单里的三项。 */
+    /** 懸停「段落格式」，返回子選單裡的三項。 */
     styleItems() {
       const parent = h.menuItem('段落格式');
       parent.dispatchEvent(new ui.window.MouseEvent('mouseenter'));
@@ -64,50 +64,50 @@ function harness(opts = {}) {
   return h;
 }
 
-describe('一键排版', { skip: JSDOM_SKIP }, () => {
+describe('一鍵排版', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
     h.state({ paragraphStyle: 'indent' });
   });
 
-  test('「排版」按钮只对正文显示，挨着「预览」', () => {
+  test('「排版」按鈕只對正文顯示，挨著「預覽」', () => {
     h.open('.novelwarden/characters/林昭.md', '# 林昭', 'character');
-    assert.equal(h.formatBtn().classList.contains('hidden'), true, '角色卡不显示');
-    h.open('chapters/001-雨夜.md', '他推开门。\n\n\n她笑了。  ', 'chapter');
+    assert.equal(h.formatBtn().classList.contains('hidden'), true, '角色卡不顯示');
+    h.open('chapters/001-雨夜.md', '他推開門。\n\n\n她笑了。  ', 'chapter');
     assert.equal(h.formatBtn().classList.contains('hidden'), false);
     assert.equal(h.formatBtn().previousElementSibling.id, 'edPreviewBtn');
   });
 
-  test('点一下：整份按分段格式排，报改了几处', () => {
+  test('點一下：整份按分段格式排，報改了幾處', () => {
     h.select(2);
     h.ui.clickEl(h.formatBtn());
-    assert.equal(h.area().value, `${W}他推开门。\n${W}她笑了。\n`);
-    // 两行各缩进一处、两段之间的空行收掉一处、文末补换行一处。
-    assert.equal(h.toasts.at(-1), '排版完成，改了 4 处');
-    assert.equal(h.area().selectionStart, 4, '光标还在原来那个字后面');
+    assert.equal(h.area().value, `${W}他推開門。\n${W}她笑了。\n`);
+    // 兩行各縮排一處、兩段之間的空行收掉一處、文末補換行一處。
+    assert.equal(h.toasts.at(-1), '排版完成，改了 4 處');
+    assert.equal(h.area().selectionStart, 4, '游標還在原來那個字後面');
   });
 
-  test('一步撤销', () => {
+  test('一步撤銷', () => {
     h.undo();
-    assert.equal(h.area().value, '他推开门。\n\n\n她笑了。  ');
+    assert.equal(h.area().value, '他推開門。\n\n\n她笑了。  ');
   });
 
-  test('已经是这个格式：不动，说一句', () => {
-    h.open('chapters/002-入镇.md', `${W}他推开门。\n${W}她笑了。\n`, 'chapter');
+  test('已經是這個格式：不動，說一句', () => {
+    h.open('chapters/002-入鎮.md', `${W}他推開門。\n${W}她笑了。\n`, 'chapter');
     h.ui.clickEl(h.formatBtn());
-    assert.equal(h.area().value, `${W}他推开门。\n${W}她笑了。\n`);
-    assert.equal(h.toasts.at(-1), '已经是这个格式了');
+    assert.equal(h.area().value, `${W}他推開門。\n${W}她笑了。\n`);
+    assert.equal(h.toasts.at(-1), '已經是這個格式了');
   });
 
-  test('有选区：只排选区碰到的那几行', () => {
-    h.open('chapters/003-夜访.md', '甲\n\n乙\n\n丙\n\n丁', 'chapter');
+  test('有選區：只排選區碰到的那幾行', () => {
+    h.open('chapters/003-夜訪.md', '甲\n\n乙\n\n丙\n\n丁', 'chapter');
     h.select(3, 7);
     h.ui.clickEl(h.formatBtn());
     assert.equal(h.area().value, `甲\n\n${W}乙\n${W}丙\n\n丁`);
   });
 
-  test('草稿区里的正文也有这颗按钮', () => {
+  test('草稿區裡的正文也有這顆按鈕', () => {
     h.ui.post({ type: 'editorOpen', pane: 'draft', file: file('drafts/001-雨夜.md', '草稿', { kind: 'draft' }) });
     const draft = h.ui.panes()[1];
     const btn = draft.querySelector('.ed-format-btn');
@@ -118,69 +118,69 @@ describe('一键排版', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('「编辑」菜单：半角标点转全角与一键排版', { skip: JSDOM_SKIP }, () => {
+describe('「編輯」選單：半形標點轉全形與一鍵排版', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
     h.state({ paragraphStyle: 'blank' });
   });
 
-  test('非正文时两项置灰', () => {
+  test('非正文時兩項置灰', () => {
     h.open('.novelwarden/characters/林昭.md', '# 林昭', 'character');
     h.area().focus();
-    assert.equal(h.menuItem('一键排版').disabled, true);
-    assert.equal(h.menuItem('半角标点转全角').disabled, true);
+    assert.equal(h.menuItem('一鍵排版').disabled, true);
+    assert.equal(h.menuItem('半形標點轉全形').disabled, true);
   });
 
-  test('正文：半角标点转全角，一步撤销，报改了几处', () => {
-    h.open('chapters/001-雨夜.md', '他说:"走吧."然后走了,头也不回', 'chapter');
+  test('正文：半形標點轉全形，一步撤銷，報改了幾處', () => {
+    h.open('chapters/001-雨夜.md', '他說:"走吧."然後走了,頭也不回', 'chapter');
     h.area().focus();
-    const item = h.menuItem('半角标点转全角');
+    const item = h.menuItem('半形標點轉全形');
     assert.equal(item.disabled, false);
     h.ui.clickEl(item);
-    assert.equal(h.area().value, '他说：“走吧。”然后走了，头也不回');
-    assert.equal(h.toasts.at(-1), '半角标点转全角：改了 5 处');
+    assert.equal(h.area().value, '他說：“走吧。”然後走了，頭也不回');
+    assert.equal(h.toasts.at(-1), '半形標點轉全形：改了 5 處');
     h.undo();
-    assert.equal(h.area().value, '他说:"走吧."然后走了,头也不回');
+    assert.equal(h.area().value, '他說:"走吧."然後走了,頭也不回');
   });
 
-  test('有选区：只转选区碰到的那几行', () => {
-    h.open('chapters/002-入镇.md', '第一行,\n第二行,\n第三行,', 'chapter');
+  test('有選區：只轉選區碰到的那幾行', () => {
+    h.open('chapters/002-入鎮.md', '第一行,\n第二行,\n第三行,', 'chapter');
     h.area().focus();
     h.select(6, 8);
-    h.ui.clickEl(h.menuItem('半角标点转全角'));
+    h.ui.clickEl(h.menuItem('半形標點轉全形'));
     assert.equal(h.area().value, '第一行,\n第二行，\n第三行,');
   });
 
-  test('没有要转的：说一句，不动', () => {
-    h.open('chapters/003-夜访.md', '他走了。', 'chapter');
+  test('沒有要轉的：說一句，不動', () => {
+    h.open('chapters/003-夜訪.md', '他走了。', 'chapter');
     h.area().focus();
-    h.ui.clickEl(h.menuItem('半角标点转全角'));
+    h.ui.clickEl(h.menuItem('半形標點轉全形'));
     assert.equal(h.area().value, '他走了。');
-    assert.equal(h.toasts.at(-1), '没有要转的半角标点。');
+    assert.equal(h.toasts.at(-1), '沒有要轉的半形標點。');
   });
 
-  test('菜单里的「一键排版」与按钮同一件事', () => {
+  test('選單裡的「一鍵排版」與按鈕同一件事', () => {
     h.open('chapters/004-北行.md', '甲\n乙', 'chapter');
     h.area().focus();
-    h.ui.clickEl(h.menuItem('一键排版'));
+    h.ui.clickEl(h.menuItem('一鍵排版'));
     assert.equal(h.area().value, '甲\n\n乙\n');
   });
 });
 
-describe('「编辑」菜单：段落格式与成对符号开关', { skip: JSDOM_SKIP }, () => {
+describe('「編輯」選單：段落格式與成對符號開關', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
     h.state({ paragraphStyle: 'indent' });
-    h.open('chapters/001-雨夜.md', '他说：', 'chapter');
+    h.open('chapters/001-雨夜.md', '他說：', 'chapter');
   });
 
-  test('「段落格式 ▸」三项，当前那项打 ✓', () => {
+  test('「段落格式 ▸」三項，當前那項打 ✓', () => {
     const items = h.styleItems();
     assert.deepEqual(
       items.map((b) => b.querySelector('.wb-menu-label').textContent),
-      ['空行分段', '段首缩进', '缩进加空行']
+      ['空行分段', '段首縮排', '縮排加空行']
     );
     assert.deepEqual(
       items.map((b) => b.querySelector('.wb-menu-check').textContent),
@@ -188,19 +188,19 @@ describe('「编辑」菜单：段落格式与成对符号开关', { skip: JSDOM
     );
   });
 
-  test('点一项发 setParagraphStyle', () => {
+  test('點一項發 setParagraphStyle', () => {
     const items = h.styleItems();
     h.ui.clickEl(items[2]);
     assert.equal(h.ui.last('setParagraphStyle')?.style, 'both');
   });
 
-  test('后端推回新值之后 ✓ 跟着挪', () => {
+  test('後端推回新值之後 ✓ 跟著挪', () => {
     h.state({ paragraphStyle: 'both' });
     const checks = h.styleItems().map((b) => b.getAttribute('aria-checked'));
     assert.deepEqual(checks, ['false', 'false', 'true']);
   });
 
-  test('还不是小说工程：「段落格式」置灰、悬停不展开', () => {
+  test('還不是小說工程：「段落格式」置灰、懸停不展開', () => {
     h.state({ initialized: false, paragraphStyle: 'blank' });
     const parent = h.menuItem('段落格式');
     assert.equal(parent.disabled, true);
@@ -209,33 +209,33 @@ describe('「编辑」菜单：段落格式与成对符号开关', { skip: JSDOM
     h.state({ paragraphStyle: 'both' });
   });
 
-  test('「成对符号自动补全」缺省打 ✓', () => {
-    const item = h.menuItem('成对符号自动补全');
+  test('「成對符號自動補全」預設打 ✓', () => {
+    const item = h.menuItem('成對符號自動補全');
     assert.equal(item.getAttribute('aria-checked'), 'true');
     assert.equal(item.querySelector('.wb-menu-check').textContent, '✓');
   });
 
-  test('点了关掉：之后敲左半边不补', () => {
-    h.ui.clickEl(h.menuItem('成对符号自动补全'));
-    assert.equal(h.menuItem('成对符号自动补全').getAttribute('aria-checked'), 'false');
+  test('點了關掉：之後敲左半邊不補', () => {
+    h.ui.clickEl(h.menuItem('成對符號自動補全'));
+    assert.equal(h.menuItem('成對符號自動補全').getAttribute('aria-checked'), 'false');
     h.ui.closeMenu();
     const a = h.area();
     a.setSelectionRange(3, 3);
-    a.value = '他说：“';
+    a.value = '他說：“';
     a.setSelectionRange(4, 4);
     a.dispatchEvent(new h.ui.window.InputEvent('input', { bubbles: true, inputType: 'insertText', data: '“' }));
-    assert.equal(a.value, '他说：“');
+    assert.equal(a.value, '他說：“');
   });
 
-  test('再点一下打开', () => {
-    h.ui.clickEl(h.menuItem('成对符号自动补全'));
-    assert.equal(h.menuItem('成对符号自动补全').getAttribute('aria-checked'), 'true');
+  test('再點一下開啟', () => {
+    h.ui.clickEl(h.menuItem('成對符號自動補全'));
+    assert.equal(h.menuItem('成對符號自動補全').getAttribute('aria-checked'), 'true');
     h.ui.closeMenu();
   });
 });
 
-describe('「编辑」菜单：空窗口', { skip: JSDOM_SKIP }, () => {
-  test('没开工程：「段落格式」置灰', () => {
+describe('「編輯」選單：空視窗', { skip: JSDOM_SKIP }, () => {
+  test('沒開工程：「段落格式」置灰', () => {
     const h = harness({ empty: true });
     h.state({ paragraphStyle: 'blank' });
     h.ui.post({ type: 'workspaces', currentId: null, items: [], recents: [] });

@@ -1,7 +1,7 @@
 /*
- * 「转到…」面板（editor/quickOpen.ts，Ctrl+P / 「文件 → 转到…」）：页面顶部居中一个输入框 + 候选列表，
- * 不是全屏遮罩——正文、对话、工程页照样看得见，点面板外面就收起。DOM 由 quickOpen.ts 现造、关掉就拆，
- * 挂在 body 上 `position: fixed`。层级压在提示条（30）上面、标题栏菜单（40）下面。
+ * 「轉到…」面板（editor/quickOpen.ts，Ctrl+P / 「檔案 → 轉到…」）：頁面頂部居中一個輸入框 + 候選列表，
+ * 不是全屏遮罩——正文、對話、工程頁照樣看得見，點面板外面就收起。DOM 由 quickOpen.ts 現造、關掉就拆，
+ * 掛在 body 上 `position: fixed`。層級壓在提示條（30）上面、標題欄選單（40）下面。
  */
 
 .qo-panel {
@@ -60,7 +60,7 @@
   background: var(--vscode-list-activeSelectionBackground);
 }
 
-/* 类型标记：章 / 角色 / 设定 / 架构 / 文档 / 草稿。 */
+/* 型別標記：章 / 角色 / 設定 / 架構 / 文件 / 草稿。 */
 .qo-badge {
   flex: 0 0 auto;
   min-width: 2.6em;
@@ -102,7 +102,7 @@
   color: var(--vscode-descriptionForeground);
 }
 
-/* 匹配到的字：只换颜色加粗，不给底色——一行里几处底色会花。 */
+/* 匹配到的字：只換顏色加粗，不給底色——一行裡幾處底色會花。 */
 .qo-name mark,
 .qo-detail mark {
   padding: 0;

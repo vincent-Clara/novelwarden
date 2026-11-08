@@ -1,42 +1,42 @@
 /**
- * 「带 action 的工具」共用的那一套：动作表 → 一个 `ToolDef`。
+ * 「帶 action 的工具」共用的那一套：動作表 → 一個 `ToolDef`。
  *
- * 工程动作按**它动的是什么**分成几个工具（流水线、定稿、角色卡、提炼、拆书、技能），每个工具
- * 一张动作表、只带自己用得到的参数。分开的理由是参数：塞在一个工具里时，模型面对的是一大把
- * 「只有某几个动作认」的参数，记错一个就白跑一趟；分开之后每个工具的 schema 就是它的全部用法。
+ * 工程動作按**它動的是什麼**分成幾個工具（流水線、定稿、角色卡、提煉、拆書、技能），每個工具
+ * 一張動作表、只帶自己用得到的引數。分開的理由是引數：塞在一個工具裡時，模型面對的是一大把
+ * 「只有某幾個動作認」的引數，記錯一個就白跑一趟；分開之後每個工具的 schema 就是它的全部用法。
  *
- * ## 这里做的四件事
+ * ## 這裡做的四件事
  *
- * 1. **参数对得上动作**：每个动作声明它认哪几个参数（`uses`）、哪几个必填（`requires`）。
- *    给了它不认的参数当场报错——模型以为自己传了一个区间、其实被忽略，比多一次往返更糟。
- * 2. **故意不给的动作**（删除、改名……）认出来单独回一句为什么，好过让模型在可选动作里猜。
- * 3. **意图**：查询类动作报 `auto`（不进对话页），其余报 `mutating`；装、绑技能自己报 `always`。
- * 4. **记账**：次数由 feature 自己算一次再报回来（弹窗写着 7 次、账上记 1 次，正是第 4 条要防的事）。
+ * 1. **引數對得上動作**：每個動作宣告它認哪幾個引數（`uses`）、哪幾個必填（`requires`）。
+ *    給了它不認的引數當場報錯——模型以為自己傳了一個區間、其實被忽略，比多一次往返更糟。
+ * 2. **故意不給的動作**（刪除、改名……）認出來單獨回一句為什麼，好過讓模型在可選動作裡猜。
+ * 3. **意圖**：查詢類動作報 `auto`（不進對話頁），其餘報 `mutating`；裝、綁技能自己報 `always`。
+ * 4. **記賬**：次數由 feature 自己算一次再報回來（彈窗寫著 7 次、賬上記 1 次，正是第 4 條要防的事）。
  *
- * 确认框全在 feature 自己那里，这一层只转发，**没有为外部 agent 加任何一条绕过它的路**。
+ * 確認框全在 feature 自己那裡，這一層只轉發，**沒有為外部 agent 加任何一條繞過它的路**。
  */
 import type { GateKind, ToolContext, ToolDef, ToolIntent, ToolResult } from '../types';
 import { objectSchema, str } from '../schema';
 import { text } from './naming';
 import { describeError } from '../../runtime/logger';
 
-/** 一次动作的结果：说给模型听的一句话 + 这一下花了几次模型调用。 */
+/** 一次動作的結果：說給模型聽的一句話 + 這一下花了幾次模型呼叫。 */
 export interface ActionResult {
   text: string;
-  /** 报给调用方记账的次数。0 = 一次模型都没调（取消 / 无事可做 / 次数只在确认框里）。 */
+  /** 報給呼叫方記賬的次數。0 = 一次模型都沒調（取消 / 無事可做 / 次數只在確認框裡）。 */
   calls: number;
 }
 
 export interface ActionSpec {
-  /** 工具描述与错误提示里的说法。 */
+  /** 工具描述與錯誤提示裡的說法。 */
   label: string;
-  /** 会不会调模型。只进工具描述，闸门由 feature 自己的确认框把。 */
+  /** 會不會調模型。只進工具描述，閘門由 feature 自己的確認框把。 */
   costly: boolean;
-  /** 认哪几个参数（`action` 之外）。没列的给了就当场报错。 */
+  /** 認哪幾個引數（`action` 之外）。沒列的給了就當場報錯。 */
   uses?: string[];
-  /** 其中哪几个必填，缺了当场报错，不放它跑一趟空的。 */
+  /** 其中哪幾個必填，缺了當場報錯，不放它跑一趟空的。 */
   requires?: string[];
-  /** 缺省 `mutating`；查询类报 `auto`。要说得更具体（装、绑技能）就实现 `intent`。 */
+  /** 預設 `mutating`；查詢類報 `auto`。要說得更具體（裝、綁技能）就實現 `intent`。 */
   gate?: GateKind;
   intent?(args: Record<string, unknown>): ToolIntent;
   run(ctx: ToolContext, args: Record<string, unknown>): Promise<ActionResult>;
@@ -44,30 +44,30 @@ export interface ActionSpec {
 
 export interface ActionToolDef {
   name: string;
-  /** 一句话说这个工具管什么。动作清单由这里拼在后面。 */
+  /** 一句話說這個工具管什麼。動作清單由這裡拼在後面。 */
   summary: string;
-  /** 动作清单之后的补充说明（怎么用才对）。 */
+  /** 動作清單之後的補充說明（怎麼用才對）。 */
   usage?: string;
-  /** `action` 之外的参数，扁平标量。 */
+  /** `action` 之外的引數，扁平標量。 */
   params: Record<string, ReturnType<typeof str>>;
   actions: Record<string, ActionSpec>;
 }
 
 /**
- * 外部 agent 可能想干、但**故意不给**的动作。哪个工具都一样：那类操作由作者自己做。
+ * 外部 agent 可能想幹、但**故意不給**的動作。哪個工具都一樣：那類操作由作者自己做。
  */
 const REFUSED: Record<string, string> = {
-  delete: '删除',
-  remove: '删除',
-  trash: '删除',
+  delete: '刪除',
+  remove: '刪除',
+  trash: '刪除',
   rename: '改名',
-  move: '移动',
+  move: '移動',
   initProject: '初始化工程',
-  newChapter: '直接新建章节文件',
+  newChapter: '直接新建章節檔案',
   split: '拆分正文',
-  uninstall: '卸载技能',
-  uninstallSkill: '卸载技能',
-  deleteSkill: '卸载技能',
+  uninstall: '解除安裝技能',
+  uninstallSkill: '解除安裝技能',
+  deleteSkill: '解除安裝技能',
 };
 
 export function defineActionTool(def: ActionToolDef): ToolDef {
@@ -88,10 +88,10 @@ export function defineActionTool(def: ActionToolDef): ToolDef {
       const target = [text(args.path), text(args.name)].filter(Boolean).join(' ');
       return {
         gate: spec ? gateOf(spec) : 'mutating',
-        title: spec ? spec.label : `执行 ${def.name} ${action}`,
+        title: spec ? spec.label : `執行 ${def.name} ${action}`,
         detail: [
           target,
-          spec?.costly ? '要调模型的动作随后还会告诉你预计调用几次，那一步你也可以不同意。' : '',
+          spec?.costly ? '要調模型的動作隨後還會告訴你預計呼叫幾次，那一步你也可以不同意。' : '',
         ]
           .filter(Boolean)
           .join('\n'),
@@ -104,22 +104,22 @@ export function defineActionTool(def: ActionToolDef): ToolDef {
         .map((a) => {
           const s = def.actions[a];
           const need = s.requires?.length ? `，要 ${s.requires.join(' / ')}` : '';
-          return `${a}=${s.label}（${s.costly ? '调模型' : '不调模型'}${need}）`;
+          return `${a}=${s.label}（${s.costly ? '調模型' : '不調模型'}${need}）`;
         })
         .join('；') +
       '。' +
       (def.usage ?? ''),
 
-    parameters: objectSchema({ action: str('要执行哪个动作。', names), ...def.params }, ['action']),
+    parameters: objectSchema({ action: str('要執行哪個動作。', names), ...def.params }, ['action']),
 
     check(args) {
       const action = text(args.action);
       const spec = def.actions[action];
       if (!spec) {
         const why = REFUSED[action]
-          ? `没有${REFUSED[action]}这个动作，而且这是有意的——那类操作由作者自己做。`
+          ? `沒有${REFUSED[action]}這個動作，而且這是有意的——那類操作由作者自己做。`
           : action
-            ? `认不出动作「${action}」。`
+            ? `認不出動作「${action}」。`
             : 'action 是必填的。';
         return `${why}${def.name} 可用的是：${names.join(' / ')}。`;
       }
@@ -128,12 +128,12 @@ export function defineActionTool(def: ActionToolDef): ToolDef {
       for (const key of Object.keys(args)) {
         if (key !== 'action' && args[key] !== undefined && !uses.has(key)) {
           const who = names.filter((a) => def.actions[a].uses?.includes(key));
-          return `${action} 不认 ${key}${who.length > 0 ? `，只有 ${who.join(' / ')} 认` : ''}。`;
+          return `${action} 不認 ${key}${who.length > 0 ? `，只有 ${who.join(' / ')} 認` : ''}。`;
         }
       }
       const missing = (spec.requires ?? []).filter((key) => !text(args[key]) && typeof args[key] !== 'number');
       if (missing.length > 0) {
-        return `${action} 需要参数：${missing.join('、')}。${describeParams(def, missing)}`;
+        return `${action} 需要引數：${missing.join('、')}。${describeParams(def, missing)}`;
       }
       return undefined;
     },
@@ -150,24 +150,24 @@ export function defineActionTool(def: ActionToolDef): ToolDef {
         const r = await spec.run(ctx, args);
         ctx.usage.record(r.calls);
         if (r.calls > 0) {
-          ctx.report(`${spec.label}：调用模型 ${r.calls} 次`);
+          ctx.report(`${spec.label}：呼叫模型 ${r.calls} 次`);
         }
         return {
           text: r.text,
-          display: { title: `${def.name} ${action}`, detail: r.calls > 0 ? `${r.calls} 次调用` : '未调模型' },
+          display: { title: `${def.name} ${action}`, detail: r.calls > 0 ? `${r.calls} 次呼叫` : '未調模型' },
         };
       } catch (err) {
         if (err instanceof ArgError) {
           return { text: '', error: err.message };
         }
-        return { text: '', error: `${spec.label}失败：${describeError(err)}` };
+        return { text: '', error: `${spec.label}失敗：${describeError(err)}` };
       }
     },
   };
   return tool;
 }
 
-/** 查询类动作自己报 `auto`；其余一律 `mutating`（宁可多问，也不要有一条没人想过的路）。 */
+/** 查詢類動作自己報 `auto`；其餘一律 `mutating`（寧可多問，也不要有一條沒人想過的路）。 */
 function gateOf(spec: ActionSpec): GateKind {
   return spec.gate ?? 'mutating';
 }
@@ -176,36 +176,36 @@ function describeParams(def: ActionToolDef, keys: string[]): string {
   return keys.map((k) => `${k}：${def.params[k]?.description ?? ''}`).join(' ');
 }
 
-/** 参数值不对（区间倒了、阶段写错）：当场回给模型，不算「执行失败」。 */
+/** 引數值不對（區間倒了、階段寫錯）：當場回給模型，不算「執行失敗」。 */
 export class ArgError extends Error {}
 
-// ---------------------------------------------------------------- 回给模型的话
+// ---------------------------------------------------------------- 回給模型的話
 
 /**
- * feature 报回来的「计划调用几次」→ 一句话 + 记账。
+ * feature 報回來的「計劃呼叫幾次」→ 一句話 + 記賬。
  *
- * **0 次要说清楚**：作者取消了，或者压根没有待处理的东西。不说的话模型会以为
- * 是自己参数填错了，然后原地再发一遍。
+ * **0 次要說清楚**：作者取消了，或者壓根沒有待處理的東西。不說的話模型會以為
+ * 是自己引數填錯了，然後原地再發一遍。
  */
-export function countedBy(calls: number, what: string, idle = '没有待处理的章'): ActionResult {
+export function countedBy(calls: number, what: string, idle = '沒有待處理的章'): ActionResult {
   if (calls <= 0) {
     return {
       text:
-        `${what}这一次没有调用模型：要么作者在确认框里取消了，要么${idle}。` +
-        '不要重试同一个动作——先用 list 或 read 看看现在的状态。',
+        `${what}這一次沒有呼叫模型：要麼作者在確認框裡取消了，要麼${idle}。` +
+        '不要重試同一個動作——先用 list 或 read 看看現在的狀態。',
       calls: 0,
     };
   }
-  return { text: `${what}已执行，计划调用模型 ${calls} 次。结果见工程页与日志。`, calls };
+  return { text: `${what}已執行，計劃呼叫模型 ${calls} 次。結果見工程頁與日誌。`, calls };
 }
 
 /**
- * 不报次数的那几个 feature（结论都在确认框、提示条与日志里）：只说交出去了、去哪看结果。
- * 次数记 0——确认框里写的才是实数，这里猜一个反倒是第 4 条要防的那种对不上。
+ * 不報次數的那幾個 feature（結論都在確認框、提示條與日誌裡）：只說交出去了、去哪看結果。
+ * 次數記 0——確認框裡寫的才是實數，這裡猜一個反倒是第 4 條要防的那種對不上。
  */
 export function handed(what: string): ActionResult {
   return {
-    text: `${what}已交给 Novelwarden 执行（确认框、结果与调用次数都在作者那边的界面和日志里）。要知道改了什么，用 read 看对应文件。`,
+    text: `${what}已交給 Novelwarden 執行（確認框、結果與呼叫次數都在作者那邊的介面和日誌裡）。要知道改了什麼，用 read 看對應檔案。`,
     calls: 0,
   };
 }

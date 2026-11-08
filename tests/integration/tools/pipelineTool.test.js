@@ -1,18 +1,18 @@
 /**
- * `pipeline` 工具：流水线上的批量动作（补齐架构、批量拆细纲、批量写章、新建细纲骨架）。
+ * `pipeline` 工具：流水線上的批次動作（補齊架構、批次拆細綱、批次寫章、新建細綱骨架）。
  *
  * 五件事：
  *
- * 1. **确认框照弹**——作者不同意就一次模型都不调，且回给模型的话要说清
- *    「不要重试同一个动作」。
- * 2. **预计次数报给调用方记账**：弹窗写着 N 次、账上记 1 次，正是第 4 条要防的。
- * 3. **批量写正文走既有流程**：正文直接落同号的 `chapters/NNN-标题.txt`（一章一纲，
- *    没有中转站），并在细纲上记 `writtenFrom`——这正是「不要自己用 write 拼」的理由。
- * 4. **区间与模式**：`from` / `to` / `mode` / `review` 转给批量写章并写进确认框与动手前那一问；
- *    只给 `from` 按缺省章数往后数；参数不对当场报错，不弹框、不花钱。
- * 5. **只补空白**：没事可做时再调一次不花钱。
+ * 1. **確認框照彈**——作者不同意就一次模型都不調，且回給模型的話要說清
+ *    「不要重試同一個動作」。
+ * 2. **預計次數報給呼叫方記賬**：彈窗寫著 N 次、賬上記 1 次，正是第 4 條要防的。
+ * 3. **批次寫正文走既有流程**：正文直接落同號的 `chapters/NNN-標題.txt`（一章一綱，
+ *    沒有中轉站），並在細綱上記 `writtenFrom`——這正是「不要自己用 write 拼」的理由。
+ * 4. **區間與模式**：`from` / `to` / `mode` / `review` 轉給批次寫章並寫進確認框與動手前那一問；
+ *    只給 `from` 按預設章數往後數；引數不對當場報錯，不彈框、不花錢。
+ * 5. **只補空白**：沒事可做時再調一次不花錢。
  *
- * 带 action 工具共用的那一套（拒绝删除类、认不出的动作、参数对不上动作）在 actionTool.test.js。
+ * 帶 action 工具共用的那一套（拒絕刪除類、認不出的動作、引數對不上動作）在 actionTool.test.js。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -32,14 +32,14 @@ let ctx;
 let reports;
 let settings;
 
-const PLOT1 = '.novelwarden/summaries/001-夜入青云.md';
-const CH1 = 'chapters/001-夜入青云.txt';
-const CH2 = 'chapters/002-藏书阁.txt';
+const PLOT1 = '.novelwarden/summaries/001-夜入青雲.md';
+const CH1 = 'chapters/001-夜入青雲.txt';
+const CH2 = 'chapters/002-藏書閣.txt';
 
-/** 细纲层的应答：按契约里写的区间给一批蓝图（「写第 1–2 章的细纲：」）。 */
+/** 細綱層的應答：按契約裡寫的區間給一批藍圖（「寫第 1–2 章的細綱：」）。 */
 function plotReply(messages) {
   const user = messages[messages.length - 1].content;
-  const m = /写第 (\d+)(?:–(\d+))? 章的细纲：/.exec(user);
+  const m = /寫第 (\d+)(?:–(\d+))? 章的細綱：/.exec(user);
   const from = Number(m?.[1] ?? 1);
   const to = Number(m?.[2] ?? from);
   const blueprints = [];
@@ -47,26 +47,26 @@ function plotReply(messages) {
     blueprints.push({
       chapterNumber: no,
       title: '模型起的名',
-      synopsis: '林昭夜里翻墙进宗门。',
+      synopsis: '林昭夜裡翻牆進宗門。',
       characters: ['林昭'],
-      timePlace: '雨夜，青云宗山门',
-      keyEvents: ['踩点、失手、翻墙', '收在藏书阁门口。'],
-      highlights: ['墙内有人在等他。'],
+      timePlace: '雨夜，青雲宗山門',
+      keyEvents: ['踩點、失手、翻牆', '收在藏書閣門口。'],
+      highlights: ['牆內有人在等他。'],
       foreshadowing: [],
       stateChange: '',
     });
   }
   return JSON.stringify({ blueprints });
 }
-const MANUSCRIPT_TEXT = '雨下了三天。山门在雨里，林昭在门外。';
+const MANUSCRIPT_TEXT = '雨下了三天。山門在雨裡，林昭在門外。';
 
 /**
- * 按装配出的系统提示认是哪一层在问：批量拆细纲与批量写章在同一个用例文件里
- * 跑，各自要拿到自己那一层该有的形状。
+ * 按裝配出的系統提示認是哪一層在問：批次拆細綱與批次寫章在同一個用例檔案裡
+ * 跑，各自要拿到自己那一層該有的形狀。
  */
 function replyFor(messages) {
   const system = messages[0]?.content ?? '';
-  if (system.includes('中文长篇小说作者，正在为')) return MANUSCRIPT_TEXT;
+  if (system.includes('中文長篇小說作者，正在為')) return MANUSCRIPT_TEXT;
   return plotReply(messages);
 }
 
@@ -114,29 +114,29 @@ before(async () => {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  t = await makeTempProject(bundle.project, { prefix: 'pipelineTool', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'pipelineTool', title: '青雲劍錄' });
   project = t.project;
   const ws = new bundle.ws.Workspace(project);
-  // 情节大纲是各章细纲梗概的汇总：写进去就是第 1、2 章各一份只有梗概的细纲（下面再把它们起名、写几节）。
+  // 情節大綱是各章細綱梗概的彙總：寫進去就是第 1、2 章各一份只有梗概的細綱（下面再把它們起名、寫幾節）。
   await ws.write(
     project.relPath(project.outlinePath),
-    { text: outlineOf(2, { title: '大纲', text: { 1: '林昭入宗。' } }) },
+    { text: outlineOf(2, { title: '大綱', text: { 1: '林昭入宗。' } }) },
     { mode: 'overwrite' }
   );
-  // 全书两章：批量拆细纲的缺省区间（下一可写章起 5 章）收在第 2 章，一批就完。
+  // 全書兩章：批次拆細綱的預設區間（下一可寫章起 5 章）收在第 2 章，一批就完。
   await ws.write(
     project.relPath(project.configPath),
-    { text: '---\ntotalChapters: 2\n---\n\n# 小说配置\n\n## 核心梗概\n\n少年入宗。\n' },
+    { text: '---\ntotalChapters: 2\n---\n\n# 小說配置\n\n## 核心梗概\n\n少年入宗。\n' },
     { mode: 'overwrite', review: false }
   );
-  // 两章细纲都只起了个头（「关键事件」空着）：批量拆细纲有活可干。
-  for (const [no, title] of [[1, '夜入青云'], [2, '藏书阁']]) {
+  // 兩章細綱都只起了個頭（「關鍵事件」空著）：批次拆細綱有活可幹。
+  for (const [no, title] of [[1, '夜入青雲'], [2, '藏書閣']]) {
     await ws.writePlot({
       no,
       title,
       upstreamHash: '',
       done: false,
-      sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '进入宗门' },
+      sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '進入宗門' },
     });
   }
   await project.syncManifest();
@@ -147,147 +147,147 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-describe('批量拆细纲：作者不同意就什么都不做', () => {
+describe('批次拆細綱：作者不同意就什麼都不做', () => {
   let r;
 
   before(async () => {
     resetCtx();
-    // 队列为空 = 确认框返回 undefined = 用户取消。
+    // 佇列為空 = 確認框返回 undefined = 使用者取消。
     h.expect();
     r = await run({ action: 'batchPlots' });
   });
 
-  test('确认框弹过了', () => {
+  test('確認框彈過了', () => {
     assert.equal(h.confirms.length, 1, JSON.stringify(h.confirms));
   });
 
-  // 第 4 条：动手前必须写明预计调用次数（有自动修复，所以还有上限）。
-  test('确认框里写了预计调用几次', () => {
-    assert.ok(/预计 \d+ 次调用，最多 \d+ 次/.test(h.confirms[0].message), h.confirms[0].message);
+  // 第 4 條：動手前必須寫明預計呼叫次數（有自動修復，所以還有上限）。
+  test('確認框裡寫了預計呼叫幾次', () => {
+    assert.ok(/預計 \d+ 次呼叫，最多 \d+ 次/.test(h.confirms[0].message), h.confirms[0].message);
   });
 
-  test('一次模型都没调', () => {
+  test('一次模型都沒調', () => {
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
   });
 
-  test('没有报调用次数', () => {
+  test('沒有報呼叫次數', () => {
     assert.equal(ctx.usage.calls, 0);
   });
 
-  test('回给模型的话说清了没调模型', () => {
-    assert.ok(r.text.includes('没有调用模型'), r.text);
+  test('回給模型的話說清了沒調模型', () => {
+    assert.ok(r.text.includes('沒有呼叫模型'), r.text);
   });
 
-  // 不说清楚它会原地再发一遍——那是最常见的烧钱方式。
-  test('还明说了不要重试同一个动作', () => {
-    assert.ok(r.text.includes('不要重试'), r.text);
+  // 不說清楚它會原地再發一遍——那是最常見的燒錢方式。
+  test('還明說了不要重試同一個動作', () => {
+    assert.ok(r.text.includes('不要重試'), r.text);
   });
 
-  test('磁盘上一章细纲都没多', async () => {
+  test('磁碟上一章細綱都沒多', async () => {
     const plots = await project.listPlots();
     assert.ok(plots.every((p) => !bundle.plotFile.isPlotFilled(p.sections)), JSON.stringify(plots.map((p) => p.no)));
   });
 });
 
-describe('批量拆细纲：作者同意', () => {
+describe('批次拆細綱：作者同意', () => {
   let r;
 
   before(async () => {
     resetCtx();
-    h.expect('开始拆细纲');
+    h.expect('開始拆細綱');
     r = await run({ action: 'batchPlots' });
   });
 
-  test('两章都排了细纲', async () => {
+  test('兩章都排了細綱', async () => {
     const plots = await project.listPlots();
     assert.ok(plots.every((p) => bundle.plotFile.isPlotFilled(p.sections)), JSON.stringify(plots.map((p) => p.sections)));
   });
 
-  // 批量拆细纲改的是七个小节：作者起的标题不该被抹掉。
-  test('标题沿用磁盘那份', async () => {
+  // 批次拆細綱改的是七個小節：作者起的標題不該被抹掉。
+  test('標題沿用磁碟那份', async () => {
     const plot = await project.readPlot(PLOT1);
-    assert.equal(plot.title, '夜入青云');
+    assert.equal(plot.title, '夜入青雲');
   });
 
-  // 计划出场写进「出场人物」一节，读回来就是 characters（没定稿，取的是计划）。
-  test('计划出场的人随产物落盘', async () => {
+  // 計劃出場寫進「出場人物」一節，讀回來就是 characters（沒定稿，取的是計劃）。
+  test('計劃出場的人隨產物落盤', async () => {
     const plot = await project.readPlot(PLOT1);
     assert.deepEqual(plot.characters, ['林昭']);
   });
 
-  // 两章一批：一次调用出两份；拆完再排一次叙事线。
-  test('两章一批，调了一次模型；拆完排一次叙事线', () => {
+  // 兩章一批：一次呼叫出兩份；拆完再排一次敘事線。
+  test('兩章一批，調了一次模型；拆完排一次敘事線', () => {
     assert.equal(fake.calls.length, 2, String(fake.calls.length));
   });
 
-  // ★ 实际调了几次，账上就记几次。
-  test('调用次数报了出去', () => {
+  // ★ 實際調了幾次，賬上就記幾次。
+  test('呼叫次數報了出去', () => {
     assert.equal(ctx.usage.calls, 2);
   });
 
-  test('用量在气泡里说出来了', () => {
+  test('用量在氣泡裡說出來了', () => {
     assert.ok(reports.some((m) => m.includes('2')), JSON.stringify(reports));
   });
 
-  test('返回文本里有次数', () => {
+  test('返回文字裡有次數', () => {
     assert.ok(r.text.includes('2 次'), r.text);
   });
 
-  test('没事可做时再调一次不花钱', async () => {
+  test('沒事可做時再調一次不花錢', async () => {
     resetCtx();
-    h.expect('开始拆细纲');
+    h.expect('開始拆細綱');
     const again = await run({ action: 'batchPlots' });
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
     assert.equal(ctx.usage.calls, 0);
-    assert.ok(again.text.includes('没有调用模型'), again.text);
+    assert.ok(again.text.includes('沒有呼叫模型'), again.text);
   });
 });
 
 /**
- * 批量的区间与模式（六期）：工程页两个弹窗能选的，agent 这条路也能给。确认框照弹，
- * 区间与模式写在框里——「批量写章」与「把第 1–2 章写完并定稿」是分量不一样的两件事。
- * 这里一律在确认框上取消：只看框里写了什么，不花钱。
+ * 批次的區間與模式（六期）：工程頁兩個彈窗能選的，agent 這條路也能給。確認框照彈，
+ * 區間與模式寫在框裡——「批次寫章」與「把第 1–2 章寫完並定稿」是分量不一樣的兩件事。
+ * 這裡一律在確認框上取消：只看框裡寫了什麼，不花錢。
  */
-describe('批量写章：区间与模式写进确认框', () => {
-  test('from / to / mode / review 都转给了批量写章', async () => {
+describe('批次寫章：區間與模式寫進確認框', () => {
+  test('from / to / mode / review 都轉給了批次寫章', async () => {
     resetCtx();
     h.expect();
     const r = await run({ action: 'batchManuscripts', from: 1, to: 2, mode: 'finalize', review: true });
     const message = h.confirms[h.confirms.length - 1].message;
-    assert.ok(message.startsWith('第 1–2 章：要写 2 章正文（写完即同步、写完即审稿）'), message);
+    assert.ok(message.startsWith('第 1–2 章：要寫 2 章正文（寫完即同步、寫完即審稿）'), message);
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
-    assert.ok(r.text.includes('没有调用模型'), r.text);
+    assert.ok(r.text.includes('沒有呼叫模型'), r.text);
   });
 
-  // 只给起点：按批量写章的缺省（3 章）往后数，再由 feature 按磁盘收住（第 3 章起没有细纲）。
-  test('只给 from 时按缺省章数往后数', async () => {
+  // 只給起點：按批次寫章的預設（3 章）往後數，再由 feature 按磁碟收住（第 3 章起沒有細綱）。
+  test('只給 from 時按預設章數往後數', async () => {
     resetCtx();
     h.expect();
     await run({ action: 'batchManuscripts', from: 2 });
     const message = h.confirms[h.confirms.length - 1].message;
-    assert.ok(message.startsWith('第 2 章：要写 1 章正文（只写正文）'), message);
+    assert.ok(message.startsWith('第 2 章：要寫 1 章正文（只寫正文）'), message);
   });
 
-  test('批量拆细纲也认区间', async () => {
+  test('批次拆細綱也認區間', async () => {
     resetCtx();
     h.expect();
     const r = await run({ action: 'batchPlots', from: 2, to: 2 });
-    // 第 2 章已经排过细纲：feature 自己说「都排过了」，不弹确认框、不花钱。
+    // 第 2 章已經排過細綱：feature 自己說「都排過了」，不彈確認框、不花錢。
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
-    assert.ok(r.text.includes('没有调用模型'), r.text);
+    assert.ok(r.text.includes('沒有呼叫模型'), r.text);
   });
 });
 
-describe('区间与模式的参数不对就当场报错，不弹框、不花钱', () => {
+describe('區間與模式的引數不對就當場報錯，不彈框、不花錢', () => {
   const cases = [
-    ['from 大于 to', { action: 'batchPlots', from: 3, to: 1 }, '区间'],
-    ['只给 to', { action: 'batchPlots', to: 3 }, 'from'],
-    ['from 不是数', { action: 'batchManuscripts', from: '第三章' }, '章号'],
-    ['不认区间的动作给了区间', { action: 'newPlot', from: 1 }, '不认 from，只有 batchPlots / batchManuscripts 认'],
-    ['拆细纲给了模式', { action: 'batchPlots', mode: 'finalize' }, '不认 mode，只有 batchManuscripts 认'],
-    ['补齐架构给了审稿', { action: 'completeSettings', review: true }, '不认 review，只有 batchManuscripts 认'],
-    ['区间只给了半个数', { action: 'batchPlots', from: 1, to: '末尾' }, '章号'],
-    ['模式写错', { action: 'batchManuscripts', mode: 'all' }, 'mode 只能是'],
+    ['from 大於 to', { action: 'batchPlots', from: 3, to: 1 }, '區間'],
+    ['只給 to', { action: 'batchPlots', to: 3 }, 'from'],
+    ['from 不是數', { action: 'batchManuscripts', from: '第三章' }, '章號'],
+    ['不認區間的動作給了區間', { action: 'newPlot', from: 1 }, '不認 from，只有 batchPlots / batchManuscripts 認'],
+    ['拆細綱給了模式', { action: 'batchPlots', mode: 'finalize' }, '不認 mode，只有 batchManuscripts 認'],
+    ['補齊架構給了審稿', { action: 'completeSettings', review: true }, '不認 review，只有 batchManuscripts 認'],
+    ['區間只給了半個數', { action: 'batchPlots', from: 1, to: '末尾' }, '章號'],
+    ['模式寫錯', { action: 'batchManuscripts', mode: 'all' }, 'mode 只能是'],
   ];
   for (const [name, args, word] of cases) {
     test(name, async () => {
@@ -295,7 +295,7 @@ describe('区间与模式的参数不对就当场报错，不弹框、不花钱'
       const before = h.confirms.length;
       const r = await run(args);
       assert.ok(r.error && r.error.includes(word), JSON.stringify(r));
-      assert.equal(h.confirms.length, before, '不该弹确认框');
+      assert.equal(h.confirms.length, before, '不該彈確認框');
       assert.equal(fake.calls.length, 0, String(fake.calls.length));
       assert.equal(ctx.usage.calls, 0);
     });
@@ -303,63 +303,63 @@ describe('区间与模式的参数不对就当场报错，不弹框、不花钱'
 });
 
 /**
- * 批量写正文是 `pipeline` 存在的理由之一：正文落盘要在细纲上记 `writtenFrom`（第 18 条），
- * agent 拿着 write 自己拼就会漏掉这一步——那一章从此永远不会因为细纲改过而挂 ⟳。
+ * 批次寫正文是 `pipeline` 存在的理由之一：正文落盤要在細綱上記 `writtenFrom`（第 18 條），
+ * agent 拿著 write 自己拼就會漏掉這一步——那一章從此永遠不會因為細綱改過而掛 ⟳。
  */
-describe('批量写正文：正文直接落同号章节，并在细纲上记指纹', () => {
+describe('批次寫正文：正文直接落同號章節，並在細綱上記指紋', () => {
   let r;
 
   before(async () => {
     resetCtx();
-    h.expect('开始写章');
+    h.expect('開始寫章');
     r = await run({ action: 'batchManuscripts' });
   });
 
-  // 四期：缺省是下一可写章起 3 章、只写正文；全书只有两章细纲，收在第 2 章。上限含自动续写与写前比对（2026-10-25 起含转写）。
-  test('确认框写了区间与预计调用几次', () => {
-    assert.equal(h.confirms[0].message, '第 1–2 章：要写 2 章正文（只写正文），预计 2–8 次调用，最多 24 次。现在写？');
+  // 四期：預設是下一可寫章起 3 章、只寫正文；全書只有兩章細綱，收在第 2 章。上限含自動續寫與寫前比對（2026-10-25 起含轉寫）。
+  test('確認框寫了區間與預計呼叫幾次', () => {
+    assert.equal(h.confirms[0].message, '第 1–2 章：要寫 2 章正文（只寫正文），預計 2–8 次呼叫，最多 24 次。現在寫？');
   });
 
-  // 一章一纲：没有中转站，正文就落在 chapters/ 里那个同号的文件上。
-  test('两章正文都落进了 chapters/', async () => {
+  // 一章一綱：沒有中轉站，正文就落在 chapters/ 裡那個同號的檔案上。
+  test('兩章正文都落進了 chapters/', async () => {
     const chapters = await project.listChapters();
     assert.deepEqual(chapters.map((c) => c.relPath), [CH1, CH2]);
   });
 
-  test('正文内容就是模型写的那一段', () => {
-    assert.ok(t.read(CH1).includes('山门在雨里'), t.read(CH1));
+  test('正文內容就是模型寫的那一段', () => {
+    assert.ok(t.read(CH1).includes('山門在雨裡'), t.read(CH1));
   });
 
-  test('不再建中转站目录', () => {
-    assert.ok(!t.has('.novelwarden/manuscripts/001-夜入青云.md'));
+  test('不再建中轉站目錄', () => {
+    assert.ok(!t.has('.novelwarden/manuscripts/001-夜入青雲.md'));
   });
 
-  // ★ 少了这一步，细纲后来改过也不会让这一章挂 ⟳。
-  test('细纲上记了 writtenFrom，且等于细纲当前内容的指纹', async () => {
+  // ★ 少了這一步，細綱後來改過也不會讓這一章掛 ⟳。
+  test('細綱上記了 writtenFrom，且等於細綱當前內容的指紋', async () => {
     const plot = await project.readPlot(PLOT1);
     assert.equal(plot.writtenFrom, bundle.plotFile.plotContentHash(plot));
   });
 
-  test('调了两次模型，账上也记两次', () => {
+  test('調了兩次模型，賬上也記兩次', () => {
     assert.equal(fake.calls.length, 2, String(fake.calls.length));
     assert.equal(ctx.usage.calls, 2);
   });
 
-  test('返回文本里有次数', () => {
+  test('返回文字裡有次數', () => {
     assert.ok(r.text.includes('2 次'), r.text);
   });
 
-  // 只补空白：已经写过的章不再动，也不再花钱。
-  test('再调一次没事可做，不花钱', async () => {
+  // 只補空白：已經寫過的章不再動，也不再花錢。
+  test('再調一次沒事可做，不花錢', async () => {
     resetCtx();
     const again = await run({ action: 'batchManuscripts' });
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
     assert.equal(ctx.usage.calls, 0);
-    assert.ok(again.text.includes('没有调用模型'), again.text);
+    assert.ok(again.text.includes('沒有呼叫模型'), again.text);
   });
 });
 
-describe('newPlot 不花钱', () => {
+describe('newPlot 不花錢', () => {
   let r;
 
   before(async () => {
@@ -367,34 +367,34 @@ describe('newPlot 不花钱', () => {
     r = await run({ action: 'newPlot' });
   });
 
-  test('建出了一份细纲', () => {
+  test('建出了一份細綱', () => {
     assert.ok(r.text.includes('.novelwarden/summaries/'), `${r.text}｜${r.error ?? ''}`);
   });
 
-  test('一次模型都没调', () => {
+  test('一次模型都沒調', () => {
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
   });
 
-  // 细纲号 = 章号：第 1、2 章已经有细纲和正文，新建的那一份就是第 3 章的。
-  test('新建的是第 3 章的细纲', async () => {
+  // 細綱號 = 章號：第 1、2 章已經有細綱和正文，新建的那一份就是第 3 章的。
+  test('新建的是第 3 章的細綱', async () => {
     const plots = await project.listPlots();
     assert.deepEqual(plots.map((p) => p.no), [1, 2, 3]);
   });
 
-  // summaries/ 子目录里的不算细纲（判成 other），新建的那一份必须落在根下才认得出来。
-  test('新建的细纲平铺在 summaries/ 根下', async () => {
+  // summaries/ 子目錄裡的不算細綱（判成 other），新建的那一份必須落在根下才認得出來。
+  test('新建的細綱平鋪在 summaries/ 根下', async () => {
     const plots = await project.listPlots();
     assert.match(plots[2].relPath, /^\.novelwarden\/summaries\/003[^/]*\.md$/, plots[2].relPath);
   });
 
-  test('新建的细纲是空骨架（不算排过）', async () => {
+  test('新建的細綱是空骨架（不算排過）', async () => {
     const plots = await project.listPlots();
     assert.ok(!bundle.plotFile.isPlotFilled(plots[2].sections), JSON.stringify(plots[2].sections));
   });
 });
 
-// 补齐故事架构（六期）：工程页工具栏那颗按钮背后的同一个函数，确认框照弹。
-describe('补齐故事架构：转发给工程页那个动作', () => {
+// 補齊故事架構（六期）：工程頁工具欄那顆按鈕背後的同一個函式，確認框照彈。
+describe('補齊故事架構：轉發給工程頁那個動作', () => {
   let r;
 
   before(async () => {
@@ -403,66 +403,66 @@ describe('补齐故事架构：转发给工程页那个动作', () => {
     r = await run({ action: 'completeSettings' });
   });
 
-  // 小说配置写了核心梗概，算填过；缺的是另外三件。
-  test('确认框写着缺哪几件、预计调用几次', () => {
+  // 小說配置寫了核心梗概，算填過；缺的是另外三件。
+  test('確認框寫著缺哪幾件、預計呼叫幾次', () => {
     const message = h.confirms[h.confirms.length - 1].message;
-    assert.ok(message.startsWith('要补齐故事前提、角色图谱、世界观，预计'), message);
+    assert.ok(message.startsWith('要補齊故事前提、角色圖譜、世界觀，預計'), message);
   });
 
-  test('作者取消：一次模型都不调，账上也不记', () => {
+  test('作者取消：一次模型都不調，賬上也不記', () => {
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
     assert.equal(ctx.usage.calls, 0);
   });
 
-  test('回给模型的话说的是架构，不是「没有待处理的章」', () => {
-    assert.ok(r.text.includes('补齐故事架构这一次没有调用模型'), r.text);
-    assert.ok(!r.text.includes('待处理的章'), r.text);
+  test('回給模型的話說的是架構，不是「沒有待處理的章」', () => {
+    assert.ok(r.text.includes('補齊故事架構這一次沒有呼叫模型'), r.text);
+    assert.ok(!r.text.includes('待處理的章'), r.text);
   });
 });
 
-describe('工具定义本身', () => {
-  test('标了 mutating', () => {
+describe('工具定義本身', () => {
+  test('標了 mutating', () => {
     assert.equal(tool().mutating, true);
   });
 
-  test('标了 costly（四个动作里三个调模型）', () => {
+  test('標了 costly（四個動作裡三個調模型）', () => {
     assert.equal(tool().costly, true);
   });
 
-  test('参数是扁平的标量', () => {
+  test('引數是扁平的標量', () => {
     const props = tool().parameters.properties;
-    // 只有区间与模式：path / name / url 归别的工具，这里给了只会被当场拒。
+    // 只有區間與模式：path / name / url 歸別的工具，這裡給了只會被當場拒。
     assert.deepEqual(Object.keys(props).sort(), ['action', 'from', 'mode', 'review', 'to']);
     assert.ok(Object.values(props).every((p) => p.type !== 'object' && p.type !== 'array'), JSON.stringify(props));
   });
 
-  test('mode 是枚举：只写正文 / 写完即定稿', () => {
+  test('mode 是列舉：只寫正文 / 寫完即定稿', () => {
     assert.deepEqual(tool().parameters.properties.mode.enum, ['draft', 'finalize']);
   });
 
-  // 确认框上看得出这一下要动哪几章、要不要定稿——那是作者决定点不点的依据。
-  test('动手前那一问写着区间与模式', () => {
+  // 確認框上看得出這一下要動哪幾章、要不要定稿——那是作者決定點不點的依據。
+  test('動手前那一問寫著區間與模式', () => {
     const intent = tool().intent({ action: 'batchManuscripts', from: 5, to: 8, mode: 'finalize', review: true });
-    assert.ok(intent.detail.includes('第 5–8 章，写完即同步，写完即审稿'), intent.detail);
+    assert.ok(intent.detail.includes('第 5–8 章，寫完即同步，寫完即審稿'), intent.detail);
   });
 
-  test('action 是这四个动作的枚举', () => {
+  test('action 是這四個動作的列舉', () => {
     assert.deepEqual(tool().parameters.properties.action.enum, ['completeSettings', 'batchPlots', 'batchManuscripts', 'newPlot']);
   });
 
-  // 只给起点时，框里写「从第 N 章起」——实际收在哪一章由 feature 按磁盘算，写在下一个确认框里。
-  test('只给 from 时那一问写「从第 N 章起」；什么都不给就不写区间', () => {
-    assert.ok(tool().intent({ action: 'batchManuscripts', from: 3 }).detail.startsWith('从第 3 章起'));
-    assert.ok(tool().intent({ action: 'batchManuscripts' }).detail.startsWith('随后还会告诉你'));
-    assert.equal(tool().intent({ action: 'batchManuscripts' }).title, '批量写章');
+  // 只給起點時，框裡寫「從第 N 章起」——實際收在哪一章由 feature 按磁碟算，寫在下一個確認框裡。
+  test('只給 from 時那一問寫「從第 N 章起」；什麼都不給就不寫區間', () => {
+    assert.ok(tool().intent({ action: 'batchManuscripts', from: 3 }).detail.startsWith('從第 3 章起'));
+    assert.ok(tool().intent({ action: 'batchManuscripts' }).detail.startsWith('隨後還會告訴你'));
+    assert.equal(tool().intent({ action: 'batchManuscripts' }).title, '批次寫章');
   });
 
-  // 第 5 条端到端验收点的提示词落点：连续多章该走批量动作而不是循环 generate。
-  test('描述里引导「连续多章走批量动作」', () => {
-    assert.ok(tool().description.includes('连续多章'), tool().description);
+  // 第 5 條端到端驗收點的提示詞落點：連續多章該走批次動作而不是迴圈 generate。
+  test('描述裡引導「連續多章走批次動作」', () => {
+    assert.ok(tool().description.includes('連續多章'), tool().description);
   });
 
-  test('描述里说清了会先弹确认框告诉作者调几次', () => {
-    assert.ok(tool().description.includes('确认框'), tool().description);
+  test('描述裡說清了會先彈確認框告訴作者調幾次', () => {
+    assert.ok(tool().description.includes('確認框'), tool().description);
   });
 });

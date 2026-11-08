@@ -1,24 +1,24 @@
 /**
- * Draft store：还没落盘的产物存哪里。
+ * Draft store：還沒落盤的產物存哪裡。
  *
- * ## 为什么要有它
+ * ## 為什麼要有它
  *
- * `generate` 产出的 `Draft` 一个字都没写盘。它至少要活到作者在那张落盘卡片
- * 上点头的那一刻（`controller/gate.ts`），而 agent 手里的 draftId 还可能被
- * 它稍后用 `write draftId=…` 拿去写。所以：内存为主（`Map`），**随会话 JSON
- * 一起落盘**（`.novelwarden/sessions/<id>.json`）——翻回一个旧会话接着让 agent
- * 干活时，那几份草稿还得在。
+ * `generate` 產出的 `Draft` 一個字都沒寫盤。它至少要活到作者在那張落盤卡片
+ * 上點頭的那一刻（`controller/gate.ts`），而 agent 手裡的 draftId 還可能被
+ * 它稍後用 `write draftId=…` 拿去寫。所以：記憶體為主（`Map`），**隨會話 JSON
+ * 一起落盤**（`.novelwarden/sessions/<id>.json`）——翻回一箇舊會話接著讓 agent
+ * 幹活時，那幾份草稿還得在。
  *
- * ## 不进 SQLite
+ * ## 不進 SQLite
  *
- * 第 17 条：库只放可丢弃的痕迹，内容的唯一真相是 Markdown。draft 是未落盘的
- * 内容，但它跟着会话走，而会话本来就是 JSON。
+ * 第 17 條：庫只放可丟棄的痕跡，內容的唯一真相是 Markdown。draft 是未落盤的
+ * 內容，但它跟著會話走，而會話本來就是 JSON。
  *
- * ## 容错读取不在这里
+ * ## 容錯讀取不在這裡
  *
- * 会话文件的容错归一化全在 `model/session.ts` 的 `normalize()`——`drafts`
- * 只是它的又一个字段，没道理单开一套。认不出的草稿在那里就被丢掉了，
- * 装进本store 的一律是已经归一过的。
+ * 會話檔案的容錯歸一化全在 `model/session.ts` 的 `normalize()`——`drafts`
+ * 只是它的又一個欄位，沒道理單開一套。認不出的草稿在那裡就被丟掉了，
+ * 裝進本store 的一律是已經歸一過的。
  */
 import type { SessionDraft } from '../model/session';
 import type { Draft } from './generate';
@@ -26,28 +26,28 @@ import type { Draft } from './generate';
 export type { Draft };
 
 /**
- * 一个会话最多留几份草稿。
+ * 一個會話最多留幾份草稿。
  *
- * `draft.raw` 与 `ChatTurn.content` 是同一段文字，全留着等于把会话文件
- * 写两遍——一场几十轮的正文对话就是几十万字。留最近的若干份足够：
- * 更早那些轮次写不写盘，早就当场问过了。
+ * `draft.raw` 與 `ChatTurn.content` 是同一段文字，全留著等於把會話檔案
+ * 寫兩遍——一場幾十輪的正文對話就是幾十萬字。留最近的若干份足夠：
+ * 更早那些輪次寫不寫盤，早就當場問過了。
  */
 export const MAX_DRAFTS_PER_SESSION = 20;
 
 /**
- * 内存里的草稿表。**一个 controller 一份**（会话之间不共享）。
+ * 記憶體裡的草稿表。**一個 controller 一份**（會話之間不共享）。
  *
- * 按会话分桶而不是一张大表：会话关掉时要能整桶扔掉，而按 draftId 逐个删
- * 需要先知道有哪些——那份名单只有会话自己有。
+ * 按會話分桶而不是一張大表：會話關掉時要能整桶扔掉，而按 draftId 逐個刪
+ * 需要先知道有哪些——那份名單隻有會話自己有。
  */
 export class DraftStore {
   private readonly bySessionId = new Map<string, Draft[]>();
   private readonly byId = new Map<string, Draft>();
 
-  /** 记一份新草稿。超出上限时丢最老的。 */
+  /** 記一份新草稿。超出上限時丟最老的。 */
   put(draft: Draft, sessionId: string): void {
     const list = this.bySessionId.get(sessionId) ?? [];
-    // 同 id 覆盖：重来一轮时草稿也该跟着换掉那一份。
+    // 同 id 覆蓋：重來一輪時草稿也該跟著換掉那一份。
     const existing = list.findIndex((d) => d.id === draft.id);
     if (existing !== -1) {
       list.splice(existing, 1);
@@ -67,12 +67,12 @@ export class DraftStore {
     return this.byId.get(id);
   }
 
-  /** 某个会话的全部草稿，按产生顺序。落盘时写的就是这一份。 */
+  /** 某個會話的全部草稿，按產生順序。落盤時寫的就是這一份。 */
   bySession(sessionId: string): Draft[] {
     return [...(this.bySessionId.get(sessionId) ?? [])];
   }
 
-  /** 会话切换/关闭时清掉该会话的草稿。 */
+  /** 會話切換/關閉時清掉該會話的草稿。 */
   dropBySession(sessionId: string): void {
     for (const draft of this.bySessionId.get(sessionId) ?? []) {
       this.byId.delete(draft.id);
@@ -81,11 +81,11 @@ export class DraftStore {
   }
 
   /**
-   * 打开会话时把落盘的那批装回内存。整桶替换，不合并——
-   * 同一个会话被重新打开时，磁盘上那份就是全部真相。
+   * 開啟會話時把落盤的那批裝回記憶體。整桶替換，不合併——
+   * 同一個會話被重新開啟時，磁碟上那份就是全部真相。
    *
-   * 收的是 `SessionDraft`（`artifact` 是不透明的）：数据层不认识 `Artifact`，
-   * 而这份快照只用于画卡片，采纳时会拿气泡里当下的文本重新解析。
+   * 收的是 `SessionDraft`（`artifact` 是不透明的）：資料層不認識 `Artifact`，
+   * 而這份快照只用於畫卡片，採納時會拿氣泡裡當下的文字重新解析。
    */
   load(sessionId: string, list: SessionDraft[] | undefined): void {
     this.dropBySession(sessionId);

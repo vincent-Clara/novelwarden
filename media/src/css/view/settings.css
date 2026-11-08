@@ -1,4 +1,4 @@
-/* 设置页：服务商卡片与模型行。 */
+/* 設定頁：服務商卡片與模型行。 */
 
 .settings-subtabs {
   display: flex;
@@ -48,7 +48,7 @@ button.settings-subtab.active {
   border-radius: var(--radius);
 }
 
-/* 设置列表里的概要卡片，详细配置在弹窗里。 */
+/* 設定列表裡的概要卡片，詳細配置在彈窗裡。 */
 .provider-card {
   display: flex;
   flex-direction: column;
@@ -87,7 +87,7 @@ button.settings-subtab.active {
   gap: 4px;
 }
 
-/* 模型徽标，跟 VS Code 的 badge 同色系。 */
+/* 模型徽標，跟 VS Code 的 badge 同色系。 */
 .model-chip {
   font-family: var(--vscode-editor-font-family);
   font-size: 0.8em;
@@ -175,7 +175,7 @@ button.settings-subtab.active {
   color: var(--vscode-testing-iconPassed, #89d185);
 }
 
-/* 「默认模型」与三档各自的有序列表。顺序即优先级，所以行首要有序号、首项要有标记。 */
+/* 「預設模型」與三檔各自的有序列表。順序即優先順序，所以行首要有序號、首項要有標記。 */
 #defaultModelList,
 #tierModelList-fast,
 #tierModelList-balanced,
@@ -240,8 +240,8 @@ button.settings-subtab.active {
   width: 100%;
 }
 
-/* 「高级设置」折叠开关：把模型分档/任务档位/请求与调度这几块日常不动的
-   配置收起来，默认折叠。沿用工程页 group-toggle 的视觉语言。 */
+/* 「高階設定」摺疊開關：把模型分檔/任務檔位/請求與排程這幾塊日常不動的
+   配置收起來，預設摺疊。沿用工程頁 group-toggle 的視覺語言。 */
 .settings-advanced-toggle {
   display: flex;
   align-items: baseline;
@@ -280,11 +280,11 @@ button.settings-subtab.active {
   white-space: nowrap;
 }
 
-/* ---------------------------------------------------------------- 模型分档 */
+/* ---------------------------------------------------------------- 模型分檔 */
 
 /*
- * 三档并排。侧边栏很窄（VS Code 里常只有 300px），auto-fit 让它在窄处
- * 自然堆成一列，宽处才排成三列——不给分档单开一套断点。
+ * 三檔並排。側邊欄很窄（VS Code 裡常只有 300px），auto-fit 讓它在窄處
+ * 自然堆成一列，寬處才排成三列——不給分檔單開一套斷點。
  */
 .tier-grid {
   display: grid;
@@ -315,7 +315,7 @@ button.settings-subtab.active {
   color: var(--vscode-descriptionForeground);
 }
 
-/* 任务 → 档位的对照表。 */
+/* 任務 → 檔位的對照表。 */
 #taskTierTable {
   display: flex;
   flex-direction: column;
@@ -344,7 +344,7 @@ button.settings-subtab.active {
   font-size: 0.9em;
 }
 
-/* 「这活为什么归在这一档」——一行说明，窄处省略而不是把下拉框挤没。 */
+/* 「這活為什麼歸在這一檔」——一行說明，窄處省略而不是把下拉框擠沒。 */
 .task-tier-hint {
   font-size: 0.78em;
   color: var(--vscode-descriptionForeground);
@@ -358,7 +358,7 @@ button.settings-subtab.active {
   max-width: 45%;
 }
 
-/* 「技能」那一页：检查卡与技能库的每一行。 */
+/* 「技能」那一頁：檢查卡與技能庫的每一行。 */
 
 .skill-install {
   display: flex;

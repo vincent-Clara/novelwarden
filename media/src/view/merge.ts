@@ -1,41 +1,41 @@
 /**
- * 覆盖审阅的段级 diff / 合并视图（五期 W11，仅独立版）。
+ * 覆蓋審閱的段級 diff / 合併檢視（五期 W11，僅獨立版）。
  *
- * 后端（`FileHost.reviewReplace`）推一条 `prompt kind: 'merge'`：两个版本、能不能合并。
- * 这里按段对齐（model/paragraphDiff.ts 的 LCS），相同的段一行带过，每一处改动画成：
+ * 後端（`FileHost.reviewReplace`）推一條 `prompt kind: 'merge'`：兩個版本、能不能合併。
+ * 這裡按段對齊（model/paragraphDiff.ts 的 LCS），相同的段一行帶過，每一處改動畫成：
  *
  * ```
  * ┌ 原文 ──────────────┐ ┌ 新版 ──────────────┐
- * │ 她把那块残令收进袖中 │ │ 她看了一眼他空着的手 │
+ * │ 她把那塊殘令收進袖中 │ │ 她看了一眼他空著的手 │
  * └────────────────────┘ └────────────────────┘
- * ┌ 结果（可以手改）──────────────────────────┐
- * │ 她看了一眼他空着的手                       │
+ * ┌ 結果（可以手改）──────────────────────────┐
+ * │ 她看了一眼他空著的手                       │
  * └──────────────────────────────────────────┘
- * [保留原文] [采用新版]                   已采用新版
+ * [保留原文] [採用新版]                   已採用新版
  * ```
  *
- * ## 手改过的那一格谁都不动
+ * ## 手改過的那一格誰都不動
  *
- * AI-Novel-Writer 的 `ThreeWayMerge` 点「采用」就把那一格换成原稿或修稿的原样文字，作者刚手改的
- * 内容一声不响就没了（`toggleHunk`，ThreeWayMerge.tsx:336-347）。这里一格被手改过，它的两颗按钮
- * 与顶上的「全部采用新版 / 全部保留原文」都**不碰它**；要重来先点「撤销手改」（第 3 条：不静默覆盖）。
+ * AI-Novel-Writer 的 `ThreeWayMerge` 點「採用」就把那一格換成原稿或修稿的原樣文字，作者剛手改的
+ * 內容一聲不響就沒了（`toggleHunk`，ThreeWayMerge.tsx:336-347）。這裡一格被手改過，它的兩顆按鈕
+ * 與頂上的「全部採用新版 / 全部保留原文」都**不碰它**；要重來先點「撤銷手改」（第 3 條：不靜默覆蓋）。
  *
- * ## 缺省是新版
+ * ## 預設是新版
  *
- * 作者是发起了一次生成（重写、修稿）才走到这里的，结果格一开始放的是新版——什么都不动直接点
- * 「写入」就等于从前的「覆盖」。一处都没动过（或者全部采用新版、没有手改）时交回 `apply`，
- * 原样用新版，不经段拼接：拼接会把段间空行规范成一个，作者没挑什么，就不该让文件里的排版变样。
+ * 作者是發起了一次生成（重寫、修稿）才走到這裡的，結果格一開始放的是新版——什麼都不動直接點
+ * 「寫入」就等於從前的「覆蓋」。一處都沒動過（或者全部採用新版、沒有手改）時交回 `apply`，
+ * 原樣用新版，不經段拼接：拼接會把段間空行規範成一個，作者沒挑什麼，就不該讓檔案裡的排版變樣。
  *
- * ## 只读模式
+ * ## 只讀模式
  *
- * 没请求合并的调用方（角色卡、设定条目那几处）收不下一份作者拼出来的文字：只画两栏 diff，
- * 底部是「采纳 / 放弃」。
+ * 沒請求合併的呼叫方（角色卡、設定條目那幾處）收不下一份作者拼出來的文字：只畫兩欄 diff，
+ * 底部是「採納 / 放棄」。
  *
- * ## 两栏叫什么由后端说
+ * ## 兩欄叫什麼由後端說
  *
- * 缺省是「原文 / 新版」（覆盖审阅、删修饰）。内置编辑器冲突时的「对比合并」是「磁盘上的 / 编辑器里的」，
- * 历史版本的「对比」是「快照 / 编辑器里的」——消息带 `sides` 时两栏、逐处与整体的按钮、状态都跟着换成
- * 「用……」的说法；`applyLabel` 换掉「写入合并结果」（那两处不写盘，是「放回编辑器」）。
+ * 預設是「原文 / 新版」（覆蓋審閱、刪修飾）。內建編輯器衝突時的「對比合併」是「磁碟上的 / 編輯器裡的」，
+ * 歷史版本的「對比」是「快照 / 編輯器裡的」——訊息帶 `sides` 時兩欄、逐處與整體的按鈕、狀態都跟著換成
+ * 「用……」的說法；`applyLabel` 換掉「寫入合併結果」（那兩處不寫盤，是「放回編輯器」）。
  */
 import { el as mk, maybeById, setHidden } from '../dom';
 import type { MergeSegment, OutMessage } from '../protocol';
@@ -45,7 +45,7 @@ import { vscode } from './store';
 type PromptMessage = Extract<OutMessage, { type: 'prompt' }>;
 type Change = Extract<MergeSegment, { kind: 'change' }>;
 
-/** 一处改动的状态：挑了哪一边（还没挑是 undefined）、手改过没有。 */
+/** 一處改動的狀態：挑了哪一邊（還沒挑是 undefined）、手改過沒有。 */
 interface HunkState {
   choice?: 'new' | 'old';
   edited: boolean;
@@ -53,10 +53,10 @@ interface HunkState {
   refresh?: () => void;
 }
 
-/** 相同的段连着超过这么多段就折起来，只露头尾。 */
+/** 相同的段連著超過這麼多段就折起來，只露頭尾。 */
 const SAME_FOLD = 3;
 
-/** 两栏与那几颗按钮上的字。 */
+/** 兩欄與那幾顆按鈕上的字。 */
 interface MergeLabels {
   colOld: string;
   colNew: string;
@@ -70,18 +70,18 @@ interface MergeLabels {
   hint: string;
 }
 
-/** 覆盖审阅与删修饰的说法（从前写死的那一套，一字不改）。 */
+/** 覆蓋審閱與刪修飾的說法（從前寫死的那一套，一字不改）。 */
 const DEFAULT_LABELS: MergeLabels = {
   colOld: '原文',
   colNew: '新版',
   takeOld: '保留原文',
-  takeNew: '采用新版',
+  takeNew: '採用新版',
   allOld: '全部保留原文',
-  allNew: '全部采用新版',
+  allNew: '全部採用新版',
   stateOld: '已保留原文',
-  stateNew: '已采用新版',
-  pending: '未处理（缺省是新版）',
-  hint: '结果格可以手改；手改过的那一格，「采用」与「全部采用」都不会动它。',
+  stateNew: '已採用新版',
+  pending: '未處理（預設是新版）',
+  hint: '結果格可以手改；手改過的那一格，「採用」與「全部採用」都不會動它。',
 };
 
 function labelsOf(msg: PromptMessage): MergeLabels {
@@ -100,16 +100,16 @@ function labelsOf(msg: PromptMessage): MergeLabels {
     allNew: `全部用${b}`,
     stateOld: `已用${a}`,
     stateNew: `已用${b}`,
-    pending: `未处理（缺省是${b}）`,
-    hint: '结果格可以手改；手改过的那一格，逐处与整体的按钮都不会再动它。',
+    pending: `未處理（預設是${b}）`,
+    hint: '結果格可以手改；手改過的那一格，逐處與整體的按鈕都不會再動它。',
   };
 }
 
 export function renderMerge(msg: PromptMessage): void {
-  // 这一块只有独立版的页面上有（插件用 VS Code 自己的 diff 编辑器）：能力探测，不判断是哪个壳。
+  // 這一塊只有獨立版的頁面上有（外掛用 VS Code 自己的 diff 編輯器）：能力探測，不判斷是哪個殼。
   const modal = maybeById('mergeModal');
   if (!modal) {
-    // 没有合并视图的页面收到了一条合并询问：当取消，别让后端死等。
+    // 沒有合併檢視的頁面收到了一條合併詢問：當取消，別讓後端死等。
     vscode.postMessage({ type: 'promptResult', requestId: msg.requestId, value: undefined });
     return;
   }
@@ -137,12 +137,12 @@ export function renderMerge(msg: PromptMessage): void {
   setHidden(allOld, !mergeable || total === 0);
   allNew.textContent = labels.allNew;
   allOld.textContent = labels.allOld;
-  apply.textContent = mergeable ? (msg.applyLabel ?? '写入合并结果') : '采纳';
-  hint.textContent = mergeable ? labels.hint : '只能整份采纳或放弃。';
+  apply.textContent = mergeable ? (msg.applyLabel ?? '寫入合併結果') : '採納';
+  hint.textContent = mergeable ? labels.hint : '只能整份採納或放棄。';
 
   const syncProgress = () => {
     const done = [...states.values()].filter((s) => s.choice || s.edited).length;
-    progress.textContent = total === 0 ? '两个版本没有不同的段' : mergeable ? `已处理 ${done} / ${total} 处` : `${total} 处改动`;
+    progress.textContent = total === 0 ? '兩個版本沒有不同的段' : mergeable ? `已處理 ${done} / ${total} 處` : `${total} 處改動`;
   };
 
   segments.forEach((seg, k) => {
@@ -234,14 +234,14 @@ function hunkBlock(
   const area = mk('textarea', 'merge-result');
   area.value = sideText(seg, 'new');
   area.rows = Math.min(12, Math.max(2, area.value.split('\n').length + 1));
-  area.setAttribute('aria-label', '合并结果（可以手改）');
+  area.setAttribute('aria-label', '合併結果（可以手改）');
   state.area = area;
   block.appendChild(area);
 
   const actions = mk('div', 'merge-actions');
   const takeNew = mk('button', 'secondary small merge-take-new', labels.takeNew);
   const takeOld = mk('button', 'secondary small merge-take-old', labels.takeOld);
-  const undo = mk('button', 'link merge-undo', '撤销手改');
+  const undo = mk('button', 'link merge-undo', '撤銷手改');
   const label = mk('span', 'merge-state');
   actions.append(takeOld, takeNew, undo, label);
   block.appendChild(actions);
@@ -253,7 +253,7 @@ function hunkBlock(
     }
     takeNew.disabled = state.edited;
     takeOld.disabled = state.edited;
-    const lock = state.edited ? '这一处你手改过，不会被「采用」冲掉；要重来先点「撤销手改」' : '';
+    const lock = state.edited ? '這一處你手改過，不會被「採用」沖掉；要重來先點「撤銷手改」' : '';
     takeNew.title = lock;
     takeOld.title = lock;
     setHidden(undo, !state.edited);
@@ -302,7 +302,7 @@ function side(label: string, paragraphs: string[], className: string): HTMLEleme
   const col = mk('div', `merge-side ${className}`);
   col.appendChild(mk('div', 'merge-side-label', label));
   if (paragraphs.length === 0) {
-    col.appendChild(mk('p', 'merge-none', '（无）'));
+    col.appendChild(mk('p', 'merge-none', '（無）'));
   }
   paragraphs.forEach((p) => col.appendChild(mk('p', undefined, p)));
   return col;

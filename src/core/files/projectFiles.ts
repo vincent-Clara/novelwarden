@@ -9,36 +9,36 @@ import { NovelProject } from '../model/project';
 import { Workspace } from '../workspace';
 import { FileOpResult } from '../protocol';
 
-const log = scoped('文件页');
+const log = scoped('檔案頁');
 
 /**
- * 文件页（资源管理器）的类文件操作：工程根范围的重命名、移动、复制。
+ * 檔案頁（資源管理器）的類檔案操作：工程根範圍的重新命名、移動、複製。
  *
- * 与 fileOps.ts 的分工：那边锁在章节/角色/设定三个区里，是工程页的产品
- * 承诺；这边面向整个工程根（含 `.novelwarden/`，旧工程是 `.novelforge/`），是文件页的磁盘视角。
- * 相同的约束仍然在：
+ * 與 fileOps.ts 的分工：那邊鎖在章節/角色/設定三個區裡，是工程頁的產品
+ * 承諾；這邊面向整個工程根（含 `.novelwarden/`，舊工程是 `.novelforge/`），是檔案頁的磁碟視角。
+ * 相同的約束仍然在：
  *
- * 1. **不出工程根**：`..` 逃逸与绝对路径一律拒绝。
- * 2. **不静默覆盖**：目标同名逐项拒绝，其余项继续。
- * 3. **固定目录不动**：chapters/、drafts/、`.novelwarden/`（旧工程 `.novelforge/`）及其关键子目录受保护。
- * 4. **垃圾箱不搬**：`.novelwarden/.trash/`（旧工程 `.novelforge/.trash/`）里的内容不是操作对象（复制出来可以，见下）。
+ * 1. **不出工程根**：`..` 逃逸與絕對路徑一律拒絕。
+ * 2. **不靜默覆蓋**：目標同名逐項拒絕，其餘項繼續。
+ * 3. **固定目錄不動**：chapters/、drafts/、`.novelwarden/`（舊工程 `.novelforge/`）及其關鍵子目錄受保護。
+ * 4. **垃圾箱不搬**：`.novelwarden/.trash/`（舊工程 `.novelforge/.trash/`）裡的內容不是操作物件（複製出來可以，見下）。
  *
- * 移动与复制都经网关（`Workspace.move` / `Workspace.copy`），守卫、伴生、manifest 同步都在那一层做一次：
+ * 移動與複製都經閘道器（`Workspace.move` / `Workspace.copy`），守衛、伴生、manifest 同步都在那一層做一次：
  *
- * - **移动**：章节带草稿与细纲跟随、manifest 同步；章节被移出 chapters/ 时草稿留在原镜像路径，只记日志提醒。
- * - **复制**：来源与落点都过守卫——复制不进回收站、会话目录、历史版本；会话文件与工程库复制不出来；回收站与
- *   历史版本里的东西**复制得出来**（读得到就复制得出来，原件一字不动——在工程里找回一份的入口）。没有伴生：
- *   复制一章不带草稿与细纲（副本是一章新的）；细纲副本去掉定稿那一侧的指纹；复制进 chapters/ 的同步 manifest。
+ * - **移動**：章節帶草稿與細綱跟隨、manifest 同步；章節被移出 chapters/ 時草稿留在原映象路徑，只記日誌提醒。
+ * - **複製**：來源與落點都過守衛——複製不進回收站、會話目錄、歷史版本；會話檔案與工程庫複製不出來；回收站與
+ *   歷史版本裡的東西**複製得出來**（讀得到就複製得出來，原件一字不動——在工程裡找回一份的入口）。沒有伴生：
+ *   複製一章不帶草稿與細綱（副本是一章新的）；細綱副本去掉定稿那一側的指紋；複製進 chapters/ 的同步 manifest。
  */
 
-/** 工程根范围的重命名。逐项结果的形状与 move/copy 对齐。 */
+/** 工程根範圍的重新命名。逐項結果的形狀與 move/copy 對齊。 */
 export async function renameAny(project: NovelProject, relPath: string): Promise<FileOpResult> {
   const from = normalizeRel(relPath) ?? relPath;
   const to = await renameEntryInRoot(project, relPath);
   return to ? { from, to, ok: true } : { from, ok: false };
 }
 
-/** 粘贴（剪切变体）：把若干文件/目录移动到目标目录。 */
+/** 貼上（剪下變體）：把若干檔案/目錄移動到目標目錄。 */
 export async function moveInto(
   project: NovelProject,
   sources: string[],
@@ -47,7 +47,7 @@ export async function moveInto(
   return pasteAll(project, sources, targetDir, false);
 }
 
-/** 粘贴（复制变体）：把若干文件/目录递归复制到目标目录。 */
+/** 貼上（複製變體）：把若干檔案/目錄遞迴複製到目標目錄。 */
 export async function copyInto(
   project: NovelProject,
   sources: string[],
@@ -62,12 +62,12 @@ async function pasteAll(
   targetDir: string,
   copy: boolean
 ): Promise<FileOpResult[]> {
-  // 空串落点 = 工程根目录；normalizeRel 不收空串，单独放行。
+  // 空串落點 = 工程根目錄；normalizeRel 不收空串，單獨放行。
   const dest = targetDir.trim() === '' ? '' : normalizeRel(targetDir);
   if (dest === undefined) {
-    log.warn(`粘贴被拒：目标目录不合法`, `原始输入 ${JSON.stringify(targetDir)}`);
-    getHost().toast('目标目录不合法。', 'error');
-    return sources.map((from) => ({ from, ok: false, error: '目标目录不合法' }));
+    log.warn(`貼上被拒：目標目錄不合法`, `原始輸入 ${JSON.stringify(targetDir)}`);
+    getHost().toast('目標目錄不合法。', 'error');
+    return sources.map((from) => ({ from, ok: false, error: '目標目錄不合法' }));
   }
   const destAbs = dest === '' ? project.root : project.pathOf(dest);
   let destIsDir = false;
@@ -77,9 +77,9 @@ async function pasteAll(
     destIsDir = false;
   }
   if (!destIsDir) {
-    log.warn(`粘贴被拒：目标目录不存在 ${dest || '（工程根）'}`);
-    getHost().toast(`目标目录不存在：${dest || '（工程根）'}`, 'error');
-    return sources.map((from) => ({ from, ok: false, error: '目标目录不存在' }));
+    log.warn(`貼上被拒：目標目錄不存在 ${dest || '（工程根）'}`);
+    getHost().toast(`目標目錄不存在：${dest || '（工程根）'}`, 'error');
+    return sources.map((from) => ({ from, ok: false, error: '目標目錄不存在' }));
   }
 
   const results: FileOpResult[] = [];
@@ -92,7 +92,7 @@ async function pasteAll(
     results.push(r);
   }
 
-  // 移动章节改了路径：重算 manifest。复制进 chapters/ 的新章节由 `Workspace.copy` 自己同步过了。
+  // 移動章節改了路徑：重算 manifest。複製進 chapters/ 的新章節由 `Workspace.copy` 自己同步過了。
   if (!copy && chaptersTouched) {
     await project.syncManifest();
   }
@@ -100,13 +100,13 @@ async function pasteAll(
 
   const failed = results.filter((r) => !r.ok);
   if (failed.length > 0) {
-    getHost().toast(`${failed.length} 项未${copy ? '复制' : '移动'}：${failed[0].error}`, 'error');
+    getHost().toast(`${failed.length} 項未${copy ? '複製' : '移動'}：${failed[0].error}`, 'error');
   } else {
     log.info(
-      `${copy ? '已复制' : '已移动'} ${results.length} 项`,
-      `落点 ${dest === '' ? '（工程根）' : dest}`
+      `${copy ? '已複製' : '已移動'} ${results.length} 項`,
+      `落點 ${dest === '' ? '（工程根）' : dest}`
     );
-    getHost().toast(`已${copy ? '复制' : '移动'} ${results.length} 项到 ${dest === '' ? '工程根目录' : dest}。`);
+    getHost().toast(`已${copy ? '複製' : '移動'} ${results.length} 項到 ${dest === '' ? '工程根目錄' : dest}。`);
   }
   return results;
 }
@@ -119,17 +119,17 @@ async function pasteOne(
 ): Promise<FileOpResult> {
   const rel = normalizeRel(relPath);
   if (!rel) {
-    log.warn(`粘贴被拒：路径不合法`, `原始输入 ${JSON.stringify(relPath)}`);
-    return { from: relPath, ok: false, error: '路径不合法' };
+    log.warn(`貼上被拒：路徑不合法`, `原始輸入 ${JSON.stringify(relPath)}`);
+    return { from: relPath, ok: false, error: '路徑不合法' };
   }
   if (isProtectedPath(project, rel)) {
-    log.warn(`粘贴被拒：${rel} 是工程的固定目录`);
-    return { from: rel, ok: false, error: `「${rel}」是固定目录` };
+    log.warn(`貼上被拒：${rel} 是工程的固定目錄`);
+    return { from: rel, ok: false, error: `「${rel}」是固定目錄` };
   }
-  // 回收站里的东西搬不出来（那是改回收站）；**复制得出来**——网关的复制只读来源（`guardCopySource`）。
+  // 回收站裡的東西搬不出來（那是改回收站）；**複製得出來**——閘道器的複製只讀來源（`guardCopySource`）。
   if (!copy && isInTrash(project, rel)) {
-    log.warn(`粘贴被拒：${rel} 在回收站里`);
-    return { from: rel, ok: false, error: '回收站里的内容不能操作' };
+    log.warn(`貼上被拒：${rel} 在回收站裡`);
+    return { from: rel, ok: false, error: '回收站裡的內容不能操作' };
   }
 
   const abs = project.pathOf(rel);
@@ -137,44 +137,44 @@ async function pasteOne(
   try {
     isDir = (await fs.stat(abs)).isDirectory();
   } catch {
-    log.warn(`粘贴被拒：找不到 ${rel}`);
+    log.warn(`貼上被拒：找不到 ${rel}`);
     return { from: rel, ok: false, error: `找不到 ${rel}` };
   }
 
   const name = path.basename(rel);
   const nextRel = dest === '' ? name : `${dest}/${name}`;
   if (nextRel === rel) {
-    return { from: rel, ok: false, error: '已经在这个目录里' };
+    return { from: rel, ok: false, error: '已經在這個目錄裡' };
   }
-  // 目录不能搬进自己的子孙——那会把子树从文件系统上摘下来。
+  // 目錄不能搬進自己的子孫——那會把子樹從檔案系統上摘下來。
   if (isDir && (dest === rel || dest.startsWith(`${rel}/`))) {
-    log.warn(`粘贴被拒：不能把文件夹放进自己里面`, `${rel} → ${dest}`);
-    return { from: rel, ok: false, error: '不能放进它自己里面' };
+    log.warn(`貼上被拒：不能把資料夾放進自己裡面`, `${rel} → ${dest}`);
+    return { from: rel, ok: false, error: '不能放進它自己裡面' };
   }
   const nextAbs = project.pathOf(nextRel);
   if (await exists(nextAbs)) {
-    log.warn(`粘贴被拒：目标已有同名项 ${nextRel}`);
-    return { from: rel, ok: false, error: `目标已有同名项 ${nextRel}` };
+    log.warn(`貼上被拒：目標已有同名項 ${nextRel}`);
+    return { from: rel, ok: false, error: `目標已有同名項 ${nextRel}` };
   }
 
   try {
     const ws = new Workspace(project);
     if (copy) {
-      // 经网关复制：来源与落点都过守卫（复制不进回收站 / 会话目录 / 历史版本，会话与工程库复制不出来），
-      // 目录逐个文件过；字节原样；细纲副本去掉定稿那一侧的指纹，复制进 chapters/ 的同步 manifest。
-      // **复制没有伴生**：复制一章不该顺手把草稿、细纲也复制一份——草稿是作者对原章写的笔记，细纲是原章的计划与
-      // 档案，跟着副本走会变成两份各自漂移的东西（副本是一章新的，第 8 条）。
+      // 經閘道器複製：來源與落點都過守衛（複製不進回收站 / 會話目錄 / 歷史版本，會話與工程庫複製不出來），
+      // 目錄逐個檔案過；位元組原樣；細綱副本去掉定稿那一側的指紋，複製進 chapters/ 的同步 manifest。
+      // **複製沒有伴生**：複製一章不該順手把草稿、細綱也複製一份——草稿是作者對原章寫的筆記，細綱是原章的計劃與
+      // 檔案，跟著副本走會變成兩份各自漂移的東西（副本是一章新的，第 8 條）。
       await ws.copy(rel, nextRel);
     } else {
-      // 经网关搬：草稿跟随、manifest 同步、章节被移出 chapters/ 时的提示
-      // 都在 chapter handler 里做一次。
+      // 經閘道器搬：草稿跟隨、manifest 同步、章節被移出 chapters/ 時的提示
+      // 都在 chapter handler 裡做一次。
       await ws.move(rel, nextRel);
     }
   } catch (err) {
-    log.warn(`粘贴失败：${rel} → ${nextRel}`, describeError(err));
+    log.warn(`貼上失敗：${rel} → ${nextRel}`, describeError(err));
     return { from: rel, ok: false, error: describeError(err) };
   }
 
-  log.info(`${copy ? '已复制' : '已移动'}${isDir ? '文件夹' : ''}`, `${rel} → ${nextRel}`);
+  log.info(`${copy ? '已複製' : '已移動'}${isDir ? '資料夾' : ''}`, `${rel} → ${nextRel}`);
   return { from: rel, to: nextRel, ok: true };
 }

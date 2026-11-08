@@ -1,18 +1,18 @@
 /**
- * 自动保存。**缺省关**：标题栏「文件 → 自动保存」（紧跟在「全部保存」后面，开着打 ✓），记在 localStorage
- * `novelforge.editor.prefs`（按浏览器记，不进工程；`paragraphState.ts`）。开着时状态栏挂一枚「自动保存」。
+ * 自動儲存。**預設關**：標題欄「檔案 → 自動儲存」（緊跟在「全部儲存」後面，開著打 ✓），記在 localStorage
+ * `novelforge.editor.prefs`（按瀏覽器記，不進工程；`paragraphState.ts`）。開著時狀態列掛一枚「自動儲存」。
  *
- * 开着时三个时机，一律经 `saving.requestSave(…, { auto: true })`：
+ * 開著時三個時機，一律經 `saving.requestSave(…, { auto: true })`：
  *
- * - **停笔 {@link AUTOSAVE_IDLE_MS}**：存那一份。输入法组字中途不算停笔（拼音还没上屏），上屏之后重新计时。
- * - **切走一个标签**：存刚离开的那一份。
- * - **窗口失去焦点 / 页面藏起来**：存全部。
+ * - **停筆 {@link AUTOSAVE_IDLE_MS}**：存那一份。輸入法組字中途不算停筆（拼音還沒上屏），上屏之後重新計時。
+ * - **切走一個標籤**：存剛離開的那一份。
+ * - **視窗失去焦點 / 頁面藏起來**：存全部。
  *
- * 照样带 `baseHash` 乐观锁。撞上冲突的那一份**停止自动保存**，直到冲突解决（作者在冲突条上选了，基线换了），
- * 绝不强制保存；磁盘上没了的不存；同一份同一时刻只有一个保存在路上，期间又改了就等回执后再存一次；
- * 有对话框开着时先不动（作者正在决定，比如点了「还原」）。这几道闸在 `saving.autoSaveAllowed`。
+ * 照樣帶 `baseHash` 樂觀鎖。撞上衝突的那一份**停止自動儲存**，直到衝突解決（作者在衝突條上選了，基線換了），
+ * 絕不強制儲存；磁碟上沒了的不存；同一份同一時刻只有一個儲存在路上，期間又改了就等回執後再存一次；
+ * 有對話方塊開著時先不動（作者正在決定，比如點了「還原」）。這幾道閘在 `saving.autoSaveAllowed`。
  *
- * 注意：正文一保存，已经定稿的章就回到「待定稿」——自动保存会让这件事在停笔两秒后就发生（README 写着）。
+ * 注意：正文一儲存，已經定稿的章就回到「待定稿」——自動儲存會讓這件事在停筆兩秒後就發生（README 寫著）。
  */
 import { onEditorChange } from './api';
 import { isDialogOpen } from './dialog';
@@ -20,14 +20,14 @@ import { autoSaveEnabled, onPrefsChange, setAutoSave } from './paragraphState';
 import { requestSave } from './saving';
 import { paneOwning, panes } from './store';
 
-/** 停笔多久算停。 */
+/** 停筆多久算停。 */
 export const AUTOSAVE_IDLE_MS = 2000;
 
 export function installAutoSave(): void {
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
-  /** 正在组字的编辑区（compositionstart 到 compositionend 之间）。 */
+  /** 正在組字的編輯區（compositionstart 到 compositionend 之間）。 */
   const composing = new Set<EventTarget>();
-  /** 每块编辑区上一次重画时的当前文件：变了就是切走了。 */
+  /** 每塊編輯區上一次重畫時的當前檔案：變了就是切走了。 */
   const lastActive = new Map<string, string | null>();
 
   const cancel = (path: string): void => {
@@ -46,7 +46,7 @@ export function installAutoSave(): void {
     if (!autoSaveEnabled()) {
       return;
     }
-    // 还在组字、或者有对话框开着：不算停笔，再等一轮。
+    // 還在組字、或者有對話方塊開著：不算停筆，再等一輪。
     if (composing.size > 0 || isDialogOpen()) {
       schedule(path);
       return;
@@ -56,8 +56,8 @@ export function installAutoSave(): void {
       void requestSave(pane, path, { auto: true });
     }
   };
-  // 停笔的计时不在这里作废：这一下要是被闸住了（有对话框开着），到点时还得再试一次；
-  // 没被闸住的存过之后就没有修改了，到点时自然跳过。
+  // 停筆的計時不在這裡作廢：這一下要是被閘住了（有對話方塊開著），到點時還得再試一次；
+  // 沒被閘住的存過之後就沒有修改了，到點時自然跳過。
   const saveAll = (): void => {
     if (!autoSaveEnabled()) {
       return;
@@ -103,7 +103,7 @@ export function installAutoSave(): void {
     if (!autoSaveEnabled()) {
       return;
     }
-    // 组字中途（拼音还没上屏）那几下不带 change：还没停笔，计时作废，上屏那一下重新计。
+    // 組字中途（拼音還沒上屏）那幾下不帶 change：還沒停筆，計時作廢，上屏那一下重新計。
     if (ev.source === 'composition' && !ev.change) {
       cancel(ev.file.path);
       return;
@@ -118,7 +118,7 @@ export function installAutoSave(): void {
     }
   });
 
-  // 标题栏「文件 → 自动保存」：问状态、切开关（菜单在 view.js 里，经 nf-editor-query / nf-editor-command）。
+  // 標題欄「檔案 → 自動儲存」：問狀態、切開關（選單在 view.js 裡，經 nf-editor-query / nf-editor-command）。
   window.addEventListener('nf-editor-query', (e) => {
     e.detail.autoSave = autoSaveEnabled();
   });

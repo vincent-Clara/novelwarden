@@ -1,16 +1,16 @@
 /**
- * 转写的整条走法（2026-10-25 起）：干活的模型按格式写了一段自然语言（`source`），这里交给「转写」那一档照抄成 JSON，
- * 查过再交回解出来的值。每一步只给一份 {@link TranscribeSpec}（合同、解码、哪些键按对应关系填），调用由调用方给
- * （对话页那条路是 `ChainIO.transcribe`，工程页任务是 features/poolIO.ts 的 `poolTranscriber`）。
+ * 轉寫的整條走法（2026-10-25 起）：幹活的模型按格式寫了一段自然語言（`source`），這裡交給「轉寫」那一檔照抄成 JSON，
+ * 查過再交回解出來的值。每一步只給一份 {@link TranscribeSpec}（合同、解碼、哪些鍵按對應關係填），呼叫由呼叫方給
+ * （對話頁那條路是 `ChainIO.transcribe`，工程頁任務是 features/poolIO.ts 的 `poolTranscriber`）。
  *
- * 1. 原文本身就是 JSON（模型没照格式写、老会话、测试里的假模型）：**不转**，按这一步的解码直接判——与改之前逐字一样。
- * 2. 原文连这一步的样子都没有（`looksLike`，比如「我不太确定」）：不转，按不合格交回去，不花转写那一次。
- * 3. 转写：照抄成 JSON → 原文写「无」的换成空的（`withoutNone`）→ **每段文字都得出自原文**（`unfaithfulStrings`，
- *    按对应关系填的键不比）→ 这一步的解码。哪一关没过就重转，说清上次哪里不对；缺省重转一次（`retries`）。
- * 4. 转写调用本身失败（池里同档换完了人、网关报错）不往外抛：交回 `failed`，写好的原文不能跟着丢（对话页留在气泡里，
- *    批量的照这一步原来解析失败的走法）。作者点了停止照旧往外抛。
+ * 1. 原文字身就是 JSON（模型沒照格式寫、老會話、測試裡的假模型）：**不轉**，按這一步的解碼直接判——與改之前逐字一樣。
+ * 2. 原文連這一步的樣子都沒有（`looksLike`，比如「我不太確定」）：不轉，按不合格交回去，不花轉寫那一次。
+ * 3. 轉寫：照抄成 JSON → 原文寫「無」的換成空的（`withoutNone`）→ **每段文字都得出自原文**（`unfaithfulStrings`，
+ *    按對應關係填的鍵不比）→ 這一步的解碼。哪一關沒過就重轉，說清上次哪裡不對；預設重轉一次（`retries`）。
+ * 4. 轉寫呼叫本身失敗（池裡同檔換完了人、閘道器報錯）不往外拋：交回 `failed`，寫好的原文不能跟著丟（對話頁留在氣泡裡，
+ *    批次的照這一步原來解析失敗的走法）。作者點了停止照舊往外拋。
  *
- * 调了几次、哪一次不合格都在结果里（`calls`、`notes`），调用方记进自己的账（第 2、4 条）。
+ * 調了幾次、哪一次不合格都在結果裡（`calls`、`notes`），呼叫方記進自己的賬（第 2、4 條）。
  */
 import type { ChatMessage, StopSignal } from '../llm/provider';
 import { CancelledError } from '../llm/provider';
@@ -18,27 +18,27 @@ import { describeError } from '../runtime/logger';
 import { transcribeMessages } from '../model/transcribe';
 import { isRepairableJsonSyntax, jsonValueOf, unfaithfulStrings, withoutNone } from './structuredJson';
 
-/** 转写一次的结果（与生成链的 `CallOutcome` 同形）。 */
+/** 轉寫一次的結果（與生成鏈的 `CallOutcome` 同形）。 */
 export interface TranscribeOutcome {
   text: string;
   stop?: StopSignal;
 }
 
-/** 调一次转写模型。`label` 写进气泡与日志。 */
+/** 調一次轉寫模型。`label` 寫進氣泡與日誌。 */
 export type TranscribeCall = (messages: ChatMessage[], label: string) => Promise<TranscribeOutcome>;
 
 export interface TranscribeSpec<T> {
-  /** 这一步叫什么：气泡与日志里那一行是「{label}转写成 JSON」，说明里是「{label}转写不合格……」。 */
+  /** 這一步叫什麼：氣泡與日誌裡那一行是「{label}轉寫成 JSON」，說明裡是「{label}轉寫不合格……」。 */
   label: string;
-  /** 转写合同：JSON 形状、每个字段从原文哪里取、词怎么对到代码。 */
+  /** 轉寫合同：JSON 形狀、每個欄位從原文哪裡取、詞怎麼對到程式碼。 */
   contract: string;
-  /** 这一步原来的解码与校验（吃 JSON 文本）。不合格交回一句人话——重转那一次原样告诉转写模型。 */
+  /** 這一步原來的解碼與校驗（吃 JSON 文字）。不合格交回一句人話——重轉那一次原樣告訴轉寫模型。 */
   decode(json: string): { ok: true; value: T } | { ok: false; message: string };
-  /** 按对应关系填、不比原文的键（type、role、章号……）。 */
+  /** 按對應關係填、不比原文的鍵（type、role、章號……）。 */
   mapped?: readonly string[];
-  /** 原文有没有这一步的样子。缺席 = 都转。坏了语法的 JSON 一律转（转写顺带把它理顺）。 */
+  /** 原文有沒有這一步的樣子。缺席 = 都轉。壞了語法的 JSON 一律轉（轉寫順帶把它理順）。 */
   looksLike?(source: string): boolean;
-  /** 最多重转几次。缺省 1。 */
+  /** 最多重轉幾次。預設 1。 */
   retries?: number;
 }
 
@@ -46,9 +46,9 @@ export type TranscribeResult<T> =
   | {
       ok: true;
       value: T;
-      /** 规范化的 JSON 文本（直接给的是原文本身）：要落进气泡、日志的就是它。 */
+      /** 規範化的 JSON 文字（直接給的是原文字身）：要落進氣泡、日誌的就是它。 */
       json: string;
-      /** 原文本身就是 JSON，没有转。 */
+      /** 原文字身就是 JSON，沒有轉。 */
       direct: boolean;
       calls: number;
       notes: string[];
@@ -56,7 +56,7 @@ export type TranscribeResult<T> =
   | {
       ok: false;
       message: string;
-      /** 转写调用本身失败了（不是转得不合格）。 */
+      /** 轉寫呼叫本身失敗了（不是轉得不合格）。 */
       failed: boolean;
       calls: number;
       notes: string[];
@@ -72,7 +72,7 @@ export async function transcribeJson<T>(source: string, spec: TranscribeSpec<T>,
       : { ok: false, message: d.message, failed: false, calls: 0, notes };
   }
   if (spec.looksLike && !isRepairableJsonSyntax(text) && !spec.looksLike(text)) {
-    return { ok: false, message: '没有按格式写', failed: false, calls: 0, notes };
+    return { ok: false, message: '沒有按格式寫', failed: false, calls: 0, notes };
   }
   const mapped = new Set(spec.mapped ?? []);
   const retries = spec.retries ?? 1;
@@ -82,21 +82,21 @@ export async function transcribeJson<T>(source: string, spec: TranscribeSpec<T>,
     let out: TranscribeOutcome;
     calls++;
     try {
-      out = await call(transcribeMessages(spec.contract, text, feedback) as ChatMessage[], `${spec.label}转写成 JSON`);
+      out = await call(transcribeMessages(spec.contract, text, feedback) as ChatMessage[], `${spec.label}轉寫成 JSON`);
     } catch (err) {
       if (err instanceof CancelledError) {
         throw err;
       }
-      return { ok: false, message: `转写调用失败（${describeError(err)}）`, failed: true, calls, notes };
+      return { ok: false, message: `轉寫呼叫失敗（${describeError(err)}）`, failed: true, calls, notes };
     }
     const judged = judge(out, text, spec, mapped);
     if (judged.ok) {
       return { ok: true, value: judged.value, json: judged.json, direct: false, calls, notes };
     }
     feedback = judged.message;
-    notes.push(round < retries ? `${spec.label}转写不合格（${feedback}），重转一次` : `${spec.label}重转仍不合格（${feedback}）`);
+    notes.push(round < retries ? `${spec.label}轉寫不合格（${feedback}），重轉一次` : `${spec.label}重轉仍不合格（${feedback}）`);
   }
-  return { ok: false, message: feedback ?? '转写不合格', failed: false, calls, notes };
+  return { ok: false, message: feedback ?? '轉寫不合格', failed: false, calls, notes };
 }
 
 function judge<T>(
@@ -106,16 +106,16 @@ function judge<T>(
   mapped: ReadonlySet<string>
 ): { ok: true; value: T; json: string } | { ok: false; message: string } {
   if (out.stop === 'maxTokens') {
-    return { ok: false, message: '转写被输出上限截断' };
+    return { ok: false, message: '轉寫被輸出上限截斷' };
   }
   const raw = jsonValueOf(out.text);
   if (raw === undefined) {
-    return { ok: false, message: '转写出来的不是一个完整的 JSON 对象' };
+    return { ok: false, message: '轉寫出來的不是一個完整的 JSON 物件' };
   }
   const value = withoutNone(raw);
   const off = unfaithfulStrings(source, value, mapped);
   if (off.length > 0) {
-    return { ok: false, message: `这几处不是原文里的字：${off.map((s) => `「${s}」`).join('、')}` };
+    return { ok: false, message: `這幾處不是原文裡的字：${off.map((s) => `「${s}」`).join('、')}` };
   }
   const json = JSON.stringify(value);
   const d = spec.decode(json);

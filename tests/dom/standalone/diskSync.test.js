@@ -1,14 +1,14 @@
 /**
- * 内置编辑器：磁盘上的改动同步到已开的标签（`editor/diskSync.ts` + `Pane.applyDiskChange` / `markGone`）。
+ * 內建編輯器：磁碟上的改動同步到已開的標籤（`editor/diskSync.ts` + `Pane.applyDiskChange` / `markGone`）。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 收到 `state` 去抖之后、窗口拿回焦点 / 页面重新可见时，把两块编辑区里开着的文件报给后端 | 定稿写回细纲、批量写章、外部 agent 的 edit、外部编辑器改了文件，从前编辑器里还是旧的 |
- * | 没改过的标签就地换、不切标签、不抢焦点、记一步撤销、光标夹进新长度 | 与「再次打开时磁盘有新版」同一处理，但不能像 editorOpen 那样把标签切过去 |
- * | 改过的标签一个字不动、挂冲突条、标签上标「!」、同一份新版不报第二次 | 不静默覆盖（第 3 条），也别刷屏 |
- * | 磁盘上没了：标成已删除；保存先问、不静默在原路径重建 | 网关对「带了基线、文件却不在」是当新建处理的 |
- * | 自己保存之后不误报 | `editorSaved` 先到、`state` 后到，核对时带的是新 hash；自己那次保存在路上时收到的「变了」不认 |
- * | 别的窗口存了同一份：不把基线悄悄换成别人的 | 从前那条 `editorSaved` 会让下一次保存把别人的改动盖掉 |
+ * | 收到 `state` 去抖之後、視窗拿回焦點 / 頁面重新可見時，把兩塊編輯區裡開著的檔案報給後端 | 定稿寫回細綱、批次寫章、外部 agent 的 edit、外部編輯器改了檔案，從前編輯器裡還是舊的 |
+ * | 沒改過的標籤就地換、不切標籤、不搶焦點、記一步撤銷、游標夾進新長度 | 與「再次開啟時磁碟有新版」同一處理，但不能像 editorOpen 那樣把標籤切過去 |
+ * | 改過的標籤一個字不動、掛衝突條、標籤上標「!」、同一份新版不報第二次 | 不靜默覆蓋（第 3 條），也別刷屏 |
+ * | 磁碟上沒了：標成已刪除；儲存先問、不靜默在原路徑重建 | 閘道器對「帶了基線、檔案卻不在」是當新建處理的 |
+ * | 自己儲存之後不誤報 | `editorSaved` 先到、`state` 後到，核對時帶的是新 hash；自己那次儲存在路上時收到的「變了」不認 |
+ * | 別的視窗存了同一份：不把基線悄悄換成別人的 | 從前那條 `editorSaved` 會讓下一次儲存把別人的改動蓋掉 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -20,9 +20,9 @@ const C = 'drafts/001-雨夜.md';
 
 function setup() {
   const ui = mount({ body: 'standalone', scripts: ['editor.js'], shims: ['pointerCapture', 'fakeTimers'] });
-  // 编辑器里不许再用 window.confirm：用到了就当场炸。
+  // 編輯器裡不許再用 window.confirm：用到了就當場炸。
   ui.window.confirm = () => {
-    throw new Error('不该调 window.confirm');
+    throw new Error('不該調 window.confirm');
   };
   const toasts = [];
   ui.window.__nfToast = (message, isError) => toasts.push({ message, isError: !!isError });
@@ -52,7 +52,7 @@ function setup() {
   return { ui, toasts, area, tabEl, activeTab, type, key, checks, lastCheck, hashIn, sync, changed, status, bar };
 }
 
-describe('磁盘上的改动：什么时候核对', { skip: JSDOM_SKIP }, () => {
+describe('磁碟上的改動：什麼時候核對', { skip: JSDOM_SKIP }, () => {
   let s;
 
   before(() => {
@@ -63,14 +63,14 @@ describe('磁盘上的改动：什么时候核对', { skip: JSDOM_SKIP }, () => 
     s.ui.window.__clock.tick(1000);
   });
 
-  test('收到 state 之后等一会儿，把两块编辑区里开着的文件连同 hash 报给后端', () => {
+  test('收到 state 之後等一會兒，把兩塊編輯區裡開著的檔案連同 hash 報給後端', () => {
     const before = s.checks().length;
     s.ui.post({ type: 'state', state: viewState() });
     s.ui.window.__clock.tick(399);
-    assert.equal(s.checks().length, before, '去抖还没到点就发了');
+    assert.equal(s.checks().length, before, '去抖還沒到點就發了');
     s.ui.window.__clock.tick(1);
     assert.equal(s.checks().length, before + 1);
-    // 消息是页面那一边造的对象（另一个 realm），按 JSON 比。
+    // 訊息是頁面那一邊造的物件（另一個 realm），按 JSON 比。
     assert.deepEqual(JSON.parse(JSON.stringify(s.lastCheck().files)), [
       { path: A, hash: `h-${A}` },
       { path: B, hash: `h-${B}` },
@@ -78,7 +78,7 @@ describe('磁盘上的改动：什么时候核对', { skip: JSDOM_SKIP }, () => 
     ]);
   });
 
-  test('连着几条 state 只核对一次', () => {
+  test('連著幾條 state 只核對一次', () => {
     const before = s.checks().length;
     for (let i = 0; i < 3; i++) {
       s.ui.post({ type: 'state', state: viewState() });
@@ -88,27 +88,27 @@ describe('磁盘上的改动：什么时候核对', { skip: JSDOM_SKIP }, () => 
     assert.equal(s.checks().length, before + 1);
   });
 
-  test('窗口重新拿到焦点时也核对', () => {
+  test('視窗重新拿到焦點時也核對', () => {
     const before = s.checks().length;
     s.ui.window.dispatchEvent(new s.ui.window.Event('focus'));
     s.ui.window.__clock.tick(400);
     assert.equal(s.checks().length, before + 1);
   });
 
-  test('页面重新可见时也核对，藏起来时不核对', () => {
+  test('頁面重新可見時也核對，藏起來時不核對', () => {
     let state = 'hidden';
     Object.defineProperty(s.ui.doc, 'visibilityState', { configurable: true, get: () => state });
     const before = s.checks().length;
     s.ui.doc.dispatchEvent(new s.ui.window.Event('visibilitychange'));
     s.ui.window.__clock.tick(400);
-    assert.equal(s.checks().length, before, '藏起来时不该核对');
+    assert.equal(s.checks().length, before, '藏起來時不該核對');
     state = 'visible';
     s.ui.doc.dispatchEvent(new s.ui.window.Event('visibilitychange'));
     s.ui.window.__clock.tick(400);
     assert.equal(s.checks().length, before + 1);
   });
 
-  test('一个标签都没开时不发', () => {
+  test('一個標籤都沒開時不發', () => {
     const empty = setup();
     empty.ui.post({ type: 'state', state: viewState() });
     empty.ui.window.__clock.tick(1000);
@@ -116,228 +116,228 @@ describe('磁盘上的改动：什么时候核对', { skip: JSDOM_SKIP }, () => 
   });
 });
 
-describe('磁盘上变了：没改过的标签', { skip: JSDOM_SKIP }, () => {
+describe('磁碟上變了：沒改過的標籤', { skip: JSDOM_SKIP }, () => {
   let s;
   let outside;
 
   before(() => {
     s = setup();
-    s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。\n林昭推门。', { kind: 'chapter' }) });
+    s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。\n林昭推門。', { kind: 'chapter' }) });
     s.ui.post({ type: 'editorOpen', file: file(B, '# 梗概', { kind: 'plot' }) });
-    // 焦点在页面别处（比如对话输入框）：磁盘同步不许把它抢走。
+    // 焦點在頁面別處（比如對話輸入框）：磁碟同步不許把它搶走。
     outside = s.ui.doc.createElement('input');
     s.ui.doc.body.appendChild(outside);
     outside.focus();
   });
 
-  test('不是当前的那一份：就地换成新内容，当前标签不变', () => {
+  test('不是當前的那一份：就地換成新內容，當前標籤不變', () => {
     assert.equal(s.activeTab(), '001-雨夜.md');
-    s.changed(A, '雨夜。\n林昭推门，又退了出来。', 'h-A2');
-    assert.equal(s.activeTab(), '001-雨夜.md', '当前标签还是细纲那一份');
+    s.changed(A, '雨夜。\n林昭推門，又退了出來。', 'h-A2');
+    assert.equal(s.activeTab(), '001-雨夜.md', '當前標籤還是細綱那一份');
     assert.equal(s.area().value, '# 梗概');
-    assert.equal(s.ui.doc.activeElement, outside, '焦点没被抢走');
-    assert.equal(s.toasts.length, 0, '不弹 toast');
+    assert.equal(s.ui.doc.activeElement, outside, '焦點沒被搶走');
+    assert.equal(s.toasts.length, 0, '不彈 toast');
   });
 
-  test('切过去看到的是磁盘上的新版，仍是没改过的', () => {
+  test('切過去看到的是磁碟上的新版，仍是沒改過的', () => {
     s.ui.clickEl(s.tabEl('001-雨夜.md'));
-    // 正文与细纲同名，按顺序第一个是正文。
-    assert.equal(s.area().value, '雨夜。\n林昭推门，又退了出来。');
+    // 正文與細綱同名，按順序第一個是正文。
+    assert.equal(s.area().value, '雨夜。\n林昭推門，又退了出來。');
     assert.equal(s.ui.panes()[0].querySelector('.ed-tab.active').classList.contains('dirty'), false);
   });
 
-  test('换进来的那一下记一步撤销', () => {
+  test('換進來的那一下記一步撤銷', () => {
     s.key('z', { ctrlKey: true });
-    assert.equal(s.area().value, '雨夜。\n林昭推门。');
+    assert.equal(s.area().value, '雨夜。\n林昭推門。');
     s.key('y', { ctrlKey: true });
-    assert.equal(s.area().value, '雨夜。\n林昭推门，又退了出来。');
+    assert.equal(s.area().value, '雨夜。\n林昭推門，又退了出來。');
   });
 
-  test('正看着的那一份：光标留在原处，焦点不动，状态栏说一句', () => {
+  test('正看著的那一份：游標留在原處，焦點不動，狀態列說一句', () => {
     outside.focus();
     s.area().setSelectionRange(3, 3);
-    s.changed(A, '雨夜。\n林昭推门，又退了出来，雨更大了。', 'h-A3');
-    assert.equal(s.area().value, '雨夜。\n林昭推门，又退了出来，雨更大了。');
+    s.changed(A, '雨夜。\n林昭推門，又退了出來，雨更大了。', 'h-A3');
+    assert.equal(s.area().value, '雨夜。\n林昭推門，又退了出來，雨更大了。');
     assert.equal(s.area().selectionStart, 3);
     assert.equal(s.ui.doc.activeElement, outside);
-    assert.equal(s.status(), '磁盘上有新版本，已载入');
+    assert.equal(s.status(), '磁碟上有新版本，已載入');
     assert.equal(s.toasts.length, 0);
   });
 
-  test('那一句过一会儿退回保存状态', () => {
+  test('那一句過一會兒退回儲存狀態', () => {
     s.ui.window.__clock.tick(4000);
-    assert.equal(s.status(), '已保存');
+    assert.equal(s.status(), '已儲存');
   });
 
-  test('光标夹进新长度', () => {
+  test('游標夾進新長度', () => {
     s.area().setSelectionRange(s.area().value.length, s.area().value.length);
     s.changed(A, '短了', 'h-A4');
     assert.equal(s.area().value, '短了');
     assert.equal(s.area().selectionStart, 2);
   });
 
-  test('之后核对时带的是新版的 hash', () => {
+  test('之後核對時帶的是新版的 hash', () => {
     assert.equal(s.hashIn(s.sync(), A), 'h-A4');
   });
 });
 
-describe('磁盘上变了：改过的标签', { skip: JSDOM_SKIP }, () => {
+describe('磁碟上變了：改過的標籤', { skip: JSDOM_SKIP }, () => {
   let s;
 
   before(() => {
     s = setup();
     s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。', { kind: 'chapter' }) });
-    s.type('雨夜。林昭来了。');
+    s.type('雨夜。林昭來了。');
     s.ui.post({ type: 'editorOpen', file: file(B, '# 梗概', { kind: 'plot' }) });
   });
 
-  test('编辑器里的修改一个字不动，不切标签，标签上挂「!」', () => {
+  test('編輯器裡的修改一個字不動，不切標籤，標籤上掛「!」', () => {
     s.changed(A, '雨夜。（外部 agent 改的）', 'h-A2');
     assert.equal(s.activeTab(), '001-雨夜.md');
-    assert.equal(s.area().value, '# 梗概', '当前还是细纲');
+    assert.equal(s.area().value, '# 梗概', '當前還是細綱');
     const tab = s.ui.panes()[0].querySelector('.ed-tab.conflict');
-    assert.ok(tab, '改过的那个标签要标出来');
-    assert.ok(tab.querySelector('.ed-tab-flag'), '标签上要有「!」');
+    assert.ok(tab, '改過的那個標籤要標出來');
+    assert.ok(tab.querySelector('.ed-tab-flag'), '標籤上要有「!」');
     assert.equal(s.toasts.length, 1);
     assert.equal(s.toasts[0].isError, true);
   });
 
-  test('切过去：修改还在，冲突条说磁盘上被改了、没有覆盖', () => {
+  test('切過去：修改還在，衝突條說磁碟上被改了、沒有覆蓋', () => {
     s.ui.clickEl(s.ui.panes()[0].querySelector('.ed-tab.conflict'));
-    assert.equal(s.area().value, '雨夜。林昭来了。');
+    assert.equal(s.area().value, '雨夜。林昭來了。');
     assert.equal(s.bar().classList.contains('hidden'), false);
     const text = s.ui.doc.getElementById('edConflictText').textContent;
-    assert.match(text, /没有覆盖/);
-    assert.doesNotMatch(text, /保存已取消/);
+    assert.match(text, /沒有覆蓋/);
+    assert.doesNotMatch(text, /儲存已取消/);
   });
 
-  test('同一份新版再报一次不再弹提示', () => {
+  test('同一份新版再報一次不再彈提示', () => {
     s.changed(A, '雨夜。（外部 agent 改的）', 'h-A2');
     assert.equal(s.toasts.length, 1);
   });
 
-  test('核对时带上见过的那份磁盘新版的 hash（同一个新版后端就不再回话）', () => {
+  test('核對時帶上見過的那份磁碟新版的 hash（同一個新版後端就不再回話）', () => {
     assert.equal(s.hashIn(s.sync(), A), 'h-A2');
   });
 
-  test('接着打字冲突条收起，同一份新版也不再报', () => {
-    s.type('雨夜。林昭来了。又一笔。');
+  test('接著打字衝突條收起，同一份新版也不再報', () => {
+    s.type('雨夜。林昭來了。又一筆。');
     assert.equal(s.bar().classList.contains('hidden'), true);
     s.changed(A, '雨夜。（外部 agent 改的）', 'h-A2');
     assert.equal(s.toasts.length, 1);
     assert.equal(s.bar().classList.contains('hidden'), true);
   });
 
-  test('磁盘上又变了一次：再挂冲突条', () => {
+  test('磁碟上又變了一次：再掛衝突條', () => {
     s.changed(A, '雨夜。（又改了）', 'h-A3');
     assert.equal(s.toasts.length, 2);
     assert.equal(s.bar().classList.contains('hidden'), false);
-    assert.equal(s.area().value, '雨夜。林昭来了。又一笔。');
+    assert.equal(s.area().value, '雨夜。林昭來了。又一筆。');
   });
 
-  test('「用磁盘版本覆盖编辑器」之后基线换成那一份', () => {
+  test('「用磁碟版本覆蓋編輯器」之後基線換成那一份', () => {
     s.ui.clickEl(s.ui.doc.getElementById('edConflictTake'));
     assert.equal(s.area().value, '雨夜。（又改了）');
     assert.equal(s.hashIn(s.sync(), A), 'h-A3');
     assert.equal(s.ui.panes()[0].querySelector('.ed-tab.conflict'), null);
   });
 
-  test('磁盘上的正好是编辑器里这一份：认下来，不算冲突', () => {
-    s.type('两边一样');
+  test('磁碟上的正好是編輯器裡這一份：認下來，不算衝突', () => {
+    s.type('兩邊一樣');
     const before = s.toasts.length;
-    s.changed(A, '两边一样', 'h-same');
+    s.changed(A, '兩邊一樣', 'h-same');
     assert.equal(s.toasts.length, before);
     assert.equal(s.bar().classList.contains('hidden'), true);
     assert.equal(s.ui.panes()[0].querySelector('.ed-tab.active').classList.contains('dirty'), false);
   });
 });
 
-describe('磁盘上没了', { skip: JSDOM_SKIP }, () => {
+describe('磁碟上沒了', { skip: JSDOM_SKIP }, () => {
   let s;
   const goneTab = () => s.ui.panes()[0].querySelector('.ed-tab.gone');
 
   before(() => {
     s = setup();
     s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。', { kind: 'chapter' }) });
-    s.type('雨夜。改了一笔。');
+    s.type('雨夜。改了一筆。');
     s.ui.post({ type: 'editorOpen', file: file(B, '# 梗概', { kind: 'plot' }) });
   });
 
-  test('标签标成已删除，不切过去', () => {
+  test('標籤標成已刪除，不切過去', () => {
     s.ui.post({ type: 'editorDiskGone', path: A });
-    assert.ok(goneTab(), '没标成已删除');
+    assert.ok(goneTab(), '沒標成已刪除');
     assert.ok(goneTab().querySelector('.ed-tab-flag'));
     assert.equal(s.area().value, '# 梗概');
   });
 
-  test('切过去：冲突条那一格说磁盘上已经没有这个文件，没有「用磁盘版本覆盖」', () => {
+  test('切過去：衝突條那一格說磁碟上已經沒有這個檔案，沒有「用磁碟版本覆蓋」', () => {
     s.ui.clickEl(goneTab());
-    assert.equal(s.area().value, '雨夜。改了一笔。');
+    assert.equal(s.area().value, '雨夜。改了一筆。');
     assert.equal(s.bar().classList.contains('hidden'), false);
-    assert.match(s.ui.doc.getElementById('edConflictText').textContent, /磁盘上已经没有.*（被删或改名）/);
+    assert.match(s.ui.doc.getElementById('edConflictText').textContent, /磁碟上已經沒有.*（被刪或改名）/);
     assert.equal(s.ui.doc.getElementById('edConflictTake').classList.contains('hidden'), true);
   });
 
-  test('打字不让这条说明收起', () => {
-    s.type('雨夜。改了两笔。');
+  test('打字不讓這條說明收起', () => {
+    s.type('雨夜。改了兩筆。');
     assert.equal(s.bar().classList.contains('hidden'), false);
   });
 
-  test('核对时给空 hash：磁盘上又出现了后端就会回话', () => {
+  test('核對時給空 hash：磁碟上又出現了後端就會回話', () => {
     assert.equal(s.hashIn(s.sync(), A), '');
   });
 
-  test('按保存先问要不要在原路径重建，取消就什么都不发', async () => {
+  test('按儲存先問要不要在原路徑重建，取消就什麼都不發', async () => {
     const before = s.ui.sent.filter((m) => m.type === 'saveFile').length;
     s.key('s', { ctrlKey: true });
-    assert.ok(s.ui.dialog(), '没有弹对话框');
-    assert.deepEqual(s.ui.dialogButtons(), ['取消', '在原路径重建']);
+    assert.ok(s.ui.dialog(), '沒有彈對話方塊');
+    assert.deepEqual(s.ui.dialogButtons(), ['取消', '在原路徑重建']);
     await s.ui.answer('取消');
     assert.equal(s.ui.dialog(), null);
     assert.equal(s.ui.sent.filter((m) => m.type === 'saveFile').length, before);
   });
 
-  test('冲突条上的「强制保存」也走这一问', async () => {
+  test('衝突條上的「強制儲存」也走這一問', async () => {
     s.ui.clickEl(s.ui.doc.getElementById('edConflictForce'));
-    assert.deepEqual(s.ui.dialogButtons(), ['取消', '在原路径重建']);
+    assert.deepEqual(s.ui.dialogButtons(), ['取消', '在原路徑重建']);
     await s.ui.answer('取消');
   });
 
-  test('答应了才发，带着 recreate 与基线', async () => {
+  test('答應了才發，帶著 recreate 與基線', async () => {
     s.key('s', { ctrlKey: true });
-    await s.ui.answer('在原路径重建');
+    await s.ui.answer('在原路徑重建');
     const msg = s.ui.last('saveFile');
     assert.equal(msg.recreate, true);
     assert.equal(msg.baseHash, `h-${A}`);
-    assert.equal(msg.text, '雨夜。改了两笔。');
+    assert.equal(msg.text, '雨夜。改了兩筆。');
   });
 
-  test('存成了：已删除的标记清掉', () => {
-    s.ui.post({ type: 'editorSaved', file: file(A, '雨夜。改了两笔。', { hash: 'h-A2', kind: 'chapter' }) });
+  test('存成了：已刪除的標記清掉', () => {
+    s.ui.post({ type: 'editorSaved', file: file(A, '雨夜。改了兩筆。', { hash: 'h-A2', kind: 'chapter' }) });
     assert.equal(goneTab(), null);
     assert.equal(s.bar().classList.contains('hidden'), true);
   });
 
-  test('普通保存撞上「磁盘上没了」：提示没有保存，标成已删除，不再「保存中」', () => {
-    s.type('雨夜。改了三笔。');
+  test('普通儲存撞上「磁碟上沒了」：提示沒有儲存，標成已刪除，不再「儲存中」', () => {
+    s.type('雨夜。改了三筆。');
     s.key('s', { ctrlKey: true });
     const msg = s.ui.last('saveFile');
     assert.equal(msg.recreate, undefined);
-    assert.equal(s.status(), '保存中…');
+    assert.equal(s.status(), '儲存中…');
     s.ui.post({ type: 'editorDiskGone', path: A });
-    assert.match(s.toasts.at(-1).message, /没有保存/);
+    assert.match(s.toasts.at(-1).message, /沒有儲存/);
     assert.ok(goneTab());
-    assert.match(s.status(), /未保存/);
+    assert.match(s.status(), /未儲存/);
   });
 
-  test('磁盘上又出现了同一份：已删除的标记清掉', () => {
-    s.changed(A, '雨夜。改了两笔。', 'h-A2');
+  test('磁碟上又出現了同一份：已刪除的標記清掉', () => {
+    s.changed(A, '雨夜。改了兩筆。', 'h-A2');
     assert.equal(goneTab(), null);
-    assert.equal(s.area().value, '雨夜。改了三笔。');
+    assert.equal(s.area().value, '雨夜。改了三筆。');
   });
 });
 
-describe('磁盘上没了：没改过的那一份', { skip: JSDOM_SKIP }, () => {
+describe('磁碟上沒了：沒改過的那一份', { skip: JSDOM_SKIP }, () => {
   let s;
 
   before(() => {
@@ -346,23 +346,23 @@ describe('磁盘上没了：没改过的那一份', { skip: JSDOM_SKIP }, () => 
     s.ui.post({ type: 'editorDiskGone', path: A });
   });
 
-  test('「全部保存」扫到它不弹框、不发保存', () => {
+  test('「全部儲存」掃到它不彈框、不發儲存', () => {
     s.ui.window.dispatchEvent(new s.ui.window.CustomEvent('nf-editor-command', { detail: { name: 'saveAll' } }));
     assert.equal(s.ui.dialog(), null);
     assert.equal(s.ui.last('saveFile'), undefined);
   });
 
-  test('冲突条上的「强制保存」是明说要存：照样问，答应了带着基线重建', async () => {
+  test('衝突條上的「強制儲存」是明說要存：照樣問，答應了帶著基線重建', async () => {
     s.ui.clickEl(s.ui.doc.getElementById('edConflictForce'));
-    assert.deepEqual(s.ui.dialogButtons(), ['取消', '在原路径重建']);
-    await s.ui.answer('在原路径重建');
+    assert.deepEqual(s.ui.dialogButtons(), ['取消', '在原路徑重建']);
+    await s.ui.answer('在原路徑重建');
     const msg = s.ui.last('saveFile');
     assert.equal(msg.recreate, true);
-    assert.equal(msg.baseHash, `h-${A}`, '重建也带基线：期间原路径又有了别的内容照样撞冲突');
+    assert.equal(msg.baseHash, `h-${A}`, '重建也帶基線：期間原路徑又有了別的內容照樣撞衝突');
   });
 });
 
-describe('自己保存之后不误报', { skip: JSDOM_SKIP }, () => {
+describe('自己儲存之後不誤報', { skip: JSDOM_SKIP }, () => {
   let s;
 
   before(() => {
@@ -370,42 +370,42 @@ describe('自己保存之后不误报', { skip: JSDOM_SKIP }, () => {
     s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。', { kind: 'chapter', hash: 'h0' }) });
     s.ui.post({ type: 'editorOpen', file: file(B, '# 梗概', { kind: 'plot' }) });
     s.ui.clickEl(s.tabEl('001-雨夜.md'));
-    s.type('雨夜。林昭来了。');
+    s.type('雨夜。林昭來了。');
     s.key('s', { ctrlKey: true });
   });
 
-  test('保存带着原来的基线发出去', () => {
+  test('儲存帶著原來的基線發出去', () => {
     assert.equal(s.ui.last('saveFile').baseHash, 'h0');
   });
 
-  test('保存还在路上时核对不带这一份', () => {
+  test('儲存還在路上時核對不帶這一份', () => {
     const msg = s.sync();
     assert.equal(s.hashIn(msg, A), undefined);
     assert.equal(s.hashIn(msg, B), `h-${B}`);
   });
 
-  test('路上收到的「磁盘上变了」（读到了自己刚写下去的那份）不认', () => {
-    s.changed(A, '雨夜。林昭来了。', 'h1');
+  test('路上收到的「磁碟上變了」（讀到了自己剛寫下去的那份）不認', () => {
+    s.changed(A, '雨夜。林昭來了。', 'h1');
     assert.equal(s.bar().classList.contains('hidden'), true);
     assert.equal(s.toasts.length, 0);
-    assert.equal(s.status(), '保存中…');
+    assert.equal(s.status(), '儲存中…');
   });
 
-  test('回执先到、state 后到：之后核对时带的就是新 hash', () => {
-    s.ui.post({ type: 'editorSaved', file: file(A, '雨夜。林昭来了。', { kind: 'chapter', hash: 'h1' }) });
+  test('回執先到、state 後到：之後核對時帶的就是新 hash', () => {
+    s.ui.post({ type: 'editorSaved', file: file(A, '雨夜。林昭來了。', { kind: 'chapter', hash: 'h1' }) });
     assert.equal(s.hashIn(s.sync(), A), 'h1');
   });
 
-  test('迟到的「变了」报的就是自己存下去的那份：什么都不动', () => {
-    s.changed(A, '雨夜。林昭来了。', 'h1');
+  test('遲到的「變了」報的就是自己存下去的那份：什麼都不動', () => {
+    s.changed(A, '雨夜。林昭來了。', 'h1');
     assert.equal(s.bar().classList.contains('hidden'), true);
     assert.equal(s.ui.panes()[0].querySelector('.ed-tab.conflict'), null);
     assert.equal(s.toasts.length, 0);
-    assert.match(s.status(), /^已保存/);
+    assert.match(s.status(), /^已儲存/);
   });
 });
 
-describe('别的窗口存了同一份（回执是广播的）', { skip: JSDOM_SKIP }, () => {
+describe('別的視窗存了同一份（回執是廣播的）', { skip: JSDOM_SKIP }, () => {
   let s;
 
   before(() => {
@@ -413,28 +413,28 @@ describe('别的窗口存了同一份（回执是广播的）', { skip: JSDOM_SK
     s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。', { kind: 'chapter', hash: 'h0' }) });
   });
 
-  test('这边没改过：就地换成那一份', () => {
-    s.ui.post({ type: 'editorSaved', file: file(A, '雨夜。别处写的。', { kind: 'chapter', hash: 'h1' }) });
-    assert.equal(s.area().value, '雨夜。别处写的。');
+  test('這邊沒改過：就地換成那一份', () => {
+    s.ui.post({ type: 'editorSaved', file: file(A, '雨夜。別處寫的。', { kind: 'chapter', hash: 'h1' }) });
+    assert.equal(s.area().value, '雨夜。別處寫的。');
     assert.equal(s.ui.panes()[0].querySelector('.ed-tab.active').classList.contains('dirty'), false);
   });
 
-  test('这边改过：挂冲突条，基线不悄悄换成别人的', () => {
-    s.type('雨夜。别处写的。这边又写了。');
-    s.ui.post({ type: 'editorSaved', file: file(A, '雨夜。另一个窗口又存了。', { kind: 'chapter', hash: 'h2' }) });
-    assert.equal(s.area().value, '雨夜。别处写的。这边又写了。');
+  test('這邊改過：掛衝突條，基線不悄悄換成別人的', () => {
+    s.type('雨夜。別處寫的。這邊又寫了。');
+    s.ui.post({ type: 'editorSaved', file: file(A, '雨夜。另一個視窗又存了。', { kind: 'chapter', hash: 'h2' }) });
+    assert.equal(s.area().value, '雨夜。別處寫的。這邊又寫了。');
     assert.equal(s.bar().classList.contains('hidden'), false);
     s.key('s', { ctrlKey: true });
-    assert.equal(s.ui.last('saveFile').baseHash, 'h1', '保存仍带这边的基线，撞上冲突而不是盖掉别人的');
+    assert.equal(s.ui.last('saveFile').baseHash, 'h1', '儲存仍帶這邊的基線，撞上衝突而不是蓋掉別人的');
   });
 });
 
-describe('再次打开（生成落盘后 openFile → editorOpen）那条路不变', { skip: JSDOM_SKIP }, () => {
-  test('editorOpen 照旧把那个标签切成当前的', () => {
+describe('再次開啟（生成落盤後 openFile → editorOpen）那條路不變', { skip: JSDOM_SKIP }, () => {
+  test('editorOpen 照舊把那個標籤切成當前的', () => {
     const s = setup();
     s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。', { kind: 'chapter' }) });
     s.ui.post({ type: 'editorOpen', file: file(B, '# 梗概', { kind: 'plot' }) });
-    s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。新写的。', { kind: 'chapter', hash: 'h1' }) });
-    assert.equal(s.area().value, '雨夜。新写的。');
+    s.ui.post({ type: 'editorOpen', file: file(A, '雨夜。新寫的。', { kind: 'chapter', hash: 'h1' }) });
+    assert.equal(s.area().value, '雨夜。新寫的。');
   });
 });

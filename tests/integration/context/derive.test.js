@@ -1,16 +1,16 @@
 /**
- * 从已写正文整理（拆书 A）的装配：`BuildRequest.derive` 时架构那张配方带上 `written` 层，
- * 契约换成「照正文整理」的说法。细纲不再从正文整理：拆书第一步「先整理细纲」已经照正文写出了
- * 定稿过的细纲，「补细纲」那一步连同细纲配方里的 `written` 层一起删了。情节大纲也不再整理：它是各章细纲梗概的
- * 汇总，细纲齐了它就齐了（docs/design/plans/2026-10-22-outline-from-plots.md），大纲配方不再挂 `written` 层。
+ * 從已寫正文整理（拆書 A）的裝配：`BuildRequest.derive` 時架構那張配方帶上 `written` 層，
+ * 契約換成「照正文整理」的說法。細綱不再從正文整理：拆書第一步「先整理細綱」已經照正文寫出了
+ * 定稿過的細綱，「補細綱」那一步連同細綱配方里的 `written` 層一起刪了。情節大綱也不再整理：它是各章細綱梗概的
+ * 彙總，細綱齊了它就齊了（docs/design/plans/2026-10-22-outline-from-plots.md），大綱配方不再掛 `written` 層。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 不是 derive 时一条 `written` 都没有、契约照旧 | 配方挂着这一层，平时必须是空的 |
- * | 架构：均匀抽样 5 章的开头 + 全书梗概（取自定稿过的细纲）；系统提示说清「这一次是整理」 | 上游只看首末两章，长书中段全丢 |
- * | 梗概放不下时降级或丢弃，写明原因 | 第 2 条：不静默截断 |
- * | 大纲那一层不带已写正文，即使请求里带着 derive | 大纲配方不再挂 `written` 层 |
- * | 规划阶段绑了技能，derive 时也不带 | 照实整理，不按技能的排法改写已经发生的事 |
+ * | 不是 derive 時一條 `written` 都沒有、契約照舊 | 配方掛著這一層，平時必須是空的 |
+ * | 架構：均勻抽樣 5 章的開頭 + 全書梗概（取自定稿過的細綱）；系統提示說清「這一次是整理」 | 上游只看首末兩章，長書中段全丟 |
+ * | 梗概放不下時降級或丟棄，寫明原因 | 第 2 條：不靜默截斷 |
+ * | 大綱那一層不帶已寫正文，即使請求裡帶著 derive | 大綱配方不再掛 `written` 層 |
+ * | 規劃階段綁了技能，derive 時也不帶 | 照實整理，不按技能的排法改寫已經發生的事 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -33,8 +33,8 @@ const config = (extra = {}) => ({
 });
 
 const N = 8;
-/** 每章：开头一句可认的话 + 很长的中段 + 结尾一句钩子。 */
-const body = (no) => `第${no}章开头：林昭醒来。\n\n${'山风很冷。'.repeat(1200)}\n\n第${no}章结尾：门外有人敲了三下。`;
+/** 每章：開頭一句可認的話 + 很長的中段 + 結尾一句鉤子。 */
+const body = (no) => `第${no}章開頭：林昭醒來。\n\n${'山風很冷。'.repeat(1200)}\n\n第${no}章結尾：門外有人敲了三下。`;
 
 let bundle;
 let t;
@@ -48,25 +48,25 @@ before(async () => {
     db: './src/core/runtime/db.ts',
   });
   bundle.host.initHost(makeFakeHost().host);
-  t = await makeTempProject(bundle.project, { prefix: 'deriveCtx', title: '整理测试' });
+  t = await makeTempProject(bundle.project, { prefix: 'deriveCtx', title: '整理測試' });
   for (let no = 1; no <= N; no++) {
     t.write(`chapters/00${no}-第${no}回.md`, `# 第${no}回\n\n${body(no)}\n`);
   }
   t.project.invalidate();
-  // 第 1–6 章定稿过（细纲照正文更新、记了 sourceHash）；第 7、8 章还没定稿。
+  // 第 1–6 章定稿過（細綱照正文更新、記了 sourceHash）；第 7、8 章還沒定稿。
   const ws = new bundle.ws.Workspace(t.project);
   for (const chapter of (await t.project.listChapters()).filter((c) => c.order <= 6)) {
     await ws.finalizePlot(chapter, {
-      梗概: `第${chapter.order}章梗概：林昭查到了第${chapter.order}条线索。`,
+      梗概: `第${chapter.order}章梗概：林昭查到了第${chapter.order}條線索。`,
       出场人物: '林昭',
-      时间地点: '青云山',
-      关键事件: `第${chapter.order}章关键事件：翻墙。`,
-      看点: `- 第${chapter.order}章看点：执事当众被林昭拆穿\n- 门外是谁`,
-      状态变更: `第${chapter.order}章后林昭受了轻伤。`,
+      时间地点: '青雲山',
+      关键事件: `第${chapter.order}章關鍵事件：翻牆。`,
+      看点: `- 第${chapter.order}章看點：執事當眾被林昭拆穿\n- 門外是誰`,
+      状态变更: `第${chapter.order}章後林昭受了輕傷。`,
       连续性事实: '',
     }, [{ name: '林昭', aliases: [] }]);
   }
-  t.write('.novelwarden/skills/排法/SKILL.md', '---\nname: 排法\n---\n每章三个场景。\n');
+  t.write('.novelwarden/skills/排法/SKILL.md', '---\nname: 排法\n---\n每章三個場景。\n');
   t.write('.novelwarden/skills.json', JSON.stringify({ version: 1, bindings: { planning: 'project:排法' } }));
   t.project.invalidate();
 });
@@ -82,9 +82,9 @@ const written = (built) => built.items.filter((i) => i.kind === 'written');
 const user = (built) => built.messages[built.messages.length - 1].content;
 const system = (built) => built.messages[0].content;
 
-describe('derive · 平时不带', () => {
-  test('架构、大纲不 derive 时没有 written，契约照旧；细纲配方从来不带', async () => {
-    // 角色图谱不随正文自动整理（见下一条）。
+describe('derive · 平時不帶', () => {
+  test('架構、大綱不 derive 時沒有 written，契約照舊；細綱配方從來不帶', async () => {
+    // 角色圖譜不隨正文自動整理（見下一條）。
     const setting = await build({ action: { stage: 'setting', capability: 'generate' }, target: { kind: 'setting', doc: 'characters' } });
     const outline = await build({ action: { stage: 'outline', capability: 'generate' }, target: { kind: 'outline' }, range: { from: 1, to: 20 } });
     const plot = await build({
@@ -95,34 +95,34 @@ describe('derive · 平时不带', () => {
     });
     for (const b of [setting, outline, plot]) {
       assert.equal(written(b).length, 0);
-      assert.ok(!user(b).includes('# 已写正文'));
-      assert.ok(!user(b).includes('从已写正文整理'));
+      assert.ok(!user(b).includes('# 已寫正文'));
+      assert.ok(!user(b).includes('從已寫正文整理'));
     }
-    assert.match(user(outline), /一章一章推演这一段/);
-    assert.match(user(plot), /商业网文节奏设计原则/);
-    // 平时规划阶段绑的技能照带。
+    assert.match(user(outline), /一章一章推演這一段/);
+    assert.match(user(plot), /商業網文節奏設計原則/);
+    // 平時規劃階段綁的技能照帶。
     assert.ok(setting.items.some((i) => i.kind === 'skill' && i.status === 'included'));
   });
 });
 
-describe('derive · 单件生成架构', () => {
-  test('已经写了正文：配置、前提、世界观自动照正文整理，写到第几章按连续有正文算；不带规划技能', async () => {
+describe('derive · 單件生成架構', () => {
+  test('已經寫了正文：配置、前提、世界觀自動照正文整理，寫到第幾章按連續有正文算；不帶規劃技能', async () => {
     for (const doc of ['config', 'premise', 'world']) {
       const b = await build({ action: { stage: 'setting', capability: 'generate' }, target: { kind: 'setting', doc } });
       assert.ok(written(b).length > 0, doc);
-      assert.ok(user(b).includes('从已写正文整理'), doc);
+      assert.ok(user(b).includes('從已寫正文整理'), doc);
       assert.ok(!b.items.some((i) => i.kind === 'skill' && i.status === 'included'), doc);
     }
   });
 
-  test('讨论照旧，不带已写正文', async () => {
+  test('討論照舊，不帶已寫正文', async () => {
     const b = await build({ action: { stage: 'setting', capability: 'discuss' }, target: { kind: 'setting', doc: 'premise' }, ask: '聊聊' });
     assert.equal(written(b).length, 0);
   });
 });
 
-describe('derive · 架构', () => {
-  test('均匀抽样 5 章的开头节选 + 全书梗概；系统提示与契约说清是整理', async () => {
+describe('derive · 架構', () => {
+  test('均勻抽樣 5 章的開頭節選 + 全書梗概；系統提示與契約說清是整理', async () => {
     const b = await build({
       action: { stage: 'setting', capability: 'generate' },
       target: { kind: 'setting', doc: 'config' },
@@ -133,26 +133,26 @@ describe('derive · 架构', () => {
     const samples = items.filter((i) => i.id !== 'written:synopsis');
     assert.deepEqual(samples.map((i) => i.id), ['written:1', 'written:3', 'written:5', 'written:6', 'written:8']);
     assert.ok(samples.every((i) => i.status === 'included'));
-    assert.match(samples[0].text, /（后略 \d+ 字）/);
+    assert.match(samples[0].text, /（後略 \d+ 字）/);
     const synopsis = items.find((i) => i.id === 'written:synopsis');
     assert.equal(synopsis.status, 'included');
     assert.match(synopsis.text, /第1章梗概/);
-    // 看点跟在同一行梗概后面，多条用分号连起来。
-    assert.match(synopsis.text, /第1章梗概：林昭查到了第1条线索。｜看点：第1章看点：执事当众被林昭拆穿；门外是谁/);
-    assert.match(synopsis.note, /2 章还没同步，没有梗概可带/);
+    // 看點跟在同一行梗概後面，多條用分號連起來。
+    assert.match(synopsis.text, /第1章梗概：林昭查到了第1條線索。｜看點：第1章看點：執事當眾被林昭拆穿；門外是誰/);
+    assert.match(synopsis.note, /2 章還沒同步，沒有梗概可帶/);
 
-    assert.match(system(b), /这一次不是从零创作：作者已经写到第 8 章/);
+    assert.match(system(b), /這一次不是從零創作：作者已經寫到第 8 章/);
     const u = user(b);
-    assert.ok(u.includes('# 已写正文（作者已经写成的权威事实'));
-    assert.ok(u.includes('【从已写正文整理（重要）】作者已经写到第 8 章'));
-    assert.ok(u.includes('基于上面「已写正文」'));
-    // 规模照给，格式不变（2026-10-25 起按小标题写）；不说「我的脑洞」。
-    assert.ok(u.includes('- 计划总章数：100 章'));
-    assert.ok(u.includes('【小说配置格式】'));
-    // 没有作者的一句话：一句话卖点必须写。
-    assert.ok(u.includes('「一句话卖点」也必须写'), u.slice(-1500));
-    assert.ok(!u.includes('# 我的脑洞'));
-    assert.ok(!u.includes('契合市场'));
+    assert.ok(u.includes('# 已寫正文（作者已經寫成的權威事實'));
+    assert.ok(u.includes('【從已寫正文整理（重要）】作者已經寫到第 8 章'));
+    assert.ok(u.includes('基於上面「已寫正文」'));
+    // 規模照給，格式不變（2026-10-25 起按小標題寫）；不說「我的腦洞」。
+    assert.ok(u.includes('- 計劃總章數：100 章'));
+    assert.ok(u.includes('【小說配置格式】'));
+    // 沒有作者的一句話：一句話賣點必須寫。
+    assert.ok(u.includes('「一句話賣點」也必須寫'), u.slice(-1500));
+    assert.ok(!u.includes('# 我的腦洞'));
+    assert.ok(!u.includes('契合市場'));
   });
 
   test('只看第 1–through 章', async () => {
@@ -162,10 +162,10 @@ describe('derive · 架构', () => {
       derive: { through: 3 },
     });
     assert.ok(written(b).every((i) => i.id === 'written:synopsis' || Number(i.id.split(':')[1]) <= 3));
-    assert.match(user(b), /基于「已写正文」与小说配置/);
+    assert.match(user(b), /基於「已寫正文」與小說配置/);
   });
 
-  test('梗概放不下时降级（隔章抽）或丢弃，写明预算不足', async () => {
+  test('梗概放不下時降級（隔章抽）或丟棄，寫明預算不足', async () => {
     const b = await build(
       {
         action: { stage: 'setting', capability: 'generate' },
@@ -175,12 +175,12 @@ describe('derive · 架构', () => {
       config({ contextWindow: 12000, maxOutputTokens: 1000 })
     );
     const synopsis = written(b).find((i) => i.id === 'written:synopsis');
-    assert.ok(synopsis, '梗概那一条要留在明细里');
+    assert.ok(synopsis, '梗概那一條要留在明細裡');
     assert.ok(['degraded', 'dropped'].includes(synopsis.status), synopsis.status);
-    assert.match(synopsis.note, /预算不足/);
+    assert.match(synopsis.note, /預算不足/);
   });
 
-  test('规划阶段绑的技能 derive 时不带', async () => {
+  test('規劃階段綁的技能 derive 時不帶', async () => {
     const b = await build({
       action: { stage: 'setting', capability: 'generate' },
       target: { kind: 'setting', doc: 'premise' },
@@ -190,9 +190,9 @@ describe('derive · 架构', () => {
   });
 });
 
-describe('derive · 大纲', () => {
-  // 情节大纲是各章细纲梗概的汇总，不再照正文整理：大纲配方不挂 `written` 层，请求里带着 derive 也不带正文。
-  test('大纲配方不带已写正文，契约照旧是规划', async () => {
+describe('derive · 大綱', () => {
+  // 情節大綱是各章細綱梗概的彙總，不再照正文整理：大綱配方不掛 `written` 層，請求裡帶著 derive 也不帶正文。
+  test('大綱配方不帶已寫正文，契約照舊是規劃', async () => {
     const b = await build({
       action: { stage: 'outline', capability: 'generate' },
       target: { kind: 'outline' },
@@ -200,6 +200,6 @@ describe('derive · 大纲', () => {
       derive: { through: N },
     });
     assert.deepEqual(written(b), []);
-    assert.ok(user(b).includes('一章一章推演这一段'));
+    assert.ok(user(b).includes('一章一章推演這一段'));
   });
 });

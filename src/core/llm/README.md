@@ -1,83 +1,83 @@
-# core/llm — 模型接入层
+# core/llm — 模型接入層
 
-把「调用大模型」抽象成统一的 `LlmProvider` 接口，上层（features / context）不关心具体协议。
+把「呼叫大模型」抽象成統一的 `LlmProvider` 介面，上層（features / context）不關心具體協議。
 
-## 文件
+## 檔案
 
-| 文件 | 职责 |
+| 檔案 | 職責 |
 |---|---|
-| [provider.ts](provider.ts) | `LlmProvider` 接口、`StreamEvent` / `ChatMessage` / `StopSignal` / `StreamOptions`、`CancelledError` / `LlmError`，以及 SSE 流的通用解析与取消/超时处理。 |
-| [collect.ts](collect.ts) | ★ 把事件流收成一段文本：`collectText` / `collect` / `mergeUsage`。既有调用点只经这里碰事件流。 |
-| [openaiProvider.ts](openaiProvider.ts) | OpenAI 的 **Responses API**（`/responses`，Codex 那一套）。思考深度是 `reasoning.effort`；system 走 `instructions` 顶层字段。**只认 `/chat/completions` 的服务商（DeepSeek / 智谱 / Kimi / 通义 / 本地 Ollama）在这条路上会 404**——见下面「两条协议，两个梯子」。 |
-| [anthropicProvider.ts](anthropicProvider.ts) | Anthropic Messages API。注意 system 要单独提取、相邻同角色消息要合并、首条必须是 user。思考深度有**两代写法**，由 provider 自己问出来（见下）。 |
-| [registry.ts](registry.ts) | ★ 按「前缀/模型名」引用构造 provider；API Key 按服务商 id 存 SecretStorage（含 0.1.x 按 kind 存的迁移）；连接测试。 |
-| [pool.ts](pool.ts) | ★ 模型池：按**任务档位**取模型，并把该档的清单变成**轮转负载均衡**（并发）与**随机 fallback**（串行失败后换模型重试）。另出 `budgetForTask()`——不构造 provider 的预算查询。只给工程页的后台任务用。 |
+| [provider.ts](provider.ts) | `LlmProvider` 介面、`StreamEvent` / `ChatMessage` / `StopSignal` / `StreamOptions`、`CancelledError` / `LlmError`，以及 SSE 流的通用解析與取消/超時處理。 |
+| [collect.ts](collect.ts) | ★ 把事件流收成一段文字：`collectText` / `collect` / `mergeUsage`。既有呼叫點只經這裡碰事件流。 |
+| [openaiProvider.ts](openaiProvider.ts) | OpenAI 的 **Responses API**（`/responses`，Codex 那一套）。思考深度是 `reasoning.effort`；system 走 `instructions` 頂層欄位。**只認 `/chat/completions` 的服務商（DeepSeek / 智谱 / Kimi / 通义 / 本地 Ollama）在這條路上會 404**——見下面「兩條協議，兩個梯子」。 |
+| [anthropicProvider.ts](anthropicProvider.ts) | Anthropic Messages API。注意 system 要單獨提取、相鄰同角色訊息要合併、首條必須是 user。思考深度有**兩代寫法**，由 provider 自己問出來（見下）。 |
+| [registry.ts](registry.ts) | ★ 按「字首/模型名」引用構造 provider；API Key 按服務商 id 存 SecretStorage（含 0.1.x 按 kind 存的遷移）；連線測試。 |
+| [pool.ts](pool.ts) | ★ 模型池：按**任務檔位**取模型，並把該檔的清單變成**輪轉負載均衡**（併發）與**隨機 fallback**（序列失敗後換模型重試）。另出 `budgetForTask()`——不構造 provider 的預算查詢。只給工程頁的後臺任務用。 |
 
-> `vscode-lm`（Copilot）的实现在 [../../shells/vscode/vscodeLmProvider.ts](../../shells/vscode/vscodeLmProvider.ts)——它依赖 VS Code Language Model API，属于宿主层，但由本层的 registry 统一分发。
+> `vscode-lm`（Copilot）的實現在 [../../shells/vscode/vscodeLmProvider.ts](../../shells/vscode/vscodeLmProvider.ts)——它依賴 VS Code Language Model API，屬於宿主層，但由本層的 registry 統一分發。
 
-## 关键设计
+## 關鍵設計
 
-- **`StreamEvent` 是唯一原语**：`stream(messages, options): AsyncIterable<StreamEvent>`，四种事件 `text` / `reasoning` / `usage` / `stop`。取消经 `AbortSignal`，超时经 `timeoutMs`（**空闲超时**：流式还在吐字时重置，卡住这么久没数据才中止）。**没有第二条路**——provider 总是全量发事件，不由「调用方想不想听」决定发不发：usage 是校准 tokenCounter 的唯一实测来源，thinking 是「正文还没开始吐」这段时间界面上唯一的反馈，都不该由调用方开关。要文本的调用点一律走 `collectText`，形状仍是「传一个流，拿一段文本」。
-- **usage 按字段合并**：同一次请求会回报多次（Anthropic 在 `message_start` 给输入、`message_delta` 给输出），所以 `mergeUsage` 是**后到的覆盖同名字段、缺席的字段保留**。整份覆盖会让先到的输入用量被后一条抹掉，估算/实测比值就废了。
-- **消息只有 system / user / assistant 三种角色**（`ChatMessage`），内容都是纯文本。本层不做工具调用：外部 agent 经 MCP（[../mcp](../mcp/README.md)）直接调我们的工具，模型侧的 tool calling 与这一层无关。
-- **错误说人话**：HTTP 401/404/429 等都在 provider 内整理成面向作者的中文提示后以 `LlmError` 抛出；用户主动取消抛 `CancelledError`，调用方静默处理。
-- **API Key 按服务商 id 分开存**：同一种协议可以并存多个服务商（官方接口、路由型服务商、自建网关都可以是同一种 kind），各有各的 Key。`vscode-lm` 走 Copilot 授权，不需要 Key。
-- **硬配额上报**：`maxInputTokens()` 返回 provider 的硬性输入上限（vscode-lm 有配额），装配器会与 `contextWindow` 取小。
-- **思考深度只作用于作者选定的那个模型**：`StreamOptions.thinking` 由对话页的单次生成带上（作者在会话上选的那一档），**工程页的后台批量任务一律不带**。理由与第 12 条同源——那一档模型是作者按成本挑的，替他把七十六章的定稿都升级成深思考，账单上看不出是谁决定的。
+- **`StreamEvent` 是唯一原語**：`stream(messages, options): AsyncIterable<StreamEvent>`，四種事件 `text` / `reasoning` / `usage` / `stop`。取消經 `AbortSignal`，超時經 `timeoutMs`（**空閒超時**：流式還在吐字時重置，卡住這麼久沒資料才中止）。**沒有第二條路**——provider 總是全量發事件，不由「呼叫方想不想聽」決定發不發：usage 是校準 tokenCounter 的唯一實測來源，thinking 是「正文還沒開始吐」這段時間介面上唯一的反饋，都不該由呼叫方開關。要文字的呼叫點一律走 `collectText`，形狀仍是「傳一個流，拿一段文字」。
+- **usage 按欄位合併**：同一次請求會回報多次（Anthropic 在 `message_start` 給輸入、`message_delta` 給輸出），所以 `mergeUsage` 是**後到的覆蓋同名欄位、缺席的欄位保留**。整份覆蓋會讓先到的輸入用量被後一條抹掉，估算/實測比值就廢了。
+- **訊息只有 system / user / assistant 三種角色**（`ChatMessage`），內容都是純文字。本層不做工具呼叫：外部 agent 經 MCP（[../mcp](../mcp/README.md)）直接調我們的工具，模型側的 tool calling 與這一層無關。
+- **錯誤說人話**：HTTP 401/404/429 等都在 provider 內整理成面向作者的中文提示後以 `LlmError` 拋出；使用者主動取消拋 `CancelledError`，呼叫方靜默處理。
+- **API Key 按服務商 id 分開存**：同一種協議可以並存多個服務商（官方介面、路由型服務商、自建閘道器都可以是同一種 kind），各有各的 Key。`vscode-lm` 走 Copilot 授權，不需要 Key。
+- **硬配額上報**：`maxInputTokens()` 返回 provider 的硬性輸入上限（vscode-lm 有配額），裝配器會與 `contextWindow` 取小。
+- **思考深度只作用於作者選定的那個模型**：`StreamOptions.thinking` 由對話頁的單次生成帶上（作者在會話上選的那一檔），**工程頁的後臺批次任務一律不帶**。理由與第 12 條同源——那一檔模型是作者按成本挑的，替他把七十六章的定稿都升級成深思考，賬單上看不出是誰決定的。
 
-## 两条协议，两个梯子
+## 兩條協議，兩個梯子
 
-**openai 这种 kind 走 Responses（`/responses`），anthropic 走 Messages，没有第三条路。**
-思考深度的落点只在这两条协议上：老的 `/chat/completions` 里「想多深」不是一个字段（要么
-是模型名的一部分，要么根本没有），界面上那个下拉框就无处可去。两条协议并存的代价是每个
-字段都要先判一次「现在是哪一条」，而设置页也要让作者先答一道他答不上来的题。
+**openai 這種 kind 走 Responses（`/responses`），anthropic 走 Messages，沒有第三條路。**
+思考深度的落點只在這兩條協議上：老的 `/chat/completions` 裡「想多深」不是一個欄位（要麼
+是模型名的一部分，要麼根本沒有），介面上那個下拉框就無處可去。兩條協議並存的代價是每個
+欄位都要先判一次「現在是哪一條」，而設定頁也要讓作者先答一道他答不上來的題。
 
-代价说清楚：**只认 `/chat/completions` 的服务商（DeepSeek、智谱、Kimi、通义、本地 Ollama）
-在这条路上会 404**，404 的提示里点了这件事，「添加服务商」的预设里也不再摆它们（点了就
-404 的按钮比找不到更让人恼火）。要用它们仍然可以手工添加一个自己那侧的 `/responses` 网关。
+代價說清楚：**只認 `/chat/completions` 的服務商（DeepSeek、智谱、Kimi、通义、本地 Ollama）
+在這條路上會 404**，404 的提示裡點了這件事，「新增服務商」的預設裡也不再擺它們（點了就
+404 的按鈕比找不到更讓人惱火）。要用它們仍然可以手工新增一個自己那側的 `/responses` 閘道器。
 
-思考深度是**一个档位、两套字段**（档位表在 [../model/thinking.ts](../model/thinking.ts)）：
+思考深度是**一個檔位、兩套欄位**（檔位表在 [../model/thinking.ts](../model/thinking.ts)）：
 
-| 档 | OpenAI Responses | Anthropic Messages |
+| 檔 | OpenAI Responses | Anthropic Messages |
 |---|---|---|
-| 不思考 | 不带 `reasoning` | 不带 `thinking` / `output_config` |
-| 浅 / 中 / 深 | `reasoning.effort: low/medium/high` | `output_config.effort: low/medium/high` |
-| 极限 | `reasoning.effort: xhigh` | `output_config.effort: max` |
+| 不思考 | 不帶 `reasoning` | 不帶 `thinking` / `output_config` |
+| 淺 / 中 / 深 | `reasoning.effort: low/medium/high` | `output_config.effort: low/medium/high` |
+| 極限 | `reasoning.effort: xhigh` | `output_config.effort: max` |
 
-另外三条与它绑在一起：
+另外三條與它綁在一起：
 
-- **思考开着时不带 `temperature`**。两家都要求它是默认值，带上去就是 400。关着时照常带——
-  非推理模型上它仍然是有效的文风旋钮。
-- **上游拒了就换一种写法，不把这一轮判死**。`effort` 的梯子上老模型缺顶上那两档；Anthropic
-  更是有两代写法（自适应 `thinking: {type:'adaptive'}` + `output_config.effort`，以及 4.5 及
-  更早唯一可用的手动预算 `thinking: {type:'enabled', budget_tokens}`，后者在 4.7 以后直接被
-  拒）。两个 provider 各自按「接口地址 + 模型」把结论记在内存里（`QUIRKS`）：降一档、换一代
-  写法、最后退到不带思考字段，每种模型一生只吃一次 400。**记在内存而不是配置里**——这是上游
-  的事实，不是作者的偏好，写进设置页只会多一个他答不上来的问题。
-- **手动预算那条路上，预算必须小于 `max_tokens`**（思考 token 算在输出上限里，且下限是 1024）。
-  所以 `thinkingBudget` 按输出上限收紧，收不出 1024 就不带思考字段，而不是发一个必然 400 的请求。
+- **思考開著時不帶 `temperature`**。兩家都要求它是預設值，帶上去就是 400。關著時照常帶——
+  非推理模型上它仍然是有效的文風旋鈕。
+- **上游拒了就換一種寫法，不把這一輪判死**。`effort` 的梯子上老模型缺頂上那兩檔；Anthropic
+  更是有兩代寫法（自適應 `thinking: {type:'adaptive'}` + `output_config.effort`，以及 4.5 及
+  更早唯一可用的手動預算 `thinking: {type:'enabled', budget_tokens}`，後者在 4.7 以後直接被
+  拒）。兩個 provider 各自按「介面地址 + 模型」把結論記在記憶體裡（`QUIRKS`）：降一檔、換一代
+  寫法、最後退到不帶思考欄位，每種模型一生只吃一次 400。**記在記憶體而不是配置裡**——這是上游
+  的事實，不是作者的偏好，寫進設定頁只會多一個他答不上來的問題。
+- **手動預算那條路上，預算必須小於 `max_tokens`**（思考 token 算在輸出上限裡，且下限是 1024）。
+  所以 `thinkingBudget` 按輸出上限收緊，收不出 1024 就不帶思考欄位，而不是發一個必然 400 的請求。
 
 ### 收尾原因：`StopSignal`
 
-两家都把上游的收尾原因归一成 `StopSignal`（`end` / `maxTokens` / `other`），以 `stop` 事件交上去。用它的是正文续写链（[../generation/continuation.ts](../generation/continuation.ts)：`maxTokens` 往后接、`end` 说明这一章已经收了尾）与工程页批量（[../features/pipelineBatch.ts](../features/pipelineBatch.ts)：判断结构化输出是否被截断）。
+兩家都把上游的收尾原因歸一成 `StopSignal`（`end` / `maxTokens` / `other`），以 `stop` 事件交上去。用它的是正文續寫鏈（[../generation/continuation.ts](../generation/continuation.ts)：`maxTokens` 往後接、`end` 說明這一章已經收了尾）與工程頁批次（[../features/pipelineBatch.ts](../features/pipelineBatch.ts)：判斷結構化輸出是否被截斷）。
 
-- **上游不发就一个都不交**（`undefined` 意为「它没说」）。补一个默认值等于替它编一句话，而续写链会照着那句话决定回退还是往后接。
-- Anthropic 的 `stop_reason` 在 `message_delta` 上；认不出的值（`pause_turn`、`refusal`……）一律 `other`。Responses 那条路上 `response.completed` 报 `end`，`response.incomplete` 按 `incomplete_details.reason` 报 `maxTokens` 或 `other`。
+- **上游不發就一個都不交**（`undefined` 意為「它沒說」）。補一個預設值等於替它編一句話，而續寫鏈會照著那句話決定回退還是往後接。
+- Anthropic 的 `stop_reason` 在 `message_delta` 上；認不出的值（`pause_turn`、`refusal`……）一律 `other`。Responses 那條路上 `response.completed` 報 `end`，`response.incomplete` 按 `incomplete_details.reason` 報 `maxTokens` 或 `other`。
 
-## 模型池的五条规矩
+## 模型池的五條規矩
 
-模型分为**三档**（快速 / 均衡 / 精标，见 [../model/tiers.ts](../model/tiers.ts)），每档各是一份有序清单。`createModelPool({ task })` 按任务所属的档取清单，把它变成一个能换人的池，但**只有工程页的后台任务**（补齐架构、批量拆细纲、批量写章与写完即审稿 / 定稿、同步细纲、全文大纲、角色卡、设定、文风、角色提取）以及经 MCP 接入的外部 agent 调生成工具时（只取首选，见 [../tools/novel/generate.ts](../tools/novel/generate.ts)）走它——对话页的单次生成（写正文、审稿、修稿……）与连接测试必须严格用用户选定的那个模型，中途换人会让文风断掉。
+模型分為**三檔**（快速 / 均衡 / 精標，見 [../model/tiers.ts](../model/tiers.ts)），每檔各是一份有序清單。`createModelPool({ task })` 按任務所屬的檔取清單，把它變成一個能換人的池，但**只有工程頁的後臺任務**（補齊架構、批次拆細綱、批次寫章與寫完即審稿 / 定稿、同步細綱、全文大綱、角色卡、設定、文風、角色提取）以及經 MCP 接入的外部 agent 調生成工具時（只取首選，見 [../tools/novel/generate.ts](../tools/novel/generate.ts)）走它——對話頁的單次生成（寫正文、審稿、修稿……）與連線測試必須嚴格用使用者選定的那個模型，中途換人會讓文風斷掉。
 
-唯一的例外是**转写**（`transcribe`，2026-10-25 起，细纲试点之后推到全部结构化产物）：干活的模型按格式写自然语言，写完由「转写」那一档照抄成 JSON（[../features/transcribe.ts](../features/transcribe.ts)）。它不写内容，所以对话页也走它的池（[../features/poolIO.ts](../features/poolIO.ts) 的 `lazyTranscriber`，用到时才建；工程页任务用 `poolTranscriber`），`refsForTask` 也不给它换成确认框上钉的模型（作者定的：固定的转写模型）。那一档没配照第 1 条沿用默认模型；一个可用的模型都没有时退回干活那个模型转写，日志里说一声。缺省归快速档，温度 0、不带思考。
+唯一的例外是**轉寫**（`transcribe`，2026-10-25 起，細綱試點之後推到全部結構化產物）：幹活的模型按格式寫自然語言，寫完由「轉寫」那一檔照抄成 JSON（[../features/transcribe.ts](../features/transcribe.ts)）。它不寫內容，所以對話頁也走它的池（[../features/poolIO.ts](../features/poolIO.ts) 的 `lazyTranscriber`，用到時才建；工程頁任務用 `poolTranscriber`），`refsForTask` 也不給它換成確認框上釘的模型（作者定的：固定的轉寫模型）。那一檔沒配照第 1 條沿用預設模型；一個可用的模型都沒有時退回幹活那個模型轉寫，日誌裡說一聲。預設歸快速檔，溫度 0、不帶思考。
 
-1. **空档位沿用「默认模型」**：某一档没配模型，归在该档的任务就用 `config.models`。三档都不配 = 不分档，行为与分档之前逐字节一致。这条是硬约束——静默把某些任务降级到便宜模型，等于替作者做了质量取舍。
-2. **起始模型看场景**：并发任务（`concurrent: true`）按游标轮转，把请求摊到几个服务商上；串行任务恒取该档的 `refs[0]`，与「档内第一个是首选」的直觉一致。
-3. **fallback 是换人，不是重试，而且不跨档**：失败后从**同档里没试过的**模型里随机挑一个，最多 `config.fallbackAttempts` 次；同一个模型不会被试两遍，档里只有一个模型时干脆不重试，档内换完了就上抛——**绝不去别的档捞人**。快速档失败自动升级到精标档，等于绕过作者的成本决定去烧贵 token，而且从日志上看不出来。`CancelledError` 立刻上抛——用户点了停止还接着换模型，会让「停止」看起来失灵。作者在调模型之前的确认框上为这一次指定了模型（`config.pinnedModel`，见 [../runtime/callScope.ts](../runtime/callScope.ts)）时，`refsForTask` 只给它：池里只有一个模型，不换人，预算也是它的（第 5 条照旧成立）。
-4. **只有该档首选能弹 Key 输入框**：备选模型一律 `buildProvider(active, { promptForKey: false })`，缺 Key / 环境不支持就剔除并 `warn`。一次点击连弹五个 API Key 输入框，比没有 fallback 更让人恼火。
-5. **预算跟着干活的模型走**：`pool.primaryBudget` 是该档**首选模型**的窗口与输出上限（模型自带的优先，缺省退回内置兼容值）。features 切批、截断一律读它，不能读 `config.contextWindow`——后者是**对话页选定模型**的窗口，拿 200k 的写作模型的窗口去给 32k 的快速档模型切批会稳定超窗。取首选而非全池最小值：fallback 是小概率路径，为它把每一批都切小等于让常态下每次调用都少读几段。
+1. **空檔位沿用「預設模型」**：某一檔沒配模型，歸在該檔的任務就用 `config.models`。三檔都不配 = 不分檔，行為與分檔之前逐位元組一致。這條是硬約束——靜默把某些任務降級到便宜模型，等於替作者做了質量取捨。
+2. **起始模型看場景**：併發任務（`concurrent: true`）按游標輪轉，把請求攤到幾個服務商上；序列任務恆取該檔的 `refs[0]`，與「檔內第一個是首選」的直覺一致。
+3. **fallback 是換人，不是重試，而且不跨檔**：失敗後從**同檔裡沒試過的**模型裡隨機挑一個，最多 `config.fallbackAttempts` 次；同一個模型不會被試兩遍，檔裡只有一個模型時乾脆不重試，檔內換完了就上拋——**絕不去別的檔撈人**。快速檔失敗自動升級到精標檔，等於繞過作者的成本決定去燒貴 token，而且從日誌上看不出來。`CancelledError` 立刻上拋——使用者點了停止還接著換模型，會讓「停止」看起來失靈。作者在調模型之前的確認框上為這一次指定了模型（`config.pinnedModel`，見 [../runtime/callScope.ts](../runtime/callScope.ts)）時，`refsForTask` 只給它：池裡只有一個模型，不換人，預算也是它的（第 5 條照舊成立）。
+4. **只有該檔首選能彈 Key 輸入框**：備選模型一律 `buildProvider(active, { promptForKey: false })`，缺 Key / 環境不支援就剔除並 `warn`。一次點選連彈五個 API Key 輸入框，比沒有 fallback 更讓人惱火。
+5. **預算跟著幹活的模型走**：`pool.primaryBudget` 是該檔**首選模型**的視窗與輸出上限（模型自帶的優先，預設退回內建相容值）。features 切批、截斷一律讀它，不能讀 `config.contextWindow`——後者是**對話頁選定模型**的視窗，拿 200k 的寫作模型的視窗去給 32k 的快速檔模型切批會穩定超窗。取首選而非全池最小值：fallback 是小機率路徑，為它把每一批都切小等於讓常態下每次呼叫都少讀幾段。
 
-确认框之前就要算的东西（设定生成的扫描片段数、角色卡的批数——它们就是「预计调用 N 次」那个数字）用 `budgetForTask(task)`：它只解析引用、不构造 provider，因此不会在用户点确认之前弹出 API Key 输入框。
+確認框之前就要算的東西（設定生成的掃描片段數、角色卡的批數——它們就是「預計呼叫 N 次」那個數字）用 `budgetForTask(task)`：它只解析引用、不構造 provider，因此不會在使用者點確認之前彈出 API Key 輸入框。
 
-## 依赖关系
+## 依賴關係
 
-依赖 `model/`（读配置、解析模型引用）。被 `features/` 使用；`initSecrets` 由 `vscode/extension.ts` 在激活时调用以注入 SecretStorage。
+依賴 `model/`（讀配置、解析模型引用）。被 `features/` 使用；`initSecrets` 由 `vscode/extension.ts` 在啟用時呼叫以注入 SecretStorage。

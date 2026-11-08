@@ -1,47 +1,47 @@
 /**
- * 三个前端产物之间的全部交集。
+ * 三個前端產物之間的全部交集。
  *
- * view / editor / explorer 各自独立打包、各自监听 message、各自 postMessage，
- * 唯一互通的就是这里的东西。**别让 explorer 直接去读 editor 的内部状态**
- * （那会把编辑器的私事变成两个文件之间的契约，而资源管理器在插件形态里
+ * view / editor / explorer 各自獨立打包、各自監聽 message、各自 postMessage，
+ * 唯一互通的就是這裡的東西。**別讓 explorer 直接去讀 editor 的內部狀態**
+ * （那會把編輯器的私事變成兩個檔案之間的契約，而資源管理器在外掛形態裡
  * 根本不存在）。
  *
- * - `__nfToast`：view 出，editor / explorer 用。共用一条提示条，免得两套互相盖住。
- * - `__nfContextMenu`：view 出的右键菜单登记函数。全局 `contextmenu` 监听只在
- *   view 里有一份，另起一套会两层菜单一起弹。
- * - 自定义事件：`nf-editor-active`、`nf-files-moved`，以及标题栏（view.js）
- *   与编辑器（editor.js）之间的 `nf-editor-query` / `nf-editor-command` /
- *   `nf-workspace-reset`，「编辑」菜单段落那几项的 `nf-paragraph-query` / `nf-paragraph-command`，
- *   「文件 → 历史版本…」的 `nf-versions-query` / `nf-versions-command`，「文件 → 转到…」的
- *   `nf-quickopen-query` / `nf-quickopen-command`，「编辑 → 全书查找替换…」的 `nf-bookfind-query` / `nf-bookfind-command`，
- *   「视图」菜单的 `nf-view-query` / `nf-view-command`，「帮助 → 快捷键一览」的 `nf-shortcuts-query` / `nf-shortcuts-command`，
- *   「视图 → 统计」那一组的 `nf-stats-query` / `nf-stats-command`，「视图 → 体检」那一组的 `nf-check-query` /
- *   `nf-check-command`，「视图 → 补全」那一组的 `nf-names-query` / `nf-names-command`，
- *   以及 `nf-reveal-in-files`（editor → explorer + view：在「文件」页定位到某个文件或目录）、`nf-show-versions`
- *   （editor → view：切到侧栏「版本」页）、存档点弹窗「对比」在编辑区开对比标签的 `nf-version-diff-query` /
+ * - `__nfToast`：view 出，editor / explorer 用。共用一條提示條，免得兩套互相蓋住。
+ * - `__nfContextMenu`：view 出的右鍵選單登記函式。全域 `contextmenu` 監聽只在
+ *   view 裡有一份，另起一套會兩層選單一起彈。
+ * - 自定義事件：`nf-editor-active`、`nf-files-moved`，以及標題欄（view.js）
+ *   與編輯器（editor.js）之間的 `nf-editor-query` / `nf-editor-command` /
+ *   `nf-workspace-reset`，「編輯」選單段落那幾項的 `nf-paragraph-query` / `nf-paragraph-command`，
+ *   「檔案 → 歷史版本…」的 `nf-versions-query` / `nf-versions-command`，「檔案 → 轉到…」的
+ *   `nf-quickopen-query` / `nf-quickopen-command`，「編輯 → 全書查詢替換…」的 `nf-bookfind-query` / `nf-bookfind-command`，
+ *   「檢視」選單的 `nf-view-query` / `nf-view-command`，「幫助 → 快捷鍵一覽」的 `nf-shortcuts-query` / `nf-shortcuts-command`，
+ *   「檢視 → 統計」那一組的 `nf-stats-query` / `nf-stats-command`，「檢視 → 體檢」那一組的 `nf-check-query` /
+ *   `nf-check-command`，「檢視 → 補全」那一組的 `nf-names-query` / `nf-names-command`，
+ *   以及 `nf-reveal-in-files`（editor → explorer + view：在「檔案」頁定位到某個檔案或目錄）、`nf-show-versions`
+ *   （editor → view：切到側欄「版本」頁）、存檔點彈窗「對比」在編輯區開對比標籤的 `nf-version-diff-query` /
  *   `nf-version-diff-command`，
- *   对话页「加入选区」问内置编辑器选区的 `nf-selection-query`，工程页「叙事线」页签打开编辑区「叙事线总览」的
- *   `nf-threads-query` / `nf-threads-command`（工程页「时间线」组打开「时间线总览」的 `nf-timeline-query` / `nf-timeline-command` 同样），工程页「存档点…」退回时问内置编辑器哪几份没保存的
+ *   對話頁「加入選區」問內建編輯器選區的 `nf-selection-query`，工程頁「敘事線」頁籤開啟編輯區「敘事線總覽」的
+ *   `nf-threads-query` / `nf-threads-command`（工程頁「時間線」組開啟「時間線總覽」的 `nf-timeline-query` / `nf-timeline-command` 同樣），工程頁「存檔點…」退回時問內建編輯器哪幾份沒儲存的
  *   `nf-dirty-query`。
- *   `nf-pick-folder` 给目录选择器拦欢迎页的占位 prompt。
- * - `__nfShowMenu`：view 出的「在某处弹一个菜单」（编辑器标签条末尾的「▾」用），与右键菜单是同一个引擎。
+ *   `nf-pick-folder` 給目錄選擇器攔歡迎頁的佔位 prompt。
+ * - `__nfShowMenu`：view 出的「在某處彈一個選單」（編輯器標籤條末尾的「▾」用），與右鍵選單是同一個引擎。
  */
 
-/** 菜单项。`{ sep: true }` 是分隔线，其余是可点的一条。 */
+/** 選單項。`{ sep: true }` 是分隔線，其餘是可點的一條。 */
 export type MenuItem = { sep: true } | MenuAction;
 
 export interface MenuAction {
   sep?: false;
   label: string;
-  /** 置灰的项（如「出场：第 1、2、3 章」那种纯说明）可以不给。 */
+  /** 置灰的項（如「出場：第 1、2、3 章」那種純說明）可以不給。 */
   run?: () => void;
   danger?: boolean;
   disabled?: boolean;
 }
 
 /**
- * 右键（触屏上是长按）那一下：按在哪个元素上、视口坐标、是不是手指长按（`touch.ts` 认的）。菜单项多半用不着它，
- * 要按「按在哪个字上」给项的（编辑区里的名字、叙事线总览的格子）才看。
+ * 右鍵（觸屏上是長按）那一下：按在哪個元素上、視口座標、是不是手指長按（`touch.ts` 認的）。選單項多半用不著它，
+ * 要按「按在哪個字上」給項的（編輯區裡的名字、敘事線總覽的格子）才看。
  */
 export interface MenuContext {
   target: Element | null;
@@ -50,25 +50,25 @@ export interface MenuContext {
   touch: boolean;
 }
 
-/** 「这个元素上右键给什么菜单」的登记函数。`provide` 在右键那一刻才调用。 */
+/** 「這個元素上右鍵給什麼選單」的登記函式。`provide` 在右鍵那一刻才呼叫。 */
 export type ContextMenuRegistrar = <T extends Element>(node: T, provide: (at: MenuContext) => MenuItem[]) => T;
 
-/** 标题栏问编辑器「现在开着什么、脏不脏」。没人听时全是空值。 */
+/** 標題欄問編輯器「現在開著什麼、髒不髒」。沒人聽時全是空值。 */
 export interface EditorStatus {
   hasFile: boolean;
   dirtyCurrent: boolean;
   dirtyAny: boolean;
   path: string | null;
   text: string;
-  /** 焦点在内置编辑器的正文区里。「编辑 → 撤销 / 重做」这时交给编辑器自己的历史。 */
+  /** 焦點在內建編輯器的正文區裡。「編輯 → 撤銷 / 重做」這時交給編輯器自己的歷史。 */
   areaFocused: boolean;
-  /** 自动保存开着没有（按浏览器记，缺省关）。「文件 → 自动保存」据此打 ✓。 */
+  /** 自動儲存開著沒有（按瀏覽器記，預設關）。「檔案 → 自動儲存」據此打 ✓。 */
   autoSave: boolean;
 }
 
 /**
- * `undo` / `redo` 作用于当前那块编辑区的当前文件（编辑器自己记的历史，不是浏览器原生的）；
- * `find` / `replace` 打开那一块的查找条（`replace` 连替换行一起展开）；`toggleAutoSave` 开关自动保存。
+ * `undo` / `redo` 作用於當前那塊編輯區的當前檔案（編輯器自己記的歷史，不是瀏覽器原生的）；
+ * `find` / `replace` 開啟那一塊的查詢條（`replace` 連替換行一起展開）；`toggleAutoSave` 開關自動儲存。
  */
 export type EditorCommandName = 'save' | 'saveAll' | 'close' | 'find' | 'replace' | 'undo' | 'redo' | 'toggleAutoSave';
 
@@ -118,31 +118,31 @@ declare global {
 }
 
 /**
- * 提示条。view 还没加载（或根本没有）时静默丢掉——
- * 提示不出来不该连带把编辑器的主流程搞崩。
+ * 提示條。view 還沒載入（或根本沒有）時靜默丟掉——
+ * 提示不出來不該連帶把編輯器的主流程搞崩。
  */
 export function toast(message: string, isError?: boolean): void {
   window.__nfToast?.(message, isError);
 }
 
 /**
- * 右键菜单登记。取不到 view 的登记表时退化成「这个元素没有菜单」，
- * 全局监听会给它兜底的「刷新」。
+ * 右鍵選單登記。取不到 view 的登記表時退化成「這個元素沒有選單」，
+ * 全域監聽會給它兜底的「重新整理」。
  */
 export const onContextMenu: ContextMenuRegistrar = (node, provide) =>
   (window.__nfContextMenu ?? ((n) => n))(node, provide);
 
-/** 广播「编辑器里现在开着哪个文件」。没人听时白发一趟，代价可以忽略。 */
+/** 廣播「編輯器裡現在開著哪個檔案」。沒人聽時白髮一趟，代價可以忽略。 */
 export function announceEditorActive(path: string | null): void {
   window.dispatchEvent(new CustomEvent('nf-editor-active', { detail: { path } }));
 }
 
-/** 广播「某个文件改名/搬家了」，编辑器据此把标签连同未保存草稿挪过去。 */
+/** 廣播「某個檔案改名/搬家了」，編輯器據此把標籤連同未儲存草稿挪過去。 */
 export function announceFileMoved(from: string, to: string): void {
   window.dispatchEvent(new CustomEvent('nf-files-moved', { detail: { from, to } }));
 }
 
-/** 问编辑器当前状态。editor.js 没装时返回全空。 */
+/** 問編輯器當前狀態。editor.js 沒裝時返回全空。 */
 export function queryEditor(): EditorStatus {
   const status: EditorStatus = {
     hasFile: false,
@@ -161,20 +161,20 @@ export function commandEditor(name: EditorCommandName): void {
   window.dispatchEvent(new CustomEvent('nf-editor-command', { detail: { name } }));
 }
 
-/** 打开/关闭文件夹前：有脏标签就问一句。不确定则不往下走。 */
-export function confirmProceedIfDirty(message = '有未保存的修改，仍要继续吗？'): boolean {
+/** 開啟/關閉資料夾前：有髒標籤就問一句。不確定則不往下走。 */
+export function confirmProceedIfDirty(message = '有未儲存的修改，仍要繼續嗎？'): boolean {
   if (!queryEditor().dirtyAny) {
     return true;
   }
   return window.confirm(message);
 }
 
-/** 工作区换了或关掉：编辑器丢掉全部标签。 */
+/** 工作區換了或關掉：編輯器丟掉全部標籤。 */
 export function resetEditor(): void {
   window.dispatchEvent(new Event('nf-workspace-reset'));
 }
 
-/** 这个窗口开的是哪个工程：独立版网址上的 `?project=`。插件与空窗口没有。 */
+/** 這個視窗開的是哪個工程：獨立版網址上的 `?project=`。外掛與空視窗沒有。 */
 export function windowProject(): string | null {
   try {
     return new URLSearchParams(location.search).get('project') || null;
@@ -184,32 +184,32 @@ export function windowProject(): string | null {
 }
 
 /**
- * localStorage 的键按工程分开：独立版几个窗口各开一个工程时，标签页、展开的目录、
- * 没发出去的草稿不互相顶掉。没有工程时就是原来那个键。
+ * localStorage 的鍵按工程分開：獨立版幾個視窗各開一個工程時，標籤頁、展開的目錄、
+ * 沒發出去的草稿不互相頂掉。沒有工程時就是原來那個鍵。
  */
 export function projectStorageKey(base: string): string {
   const project = windowProject();
   return project ? `${base}@${project}` : base;
 }
 
-// ---------------------------------------------------------------- 「编辑」菜单段落那几项
+// ---------------------------------------------------------------- 「編輯」選單段落那幾項
 
 /**
- * 标题栏「编辑」菜单段落那几项问编辑器的状态（`editor/paragraph.ts` 回答）。与 `EditorStatus` 分开一份：
- * 那是保存 / 撤销那一组的，这一组只管正文排版。分段格式本身不在这里——它是工程的设置，菜单从
- * `ViewState.paragraphStyle` 读。
+ * 標題欄「編輯」選單段落那幾項問編輯器的狀態（`editor/paragraph.ts` 回答）。與 `EditorStatus` 分開一份：
+ * 那是儲存 / 撤銷那一組的，這一組只管正文排版。分段格式本身不在這裡——它是工程的設定，選單從
+ * `ViewState.paragraphStyle` 讀。
  */
 export interface ParagraphStatus {
-  /** 当前那块编辑区开着的是正文（章节或草稿）。「一键排版」「半角标点转全角」只对正文亮。 */
+  /** 當前那塊編輯區開著的是正文（章節或草稿）。「一鍵排版」「半形標點轉全形」只對正文亮。 */
   prose: boolean;
-  /** 成对符号自动补全开着没有（按浏览器记，缺省开）。 */
+  /** 成對符號自動補全開著沒有（按瀏覽器記，預設開）。 */
   autoPair: boolean;
 }
 
-/** `toggleAutoPair` 开关成对符号；另两个作用于当前那块编辑区的当前文件（有选区只改选中的那几行）。 */
+/** `toggleAutoPair` 開關成對符號；另兩個作用於當前那塊編輯區的當前檔案（有選區只改選中的那幾行）。 */
 export type ParagraphCommandName = 'toggleAutoPair' | 'formatProse' | 'fullWidthPunct';
 
-/** 问编辑器段落那几项的状态。editor.js 没装时全是关的（自动补全按缺省算开）。 */
+/** 問編輯器段落那幾項的狀態。editor.js 沒裝時全是關的（自動補全按預設算開）。 */
 export function queryParagraph(): ParagraphStatus {
   const status: ParagraphStatus = { prose: false, autoPair: true };
   window.dispatchEvent(new CustomEvent('nf-paragraph-query', { detail: status }));
@@ -220,39 +220,39 @@ export function commandParagraph(name: ParagraphCommandName): void {
   window.dispatchEvent(new CustomEvent('nf-paragraph-command', { detail: { name } }));
 }
 
-// ---------------------------------------------------------------- 「文件」菜单「历史版本…」
+// ---------------------------------------------------------------- 「檔案」選單「歷史版本…」
 
 /**
- * 标题栏「文件 → 历史版本…」问编辑器的状态（`editor/versions.ts` 回答）：当前那块编辑区开着的文件存不存
- * 历史版本，不存的话为什么（菜单项置灰时挂在提示上）。点了切到侧栏「版本」页（经 `nf-versions-command`）。
+ * 標題欄「檔案 → 歷史版本…」問編輯器的狀態（`editor/versions.ts` 回答）：當前那塊編輯區開著的檔案存不存
+ * 歷史版本，不存的話為什麼（選單項置灰時掛在提示上）。點了切到側欄「版本」頁（經 `nf-versions-command`）。
  */
 export interface VersionsStatus {
   available: boolean;
-  /** 不能用的原因（没开文件、没打开工程、不是创作产物……）。 */
+  /** 不能用的原因（沒開檔案、沒開啟工程、不是創作產物……）。 */
   reason?: string;
 }
 
-/** 问编辑器「历史版本」能不能用。editor.js 没装时不能用。 */
+/** 問編輯器「歷史版本」能不能用。editor.js 沒裝時不能用。 */
 export function queryVersions(): VersionsStatus {
-  const status: VersionsStatus = { available: false, reason: '没有打开的文件' };
+  const status: VersionsStatus = { available: false, reason: '沒有開啟的檔案' };
   window.dispatchEvent(new CustomEvent('nf-versions-query', { detail: status }));
   return status;
 }
 
-/** 看当前那块编辑区那份文件的历史版本：切到侧栏「版本」页。 */
+/** 看當前那塊編輯區那份檔案的歷史版本：切到側欄「版本」頁。 */
 export function commandVersions(name: 'open'): void {
   window.dispatchEvent(new CustomEvent('nf-versions-command', { detail: { name } }));
 }
 
-/** 存档点弹窗里「对比」一份：那个存档点里的这一份 ↔ 现在，在编辑区的对比标签里看（`editor/versions.ts` 接）。 */
+/** 存檔點彈窗裡「對比」一份：那個存檔點裡的這一份 ↔ 現在，在編輯區的對比標籤裡看（`editor/versions.ts` 接）。 */
 export interface CheckpointFileDiffCommand {
   path: string;
-  /** 同 `CheckpointFileStatus`：改过的、之后删掉的、之后新建的。 */
+  /** 同 `CheckpointFileStatus`：改過的、之後刪掉的、之後新建的。 */
   status: 'changed' | 'deleted' | 'added';
   checkpoint: { id: string; time: number; note: string; auto: boolean };
 }
 
-/** 有没有人画得了对比标签（只有装了内置编辑器的独立版、桌面版回答）。 */
+/** 有沒有人畫得了對比標籤（只有裝了內建編輯器的獨立版、桌面版回答）。 */
 export function queryVersionDiff(): boolean {
   const status = { available: false };
   window.dispatchEvent(new CustomEvent('nf-version-diff-query', { detail: status }));
@@ -263,16 +263,16 @@ export function commandVersionDiff(cmd: CheckpointFileDiffCommand): void {
   window.dispatchEvent(new CustomEvent('nf-version-diff-command', { detail: cmd }));
 }
 
-/** 切到侧栏「版本」页（editor.js 发，view.js 的 `tabs.ts` 切；插件形态没有这一页）。 */
+/** 切到側欄「版本」頁（editor.js 發，view.js 的 `tabs.ts` 切；外掛形態沒有這一頁）。 */
 export function showVersionsTab(): void {
   window.dispatchEvent(new Event('nf-show-versions'));
 }
 
-// ---------------------------------------------------------------- 「文件」菜单「转到…」
+// ---------------------------------------------------------------- 「檔案」選單「轉到…」
 
 /**
- * 标题栏「文件 → 转到…」问编辑器「转到」面板能不能开（`editor/quickOpen.ts` 回答）：没打开工程时不能，
- * 原因挂在菜单项的提示上。editor.js 没装（插件形态，也就没有标题栏）时没人回答，当不能用。
+ * 標題欄「檔案 → 轉到…」問編輯器「轉到」面板能不能開（`editor/quickOpen.ts` 回答）：沒開啟工程時不能，
+ * 原因掛在選單項的提示上。editor.js 沒裝（外掛形態，也就沒有標題欄）時沒人回答，當不能用。
  */
 export interface QuickOpenStatus {
   available: boolean;
@@ -280,61 +280,61 @@ export interface QuickOpenStatus {
 }
 
 export function queryQuickOpen(): QuickOpenStatus {
-  const status: QuickOpenStatus = { available: false, reason: '没有内置编辑器' };
+  const status: QuickOpenStatus = { available: false, reason: '沒有內建編輯器' };
   window.dispatchEvent(new CustomEvent('nf-quickopen-query', { detail: status }));
   return status;
 }
 
-/** 打开「转到」面板（与 Ctrl+P 同一件事）。 */
+/** 開啟「轉到」面板（與 Ctrl+P 同一件事）。 */
 export function commandQuickOpen(name: 'open'): void {
   window.dispatchEvent(new CustomEvent('nf-quickopen-command', { detail: { name } }));
 }
 
-// ---------------------------------------------------------------- 「编辑」菜单「全书查找替换…」
+// ---------------------------------------------------------------- 「編輯」選單「全書查詢替換…」
 
 /**
- * 标题栏「编辑 → 全书查找替换…」问编辑器那块面板能不能开（`editor/bookFind.ts` 回答）：没打开工程时不能，原因挂在
- * 菜单项的提示上。editor.js 没装（插件形态，也就没有标题栏）时没人回答，当不能用。
+ * 標題欄「編輯 → 全書查詢替換…」問編輯器那塊面板能不能開（`editor/bookFind.ts` 回答）：沒開啟工程時不能，原因掛在
+ * 選單項的提示上。editor.js 沒裝（外掛形態，也就沒有標題欄）時沒人回答，當不能用。
  */
 export interface BookFindStatus {
   available: boolean;
   reason?: string;
 }
 
-/** `open` 打开面板、焦点进查找框；`openReplace` 打开面板、焦点进替换框。 */
+/** `open` 開啟面板、焦點進查詢框；`openReplace` 開啟面板、焦點進替換框。 */
 export type BookFindCommandName = 'open' | 'openReplace';
 
 export function queryBookFind(): BookFindStatus {
-  const status: BookFindStatus = { available: false, reason: '没有内置编辑器' };
+  const status: BookFindStatus = { available: false, reason: '沒有內建編輯器' };
   window.dispatchEvent(new CustomEvent('nf-bookfind-query', { detail: status }));
   return status;
 }
 
-/** 打开全书查找替换面板（与 Ctrl+Shift+F / Ctrl+Shift+H 同一件事）。 */
+/** 開啟全書查詢替換面板（與 Ctrl+Shift+F / Ctrl+Shift+H 同一件事）。 */
 export function commandBookFind(name: BookFindCommandName): void {
   window.dispatchEvent(new CustomEvent('nf-bookfind-command', { detail: { name } }));
 }
 
-// ---------------------------------------------------------------- 「视图」菜单
+// ---------------------------------------------------------------- 「檢視」選單
 
 /**
- * 标题栏「视图」菜单问编辑器的状态（`editor/viewPrefs.ts` 回答）。之后的阶段往「视图」里加的项各自往这里
- * 加一个字段、往 `ViewCommandName` 加一个名字即可（菜单那一半在 `view/viewMenu.ts`，一组一个函数）。
+ * 標題欄「檢視」選單問編輯器的狀態（`editor/viewPrefs.ts` 回答）。之後的階段往「檢視」里加的項各自往這裡
+ * 加一個欄位、往 `ViewCommandName` 加一個名字即可（選單那一半在 `view/viewMenu.ts`，一組一個函式）。
  */
 export interface ViewPrefsStatus {
-  /** 编辑器装上了（插件与空窗口没有，那时这几项置灰）。 */
+  /** 編輯器裝上了（外掛與空視窗沒有，那時這幾項置灰）。 */
   available: boolean;
-  /** 单击打开为临时标签（按浏览器记，缺省开）。 */
+  /** 單擊開啟為臨時標籤（按瀏覽器記，預設開）。 */
   previewTabs: boolean;
-  /** 「外观」那一组（`editor/look.ts` 回答；没人回答就是 undefined，那组置灰）。 */
+  /** 「外觀」那一組（`editor/look.ts` 回答；沒人回答就是 undefined，那組置灰）。 */
   look?: LookStatus;
-  /** 「专注」那一组（`editor/focus.ts` 回答；没人回答就是 undefined，那组置灰）。 */
+  /** 「專注」那一組（`editor/focus.ts` 回答；沒人回答就是 undefined，那組置灰）。 */
   focus?: FocusStatus;
 }
 
 export type ViewCommandName = 'togglePreviewTabs' | LookCommandName | FocusCommandName;
 
-/** 问编辑器「视图」那几项的状态。editor.js 没装时不可用（开关按缺省算）。 */
+/** 問編輯器「檢視」那幾項的狀態。editor.js 沒裝時不可用（開關按預設算）。 */
 export function queryViewPrefs(): ViewPrefsStatus {
   const status: ViewPrefsStatus = { available: false, previewTabs: true };
   window.dispatchEvent(new CustomEvent('nf-view-query', { detail: status }));
@@ -345,49 +345,49 @@ export function commandViewPrefs(name: ViewCommandName): void {
   window.dispatchEvent(new CustomEvent('nf-view-command', { detail: { name } }));
 }
 
-/** 「视图 → 外观」：正文字号（另几项在外观面板里）。 */
+/** 「檢視 → 外觀」：正文字號（另幾項在外觀面板裡）。 */
 export interface LookStatus {
-  /** 当前字号（px）与缺省字号。 */
+  /** 當前字號（px）與預設字號。 */
   fontSize: number;
   defaultFontSize: number;
-  /** 到上限 / 下限了没有（「放大 / 缩小字号」据此置灰）。 */
+  /** 到上限 / 下限了沒有（「放大 / 縮小字號」據此置灰）。 */
   canZoomIn: boolean;
   canZoomOut: boolean;
 }
 
-/** `zoomIn` / `zoomOut` / `zoomReset` 字号放大、缩小、还原；`openLook` 打开外观面板。 */
+/** `zoomIn` / `zoomOut` / `zoomReset` 字號放大、縮小、還原；`openLook` 開啟外觀面板。 */
 export type LookCommandName = 'zoomIn' | 'zoomOut' | 'zoomReset' | 'openLook';
 
-/** 「视图 → 专注」：三个开关（记在 `novelforge.editor.prefs`）与全屏（不记）。 */
+/** 「檢視 → 專注」：三個開關（記在 `novelforge.editor.prefs`）與全屏（不記）。 */
 export interface FocusStatus {
   focusMode: boolean;
   typewriter: boolean;
   paragraphFocus: boolean;
   fullscreen: boolean;
-  /** 页面能不能全屏（Fullscreen API 的能力探测；不能就置灰）。 */
+  /** 頁面能不能全屏（Fullscreen API 的能力探測；不能就置灰）。 */
   fullscreenSupported: boolean;
 }
 
 export type FocusCommandName = 'toggleFocusMode' | 'toggleFullscreen' | 'toggleTypewriter' | 'toggleParagraphFocus';
 
-// ---------------------------------------------------------------- 「视图 → 统计」
+// ---------------------------------------------------------------- 「檢視 → 統計」
 
 /**
- * 「视图」菜单「统计」那一组问编辑器的状态（`editor/stats.ts` 回答）：状态栏字数那一格除了全文 / 选中，还显示
- * 哪几项（按浏览器记在 `novelforge.editor.prefs` 的 `stats` 里）。与 `ViewPrefsStatus` 分开一份：那是别的组的。
+ * 「檢視」選單「統計」那一組問編輯器的狀態（`editor/stats.ts` 回答）：狀態列字數那一格除了全文 / 選中，還顯示
+ * 哪幾項（按瀏覽器記在 `novelforge.editor.prefs` 的 `stats` 裡）。與 `ViewPrefsStatus` 分開一份：那是別的組的。
  */
 export interface StatsStatus {
-  /** 编辑器装上了（插件没有，那时这一组置灰）。 */
+  /** 編輯器裝上了（外掛沒有，那時這一組置灰）。 */
   available: boolean;
-  /** 正文显示本章字数与目标的进度（缺省开）。 */
+  /** 正文顯示本章字數與目標的進度（預設開）。 */
   goal: boolean;
-  /** 显示本次码字（缺省关）。 */
+  /** 顯示本次碼字（預設關）。 */
   session: boolean;
-  /** 显示今日码字（缺省关）。 */
+  /** 顯示今日碼字（預設關）。 */
   today: boolean;
 }
 
-/** 三个开关，外加「重新开始计时」（本次码字从现在起重新算）。 */
+/** 三個開關，外加「重新開始計時」（本次碼字從現在起重新算）。 */
 export type StatsCommandName = 'toggleGoal' | 'toggleSession' | 'toggleToday' | 'restart';
 
 export function queryStats(): StatsStatus {
@@ -400,24 +400,24 @@ export function commandStats(name: StatsCommandName): void {
   window.dispatchEvent(new CustomEvent('nf-stats-command', { detail: { name } }));
 }
 
-// ---------------------------------------------------------------- 「视图 → 体检」
+// ---------------------------------------------------------------- 「檢視 → 體檢」
 
 /**
- * 「视图」菜单「体检」那一组问编辑器的状态（`editor/check.ts` 回答）：正文里画不画体检高亮、状态栏显示不显示「体检」
- * 那一格（按浏览器记在 `novelforge.editor.prefs` 的 `check` 里），以及「编辑敏感词表…」能不能点（没打开工程不能）。
+ * 「檢視」選單「體檢」那一組問編輯器的狀態（`editor/check.ts` 回答）：正文裡畫不畫體檢高亮、狀態列顯示不顯示「體檢」
+ * 那一格（按瀏覽器記在 `novelforge.editor.prefs` 的 `check` 裡），以及「編輯敏感詞表…」能不能點（沒開啟工程不能）。
  */
 export interface CheckStatus {
-  /** 编辑器装上了（插件没有，那时这一组置灰）。 */
+  /** 編輯器裝上了（外掛沒有，那時這一組置灰）。 */
   available: boolean;
-  /** 体检高亮（缺省开）。 */
+  /** 體檢高亮（預設開）。 */
   highlight: boolean;
-  /** 状态栏「体检」那一格（缺省开）。 */
+  /** 狀態列「體檢」那一格（預設開）。 */
   status: boolean;
-  /** 打开着工程（「编辑敏感词表…」要它）。 */
+  /** 開啟著工程（「編輯敏感詞表…」要它）。 */
   canEditList: boolean;
 }
 
-/** 两个开关，外加「编辑敏感词表…」（没有就新建一份模板，然后在编辑器里打开）。 */
+/** 兩個開關，外加「編輯敏感詞表…」（沒有就新建一份模板，然後在編輯器裡開啟）。 */
 export type CheckCommandName = 'toggleHighlight' | 'toggleStatus' | 'editList';
 
 export function queryCheck(): CheckStatus {
@@ -430,33 +430,33 @@ export function commandCheck(name: CheckCommandName): void {
   window.dispatchEvent(new CustomEvent('nf-check-command', { detail: { name } }));
 }
 
-// ---------------------------------------------------------------- 「视图 → 补全」
+// ---------------------------------------------------------------- 「檢視 → 補全」
 
 /**
- * 「视图」菜单「补全」那一组问编辑器的状态（`editor/names.ts` 回答）：边打边弹开着没有（按浏览器记在
- * `novelforge.editor.prefs` 的 `nameAutoPopup`），当前那块编辑区里的文件能不能补全。与 `ViewPrefsStatus` 分开一份。
+ * 「檢視」選單「補全」那一組問編輯器的狀態（`editor/names.ts` 回答）：邊打邊彈開著沒有（按瀏覽器記在
+ * `novelforge.editor.prefs` 的 `nameAutoPopup`），當前那塊編輯區裡的檔案能不能補全。與 `ViewPrefsStatus` 分開一份。
  */
 export interface NamesStatus {
-  /** 编辑器装上了（插件没有，那时这一组置灰）。 */
+  /** 編輯器裝上了（外掛沒有，那時這一組置灰）。 */
   available: boolean;
-  /** 边打边弹名词补全（缺省关）。 */
+  /** 邊打邊彈名詞補全（預設關）。 */
   auto: boolean;
-  /** 名词高亮（缺省开，`editor/nameMarks.ts` 回答）。 */
+  /** 名詞高亮（預設開，`editor/nameMarks.ts` 回答）。 */
   highlight: boolean;
-  /** 当前那块编辑区开着的文件能补全（正文、细纲、角色卡、设定……看后端给的 kind）。 */
+  /** 當前那塊編輯區開著的檔案能補全（正文、細綱、角色卡、設定……看後端給的 kind）。 */
   canTrigger: boolean;
-  /** 不能补全的原因（菜单项置灰时挂在提示上）。 */
+  /** 不能補全的原因（選單項置灰時掛在提示上）。 */
   reason?: string;
 }
 
 /**
- * `toggleAuto` 开关边打边弹；`trigger` 在当前那块编辑区的光标处弹出名词补全（与快捷键同一件事）；`toggleHighlight`
- * 开关名词高亮（`editor/nameMarks.ts` 接）。
+ * `toggleAuto` 開關邊打邊彈；`trigger` 在當前那塊編輯區的游標處彈出名詞補全（與快捷鍵同一件事）；`toggleHighlight`
+ * 開關名詞高亮（`editor/nameMarks.ts` 接）。
  */
 export type NamesCommandName = 'toggleAuto' | 'trigger' | 'toggleHighlight';
 
 export function queryNames(): NamesStatus {
-  const status: NamesStatus = { available: false, auto: false, highlight: false, canTrigger: false, reason: '没有内置编辑器' };
+  const status: NamesStatus = { available: false, auto: false, highlight: false, canTrigger: false, reason: '沒有內建編輯器' };
   window.dispatchEvent(new CustomEvent('nf-names-query', { detail: status }));
   return status;
 }
@@ -465,46 +465,46 @@ export function commandNames(name: NamesCommandName): void {
   window.dispatchEvent(new CustomEvent('nf-names-command', { detail: { name } }));
 }
 
-// ---------------------------------------------------------------- 「帮助 → 快捷键一览」
+// ---------------------------------------------------------------- 「幫助 → 快捷鍵一覽」
 
-/** 快捷键一览面板能不能开（`editor/shortcutsPanel.ts` 回答）。editor.js 没装（插件形态，也就没有标题栏）时不能。 */
+/** 快捷鍵一覽面板能不能開（`editor/shortcutsPanel.ts` 回答）。editor.js 沒裝（外掛形態，也就沒有標題欄）時不能。 */
 export function queryShortcuts(): boolean {
   const status = { available: false };
   window.dispatchEvent(new CustomEvent('nf-shortcuts-query', { detail: status }));
   return status.available;
 }
 
-/** 打开快捷键一览面板（与 `Ctrl+/` 同一件事；开着时再来一下就收起）。 */
+/** 開啟快捷鍵一覽面板（與 `Ctrl+/` 同一件事；開著時再來一下就收起）。 */
 export function commandShortcuts(): void {
   window.dispatchEvent(new Event('nf-shortcuts-command'));
 }
 
-// ---------------------------------------------------------------- 在「文件」页定位
+// ---------------------------------------------------------------- 在「檔案」頁定位
 
 /**
- * 在「文件」页定位到某个文件或目录（编辑器的面包屑目录段、标签右键「在文件页中定位」）。资源管理器展开到它、
- * 高亮那一行；view 切到「文件」页。编辑器不碰资源管理器的状态，资源管理器也不读编辑器的。
+ * 在「檔案」頁定位到某個檔案或目錄（編輯器的麵包屑目錄段、標籤右鍵「在檔案頁中定位」）。資源管理器展開到它、
+ * 高亮那一行；view 切到「檔案」頁。編輯器不碰資源管理器的狀態，資源管理器也不讀編輯器的。
  */
 export function revealInFiles(path: string, dir = false): void {
   window.dispatchEvent(new CustomEvent('nf-reveal-in-files', { detail: { path, dir } }));
 }
 
-// ---------------------------------------------------------------- 在某处弹一个菜单
+// ---------------------------------------------------------------- 在某處彈一個選單
 
 /**
- * 在视口坐标 (x, y) 弹一个菜单（与右键菜单同一个引擎、同一种样子，同时只有一个；点别处 / Esc 收起）。
- * 返回菜单节点，view 没装时返回 undefined。**调用方要 `stopPropagation()` 那一下点击**，否则它冒到
- * document 上就把刚弹出来的菜单收掉了。
+ * 在視口座標 (x, y) 彈一個選單（與右鍵選單同一個引擎、同一種樣子，同時只有一個；點別處 / Esc 收起）。
+ * 返回選單節點，view 沒裝時返回 undefined。**呼叫方要 `stopPropagation()` 那一下點選**，否則它冒到
+ * document 上就把剛彈出來的選單收掉了。
  */
 export function showMenuAt(items: MenuItem[], x: number, y: number): HTMLElement | undefined {
   return window.__nfShowMenu?.(items, x, y);
 }
 
-// ---------------------------------------------------------------- 对话页「加入选区」
+// ---------------------------------------------------------------- 對話頁「加入選區」
 
 /**
- * 内置编辑器当前那块编辑区里选中的文字（`editor/index.ts` 回答）。`relPath` 是工作区相对路径，`start` / `end` 是
- * 1-based 闭区间的行号，`text` 已去掉首尾空白。
+ * 內建編輯器當前那塊編輯區裡選中的文字（`editor/index.ts` 回答）。`relPath` 是工作區相對路徑，`start` / `end` 是
+ * 1-based 閉區間的行號，`text` 已去掉首尾空白。
  */
 export interface EditorSelection {
   relPath: string;
@@ -514,8 +514,8 @@ export interface EditorSelection {
 }
 
 /**
- * 问内置编辑器的选区。没选中、在 Markdown 预览里、或者根本没有内置编辑器（插件形态，editor.js 没装）时返回
- * undefined——对话页就照旧发不带选区的 `addSelection`，交给宿主（插件读 VS Code 编辑器的选区，独立版弹粘贴框）。
+ * 問內建編輯器的選區。沒選中、在 Markdown 預覽裡、或者根本沒有內建編輯器（外掛形態，editor.js 沒裝）時返回
+ * undefined——對話頁就照舊發不帶選區的 `addSelection`，交給宿主（外掛讀 VS Code 編輯器的選區，獨立版彈貼上框）。
  */
 export function querySelection(): EditorSelection | undefined {
   const sel: EditorSelection = { relPath: '', text: '', start: 0, end: 0 };
@@ -523,11 +523,11 @@ export function querySelection(): EditorSelection | undefined {
   return sel.relPath && sel.text ? sel : undefined;
 }
 
-// ---------------------------------------------------------------- 叙事线总览（叙事线重做三期）
+// ---------------------------------------------------------------- 敘事線總覽（敘事線重做三期）
 
 /**
- * 工程页「叙事线」页签打开编辑区里的「叙事线总览」（`editor/threadsOverview.ts`）。`focus`：打开后定位到哪一行——一条线的
- * 文件路径，或「未归属的伏笔」那份文件的路径（右键「在总览里看」）。
+ * 工程頁「敘事線」頁籤開啟編輯區裡的「敘事線總覽」（`editor/threadsOverview.ts`）。`focus`：開啟後定位到哪一行——一條線的
+ * 檔案路徑，或「未歸屬的伏筆」那份檔案的路徑（右鍵「在總覽裡看」）。
  */
 export interface ThreadsOverviewCommand {
   name: 'open';
@@ -535,8 +535,8 @@ export interface ThreadsOverviewCommand {
 }
 
 /**
- * 有没有地方画叙事线总览。**能力探测**：editor.js 装上了才有人回答（它探测到 `#wbEditor` 才装）；插件形态没有内置编辑器，
- * 没人回答就是 false，工程页上的「总览」按钮与「在总览里看」都不画（AGENTS 架构要点：不判断是哪个壳）。
+ * 有沒有地方畫敘事線總覽。**能力探測**：editor.js 裝上了才有人回答（它探測到 `#wbEditor` 才裝）；外掛形態沒有內建編輯器，
+ * 沒人回答就是 false，工程頁上的「總覽」按鈕與「在總覽裡看」都不畫（AGENTS 架構要點：不判斷是哪個殼）。
  */
 export function queryThreadsOverview(): boolean {
   const status = { available: false };
@@ -549,18 +549,18 @@ export function commandThreadsOverview(focus?: string): void {
   window.dispatchEvent(new CustomEvent('nf-threads-command', { detail }));
 }
 
-// ---------------------------------------------------------------- 时间线总览（2026-10-24）
+// ---------------------------------------------------------------- 時間線總覽（2026-10-24）
 
 /**
- * 工程页「时间线」组打开编辑区里的「时间线总览」（`editor/timelineOverview.ts`）。`chapter`：打开后展开哪一章、滚过去（点一章、
- * 点一条带章号的 ⚠）。
+ * 工程頁「時間線」組開啟編輯區裡的「時間線總覽」（`editor/timelineOverview.ts`）。`chapter`：開啟後展開哪一章、滾過去（點一章、
+ * 點一條帶章號的 ⚠）。
  */
 export interface TimelineOverviewCommand {
   name: 'open';
   chapter?: number;
 }
 
-/** 有没有地方画时间线总览。**能力探测**（同 {@link queryThreadsOverview}）：插件形态没有内置编辑器，没人回答就是 false。 */
+/** 有沒有地方畫時間線總覽。**能力探測**（同 {@link queryThreadsOverview}）：外掛形態沒有內建編輯器，沒人回答就是 false。 */
 export function queryTimelineOverview(): boolean {
   const status = { available: false };
   window.dispatchEvent(new CustomEvent('nf-timeline-query', { detail: status }));
@@ -572,12 +572,12 @@ export function commandTimelineOverview(chapter?: number): void {
   window.dispatchEvent(new CustomEvent('nf-timeline-command', { detail }));
 }
 
-// ---------------------------------------------------------------- 工程页「存档点…」
+// ---------------------------------------------------------------- 工程頁「存檔點…」
 
 /**
- * 内置编辑器里开着、有未保存修改的文件（`editor/index.ts` 回答，与全书替换跳过的是同一批）。存档点退回时随请求带上，
- * 后端跳过它们——不拿存档点里的旧稿去盖编辑器里还没存下的字。没有内置编辑器（插件形态，editor.js 没装）时没人回答，
- * 是空的：VS Code 自己的编辑器有它自己那一套。
+ * 內建編輯器裡開著、有未儲存修改的檔案（`editor/index.ts` 回答，與全書替換跳過的是同一批）。存檔點退回時隨請求帶上，
+ * 後端跳過它們——不拿存檔點裡的舊稿去蓋編輯器裡還沒存下的字。沒有內建編輯器（外掛形態，editor.js 沒裝）時沒人回答，
+ * 是空的：VS Code 自己的編輯器有它自己那一套。
  */
 export function queryDirtyPaths(): string[] {
   const detail = { paths: [] as string[] };

@@ -1,26 +1,27 @@
+import { traditionalLabel } from './labels';
 /**
- * 全书查找替换在**一份文件**上的那几件事：哪些字不搜不换（机器记的账、解析器认的结构）、找出这份文件里的每一处、
- * 每一处那一行的上下文、预览时每一处换成什么。纯函数、零 I/O——读盘与按范围列文件在 `views/bookFind.ts`，
- * 写盘在 `features/bookReplace.ts`。匹配口径本身是 `textFind.ts`（与内置编辑器的查找条同一份）。
+ * 全書查詢替換在**一份檔案**上的那幾件事：哪些字不搜不換（機器記的賬、解析器認的結構）、找出這份檔案裡的每一處、
+ * 每一處那一行的上下文、預覽時每一處換成什麼。純函式、零 I/O——讀盤與按範圍列檔案在 `views/bookFind.ts`，
+ * 寫盤在 `features/bookReplace.ts`。匹配口徑本身是 `textFind.ts`（與內建編輯器的查詢條同一份）。
  *
- * ## 哪些字不搜不换（⚑）
+ * ## 哪些字不搜不換（⚑）
  *
- * 全书替换一次能改几百份文件，作者在预览里不可能逐行看清每一处落在哪。下面这几样**被换掉就会安静地坏掉工程**，
- * 所以压在它们上面的匹配一律不列、不换（单份文件的查找条照旧找得到，那是作者自己一处一处看着改）：
+ * 全書替換一次能改幾百份檔案，作者在預覽裡不可能逐行看清每一處落在哪。下面這幾樣**被換掉就會安靜地壞掉工程**，
+ * 所以壓在它們上面的匹配一律不列、不換（單份檔案的查詢條照舊找得到，那是作者自己一處一處看著改）：
  *
- * 1. **frontmatter 里除了「人写的值」以外的一切**：`---` 两条围栏、每一行的键名，以及机器记的账——指纹
- *    （`upstreamHash` / `writtenFrom` / `sourceHash` / `stateHash` / `bodyHash`，第 18 条的指纹链就记在这里）、
- *    章号与字数（`no` / `targetWords` / `totalChapters` / `wordsPerChapter`）、水位与出场（`through` /
- *    `updatedThrough` / `stateThrough` / `firstAppear` / `lastSeen` / `appearsIn`）、状态位（`status` /
- *    `factCheckOk` / `paragraphStyle` / `generatedBy`）。搜一个「3」换成「三」，不该顺手把 `sourceHash` 里的 3
- *    也换掉、让几百章悄悄退回待定稿。**名字、别名、标题、出场（`cast`）、关键词、一句话这些人写的值照常搜、照常换**——
- *    「把林晚全书改成林婉」要连角色卡的 `name`、细纲的 `cast` 一起改才改得干净。
- * 2. **解析器认的小节标题**：细纲的七节与「设定」一节、角色卡的七节、设定条目的三节与「暗设」（以它开头的标题都算）、
- *    架构三件的各节、文风指南的「禁用词表」——`## 关键事件` 被换成 `## 关键事情`，这一节就读不出来了，
- *    那一章从「排过细纲」退回「待写细纲」。
- *    标题行整行不搜。（情节大纲没有文件，是各章细纲梗概的汇总，搜细纲就搜到了。）
+ * 1. **frontmatter 裡除了「人寫的值」以外的一切**：`---` 兩條圍欄、每一行的鍵名，以及機器記的賬——指紋
+ *    （`upstreamHash` / `writtenFrom` / `sourceHash` / `stateHash` / `bodyHash`，第 18 條的指紋鏈就記在這裡）、
+ *    章號與字數（`no` / `targetWords` / `totalChapters` / `wordsPerChapter`）、水位與出場（`through` /
+ *    `updatedThrough` / `stateThrough` / `firstAppear` / `lastSeen` / `appearsIn`）、狀態位（`status` /
+ *    `factCheckOk` / `paragraphStyle` / `generatedBy`）。搜一個「3」換成「三」，不該順手把 `sourceHash` 裡的 3
+ *    也換掉、讓幾百章悄悄退回待定稿。**名字、別名、標題、出場（`cast`）、關鍵詞、一句話這些人寫的值照常搜、照常換**——
+ *    「把林晚全書改成林婉」要連角色卡的 `name`、細綱的 `cast` 一起改才改得乾淨。
+ * 2. **解析器認的小節標題**：細綱的七節與「設定」一節、角色卡的七節、設定條目的三節與「暗設」（以它開頭的標題都算）、
+ *    架構三件的各節、文風指南的「禁用詞表」——`## 關鍵事件` 被換成 `## 關鍵事情`，這一節就讀不出來了，
+ *    那一章從「排過細綱」退回「待寫細綱」。
+ *    標題行整行不搜。（情節大綱沒有檔案，是各章細綱梗概的彙總，搜細綱就搜到了。）
  *
- * 正文、草稿是作者的文件，一个字都不护。
+ * 正文、草稿是作者的檔案，一個字都不護。
  */
 import { CONFIG_SECTION_KEYS, PREMISE_SECTION_KEYS, WORLD_SECTION_KEYS } from './settingFile';
 import { CHARACTER_SECTION_KEYS } from './types';
@@ -30,17 +31,17 @@ import { BOOK_FIND_CONTEXT } from './bookFindScope';
 import { FindMatch, FindOptions, compileSearch, expandReplacement, findMatches } from './textFind';
 
 /**
- * frontmatter 里机器记的账：这些键的值不搜不换（见文件头第 1 条）。别的键（`name` / `aliases` / `title` /
- * `cast` / `keywords` / `brief` / `tags` / `gender` / `genre` / `preflightOk`……，以及作者自己加的键）是人写的值。
+ * frontmatter 裡機器記的賬：這些鍵的值不搜不換（見檔案頭第 1 條）。別的鍵（`name` / `aliases` / `title` /
+ * `cast` / `keywords` / `brief` / `tags` / `gender` / `genre` / `preflightOk`……，以及作者自己加的鍵）是人寫的值。
  */
 export const MACHINE_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
-  // 指纹（第 18 条）
+  // 指紋（第 18 條）
   'upstreamHash',
   'writtenFrom',
   'sourceHash',
   'stateHash',
   'bodyHash',
-  // 章号、字数、水位、出场
+  // 章號、字數、水位、出場
   'no',
   'targetWords',
   'totalChapters',
@@ -51,14 +52,14 @@ export const MACHINE_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   'firstAppear',
   'lastSeen',
   'appearsIn',
-  // 状态位
+  // 狀態位
   'status',
   'factCheckOk',
   'paragraphStyle',
   'generatedBy',
 ]);
 
-/** 各种文件里解析器认的小节标题（见文件头第 2 条）。键是 `workspace/kind.ts` 的种类名。 */
+/** 各種檔案裡解析器認的小節標題（見檔案頭第 2 條）。鍵是 `workspace/kind.ts` 的種類名。 */
 const STRUCTURAL_HEADINGS: Record<string, readonly string[]> = {
   plot: [...PLOT_SECTION_KEYS, PLOT_LORE_KEY],
   character: CHARACTER_SECTION_KEYS,
@@ -68,22 +69,22 @@ const STRUCTURAL_HEADINGS: Record<string, readonly string[]> = {
 };
 
 /**
- * 以它开头就算的小节标题：设定条目的「暗设」（完善设定，2026-10-19）。`## 暗设（未揭示）` 也认
- * （与 loreFile.ts 的 `splitLoreHidden` 同一个认法）——「暗设」两个字被换掉，这一节就成了明面，写正文时也带进去。
+ * 以它開頭就算的小節標題：設定條目的「暗設」（完善設定，2026-10-19）。`## 暗設（未揭示）` 也認
+ * （與 loreFile.ts 的 `splitLoreHidden` 同一個認法）——「暗設」兩個字被換掉，這一節就成了明面，寫正文時也帶進去。
  */
 const STRUCTURAL_PREFIXES: Record<string, readonly string[]> = {
   lore: [LORE_HIDDEN_KEY],
 };
 
-/** 正文与草稿：作者的文件，一个字都不护。 */
+/** 正文與草稿：作者的檔案，一個字都不護。 */
 const PROSE_KINDS: ReadonlySet<string> = new Set(['chapter', 'draft']);
 
-/** 与 `model/markdown.ts` 的 `FM_FENCE` 同一个认法（那边认得出的 frontmatter，这里才护）。 */
+/** 與 `model/markdown.ts` 的 `FM_FENCE` 同一個認法（那邊認得出的 frontmatter，這裡才護）。 */
 const FM_FENCE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
-/** 与 `markdown.ts` 的 `pickSections` 同一个归一（忽略空白与常见标点），小节标题才认得一样。 */
+/** 與 `markdown.ts` 的 `pickSections` 同一個歸一（忽略空白與常見標點），小節標題才認得一樣。 */
 function normalizeKey(s: string): string {
-  return s.replace(/[\s·・、,，.。:：/-]/g, '').toLowerCase();
+  return traditionalLabel(s.replace(/[\s·・、,，.。:：/-]/g, '').toLowerCase());
 }
 
 interface Span {
@@ -92,8 +93,8 @@ interface Span {
 }
 
 /**
- * 这份文件里哪些字不搜不换：`fence` 是整段 frontmatter（含两条围栏），`open` 是其中人写的值（可以搜）；
- * `blocked` 是 frontmatter 之外护住的几段（小节标题行、大纲章标题的那一截）。
+ * 這份檔案裡哪些字不搜不換：`fence` 是整段 frontmatter（含兩條圍欄），`open` 是其中人寫的值（可以搜）；
+ * `blocked` 是 frontmatter 之外護住的幾段（小節標題行、大綱章標題的那一截）。
  */
 export interface Protection {
   fence?: Span;
@@ -101,7 +102,7 @@ export interface Protection {
   blocked: Span[];
 }
 
-/** 这一份文件（`kind` 是 `workspace/kind.ts` 的种类名）里哪些字不搜不换。绝不抛。 */
+/** 這一份檔案（`kind` 是 `workspace/kind.ts` 的種類名）裡哪些字不搜不換。絕不拋。 */
 export function protectionOf(text: string, kind: string): Protection {
   const out: Protection = { open: [], blocked: [] };
   if (PROSE_KINDS.has(kind)) {
@@ -132,7 +133,7 @@ export function protectionOf(text: string, kind: string): Protection {
   return out;
 }
 
-/** frontmatter 里人写的那几段值（键名、机器记的账、围栏不在里面）。 */
+/** frontmatter 裡人寫的那幾段值（鍵名、機器記的賬、圍欄不在裡面）。 */
 function openValues(inner: string, offset: number): Span[] {
   const open: Span[] = [];
   let listKeyIsHuman = false;
@@ -166,7 +167,7 @@ function openValues(inner: string, offset: number): Span[] {
   return open;
 }
 
-/** 从 `from` 起一行一行（不含换行符，行尾的 `\r` 也去掉），带每一行在全文里的起点。 */
+/** 從 `from` 起一行一行（不含換行符，行尾的 `\r` 也去掉），帶每一行在全文裡的起點。 */
 function linesFrom(text: string, from: number): { start: number; text: string }[] {
   const out: { start: number; text: string }[] = [];
   let pos = from;
@@ -183,10 +184,10 @@ function linesFrom(text: string, from: number): { start: number; text: string }[
   return out;
 }
 
-/** 这一处能不能搜、能不能换：没压在护住的字上。 */
+/** 這一處能不能搜、能不能換：沒壓在護住的字上。 */
 export function isOpen(p: Protection, m: FindMatch): boolean {
   if (p.fence && m.start < p.fence.end && m.end > p.fence.start) {
-    // 压在 frontmatter 上：必须整个落在某一个人写的值里。
+    // 壓在 frontmatter 上：必須整個落在某一個人寫的值裡。
     if (!p.open.some((s) => m.start >= s.start && m.end <= s.end)) {
       return false;
     }
@@ -195,15 +196,15 @@ export function isOpen(p: Protection, m: FindMatch): boolean {
 }
 
 export interface FileHits {
-  /** 这份文件里可以搜、可以换的每一处，按先后。 */
+  /** 這份檔案裡可以搜、可以換的每一處，按先後。 */
   matches: FindMatch[];
-  /** 匹配数到了 `textFind` 的上限（两万处），后面的没数。 */
+  /** 匹配數到了 `textFind` 的上限（兩萬處），後面的沒數。 */
   truncated: boolean;
-  /** 正则写错了（这时 `matches` 是空的）。 */
+  /** 正則寫錯了（這時 `matches` 是空的）。 */
   error?: string;
 }
 
-/** 一份文件里的每一处：`textFind.findMatches` 的口径，去掉压在护住的字上的那些。 */
+/** 一份檔案裡的每一處：`textFind.findMatches` 的口徑，去掉壓在護住的字上的那些。 */
 export function fileHits(text: string, kind: string, query: string, opts: FindOptions = {}): FileHits {
   const found = findMatches(text, query, opts);
   if (found.error) {
@@ -216,26 +217,26 @@ export function fileHits(text: string, kind: string, query: string, opts: FindOp
   return { matches: found.matches.filter((m) => isOpen(p, m)), truncated: found.truncated };
 }
 
-/** 结果列表上的一处：位置、第几行、那一行里命中前后的一截。 */
+/** 結果列表上的一處：位置、第幾行、那一行裡命中前後的一截。 */
 export interface HitLine {
   start: number;
   end: number;
-  /** 第几行（从 1 起）。 */
+  /** 第幾行（從 1 起）。 */
   line: number;
-  /** 这一处在那一行里的第几个字（从 0 起）。编辑器按「行 + 列」定位，不按下标——磁盘上的 `\r\n` 到了编辑区里是 `\n`。 */
+  /** 這一處在那一行裡的第幾個字（從 0 起）。編輯器按「行 + 列」定位，不按下標——磁碟上的 `\r\n` 到了編輯區裡是 `\n`。 */
   col: number;
-  /** 同一行里命中之前的一截（截过的话开头是「…」）。 */
+  /** 同一行裡命中之前的一截（截過的話開頭是「…」）。 */
   before: string;
-  /** 命中的字（跨行的话换行画成「↵」；太长中间截掉）。 */
+  /** 命中的字（跨行的話換行畫成「↵」；太長中間截掉）。 */
   text: string;
-  /** 同一行里命中之后的一截（截过的话结尾是「…」）。 */
+  /** 同一行裡命中之後的一截（截過的話結尾是「…」）。 */
   after: string;
 }
 
-/** 命中的字最多显示几个（跨行的正则一下能吞几百字）。 */
+/** 命中的字最多顯示幾個（跨行的正則一下能吞幾百字）。 */
 const HIT_TEXT_MAX = 80;
 
-/** 给按先后排好的几处配上行号与那一行的上下文。 */
+/** 給按先後排好的幾處配上行號與那一行的上下文。 */
 export function describeHits(text: string, matches: readonly FindMatch[]): HitLine[] {
   const out: HitLine[] = [];
   let line = 1;
@@ -267,7 +268,7 @@ export function describeHits(text: string, matches: readonly FindMatch[]): HitLi
   return out;
 }
 
-/** 命中的字给人看的样子：换行画成「↵」，太长的中间截掉。 */
+/** 命中的字給人看的樣子：換行畫成「↵」，太長的中間截掉。 */
 export function showHit(raw: string): string {
   const flat = raw.replace(/\r?\n/g, '↵');
   if (flat.length <= HIT_TEXT_MAX) {
@@ -278,8 +279,8 @@ export function showHit(raw: string): string {
 }
 
 /**
- * 预览：每一处换成什么（与 `textFind.replaceSelectedIn` 同一个算法——在原文里、在这一处自己的位置上重新匹配一次，
- * 正则时照 `String.prototype.replace` 的规矩展开 `$1`）。对不上的那一处给 undefined。
+ * 預覽：每一處換成什麼（與 `textFind.replaceSelectedIn` 同一個演算法——在原文裡、在這一處自己的位置上重新匹配一次，
+ * 正則時照 `String.prototype.replace` 的規矩展開 `$1`）。對不上的那一處給 undefined。
  */
 export function replacementsAt(
   text: string,

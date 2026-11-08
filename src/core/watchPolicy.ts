@@ -4,27 +4,27 @@ import { LEGACY_NOVEL_DIRS, NOVEL_DIR } from './model/project';
 import { NovelConfig } from './model/types';
 
 /**
- * 「工程里哪些改动值得刷新界面」——**策略**在这里，**机制**在壳里。
+ * 「工程裡哪些改動值得重新整理介面」——**策略**在這裡，**機制**在殼裡。
  *
- * 两个壳的监听机制天差地别（插件用 VS Code 的 FileSystemWatcher 吃 glob，
- * 独立版用 `fs.watch` 吃事件流），但要看的是同一批东西：章节根、草稿目录、
- * 元数据目录（`.novelwarden/`，旧工程是 `.novelforge/` / `.novel/`）。这份知识属于 core——
- * 章节能是什么扩展名、草稿在哪、哪些目录算元数据，都是 core 定义的规则，壳照抄一遍就会跟着规则变化一起腐烂。
+ * 兩個殼的監聽機制天差地別（外掛用 VS Code 的 FileSystemWatcher 吃 glob，
+ * 獨立版用 `fs.watch` 吃事件流），但要看的是同一批東西：章節根、草稿目錄、
+ * 後設資料目錄（`.novelwarden/`，舊工程是 `.novelforge/` / `.novel/`）。這份知識屬於 core——
+ * 章節能是什麼副檔名、草稿在哪、哪些目錄算後設資料，都是 core 定義的規則，殼照抄一遍就會跟著規則變化一起腐爛。
  */
 
-/** 元数据目录名，从新到旧。旧工程没迁移时数据在旧目录里，三处都要看。 */
+/** 後設資料目錄名，從新到舊。舊工程沒遷移時資料在舊目錄裡，三處都要看。 */
 const METADATA_DIRS = [NOVEL_DIR, ...LEGACY_NOVEL_DIRS];
 
 /**
- * 给吃 glob 的宿主用的模式清单（相对工程根）。
+ * 給吃 glob 的宿主用的模式清單（相對工程根）。
  *
- * 三处不显然的地方：
- * - `${chaptersDir}/**` 是**全量**的，不是 `**\/*.md`：目录本身的增删要看得见
- *   （工程页上文件夹是可见节点，新建空文件夹不动任何 .md），顺带也覆盖了非 .md
- *   的章节（.txt / 无扩展名 / .json），所以章节扩展名放宽不需要在这里加模式。
- * - 草稿目录也要监听：手工建的草稿也该让工程页上的「有草稿」标记翻过来。
- * - `<元数据目录>/characters/**` 与 `lore/**`（旧工程同理，三处元数据目录都出）用全量而不是 `*.md`：
- *   那两个区允许子目录收纳。
+ * 三處不顯然的地方：
+ * - `${chaptersDir}/**` 是**全量**的，不是 `**\/*.md`：目錄本身的增刪要看得見
+ *   （工程頁上資料夾是可見節點，新建空資料夾不動任何 .md），順帶也覆蓋了非 .md
+ *   的章節（.txt / 無副檔名 / .json），所以章節副檔名放寬不需要在這裡加模式。
+ * - 草稿目錄也要監聽：手工建的草稿也該讓工程頁上的「有草稿」標記翻過來。
+ * - `<後設資料目錄>/characters/**` 與 `lore/**`（舊工程同理，三處後設資料目錄都出）用全量而不是 `*.md`：
+ *   那兩個區允許子目錄收納。
  */
 export function watchGlobs(config: NovelConfig): string[] {
   return [
@@ -40,37 +40,37 @@ export function watchGlobs(config: NovelConfig): string[] {
   ];
 }
 
-/** 元数据目录的哪个子目录（相对、绝对路径都认）。新旧目录名都算。 */
+/** 後設資料目錄的哪個子目錄（相對、絕對路徑都認）。新舊目錄名都算。 */
 function metadataSubdirRe(sub: string): RegExp {
   return new RegExp(`(^|/)\\.(?:novelwarden|novelforge|novel)/${sub}(/|$)`);
 }
 
-/** `.novelwarden/history`（旧工程 `.novelforge/history` 等）本身或它下面的任何东西。 */
+/** `.novelwarden/history`（舊工程 `.novelforge/history` 等）本身或它下面的任何東西。 */
 const HISTORY_RE = metadataSubdirRe('history');
-/** 存档点目录同上。 */
+/** 存檔點目錄同上。 */
 const CHECKPOINTS_RE = metadataSubdirRe('checkpoints');
 
 /**
- * 给吃事件流的宿主用的过滤：这条变更该不该忽略。
+ * 給吃事件流的宿主用的過濾：這條變更該不該忽略。
  *
- * 用**黑名单**而不是白名单：章节可以是 `.txt`、可以没有扩展名，目录事件也没有
- * 扩展名——白名单式过滤会让这些改动看不见。放行面因此偏宽，调用方要自己去抖
- * （一次 onChange 会触发全量重扫）。
+ * 用**黑名單**而不是白名單：章節可以是 `.txt`、可以沒有副檔名，目錄事件也沒有
+ * 副檔名——白名單式過濾會讓這些改動看不見。放行面因此偏寬，呼叫方要自己去抖
+ * （一次 onChange 會觸發全量重掃）。
  *
- * @param name 事件带回来的路径或文件名（相对、绝对都行；`fs.watch` 给的是相对）
+ * @param name 事件帶回來的路徑或檔名（相對、絕對都行；`fs.watch` 給的是相對）
  */
 export function shouldIgnoreChange(name: string): boolean {
   if (!name) {
     return false;
   }
-  // 依赖目录与回收站里的动静与工程内容无关。回收站尤其要挡：删除是「搬进
-  // .trash/」，不挡的话每次删除都会多触发一轮重扫。
+  // 依賴目錄與回收站裡的動靜與工程內容無關。回收站尤其要擋：刪除是「搬進
+  // .trash/」，不擋的話每次刪除都會多觸發一輪重掃。
   if (name.includes('node_modules') || name.includes('.trash')) {
     return true;
   }
-  // 历史版本同理：网关每覆盖一份产物就先往 `<元数据目录>/history/` 存一版（workspace/history.ts），
-  // 不挡的话每存一个快照就多一轮全量重扫。插件壳那边快照是 `.txt`，`watchGlobs` 本来就扫不到。
-  // 存档点（workspace/checkpoints.ts）一次存几十上百个对象，更要挡。
+  // 歷史版本同理：閘道器每覆蓋一份產物就先往 `<後設資料目錄>/history/` 存一版（workspace/history.ts），
+  // 不擋的話每存一個快照就多一輪全量重掃。外掛殼那邊快照是 `.txt`，`watchGlobs` 本來就掃不到。
+  // 存檔點（workspace/checkpoints.ts）一次存幾十上百個物件，更要擋。
   const posix = name.replace(/\\/g, '/');
   if (HISTORY_RE.test(posix) || CHECKPOINTS_RE.test(posix)) {
     return true;

@@ -1,14 +1,14 @@
 /**
- * 一致性预检的取数（五期）：本章细纲排了谁、他们的卡上「当前状态」怎么写的、前面定稿过的章留下了
- * 哪些连续性事实。判断在 model/preflight.ts（纯函数）。
+ * 一致性預檢的取數（五期）：本章細綱排了誰、他們的卡上「當前狀態」怎麼寫的、前面定稿過的章留下了
+ * 哪些連續性事實。判斷在 model/preflight.ts（純函式）。
  *
- * 零调用：只读细纲（本章的计划与前面各章的定稿）与角色卡。两个入口：对话页写第 N 章之前（controller/chat.ts，亮一张卡，
- * 可以「仅本次忽略」或「记为刻意安排」）；工程页批量写章开跑之前与每一章之前（features/pipelineBatch.ts）。
+ * 零呼叫：只讀細綱（本章的計劃與前面各章的定稿）與角色卡。兩個入口：對話頁寫第 N 章之前（controller/chat.ts，亮一張卡，
+ * 可以「僅本次忽略」或「記為刻意安排」）；工程頁批次寫章開跑之前與每一章之前（features/pipelineBatch.ts）。
  *
- * 细纲里记下的永久放行（`preflightOk`，五期补遗 §2）在这里分出去：两个入口都只为剩下的那些停。
+ * 細綱裡記下的永久放行（`preflightOk`，五期補遺 §2）在這裡分出去：兩個入口都只為剩下的那些停。
  *
- * 叙事线的两类提醒（二期，设计稿「四、写前检查」）：伏笔逾期、线断了。照「设定还只有一句话」（`thinLoreFor`）那套做，
- * **不进 `risks`**（那是要拦人的），另放一个字段，说明里提一句、照写不拦。取数在 views/threads.ts 的 `threadReminders`。
+ * 敘事線的兩類提醒（二期，設計稿「四、寫前檢查」）：伏筆逾期、線斷了。照「設定還只有一句話」（`thinLoreFor`）那套做，
+ * **不進 `risks`**（那是要攔人的），另放一個欄位，說明裡提一句、照寫不攔。取數在 views/threads.ts 的 `threadReminders`。
  */
 import { NovelProject } from '../model/project';
 import { PreflightRisk, describeRisk, findPreflightRisks, splitExempt } from '../model/preflight';
@@ -19,21 +19,21 @@ export { describeExempted, describeRisk, PREFLIGHT_SUGGESTION } from '../model/p
 export type { PreflightRisk } from '../model/preflight';
 
 export interface PreflightResult {
-  /** 要作者留意的（没有被永久放行的）。 */
+  /** 要作者留意的（沒有被永久放行的）。 */
   risks: PreflightRisk[];
-  /** 细纲里记过永久放行的：不拦，只在说明里提一句。 */
+  /** 細綱裡記過永久放行的：不攔，只在說明裡提一句。 */
   exempted: { risk: PreflightRisk; reason: string }[];
-  /** 这一章细纲的路径（记永久放行要写它）。没有细纲时缺席。 */
+  /** 這一章細綱的路徑（記永久放行要寫它）。沒有細綱時缺席。 */
   plotRelPath?: string;
-  /** 叙事线的提醒（二期）：伏笔逾期、线断了。不拦（不进 `risks`），说明里提一句（{@link describeThreadNotes}）。 */
+  /** 敘事線的提醒（二期）：伏筆逾期、線斷了。不攔（不進 `risks`），說明裡提一句（{@link describeThreadNotes}）。 */
   threads: ThreadReminder[];
-  /** 叙事线记到第几章（定稿到的最后一章）：与这一章之间还有没定稿的章时，提醒可能不准，说法里注一句。 */
+  /** 敘事線記到第幾章（定稿到的最後一章）：與這一章之間還有沒定稿的章時，提醒可能不準，說法裡注一句。 */
   threadsThrough: number;
 }
 
 /**
- * 第 `no` 章的预检。这一章没有细纲、细纲里没排人，风险都是空的——没有可比的东西；叙事线的提醒照算（它看的是叙事线，
- * 不看这一章排了谁）。
+ * 第 `no` 章的預檢。這一章沒有細綱、細綱裡沒排人，風險都是空的——沒有可比的東西；敘事線的提醒照算（它看的是敘事線，
+ * 不看這一章排了誰）。
  */
 export async function preflightChapter(project: NovelProject, no: number): Promise<PreflightResult> {
   const plot = await project.getPlot(no);
@@ -58,8 +58,8 @@ export async function preflightChapter(project: NovelProject, no: number): Promi
 }
 
 /**
- * 叙事线提醒那一句（对话页的卡片与说明、工作台、批量写章的确认框同一句，`describeThreadReminders`）：第 `first` 章起写，
- * 叙事线记到第 `through` 章。没有提醒是空串。
+ * 敘事線提醒那一句（對話頁的卡片與說明、工作臺、批次寫章的確認框同一句，`describeThreadReminders`）：第 `first` 章起寫，
+ * 敘事線記到第 `through` 章。沒有提醒是空串。
  */
 export function describeThreadNotes(
   scope: '本章' | '区间里',
@@ -70,12 +70,12 @@ export function describeThreadNotes(
   return describeThreadReminders(scope, reminders, unrecordedBefore(through, first));
 }
 
-/** 一处风险的身份：同一章、同一个人。批量里「开跑前问过、作者说仅本次忽略」的那几处按它认。 */
+/** 一處風險的身份：同一章、同一個人。批次裡「開跑前問過、作者說僅本次忽略」的那幾處按它認。 */
 export function riskKey(no: number, risk: PreflightRisk): string {
   return `${no}:${risk.name}`;
 }
 
-/** 卡片、确认框、日志里的那几行：「第 3 章：沈秋的当前状态……」。 */
+/** 卡片、確認框、日誌裡的那幾行：「第 3 章：沈秋的當前狀態……」。 */
 export function describeRisks(no: number, risks: readonly PreflightRisk[], withChapter = false): string[] {
   return risks.map((r) => `${withChapter ? `第 ${no} 章：` : ''}${describeRisk(r)}`);
 }

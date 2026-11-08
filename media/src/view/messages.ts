@@ -1,31 +1,31 @@
 /**
- * 消息气泡。一条 turn 对应一个 `.msg`：头部（角色/时刻/字数/⋯ 菜单）、附件、
- * 思考过程、**段区**、花销、上下文明细、行内动作各是一块。
+ * 訊息氣泡。一條 turn 對應一個 `.msg`：頭部（角色/時刻/字數/⋯ 選單）、附件、
+ * 思考過程、**段區**、花銷、上下文明細、行內動作各是一塊。
  *
- * ## 段区：说的话与做的事交替
+ * ## 段區：說的話與做的事交替
  *
- * 有段的那一轮画的是 `turn.segments`——**顺序就是它发生的顺序**。外部 agent 经 MCP
- * 留下的只有工具条与 generate 卡（它说的话不在这里）；文字段只出现在已经移除的内置
- * agent 留下的旧轮次里：
+ * 有段的那一輪畫的是 `turn.segments`——**順序就是它發生的順序**。外部 agent 經 MCP
+ * 留下的只有工具條與 generate 卡（它說的話不在這裡）；文欄位只出現在已經移除的內建
+ * agent 留下的舊輪次裡：
  *
  * ```
- * 🔧 list 2 项            ┐ 相邻的工具段并进同一串
+ * 🔧 list 2 項            ┐ 相鄰的工具段並進同一串
  * 🔧 read 19 行           ┘
- * ┌ 我先看看工程现在的结构。      ← 一段文字
- * ✨ 生成 · 情节大纲 · 6104 字   ← generate 单独一张卡，正文限高滚动
- * ┌ 大纲已经生成并落盘到…        ← 又一段文字
+ * ┌ 我先看看工程現在的結構。      ← 一段文字
+ * ✨ 生成 · 情節大綱 · 6104 字   ← generate 單獨一張卡，正文限高滾動
+ * ┌ 大綱已經生成並落盤到…        ← 又一段文字
  * ```
  *
- * 没有段的轮次（单步创作、纯聊天）只有一块正文。
+ * 沒有段的輪次（單步創作、純聊天）只有一塊正文。
  *
- * **生成中不可编辑**是这里最要紧的一条：contentEditable 的光标会被后续
- * delta 追加冲掉，用户改到一半的内容也会被 turnDone 的整体重建覆盖。
- * 判据是 `store.streamingId`，由 index.ts 在 turnDone 那一刻定下来。
- * **有段的那一轮一律不可编辑**：`editTurn` 的语义是「整轮内容换成这一段文字」，
- * 多块之间没法映射；agent 的产物改不改走落盘卡片那条路。
+ * **生成中不可編輯**是這裡最要緊的一條：contentEditable 的游標會被後續
+ * delta 追加沖掉，使用者改到一半的內容也會被 turnDone 的整體重建覆蓋。
+ * 判據是 `store.streamingId`，由 index.ts 在 turnDone 那一刻定下來。
+ * **有段的那一輪一律不可編輯**：`editTurn` 的語義是「整輪內容換成這一段文字」，
+ * 多塊之間沒法對映；agent 的產物改不改走落盤卡片那條路。
  *
- * **流式时只在贴着底才跟滚**：每来一段 delta 都会 `scrollToBottom()`，
- * 翻上去看前面的气泡时不该被拽回来（与日志页同一条理由）。
+ * **流式時只在貼著底才跟滾**：每來一段 delta 都會 `scrollToBottom()`，
+ * 翻上去看前面的氣泡時不該被拽回來（與日誌頁同一條理由）。
  */
 import { closestFrom, el as mk, spacer } from '../dom';
 import type {
@@ -46,9 +46,9 @@ import type { SendPayload } from '../protocol';
 import { CONTEXT_DETAIL_LABEL, describeWriteLength, isContextDetail } from '../protocol';
 import { buildReviewCard } from './review';
 
-/** 由 composer.ts 注入：「重新生成」要带上输入框里当下的那套参数。 */
+/** 由 composer.ts 注入：「重新生成」要帶上輸入框裡當下的那套引數。 */
 let currentPayload: () => SendPayload = () => {
-  throw new Error('messages.bindPayload 还没调用');
+  throw new Error('messages.bindPayload 還沒呼叫');
 };
 
 export function bindPayload(fn: () => SendPayload): void {
@@ -64,19 +64,19 @@ export function renderSession(session: typeof store.session): void {
     el.messages.appendChild(el.emptyHint);
     el.emptyHint.classList.remove('hidden');
   }
-  // 「还不是小说工程」那一块常驻在消息区里，显不显示由 #messages 的 uninit 类决定（state.ts）。
+  // 「還不是小說工程」那一塊常駐在訊息區裡，顯不顯示由 #messages 的 uninit 類決定（state.ts）。
   el.messages.appendChild(el.initHint);
   for (const turn of session.turns) {
     el.messages.appendChild(buildTurn(turn));
   }
 
   syncThinkingSelect();
-  // 目标下拉框与流水线条都跟着会话走——会话里的 target 是唯一真相。
+  // 目標下拉框與流水線條都跟著會話走——會話裡的 target 是唯一真相。
   if (store.state) {
     renderState(store.state);
   }
   onSessionChanged();
-  // 切会话 / 重放整份：人是要看最新的，强制贴底。
+  // 切會話 / 重放整份：人是要看最新的，強制貼底。
   scrollToBottom(true);
 }
 
@@ -103,15 +103,15 @@ export function bubbleOf(turnId: string): HTMLElement | null {
 }
 
 /**
- * 气泡里**最后**那一串工具条：没有就在段区末尾现建一个。
+ * 氣泡裡**最後**那一串工具條：沒有就在段區末尾現建一個。
  *
- * 「最后」是段区的要点：一轮里工具串会被文字段打断好几次，新的一次调用要接在
- * **当下**那一串上，接到第一串上就等于把顺序又抹平了。
+ * 「最後」是段區的要點：一輪裡工具串會被文欄位打斷好幾次，新的一次呼叫要接在
+ * **當下**那一串上，接到第一串上就等於把順序又抹平了。
  *
- * 工具条与**权限请求答完那一行**（`.gate-note`，见 gate.ts）都往这里追加——
- * 它们是同一件事的两半（先问，再做），排在一起读起来才是「问了、答了、然后
- * 做了什么」。问本身不在这里：那张卡片固定在输入框上方，不跟着消息流滚。
- * 就地追加而不是重建气泡：重建会把正在流的内容冲掉（文字块是纯文本节点，
+ * 工具條與**許可權請求答完那一行**（`.gate-note`，見 gate.ts）都往這裡追加——
+ * 它們是同一件事的兩半（先問，再做），排在一起讀起來才是「問了、答了、然後
+ * 做了什麼」。問本身不在這裡：那張卡片固定在輸入框上方，不跟著訊息流滾。
+ * 就地追加而不是重建氣泡：重建會把正在流的內容沖掉（文字塊是純文字節點，
  * delta 靠 `textContent +=` 追加）。
  */
 export function toolStripOf(turnId: string): HTMLElement | null {
@@ -119,8 +119,8 @@ export function toolStripOf(turnId: string): HTMLElement | null {
   if (!node) {
     return null;
   }
-  // **只有还排在末尾的那一串接得上**：中间说过一句话之后，那一串已经翻篇了，
-  // 再往它上面追加等于把这次调用挪到那句话前面去。
+  // **只有還排在末尾的那一串接得上**：中間說過一句話之後，那一串已經翻篇了，
+  // 再往它上面追加等於把這次呼叫挪到那句話前面去。
   const last = lastSegment(node);
   if (last?.classList.contains('tools')) {
     return last as HTMLElement;
@@ -130,18 +130,18 @@ export function toolStripOf(turnId: string): HTMLElement | null {
   return strip;
 }
 
-/** 段区里当下的最后一段（工具串 / 文字块 / generate 卡都算）。 */
+/** 段區裡當下的最後一段（工具串 / 文字塊 / generate 卡都算）。 */
 export function lastSegment(node: ParentNode): HTMLElement | undefined {
   const segments = node.querySelectorAll<HTMLElement>('.msg-body[data-seg="text"], .tools, .gen');
   return segments[segments.length - 1];
 }
 
 /**
- * 撤掉那块**一个字都没写过**的正文占位。
+ * 撤掉那塊**一個字都沒寫過**的正文佔位。
  *
- * 它是一轮刚开始时留的位（见 `buildTurn`）。第一段结果是工具调用时，留着它就是
- * 在工具条上方摆一个空盒子，还会让随后的文字接不上——段区里空的文字块没有任何
- * 意义（后端那边 `textOf` 也把空段滤掉了）。
+ * 它是一輪剛開始時留的位（見 `buildTurn`）。第一段結果是工具呼叫時，留著它就是
+ * 在工具條上方擺一個空盒子，還會讓隨後的文字接不上——段區裡空的文字塊沒有任何
+ * 意義（後端那邊 `textOf` 也把空段濾掉了）。
  */
 export function dropEmptyText(node: ParentNode): void {
   for (const block of node.querySelectorAll<HTMLElement>('.msg-body[data-seg="text"]')) {
@@ -152,25 +152,25 @@ export function dropEmptyText(node: ParentNode): void {
 }
 
 /**
- * 段区的末尾：新的一段插在**这个节点前面**。
+ * 段區的末尾：新的一段插在**這個節點前面**。
  *
- * 气泡的孩子是「头 / 附件 / 思考 / 段区… / 花销 / 上下文 / 行内动作」，后三样
- * 是这一轮的收尾，任何一段新内容都该排在它们之前。三样都可能不在（跑到一半），
- * 所以按这个顺序找第一个在的；全都不在就返回 null（= 追加到末尾）。
+ * 氣泡的孩子是「頭 / 附件 / 思考 / 段區… / 花銷 / 上下文 / 行內動作」，後三樣
+ * 是這一輪的收尾，任何一段新內容都該排在它們之前。三樣都可能不在（跑到一半），
+ * 所以按這個順序找第一個在的；全都不在就返回 null（= 追加到末尾）。
  */
 export function segmentAnchor(node: ParentNode): Element | null {
   return node.querySelector('.ctx') ?? node.querySelector('.msg-actions');
 }
 
-/** 离底多近算「贴着底」。与日志页同一档。 */
+/** 離底多近算「貼著底」。與日誌頁同一檔。 */
 const AT_BOTTOM_SLACK = 40;
 
 /**
- * 用户贴着底时跟着新内容滚；翻上去看前面的气泡时不该被拽回来。
+ * 使用者貼著底時跟著新內容滾；翻上去看前面的氣泡時不該被拽回來。
  *
- * 用滚动事件记账，而不是在 `scrollToBottom` 里当场量距离：delta 是先
- * 追加正文再滚，量的时候内容已经变高，贴着底的人会被算成「离底好远」
- * 从而掉队。
+ * 用滾動事件記賬，而不是在 `scrollToBottom` 裡當場量距離：delta 是先
+ * 追加正文再滾，量的時候內容已經變高，貼著底的人會被算成「離底好遠」
+ * 從而掉隊。
  */
 let follow = true;
 
@@ -180,11 +180,11 @@ function isAtBottom(): boolean {
 }
 
 /**
- * 滚到消息流底部。
+ * 滾到訊息流底部。
  *
- * 流式输出每来一段都会调这里；**只在原本就贴着底时才跟着滚**——
- * 用户翻上去看前面的气泡时不该被拽回来（日志页同一条理由）。
- * `force` 给切会话、主动发送：那是人自己起的头，应当看到最新。
+ * 流式輸出每來一段都會調這裡；**只在原本就貼著底時才跟著滾**——
+ * 使用者翻上去看前面的氣泡時不該被拽回來（日誌頁同一條理由）。
+ * `force` 給切會話、主動傳送：那是人自己起的頭，應當看到最新。
  */
 export function scrollToBottom(force = false): void {
   if (!force && !follow) {
@@ -198,7 +198,7 @@ export function installMessages(): void {
   el.messages.addEventListener('scroll', () => {
     follow = isAtBottom();
   });
-  // 与工程页那颗「初始化小说工程」同一个动作：初始化流程（问作品名等）在后端。
+  // 與工程頁那顆「初始化小說工程」同一個動作：初始化流程（問作品名等）在後端。
   el.initHint.addEventListener('click', (e) => {
     if (closestFrom(e.target, '#initProjectBtn')) {
       vscode.postMessage({ type: 'projectAction', action: 'initProject' });
@@ -218,14 +218,14 @@ function buildTurn(turn: SerializedTurn): HTMLElement {
   if (turn.attachments && turn.attachments.length > 0) {
     wrap.appendChild(buildAttachments(turn.attachments));
   }
-  // 思考过程放在正文上方，默认折叠——它不是正文，但正文迟迟不来时
-  // 它是唯一的进度反馈。用户展开后的状态由 details 自己维持。
+  // 思考過程放在正文上方，預設摺疊——它不是正文，但正文遲遲不來時
+  // 它是唯一的進度反饋。使用者展開後的狀態由 details 自己維持。
   if (turn.reasoning) {
     wrap.appendChild(buildReasoningDetails(turn.reasoning));
   }
-  // 段区：它说的话与它做的事按发生顺序交替。没有段的轮次就是一块正文。
-  // 审稿那一轮（五期 W10）画报告卡，不画那段可就地编辑的正文：报告不落盘，改它的文字没有意义；
-  // 正文里那一份给人读的文字仍在 `turn.content` 上，「复制」取它。
+  // 段區：它說的話與它做的事按發生順序交替。沒有段的輪次就是一塊正文。
+  // 審稿那一輪（五期 W10）畫報告卡，不畫那段可就地編輯的正文：報告不落盤，改它的文字沒有意義；
+  // 正文裡那一份給人讀的文字仍在 `turn.content` 上，「複製」取它。
   if (turn.role === 'assistant' && turn.review && !turn.error) {
     wrap.appendChild(buildReviewCard(turn));
   } else if (turn.role === 'assistant' && turn.segments && turn.segments.length > 0) {
@@ -233,10 +233,10 @@ function buildTurn(turn: SerializedTurn): HTMLElement {
       wrap.appendChild(node);
     }
   } else if (turn.role === 'user' || turn.content || turn.error || store.streamingId === turn.id) {
-    // 空的 assistant 正文**只在这一轮正流着的时候**画：推理模型常常先想几十秒
-    // 才吐第一个字，那段时间界面上得有个东西说「内容长在这儿」。已经结束、又
-    // 什么都没说的轮次不画那个空盒子；第一段是工具调用时，它会被
-    // `appendToolCall` 就地撤掉（一个字都没写过的块留着只是挡路）。
+    // 空的 assistant 正文**只在這一輪正流著的時候**畫：推理模型常常先想幾十秒
+    // 才吐第一個字，那段時間介面上得有個東西說「內容長在這兒」。已經結束、又
+    // 什麼都沒說的輪次不畫那個空盒子；第一段是工具呼叫時，它會被
+    // `appendToolCall` 就地撤掉（一個字都沒寫過的塊留著只是擋路）。
     wrap.appendChild(buildBody(turn));
   }
 
@@ -249,16 +249,16 @@ function buildTurn(turn: SerializedTurn): HTMLElement {
 
 function buildHead(turn: SerializedTurn): HTMLElement {
   const head = mk('div', 'msg-head');
-  const role = turn.role === 'user' ? '我' : turn.mcp ? '外部 Agent' : turn.builtinAgent ? '内置 Agent' : '模型';
+  const role = turn.role === 'user' ? '我' : turn.mcp ? '外部 Agent' : turn.builtinAgent ? '內建 Agent' : '模型';
   head.appendChild(mk('span', 'msg-role', role));
   if (turn.mcp) {
-    // 经 MCP 接进来的调用（Claude Code 之类）：它说的话不在这里，这里只有它做的事。
+    // 經 MCP 接進來的呼叫（Claude Code 之類）：它說的話不在這裡，這裡只有它做的事。
     const tag = mk('span', 'msg-tag', 'MCP');
-    tag.title = '外部 agent 经 MCP 调用 Novelwarden 的工具留下的记录';
+    tag.title = '外部 agent 經 MCP 呼叫 Novelwarden 的工具留下的記錄';
     head.appendChild(tag);
   } else if (turn.builtinAgent) {
     const tag = mk('span', 'msg-tag', '已移除');
-    tag.title = '已经移除的内置 agent 跑的一轮，只留着回看；讨论时不随历史带';
+    tag.title = '已經移除的內建 agent 跑的一輪，只留著回看；討論時不隨歷史帶';
     head.appendChild(tag);
   }
   head.appendChild(mk('span', undefined, timeLabel(turn.at)));
@@ -267,25 +267,25 @@ function buildHead(turn: SerializedTurn): HTMLElement {
     head.appendChild(mk('span', undefined, `· ${countWords(turn.content)} 字`));
   }
   if (turn.interrupted) {
-    head.appendChild(mk('span', undefined, '· 已中断'));
+    head.appendChild(mk('span', undefined, '· 已中斷'));
   }
-  // 低频且有破坏性的操作（重新生成/删除）收进右上角的 ⋯，
-  // 不和行尾的「打开」「复制」挤在一起。
+  // 低頻且有破壞性的操作（重新生成/刪除）收進右上角的 ⋯，
+  // 不和行尾的「開啟」「複製」擠在一起。
   head.appendChild(spacer());
   head.appendChild(buildMenuBtn(turn));
   return head;
 }
 
 /**
- * 气泡正文（**没有段的那一轮**：单步创作、纯聊天）。
+ * 氣泡正文（**沒有段的那一輪**：單步創作、純聊天）。
  *
- * assistant 那一支**刻意保持成一个纯文本节点**：流式增量走的是
- * `body.textContent += delta`（index.ts），里面有子元素的话第一片增量就会
- * 把它们冲掉；就地编辑的 blur 判据也是拿 `body.textContent` 比 `turn.content`。
- * 要加结构的是 user 那一支。
+ * assistant 那一支**刻意保持成一個純文字節點**：流式增量走的是
+ * `body.textContent += delta`（index.ts），裡面有子元素的話第一片增量就會
+ * 把它們沖掉；就地編輯的 blur 判據也是拿 `body.textContent` 比 `turn.content`。
+ * 要加結構的是 user 那一支。
  *
- * 有段的那一轮画的是 `buildTextBlock`（只读）：`editTurn` 换的是**整轮内容**，
- * 而那时正文分成好几块，改哪一块都映射不回去。
+ * 有段的那一輪畫的是 `buildTextBlock`（只讀）：`editTurn` 換的是**整輪內容**，
+ * 而那時正文分成好幾塊，改哪一塊都對映不回去。
  */
 function buildBody(turn: SerializedTurn): HTMLElement {
   const body = mk('div', 'msg-body');
@@ -298,7 +298,7 @@ function buildBody(turn: SerializedTurn): HTMLElement {
 
   body.textContent = turn.error ? turn.error : turn.content;
 
-  // 结束后（turnDone 会重建这个节点）才放开就地编辑：结果可以改完再采纳。
+  // 結束後（turnDone 會重建這個節點）才放開就地編輯：結果可以改完再採納。
   const streaming = store.streamingId === turn.id;
   if (!turn.error && !streaming) {
     body.setAttribute('contenteditable', 'true');
@@ -314,11 +314,11 @@ function buildBody(turn: SerializedTurn): HTMLElement {
 }
 
 /**
- * 用户气泡：命令标签 +（可选的）补充要求。
+ * 使用者氣泡：命令標籤 +（可選的）補充要求。
  *
- * 命令类的轮次 content 本来就是空的——「写细纲」不需要作者说什么，该说的
- * 都在大纲和前后几章的细纲里（命令一律不要求输入，见 `commandsFor`）。但**空气泡不能就这么空着**：
- * 翻回去看时认不出刚才点的是哪一下。所以把命令本身画成一枚 `/写细纲` 标签。
+ * 命令類的輪次 content 本來就是空的——「寫細綱」不需要作者說什麼，該說的
+ * 都在大綱和前後幾章的細綱裡（命令一律不要求輸入，見 `commandsFor`）。但**空氣泡不能就這麼空著**：
+ * 翻回去看時認不出剛才點的是哪一下。所以把命令本身畫成一枚 `/寫細綱` 標籤。
  */
 function fillUserBody(body: HTMLElement, turn: SerializedTurn): HTMLElement {
   if (turn.command) {
@@ -329,16 +329,16 @@ function fillUserBody(body: HTMLElement, turn: SerializedTurn): HTMLElement {
   if (text) {
     body.appendChild(mk('span', 'msg-text', text));
   } else if (turn.revise?.items.length) {
-    // 按审稿修稿：勾了哪几条（五期）。命令标签下面一条一行——翻回来看得出这一次修的是什么。
+    // 按審稿修稿：勾了哪幾條（五期）。命令標籤下面一條一行——翻回來看得出這一次修的是什麼。
     const list = mk('ul', 'msg-revise-items');
     for (const item of turn.revise.items) {
       list.appendChild(mk('li', undefined, item));
     }
     body.appendChild(list);
   } else if (!turn.command) {
-    // 既没有话也没有命令：只可能是旧会话里的空轮次（那时命令没被记下来）。
-    // 留一句说明，总比一片看不出所以然的空白好。
-    body.appendChild(mk('span', 'msg-text msg-text-empty', '（没有补充要求）'));
+    // 既沒有話也沒有命令：只可能是舊會話裡的空輪次（那時命令沒被記下來）。
+    // 留一句說明，總比一片看不出所以然的空白好。
+    body.appendChild(mk('span', 'msg-text msg-text-empty', '（沒有補充要求）'));
   }
   return body;
 }
@@ -359,15 +359,15 @@ function buildAttachments(attachments: NonNullable<SerializedTurn['attachments']
 }
 
 /**
- * 气泡末尾那一行：这一轮产出的东西**落到哪儿了**，加一颗「复制」。
+ * 氣泡末尾那一行：這一輪產出的東西**落到哪兒了**，加一顆「複製」。
  *
- * **这里没有任何能写文件的按钮。** 写不写在产出的当下就问过了——那是输入框
- * 上方那张权限卡片（`view/gate.ts`），和 agent 动手前那一问长一个样。从前
- * 这里是「采纳写入 / 覆盖并写入」：一颗**可以永远不点的按钮**，于是「产物
- * 落盘前必须过一遍人」在界面上成了一件可以无限拖延的事，作者手里攒着三份
- * 没落地的产物，谁也说不清哪份写过。
+ * **這裡沒有任何能寫檔案的按鈕。** 寫不寫在產出的當下就問過了——那是輸入框
+ * 上方那張許可權卡片（`view/gate.ts`），和 agent 動手前那一問長一個樣。從前
+ * 這裡是「採納寫入 / 覆蓋並寫入」：一顆**可以永遠不點的按鈕**，於是「產物
+ * 落盤前必須過一遍人」在介面上成了一件可以無限拖延的事，作者手裡攢著三份
+ * 沒落地的產物，誰也說不清哪份寫過。
  *
- * 留下的是记录：写了的说写到哪（可点开），没写的标一句「未采纳」。
+ * 留下的是記錄：寫了的說寫到哪（可點開），沒寫的標一句「未採納」。
  */
 function buildActions(turn: SerializedTurn): HTMLElement {
   const bar = mk('div', 'msg-actions');
@@ -376,11 +376,11 @@ function buildActions(turn: SerializedTurn): HTMLElement {
   }
 
   /**
-   * 复制取的是**气泡里当下的文本**（可能被就地改过），不是 turn.content。
+   * 複製取的是**氣泡裡當下的文字**（可能被就地改過），不是 turn.content。
    *
-   * 段区里可能有好几块文字（说一句、做一件事、再说一句），全都要——只取第一块
-   * 的话，复制出来的是半截结论。工具条与 generate 卡不进剪贴板：那是过程与产物，
-   * 产物有自己的落点。
+   * 段區裡可能有好幾塊文字（說一句、做一件事、再說一句），全都要——只取第一塊
+   * 的話，複製出來的是半截結論。工具條與 generate 卡不進剪貼簿：那是過程與產物，
+   * 產物有自己的落點。
    */
   const currentText = () => {
     const blocks = [...(bubbleOf(turn.id)?.querySelectorAll<HTMLElement>('.msg-body[data-seg="text"]') ?? [])];
@@ -392,35 +392,35 @@ function buildActions(turn: SerializedTurn): HTMLElement {
   };
 
   if (turn.acceptedTo) {
-    bar.appendChild(mk('span', 'accepted', `✓ 已写入 ${turn.acceptedTo}`));
-    bar.appendChild(linkBtn('打开', () => openPath(turn.acceptedTo!)));
+    bar.appendChild(mk('span', 'accepted', `✓ 已寫入 ${turn.acceptedTo}`));
+    bar.appendChild(linkBtn('開啟', () => openPath(turn.acceptedTo!)));
   } else if (turn.artifact) {
-    // 产出过一份结构化产物，但没落盘：说清是什么、本来要写到哪。
+    // 產出過一份結構化產物，但沒落盤：說清是什麼、本來要寫到哪。
     const a = turn.artifact;
-    const line = `${a.where} · ${a.summary}${a.declined ? ' · 未采纳' : ''}`;
+    const line = `${a.where} · ${a.summary}${a.declined ? ' · 未採納' : ''}`;
     bar.appendChild(mk('span', 'artifact-where', line));
   }
-  // 正文写了多长、有没有重演（W7）：写没写进去都留着，翻回来看得出这一章当时够不够。
+  // 正文寫了多長、有沒有重演（W7）：寫沒寫進去都留著，翻回來看得出這一章當時夠不夠。
   const a = turn.artifact;
   if (a?.length) {
     bar.appendChild(mk('span', `artifact-length${a.length.reached ? '' : ' short'}`, describeWriteLength(a.length, a.append)));
   }
   if (a?.replay) {
-    const flag = mk('span', 'artifact-replay', '开头与上一章结尾重合');
+    const flag = mk('span', 'artifact-replay', '開頭與上一章結尾重合');
     flag.title = a.replay;
     bar.appendChild(flag);
   }
 
   bar.appendChild(
-    linkBtn('复制', () => {
+    linkBtn('複製', () => {
       void navigator.clipboard.writeText(currentText());
-      toast('已复制到剪贴板。');
+      toast('已複製到剪貼簿。');
     })
   );
   return bar;
 }
 
-// ---------------------------------------------------- 气泡右上角的 ⋯ 菜单
+// ---------------------------------------------------- 氣泡右上角的 ⋯ 選單
 
 function buildMenuBtn(turn: SerializedTurn): HTMLElement {
   const btn = mk('button', 'msg-menu-btn', '⋯');
@@ -433,17 +433,17 @@ function buildMenuBtn(turn: SerializedTurn): HTMLElement {
   return btn;
 }
 
-/** 这条消息在 ⋯ 菜单里能做什么。 */
+/** 這條訊息在 ⋯ 選單裡能做什麼。 */
 function menuItemsFor(turn: SerializedTurn) {
   const items = [];
-  // 「重新生成」只对用户消息有意义：重来是从那一条分叉，
-  // 丢掉它之后的所有轮次再跑一遍。
+  // 「重新生成」只對使用者訊息有意義：重來是從那一條分叉，
+  // 丟掉它之後的所有輪次再跑一遍。
   if (turn.role === 'user') {
     items.push({
       label: '重新生成',
       run: () => {
         if (store.busy) {
-          toast('正在生成，请先停止。', true);
+          toast('正在生成，請先停止。', true);
           return;
         }
         vscode.postMessage({ type: 'retry', turnId: turn.id, payload: currentPayload() });
@@ -451,39 +451,39 @@ function menuItemsFor(turn: SerializedTurn) {
     });
   }
   items.push({
-    label: '删除',
+    label: '刪除',
     danger: true,
     run: () => vscode.postMessage({ type: 'deleteTurn', turnId: turn.id }),
   });
   return items;
 }
 
-// ---------------------------------------------------------------- 折叠块
+// ---------------------------------------------------------------- 摺疊塊
 
 /**
- * 思考过程的折叠块。
+ * 思考過程的摺疊塊。
  *
- * 推理模型（gemma/gemini thinking、DeepSeek reasoner 等）可能先想几十秒
- * 才开始吐正文。这段内容不是正文——采纳写入时不会带上它——但把它显示
- * 出来，用户才知道模型在动，而不是界面卡住了。
+ * 推理模型（gemma/gemini thinking、DeepSeek reasoner 等）可能先想幾十秒
+ * 才開始吐正文。這段內容不是正文——採納寫入時不會帶上它——但把它顯示
+ * 出來，使用者才知道模型在動，而不是介面卡住了。
  */
 export function buildReasoningDetails(text: string): HTMLDetailsElement {
   const det = mk('details', 'reasoning');
-  det.appendChild(mk('summary', undefined, `思考过程 · ${countWords(text)} 字`));
+  det.appendChild(mk('summary', undefined, `思考過程 · ${countWords(text)} 字`));
   det.appendChild(mk('div', 'reasoning-body', text));
   return det;
 }
 
 /**
- * 把一轮的段画成一串节点。
+ * 把一輪的段畫成一串節點。
  *
- * **相邻的工具段并进同一个 `.tools` 组**：连着五次 `list` / `read` 仍然读成
- * 一串流水账，散成五块反而比从前更乱。文字段与 generate 卡打断它——那正是
- * 「读了三份 → 说一句 → 生成 → 再说一句」看得出来的地方。
+ * **相鄰的工具段並進同一個 `.tools` 組**：連著五次 `list` / `read` 仍然讀成
+ * 一串流水賬，散成五塊反而比從前更亂。文欄位與 generate 卡打斷它——那正是
+ * 「讀了三份 → 說一句 → 生成 → 再說一句」看得出來的地方。
  */
 function buildSegments(turn: SerializedTurn): HTMLElement[] {
   const nodes: HTMLElement[] = [];
-  /** 当前那一串工具条。遇到别的段就作废，下一次工具调用重开一串。 */
+  /** 當前那一串工具條。遇到別的段就作廢，下一次工具呼叫重開一串。 */
   let strip: HTMLElement | undefined;
 
   for (const seg of turn.segments ?? []) {
@@ -507,10 +507,10 @@ function buildSegments(turn: SerializedTurn): HTMLElement[] {
 }
 
 /**
- * 一段文字。**有段的那一轮一律只读**（见文件头）。
+ * 一段文字。**有段的那一輪一律只讀**（見檔案頭）。
  *
- * `data-seg` 标出「这是段区里的一块文字」：流式追加要找的是**最后**那一块，
- * 而气泡里别的地方（用户那一支、错误文本）也叫 `.msg-body`。
+ * `data-seg` 標出「這是段區裡的一塊文字」：流式追加要找的是**最後**那一塊，
+ * 而氣泡裡別的地方（使用者那一支、錯誤文字）也叫 `.msg-body`。
  */
 export function buildTextBlock(text: string): HTMLElement {
   const body = mk('div', 'msg-body', text);
@@ -518,7 +518,7 @@ export function buildTextBlock(text: string): HTMLElement {
   return body;
 }
 
-/** 这一次调用是不是「花钱产出了一份东西」。产出的正文画成一张卡，不是一行。 */
+/** 這一次呼叫是不是「花錢產出了一份東西」。產出的正文畫成一張卡，不是一行。 */
 function isGenerate(call: SerializedToolCall): boolean {
   return call.name === 'generate' || call.output !== undefined;
 }
@@ -528,24 +528,24 @@ function isGenerate(call: SerializedToolCall): boolean {
  *
  * ```
  * ┌ ✨ generate                              23.6s ▾ ┐
- * │ ✓ 情节大纲 · 6104 字 · 已写入 .novelwarden/outline.md│
+ * │ ✓ 情節大綱 · 6104 字 · 已寫入 .novelwarden/outline.md│
  * ├──────────────────────────────────────────────────┤
- * │ ### 全书结构一览                                  │
- * │ **第一卷 活着**：半世界陷入病灾…                   │ ← 限高，卡内滚动
- * │ ▸ 参数与返回                                      │
+ * │ ### 全書結構一覽                                  │
+ * │ **第一卷 活著**：半世界陷入病災…                   │ ← 限高，卡內滾動
+ * │ ▸ 引數與返回                                      │
  * └──────────────────────────────────────────────────┘
  * ```
  *
- * **它不是一行流水账**：`read` 回来的东西是它查资料的过程，而这几千字是**产物
- * 本身**——作者接下来要判断「这份要不要落盘」，读的就是它。所以默认展开（点头
- * 部可收起），限高滚动：铺开会把整轮对话顶出屏幕，藏起来又等于让他隔着一行摘要
- * 去决定要不要写进书里。
+ * **它不是一行流水賬**：`read` 回來的東西是它查資料的過程，而這幾千字是**產物
+ * 本身**——作者接下來要判斷「這份要不要落盤」，讀的就是它。所以預設展開（點頭
+ * 部可收起），限高滾動：鋪開會把整輪對話頂出螢幕，藏起來又等於讓他隔著一行摘要
+ * 去決定要不要寫進書裡。
  *
- * 落盘的结论由后端拼在 `summary` 后面（「已生成 4/4 节 · 已写入 X」），画成**单独
- * 一行**而不是挤进头里：那一行在侧栏的宽度下会被截成
- * `gener… 情节大纲 · 6104 字 · 已写入 .novelforg…`，而「写到哪儿了」恰恰是作者
- * 最要看清的一句。这两行都长在 `<summary>` 里，所以**收起来之后它们还在**——
- * 折叠只藏产物正文。
+ * 落盤的結論由後端拼在 `summary` 後面（「已生成 4/4 節 · 已寫入 X」），畫成**單獨
+ * 一行**而不是擠進頭裡：那一行在側欄的寬度下會被截成
+ * `gener… 情節大綱 · 6104 字 · 已寫入 .novelforg…`，而「寫到哪兒了」恰恰是作者
+ * 最要看清的一句。這兩行都長在 `<summary>` 裡，所以**收起來之後它們還在**——
+ * 摺疊只藏產物正文。
  */
 export function buildGenCard(call: SerializedToolCall & { open?: boolean }): HTMLElement {
   const card = mk('details', `gen${call.ok ? '' : ' gen-failed'}`);
@@ -564,19 +564,19 @@ export function buildGenCard(call: SerializedToolCall & { open?: boolean }): HTM
 
   card.appendChild(mk('pre', 'gen-body', call.output ?? ''));
 
-  // 参数与返回收在再一层折叠里。**花钱那一下更要查得出它动的是哪一章**：卡上
-  // 那两行说的是「产出了什么」，而「它是按哪个落点、哪句要求生成的」只在参数里。
+  // 引數與返回收在再一層摺疊裡。**花錢那一下更要查得出它動的是哪一章**：卡上
+  // 那兩行說的是「產出了什麼」，而「它是按哪個落點、哪句要求生成的」只在引數裡。
   const detail = buildToolDetail(call);
   if (detail) {
     const det = mk('details', 'gen-args');
-    det.appendChild(mk('summary', undefined, '参数与返回'));
+    det.appendChild(mk('summary', undefined, '引數與返回'));
     det.appendChild(detail);
     card.appendChild(det);
   }
   return card;
 }
 
-/** 卡上那一行结论。还没跑完时说「生成中…」，不摆一句空话。 */
+/** 卡上那一行結論。還沒跑完時說「生成中…」，不擺一句空話。 */
 function buildGenState(call: SerializedToolCall): HTMLElement {
   const pending = call.elapsedMs < 0;
   const row = mk('div', `gen-state${call.ok || pending ? '' : ' gen-state-failed'}`);
@@ -586,17 +586,17 @@ function buildGenState(call: SerializedToolCall): HTMLElement {
 }
 
 /**
- * agent 工具调用的那一串折叠条。
+ * agent 工具呼叫的那一串摺疊條。
  *
  * ```
- * 🔧 search「北境」        2 处命中   0.3s
+ * 🔧 search「北境」        2 處命中   0.3s
  * 🔧 read chapters/009…   142 行     0.1s
- * ✨ generate 剧情         620 字     12.4s
+ * ✨ generate 劇情         620 字     12.4s
  * ```
  *
- * **那一行上只画摘要**：`read` 一章正文是几千字，摊在气泡里会把作者真正要看的
- * 那段回答挤到屏幕外。参数与返回文本收在折叠里——想核对「它读的是哪一章、
- * 看到的是什么」点开就有，不想看时它一行都不占（后端已经截过，见
+ * **那一行上只畫摘要**：`read` 一章正文是幾千字，攤在氣泡裡會把作者真正要看的
+ * 那段回答擠到螢幕外。引數與返回文字收在摺疊裡——想核對「它讀的是哪一章、
+ * 看到的是什麼」點開就有，不想看時它一行都不佔（後端已經截過，見
  * `controller/mcp.ts`）。
  */
 export function buildToolStrip(): HTMLElement {
@@ -615,7 +615,7 @@ export function buildToolRow(call: {
   open?: boolean;
 }): HTMLElement {
   const line = mk('summary', 'tool-line');
-  // 花钱的那个用另一个图标：作者一眼要能看出这一串里哪几下是收费的。
+  // 花錢的那個用另一個圖示：作者一眼要能看出這一串裡哪幾下是收費的。
   line.appendChild(mk('span', 'tool-icon', call.name === 'generate' ? '✨' : '🔧'));
   line.appendChild(mk('span', 'tool-title', call.title));
   line.appendChild(mk('span', 'tool-summary', call.summary));
@@ -623,8 +623,8 @@ export function buildToolRow(call: {
 
   const detail = buildToolDetail(call);
 
-  // 没有明细可看（老会话里存的那些）就还是一行普通的条：给一个点开之后
-  // 空空如也的三角，比不给更让人火大。
+  // 沒有明細可看（老會話裡存的那些）就還是一行普通的條：給一個點開之後
+  // 空空如也的三角，比不給更讓人火大。
   if (!detail) {
     const flat = mk('div', `tool-row tool-flat${call.ok ? '' : ' tool-failed'}`);
     flat.dataset.call = call.callId;
@@ -643,15 +643,15 @@ export function buildToolRow(call: {
 }
 
 /**
- * 那一步的明细：**它填的参数**与**回给模型的那段文本**（两者都由后端截过）。
+ * 那一步的明細：**它填的引數**與**回給模型的那段文字**（兩者都由後端截過）。
  *
- * 要核对「它读的是哪一章、看到的是什么」时，这里是唯一的去处。两样都没有就回
- * undefined——调用方据此不给折叠三角（点开之后空空如也比不给更让人火大）。
+ * 要核對「它讀的是哪一章、看到的是什麼」時，這裡是唯一的去處。兩樣都沒有就回
+ * undefined——呼叫方據此不給摺疊三角（點開之後空空如也比不給更讓人火大）。
  */
 function buildToolDetail(call: SerializedToolCall): HTMLElement | undefined {
   const parts: [string, string][] = [];
   if (call.argsText) {
-    parts.push(['参数', call.argsText]);
+    parts.push(['引數', call.argsText]);
   }
   if (call.resultText) {
     parts.push(['返回', call.resultText]);
@@ -668,10 +668,10 @@ function buildToolDetail(call: SerializedToolCall): HTMLElement | undefined {
 }
 
 /**
- * 一次工具调用刚开始，还没有结果。收到 `toolResult` 时就地补上。
+ * 一次工具呼叫剛開始，還沒有結果。收到 `toolResult` 時就地補上。
  *
- * 参数这时就有了，所以这一条已经能展开——它正在读哪个路径，是「它卡在
- * 哪一步」最先要看的东西。
+ * 引數這時就有了，所以這一條已經能展開——它正在讀哪個路徑，是「它卡在
+ * 哪一步」最先要看的東西。
  */
 export function buildPendingToolRow(
   callId: string,
@@ -684,7 +684,7 @@ export function buildPendingToolRow(
     name: title.split(' ')[0],
     title,
     ok: true,
-    summary: detail ?? '进行中…',
+    summary: detail ?? '進行中…',
     elapsedMs: -1,
     argsText,
   });
@@ -698,32 +698,32 @@ function formatElapsed(ms: number): string {
 }
 
 /**
- * 上下文明细：装配器放进去了什么、各占多少 token、降级或丢弃的原因。
+ * 上下文明細：裝配器放進去了什麼、各佔多少 token、降級或丟棄的原因。
  *
- * `copyTurnId` 给了（这一轮的完整消息留在会话文件里）就在摘要行末尾放一颗「复制完整上下文」：
- * 放在摘要行而不是展开之后，是为了**一下就够**，不必先点开清单。点它不展开折叠块。
+ * `copyTurnId` 給了（這一輪的完整訊息留在會話檔案裡）就在摘要行末尾放一顆「複製完整上下文」：
+ * 放在摘要行而不是展開之後，是為了**一下就夠**，不必先點開清單。點它不展開摺疊塊。
  */
 export function buildContextDetails(digest: SerializedDigest, copyTurnId?: string): HTMLDetailsElement {
   const det = mk('details', 'ctx');
 
   const kept = digest.items.filter((i) => i.status === 'included' || i.status === 'degraded').length;
-  // 按哪一级装的：这个开关出现之前存下的会话没有，就不说。
-  const detail = isContextDetail(digest.detail) ? ` · 详细度：${CONTEXT_DETAIL_LABEL[digest.detail]}` : '';
+  // 按哪一級裝的：這個開關出現之前存下的會話沒有，就不說。
+  const detail = isContextDetail(digest.detail) ? ` · 詳細度：${CONTEXT_DETAIL_LABEL[digest.detail]}` : '';
   const sum = mk(
     'summary',
     undefined,
     `上下文 ${fmt(digest.usedTokens)} / ${fmt(digest.budget)} token${
-      digest.clamped ? '（已按模型配额压缩）' : ''
-    } · ${kept} 项${detail}`
+      digest.clamped ? '（已按模型配額壓縮）' : ''
+    } · ${kept} 項${detail}`
   );
   if (digest.usedTokens > digest.budget) {
     sum.classList.add('over-budget');
   }
   if (copyTurnId) {
-    const copy = linkBtn('复制完整上下文', () => requestContextCopy(copyTurnId));
+    const copy = linkBtn('複製完整上下文', () => requestContextCopy(copyTurnId));
     copy.classList.add('ctx-copy');
-    copy.title = '复制这一轮发给模型的全部消息（系统提示、历史与这一轮的话），原样';
-    // 按规范点 <summary> 里的按钮不开合折叠块，但有的引擎照样开合——取消默认动作，只复制。
+    copy.title = '複製這一輪發給模型的全部訊息（系統提示、歷史與這一輪的話），原樣';
+    // 按規範點 <summary> 裡的按鈕不開合折疊塊，但有的引擎照樣開合——取消預設動作，只複製。
     copy.addEventListener('click', (e) => e.preventDefault());
     sum.appendChild(copy);
   }
@@ -735,7 +735,7 @@ export function buildContextDetails(digest: SerializedDigest, copyTurnId?: strin
     li.appendChild(mk('span', 'badge', `P${item.priority}`));
     li.appendChild(mk('span', 'label', item.label));
     if (item.source) {
-      li.appendChild(linkBtn('打开', () => openPath(item.source!)));
+      li.appendChild(linkBtn('開啟', () => openPath(item.source!)));
     }
     li.appendChild(mk('span', 'tokens', item.tokens > 0 ? fmt(item.tokens) : '—'));
     if (item.note) {
@@ -747,11 +747,11 @@ export function buildContextDetails(digest: SerializedDigest, copyTurnId?: strin
   return det;
 }
 
-// ---------------------------------------------------- 复制完整上下文
+// ---------------------------------------------------- 複製完整上下文
 
 /**
- * 还没回的那一次「复制完整上下文」。回复是广播（侧栏与编辑器标签页挂同一个 controller），
- * 只认自己发的这一个；连点两下只认最后一下。
+ * 還沒回的那一次「複製完整上下文」。回覆是廣播（側欄與編輯器標籤頁掛同一個 controller），
+ * 只認自己發的這一個；連點兩下只認最後一下。
  */
 let pendingCopy: string | undefined;
 let copySeq = 0;
@@ -763,11 +763,11 @@ function requestContextCopy(turnId: string): void {
 }
 
 /**
- * 后端拼好的完整上下文回来了：写进剪贴板。
+ * 後端拼好的完整上下文回來了：寫進剪貼簿。
  *
- * 正文不在前端（一轮几万字，不随会话推），所以中间隔着一趟来回。写剪贴板要「刚点过」：
- * Chromium 系与 Firefox 里这一趟还算数，WebKit（Linux 桌面壳、Safari）可能不认——写不进去时
- * 提示条上给一颗「再点一下复制」，那一下是新的点击，文字已经在手上了。
+ * 正文不在前端（一輪幾萬字，不隨會話推），所以中間隔著一趟來回。寫剪貼簿要「剛點過」：
+ * Chromium 系與 Firefox 裡這一趟還算數，WebKit（Linux 桌面殼、Safari）可能不認——寫不進去時
+ * 提示條上給一顆「再點一下複製」，那一下是新的點選，文字已經在手上了。
  */
 export function onContextText(msg: Extract<OutMessage, { type: 'contextText' }>): void {
   if (msg.requestId !== pendingCopy) {
@@ -776,18 +776,18 @@ export function onContextText(msg: Extract<OutMessage, { type: 'contextText' }>)
   pendingCopy = undefined;
   const text = msg.text;
   if (text === undefined) {
-    toast(msg.error ?? '没拿到这一轮的完整上下文。', true);
+    toast(msg.error ?? '沒拿到這一輪的完整上下文。', true);
     return;
   }
   if (!navigator.clipboard?.writeText) {
-    toast('当前环境不支持剪贴板。', true);
+    toast('當前環境不支援剪貼簿。', true);
     return;
   }
-  const done = () => toast(`已复制完整上下文（${fmt(countWords(text))} 字）。`);
+  const done = () => toast(`已複製完整上下文（${fmt(countWords(text))} 字）。`);
   navigator.clipboard.writeText(text).then(done, () =>
-    toast('浏览器没让写剪贴板。', true, {
-      label: '再点一下复制',
-      run: () => void navigator.clipboard.writeText(text).then(done, () => toast('复制失败。', true)),
+    toast('瀏覽器沒讓寫剪貼簿。', true, {
+      label: '再點一下複製',
+      run: () => void navigator.clipboard.writeText(text).then(done, () => toast('複製失敗。', true)),
     })
   );
 }

@@ -1,26 +1,26 @@
 /**
- * 从已写正文补记叙事线（叙事线重做四期，设计稿「九、补记已经写了的书」）：拆书导入的书、「从已写正文补齐」整理出来的书、
- * 定稿时叙事线没判成的章——定稿过了，线上却没有它们的事件。从 `project.json` 的水位（`threadsThrough`）之后、到最后一个定稿过的
- * 章，**按章号串行**逐章走定稿第三步（认事件 → 归并 → 当前进度，每章写 1–3 次、每次写完转写 1 次，`THREADS_JUDGE_CALLS`；
+ * 從已寫正文補記敘事線（敘事線重做四期，設計稿「九、補記已經寫了的書」）：拆書匯入的書、「從已寫正文補齊」整理出來的書、
+ * 定稿時敘事線沒判成的章——定稿過了，線上卻沒有它們的事件。從 `project.json` 的水位（`threadsThrough`）之後、到最後一個定稿過的
+ * 章，**按章號序列**逐章走定稿第三步（認事件 → 歸併 → 當前進度，每章寫 1–3 次、每次寫完轉寫 1 次，`THREADS_JUDGE_CALLS`；
  * finalizeSteps.ts 的 `judgeChapterThreads`）。
  *
  * ```
- * （一条线都没有、有情节大纲：先排线，排 1 次、转写 1 次，没排成不挡补记）
- * 第 a 章 → 认事件 / 归并 / 当前进度 → 推水位 → 第 a+1 章 → …… → 定稿到的最后一章
+ * （一條線都沒有、有情節大綱：先排線，排 1 次、轉寫 1 次，沒排成不擋補記）
+ * 第 a 章 → 認事件 / 歸併 / 當前進度 → 推水位 → 第 a+1 章 → …… → 定稿到的最後一章
  * ```
  *
- * - **串行**：后一章要看前一章刚记下的事件与新认出的线（同立即同步的后两步、单独补记设定）。
- * - **只判定稿过、正文没再改过的章**（第 4 条：没定稿、定稿后正文又改过的不偷偷补）：水位之后、定稿到之前这样的章跳过，确认框里
- *   列出来（先定稿，定稿时会一并判）；它们挡在水位前面，后面判过的记在 `threadsJudged`，定稿了它们水位就一口气推过去。
- * - ⚑ **一章没判成就停**（认事件没成）：后一章要看前一章，系统性的失败（模型挂了）也不会把几十章白调一遍。已判的留着，水位停在
- *   没判成的那一章前面，失败挂在那一章上（第 16 条），再点一次从那一章接着判。当前进度、归并没成不停（认出来的照样记下，黄 ❗）。
- * - ⚑ **还没有一条线、有情节大纲时先排线**（照批量拆细纲「一条线都没有先排一次」，设计稿 ⚑8）：排线算进同一个确认框（`THREAD_PLAN_CALLS`），
- *   没排成不挡补记（线照样能从正文里认出来，完成提示说一句）。没有情节大纲就不排：线全靠从正文里认。
- * - 走「定稿」档（`plotSummary`）的池，同立即同步、写完即定稿；排线走「剧情细纲」档（`plotOutline`）。不带思考深度（第 26 条）。
+ * - **序列**：後一章要看前一章剛記下的事件與新認出的線（同立即同步的後兩步、單獨補記設定）。
+ * - **只判定稿過、正文沒再改過的章**（第 4 條：沒定稿、定稿後正文又改過的不偷偷補）：水位之後、定稿到之前這樣的章跳過，確認框裡
+ *   列出來（先定稿，定稿時會一併判）；它們擋在水位前面，後面判過的記在 `threadsJudged`，定稿了它們水位就一口氣推過去。
+ * - ⚑ **一章沒判成就停**（認事件沒成）：後一章要看前一章，系統性的失敗（模型掛了）也不會把幾十章白調一遍。已判的留著，水位停在
+ *   沒判成的那一章前面，失敗掛在那一章上（第 16 條），再點一次從那一章接著判。當前進度、歸併沒成不停（認出來的照樣記下，黃 ❗）。
+ * - ⚑ **還沒有一條線、有情節大綱時先排線**（照批次拆細綱「一條線都沒有先排一次」，設計稿 ⚑8）：排線算進同一個確認框（`THREAD_PLAN_CALLS`），
+ *   沒排成不擋補記（線照樣能從正文裡認出來，完成提示說一句）。沒有情節大綱就不排：線全靠從正文裡認。
+ * - 走「定稿」檔（`plotSummary`）的池，同立即同步、寫完即定稿；排線走「劇情細綱」檔（`plotOutline`）。不帶思考深度（第 26 條）。
  *
- * 入口：工程页「叙事线」页签标题旁的「从正文补记」与右键（叙事线落后于定稿时才给）、agent 的 `extract threadsFromText`；
- * 「从已写正文补齐」（features/derive.ts）在补完架构与情节大纲之后接上它（{@link planThreadsBackfill} + {@link runThreadsBackfill}，
- * 次数并进它的确认框）。
+ * 入口：工程頁「敘事線」頁籤標題旁的「從正文補記」與右鍵（敘事線落後於定稿時才給）、agent 的 `extract threadsFromText`；
+ * 「從已寫正文補齊」（features/derive.ts）在補完架構與情節大綱之後接上它（{@link planThreadsBackfill} + {@link runThreadsBackfill}，
+ * 次數並進它的確認框）。
  */
 import { getHost } from '../host';
 import { CancelledError } from '../llm/provider';
@@ -40,27 +40,27 @@ import { PlanThreadsOutcome, ThreadsOutcome, describePlanned, planThreadsFromOut
 
 const log = scoped('叙事线');
 
-/** 补记的任务名：前端看它在不在跑（media/src/view/project/threads.ts 一字不差）。 */
-export const BACKFILL_TASK = '从已写正文补记叙事线';
+/** 補記的任務名：前端看它在不在跑（media/src/view/project/threads.ts 一字不差）。 */
+export const BACKFILL_TASK = '從已寫正文補記敘事線';
 
-/** 补记要判哪几章（零调用，{@link planThreadsBackfill}）。 */
+/** 補記要判哪幾章（零呼叫，{@link planThreadsBackfill}）。 */
 export interface ThreadsBackfillPlan {
-  /** 要判的章：水位之后、定稿到之前，定稿过、正文没再改过、还没判过的，按章号。 */
+  /** 要判的章：水位之後、定稿到之前，定稿過、正文沒再改過、還沒判過的，按章號。 */
   chapters: Chapter[];
-  /** 水位之后、定稿到之前，这一次判不了的章（没定稿、定稿之后正文又改过），按章号。 */
+  /** 水位之後、定稿到之前，這一次判不了的章（沒定稿、定稿之後正文又改過），按章號。 */
   skipped: { no: number; why: string }[];
-  /** 一条线都没有、有（或这一次会有）情节大纲：先排线（加 `THREAD_PLAN_CALLS`）。 */
+  /** 一條線都沒有、有（或這一次會有）情節大綱：先排線（加 `THREAD_PLAN_CALLS`）。 */
   planFirst: boolean;
-  /** 开始之前的水位。 */
+  /** 開始之前的水位。 */
   through: number;
-  /** 定稿到的最后一章。 */
+  /** 定稿到的最後一章。 */
   current: number;
   calls: CallEstimate;
 }
 
 /**
- * 补记要判哪几章。一条线都没有、有情节大纲（各章细纲梗概的汇总）时先排线。
- * `upTo`：只看到第几章为止（补齐只管第 1–N 章）。同号的正文有两份时认路径排序第一份（与流水线、总览同一个口径）。
+ * 補記要判哪幾章。一條線都沒有、有情節大綱（各章細綱梗概的彙總）時先排線。
+ * `upTo`：只看到第幾章為止（補齊只管第 1–N 章）。同號的正文有兩份時認路徑排序第一份（與流水線、總覽同一個口徑）。
  */
 export async function planThreadsBackfill(
   project: NovelProject,
@@ -98,39 +98,39 @@ export async function planThreadsBackfill(
     }
   }
   const skipped = [
-    ...stale.map((no) => ({ no, why: '同步之后正文又改过' })),
-    // 没定稿的只说水位之后、定稿到之前的：定稿到之后的是还没走到定稿那一步，不归补记管。
-    ...unfinalized.filter((no) => no > mark.through && no < current).map((no) => ({ no, why: '还没同步' })),
+    ...stale.map((no) => ({ no, why: '同步之後正文又改過' })),
+    // 沒定稿的只說水位之後、定稿到之前的：定稿到之後的是還沒走到定稿那一步，不歸補記管。
+    ...unfinalized.filter((no) => no > mark.through && no < current).map((no) => ({ no, why: '還沒同步' })),
   ].sort((a, b) => a.no - b.no);
   const outlineReady = isOutlineFilled(await project.readOutline());
   const planFirst = fresh.length > 0 && book.threads.length === 0 && outlineReady;
   return { chapters: fresh, skipped, planFirst, through: mark.through, current, calls: threadsBackfillCalls(fresh.length, planFirst) };
 }
 
-/** {@link runThreadsBackfill} 的结果。 */
+/** {@link runThreadsBackfill} 的結果。 */
 export interface ThreadsBackfillOutcome {
-  /** 实际调了几次模型（含先排线那一次）。 */
+  /** 實際調了幾次模型（含先排線那一次）。 */
   calls: number;
-  /** 判过的章，按章号。 */
+  /** 判過的章，按章號。 */
   judged: number[];
-  /** 判过的那几章各自认出了什么（与 `judged` 一一对应）。 */
+  /** 判過的那幾章各自認出了什麼（與 `judged` 一一對應）。 */
   results: ThreadsOutcome[];
-  /** 先排线的结果（没排就缺席）。 */
+  /** 先排線的結果（沒排就缺席）。 */
   planned?: PlanThreadsOutcome;
-  /** 停在这一章：认事件没成（失败挂在那一章上）。 */
+  /** 停在這一章：認事件沒成（失敗掛在那一章上）。 */
   failed?: { no: number; reason: string };
-  /** 停下时还没走到的章（没判成的那一章之后的、取消时剩下的）。 */
+  /** 停下時還沒走到的章（沒判成的那一章之後的、取消時剩下的）。 */
   left: number[];
   cancelled?: boolean;
-  /** 认出来了、当前进度或归并没成的章（挂了黄 ❗）。 */
+  /** 認出來了、當前進度或歸併沒成的章（掛了黃 ❗）。 */
   partial: number[];
-  /** 跑完之后的水位。 */
+  /** 跑完之後的水位。 */
   through: number;
 }
 
 /**
- * 按 {@link planThreadsBackfill} 的结果补记。**不弹框、不开任务、不抛**（取消单列）：确认与进度条归调用方。`pool` 判事件
- * （「定稿」档），`planPool` 先排线（「剧情细纲」档，缺席用 `pool`）。
+ * 按 {@link planThreadsBackfill} 的結果補記。**不彈框、不開任務、不拋**（取消單列）：確認與進度條歸呼叫方。`pool` 判事件
+ * （「定稿」檔），`planPool` 先排線（「劇情細綱」檔，缺席用 `pool`）。
  */
 export async function runThreadsBackfill(
   project: NovelProject,
@@ -146,8 +146,8 @@ export async function runThreadsBackfill(
   const out: ThreadsBackfillOutcome = { calls: 0, judged: [], results: [], left: [], partial: [], through: plan.through };
   const total = plan.chapters.length;
   if (plan.planFirst) {
-    // 一条线都没有：先从情节大纲排一次（没排成不挡补记，失败挂在叙事线目录上，完成提示里说一句）。
-    report({ message: '先从情节大纲排叙事线', current: 0, total });
+    // 一條線都沒有：先從情節大綱排一次（沒排成不擋補記，失敗掛在敘事線目錄上，完成提示裡說一句）。
+    report({ message: '先從情節大綱排敘事線', current: 0, total });
     const planned = await planThreadsFromOutline(project, opts.planPool ?? opts.pool, signal);
     out.calls += planned.calls;
     out.planned = planned;
@@ -169,8 +169,8 @@ export async function runThreadsBackfill(
       const step = await judgeChapterThreads(project, chapter, opts.pool, { signal, from: 'backfill' });
       out.calls += step.calls;
       if (step.threadsError || !step.threads) {
-        // 一章没判成就停（⚑）：后一章要看前一章，系统性的失败也不白调后面几十章。失败已经挂在这一章上。
-        out.failed = { no: chapter.order, reason: step.threadsError ?? '没有结果' };
+        // 一章沒判成就停（⚑）：後一章要看前一章，系統性的失敗也不白調後面幾十章。失敗已經掛在這一章上。
+        out.failed = { no: chapter.order, reason: step.threadsError ?? '沒有結果' };
         out.left = plan.chapters.slice(i + 1).map((c) => c.order);
         break;
       }
@@ -195,8 +195,8 @@ export async function runThreadsBackfill(
 }
 
 /**
- * 补记的完成提示（第 2 条：说清楚）：「叙事线补记：判了 5 章（第 1–5 章），记下 12 个事件，新认出 2 条线、3 条伏笔；叙事线判到第
- * 5 章」，先排线的、没判成停在哪一章、后面几章没判、跳过的、没收的记录、没写上的当前进度跟在后面。
+ * 補記的完成提示（第 2 條：說清楚）：「敘事線補記：判了 5 章（第 1–5 章），記下 12 個事件，新認出 2 條線、3 條伏筆；敘事線判到第
+ * 5 章」，先排線的、沒判成停在哪一章、後面幾章沒判、跳過的、沒收的記錄、沒寫上的當前進度跟在後面。
  */
 export function describeBackfill(o: ThreadsBackfillOutcome, plan: Pick<ThreadsBackfillPlan, 'skipped' | 'current'>, rel: string): string {
   const sum = (f: (r: ThreadsOutcome) => number): number => o.results.reduce((n, r) => n + f(r), 0);
@@ -205,39 +205,39 @@ export function describeBackfill(o: ThreadsBackfillOutcome, plan: Pick<ThreadsBa
   const fores = sum((r) => r.newForeshadowing.length);
   const dropped = sum((r) => r.dropped.length);
   const unwritten = sum((r) => r.unwritten.length);
-  const found = [lines > 0 ? `${lines} 条线` : '', fores > 0 ? `${fores} 条伏笔` : ''].filter(Boolean).join('、');
+  const found = [lines > 0 ? `${lines} 條線` : '', fores > 0 ? `${fores} 條伏筆` : ''].filter(Boolean).join('、');
   const head =
     o.judged.length > 0
-      ? `判了 ${o.judged.length} 章（${describeChapterRuns(o.judged)}），${events > 0 ? `记下 ${events} 个事件` : '没有记下事件'}${found ? `，新认出 ${found}` : ''}`
-      : '一章都没判';
+      ? `判了 ${o.judged.length} 章（${describeChapterRuns(o.judged)}），${events > 0 ? `記下 ${events} 個事件` : '沒有記下事件'}${found ? `，新認出 ${found}` : ''}`
+      : '一章都沒判';
   const planned = o.planned
     ? o.planned.error
-      ? `先从情节大纲排线没排成（${o.planned.error}）`
+      ? `先從情節大綱排線沒排成（${o.planned.error}）`
       : o.planned.cancelled
         ? ''
-        : `先从情节大纲${describePlanned(o.planned, rel).replace(/。$/, '')}`
+        : `先從情節大綱${describePlanned(o.planned, rel).replace(/。$/, '')}`
     : '';
   const stop = o.failed
-    ? `第 ${o.failed.no} 章没判成（${o.failed.reason}），停在那里${o.left.length > 0 ? `，后面 ${o.left.length} 章没判` : ''}；再点一次「从正文补记」从第 ${o.failed.no} 章接着判`
+    ? `第 ${o.failed.no} 章沒判成（${o.failed.reason}），停在那裡${o.left.length > 0 ? `，後面 ${o.left.length} 章沒判` : ''}；再點一次「從正文補記」從第 ${o.failed.no} 章接著判`
     : o.cancelled && o.left.length > 0
-      ? `取消了，${describeChapterRuns(o.left)}没判`
+      ? `取消了，${describeChapterRuns(o.left)}沒判`
       : '';
   const parts = [
     planned,
-    `叙事线补记：${head}`,
+    `敘事線補記：${head}`,
     stop,
-    plan.skipped.length > 0 ? `${describeChapterRuns(plan.skipped.map((s) => s.no))}没判（${[...new Set(plan.skipped.map((s) => s.why))].join('、')}；先同步，同步时会一并判）` : '',
-    o.partial.length > 0 ? `${describeChapterRuns(o.partial)}的当前进度或归并没成（挂了黄 ❗）` : '',
-    dropped > 0 ? `另有 ${dropped} 条叙事线的记录没有收（见日志）` : '',
-    unwritten > 0 ? `${unwritten} 条线的当前进度没写上（见日志）` : '',
-    o.through >= plan.current ? `叙事线判到第 ${o.through} 章，跟上了同步进度` : `叙事线判到第 ${o.through} 章（同步到第 ${plan.current} 章）`,
+    plan.skipped.length > 0 ? `${describeChapterRuns(plan.skipped.map((s) => s.no))}沒判（${[...new Set(plan.skipped.map((s) => s.why))].join('、')}；先同步，同步時會一併判）` : '',
+    o.partial.length > 0 ? `${describeChapterRuns(o.partial)}的當前進度或歸併沒成（掛了黃 ❗）` : '',
+    dropped > 0 ? `另有 ${dropped} 條敘事線的記錄沒有收（見日誌）` : '',
+    unwritten > 0 ? `${unwritten} 條線的當前進度沒寫上（見日誌）` : '',
+    o.through >= plan.current ? `敘事線判到第 ${o.through} 章，跟上了同步進度` : `敘事線判到第 ${o.through} 章（同步到第 ${plan.current} 章）`,
   ];
   return `${parts.filter(Boolean).join('；')}。`;
 }
 
 /**
- * 工程页「从正文补记」与 agent 的 `extract threadsFromText`：先问一句（章数与次数），再按章串行补记。返回实际调用次数（取消、没有
- * 要补的章时是 0）。
+ * 工程頁「從正文補記」與 agent 的 `extract threadsFromText`：先問一句（章數與次數），再按章序列補記。返回實際呼叫次數（取消、沒有
+ * 要補的章時是 0）。
  */
 export async function backfillThreads(project: NovelProject): Promise<number> {
   const host = getHost();
@@ -246,10 +246,10 @@ export async function backfillThreads(project: NovelProject): Promise<number> {
   if (plan.chapters.length === 0) {
     host.toast(
       plan.skipped.length > 0
-        ? `没有可以补记的章：${describeChapterRuns(plan.skipped.map((s) => s.no))}${[...new Set(plan.skipped.map((s) => s.why))].join('或')}——先同步，同步时会一并判叙事线。`
+        ? `沒有可以補記的章：${describeChapterRuns(plan.skipped.map((s) => s.no))}${[...new Set(plan.skipped.map((s) => s.why))].join('或')}——先同步，同步時會一併判敘事線。`
         : plan.current === 0
-          ? '还没有同步过的章：叙事线是同步时判的，先同步。'
-          : `叙事线已经判到第 ${plan.through} 章、跟上了同步进度，没有要补记的。要重判哪一章，重新同步那一章。`
+          ? '還沒有同步過的章：敘事線是同步時判的，先同步。'
+          : `敘事線已經判到第 ${plan.through} 章、跟上了同步進度，沒有要補記的。要重判哪一章，重新同步那一章。`
     );
     return 0;
   }
@@ -258,46 +258,46 @@ export async function backfillThreads(project: NovelProject): Promise<number> {
   const rel = project.relPath(project.threadsDir);
   const answer = await askCall({
     message:
-      `从已写正文补记叙事线：${where}同步过、叙事线还没判，逐章认这一章在叙事线上发生了什么（每章 ${THREADS_JUDGE_CALLS.low}–${THREADS_JUDGE_CALLS.high} 次）` +
-      `${plan.planFirst ? '；还没有一条叙事线，先从情节大纲排一次（排 1 次、转写 1 次）' : ''}，${describeCalls(plan.calls)}。现在补记？`,
-    actions: ['开始补记'],
+      `從已寫正文補記敘事線：${where}同步過、敘事線還沒判，逐章認這一章在敘事線上發生了什麼（每章 ${THREADS_JUDGE_CALLS.low}–${THREADS_JUDGE_CALLS.high} 次）` +
+      `${plan.planFirst ? '；還沒有一條敘事線，先從情節大綱排一次（排 1 次、轉寫 1 次）' : ''}，${describeCalls(plan.calls)}。現在補記？`,
+    actions: ['開始補記'],
     detail: [
-      `共 ${n} 章，按章号一章一章往后判（后一章要看前一章记下的事件与新认出的线），可以随时停下，已经判过的留着；一章没判成就停在那里，再点一次从那一章接着判。`,
-      `每章：${THREADS_JUDGE_CALLS.why}。只往 ${rel}/ 里追加带原文证据的事件、正文里认出的新线与新伏笔；当前进度由机器维护，你改过的不写；已有的一个字不动。`,
-      plan.planFirst ? '还没有一条叙事线：先从情节大纲排一次（排 1 次、转写 1 次，算在上面的数里；没排成不挡补记，线照样能从正文里认出来）。' : '',
+      `共 ${n} 章，按章號一章一章往後判（後一章要看前一章記下的事件與新認出的線），可以隨時停下，已經判過的留著；一章沒判成就停在那裡，再點一次從那一章接著判。`,
+      `每章：${THREADS_JUDGE_CALLS.why}。只往 ${rel}/ 裡追加帶原文證據的事件、正文裡認出的新線與新伏筆；當前進度由機器維護，你改過的不寫；已有的一個字不動。`,
+      plan.planFirst ? '還沒有一條敘事線：先從情節大綱排一次（排 1 次、轉寫 1 次，算在上面的數裡；沒排成不擋補記，線照樣能從正文裡認出來）。' : '',
       plan.skipped.length > 0
-        ? `${plan.skipped.map((s) => `第 ${s.no} 章${s.why}`).slice(0, 8).join('、')}${plan.skipped.length > 8 ? ` 等 ${plan.skipped.length} 章` : ''}，这一次不判——先同步，同步时会一并判。`
+        ? `${plan.skipped.map((s) => `第 ${s.no} 章${s.why}`).slice(0, 8).join('、')}${plan.skipped.length > 8 ? ` 等 ${plan.skipped.length} 章` : ''}，這一次不判——先同步，同步時會一併判。`
         : '',
     ]
       .filter(Boolean)
       .join('\n'),
     tasks: plan.planFirst ? ['plotOutline', 'plotSummary', 'transcribe'] : ['plotSummary', 'transcribe'],
-    // 认事件带几条线、几条伏笔随详细度（`recordThreads`）。
+    // 認事件帶幾條線、幾條伏筆隨詳細度（`recordThreads`）。
     contextDetail: true,
   });
-  if (answer?.action !== '开始补记') {
-    log.info('作者没有开始从已写正文补记叙事线');
+  if (answer?.action !== '開始補記') {
+    log.info('作者沒有開始從已寫正文補記敘事線');
     return 0;
   }
   return withCallChoice(answer.choice, async () => {
     const pool = await createModelPool({ task: 'plotSummary', concurrent: false });
     if (!pool) {
-      log.error('没有可用的模型，从已写正文补记叙事线中止');
+      log.error('沒有可用的模型，從已寫正文補記敘事線中止');
       return 0;
     }
     const planPool = plan.planFirst ? ((await createModelPool({ task: 'plotOutline', concurrent: false })) ?? pool) : undefined;
-    log.info('开始从已写正文补记叙事线', `${where}｜${pool.label}`);
+    log.info('開始從已寫正文補記敘事線', `${where}｜${pool.label}`);
     let calls = 0;
     await runTask(
       BACKFILL_TASK,
       async ({ signal, report }) => {
-        // 先存一个存档点（features/checkpoint.ts）：逐章往各条线里追加事件、改写当前进度，整本退得回去。
-        await checkpointBefore(project, `从正文补记叙事线之前（${where}）`);
+        // 先存一個存檔點（features/checkpoint.ts）：逐章往各條線裡追加事件、改寫當前進度，整本退得回去。
+        await checkpointBefore(project, `從正文補記敘事線之前（${where}）`);
         const startedAt = Date.now();
         const o = await runThreadsBackfill(project, plan, { pool, planPool, signal, report });
         calls = o.calls;
         const text = describeBackfill(o, plan, rel);
-        log.info('从已写正文补记叙事线结束', `${text}｜调用 ${o.calls} 次，总耗时 ${elapsed(startedAt)}`);
+        log.info('從已寫正文補記敘事線結束', `${text}｜呼叫 ${o.calls} 次，總耗時 ${elapsed(startedAt)}`);
         if (o.cancelled && o.judged.length === 0) {
           return;
         }

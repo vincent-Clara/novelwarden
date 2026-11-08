@@ -1,16 +1,16 @@
 /**
- * 写作体检的口径（`media/src/editor/checkCore.ts`，零 DOM）。状态栏、面板、高亮镜像层那一整条链路在
- * tests/dom/standalone/check.test.js，这里钉口径：
+ * 寫作體檢的口徑（`media/src/editor/checkCore.ts`，零 DOM）。狀態列、面板、高亮映象層那一整條鏈路在
+ * tests/dom/standalone/check.test.js，這裡釘口徑：
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 四类 | 敏感词 / 禁用词 / 超出上限的比喻词 / 英文缩写各自认出来、各自的 class |
- * | 叠在一起 | 同一段字落在两类里两类都算、都画；同一个词出现几次就几处 |
- * | 英文大小写 | 敏感词不分大小写（全角当半角），禁用词区分（与生成链的 `countBanned` 一样） |
- * | 比喻词 | 没超上限不算、不画；超了算超出的那几个，每一处都画 |
- * | 与生成链同一口径 | 禁用词每个词的次数等于 `countBanned`、比喻词合计等于 `countSimiles`、缩写去重等于 `latinAcronyms` |
- * | 跳转与替换 | 下一处（选区正好是第 k 处就去 k+1、到底绕回）、全部替换只改第一处到最后一处那一段 |
- * | 跟着改动挪 | 平移规则与 `highlight.ts` 一样；前后文字差（撤销、组字中途用） |
+ * | 四類 | 敏感詞 / 禁用詞 / 超出上限的比喻詞 / 英文縮寫各自認出來、各自的 class |
+ * | 疊在一起 | 同一段字落在兩類裡兩類都算、都畫；同一個詞出現幾次就幾處 |
+ * | 英文大小寫 | 敏感詞不分大小寫（全形當半形），禁用詞區分（與生成鏈的 `countBanned` 一樣） |
+ * | 比喻詞 | 沒超上限不算、不畫；超了算超出的那幾個，每一處都畫 |
+ * | 與生成鏈同一口徑 | 禁用詞每個詞的次數等於 `countBanned`、比喻詞合計等於 `countSimiles`、縮寫去重等於 `latinAcronyms` |
+ * | 跳轉與替換 | 下一處（選區正好是第 k 處就去 k+1、到底繞回）、全部替換隻改第一處到最後一處那一段 |
+ * | 跟著改動挪 | 平移規則與 `highlight.ts` 一樣；前後文字差（撤銷、組字中途用） |
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -21,20 +21,20 @@ const mc = loadModule('src/core/model/manuscriptCheck.ts');
 const plain = (x) => JSON.parse(JSON.stringify(x));
 
 const VOCAB = {
-  banned: ['能量', '神经'],
-  sensitive: [{ term: '赌博', replacement: '博戏' }, { term: 'sb' }, { term: '能量' }],
+  banned: ['能量', '神經'],
+  sensitive: [{ term: '賭博', replacement: '博戲' }, { term: 'sb' }, { term: '能量' }],
 };
 
-describe('写作体检：四类', () => {
-  const text = '他赌博输了，能量耗尽。PTSD 又犯了。';
+describe('寫作體檢：四類', () => {
+  const text = '他賭博輸了，能量耗盡。PTSD 又犯了。';
   const r = c.runCheck(text, VOCAB);
 
-  test('敏感词带着替换词', () => {
-    const e = r.entries.find((x) => x.category === 'sensitive' && x.term === '赌博');
-    assert.deepEqual(plain(e), { category: 'sensitive', term: '赌博', offsets: [1], length: 2, replacement: '博戏' });
+  test('敏感詞帶著替換詞', () => {
+    const e = r.entries.find((x) => x.category === 'sensitive' && x.term === '賭博');
+    assert.deepEqual(plain(e), { category: 'sensitive', term: '賭博', offsets: [1], length: 2, replacement: '博戲' });
   });
 
-  test('禁用词、英文缩写各自认出来', () => {
+  test('禁用詞、英文縮寫各自認出來', () => {
     assert.deepEqual(
       r.entries.filter((x) => x.category !== 'sensitive').map((x) => [x.category, x.term, x.offsets]),
       [
@@ -44,12 +44,12 @@ describe('写作体检：四类', () => {
     );
   });
 
-  test('一共几个问题：每一处算一个', () => {
+  test('一共幾個問題：每一處算一個', () => {
     assert.deepEqual(plain(r.counts), { sensitive: 2, banned: 1, simile: 0, acronym: 1 });
     assert.equal(r.total, 4);
   });
 
-  test('画到图层上的段：每一处一段、各类各自的 class、按起点排', () => {
+  test('畫到圖層上的段：每一處一段、各類各自的 class、按起點排', () => {
     assert.deepEqual(plain(c.checkRanges(r)), [
       { start: 1, end: 3, cls: 'ed-hl-chk-sensitive' },
       { start: 6, end: 8, cls: 'ed-hl-chk-banned' },
@@ -58,91 +58,91 @@ describe('写作体检：四类', () => {
     ]);
   });
 
-  test('面板里的顺序：敏感词 → 禁用词 → 比喻词 → 英文缩写，同一类里次数多的在前', () => {
-    const r2 = c.runCheck('能量，神经，神经。sb SB', VOCAB);
+  test('面板裡的順序：敏感詞 → 禁用詞 → 比喻詞 → 英文縮寫，同一類裡次數多的在前', () => {
+    const r2 = c.runCheck('能量，神經，神經。sb SB', VOCAB);
     assert.deepEqual(r2.entries.map((e) => `${e.category}:${e.term}`), [
       'sensitive:sb',
       'sensitive:能量',
-      'banned:神经',
+      'banned:神經',
       'banned:能量',
       'acronym:SB',
     ]);
   });
 
-  test('词表还没到（空的）：比喻词与缩写照查', () => {
-    const r3 = c.runCheck('CPU 烧了。', c.EMPTY_VOCAB);
+  test('詞表還沒到（空的）：比喻詞與縮寫照查', () => {
+    const r3 = c.runCheck('CPU 燒了。', c.EMPTY_VOCAB);
     assert.deepEqual(r3.entries.map((e) => e.term), ['CPU']);
   });
 });
 
-describe('写作体检：叠在一起、出现几次', () => {
-  test('同一段字落在两类里：两类都算、都画', () => {
+describe('寫作體檢：疊在一起、出現幾次', () => {
+  test('同一段字落在兩類裡：兩類都算、都畫', () => {
     const r = c.runCheck('能量', VOCAB);
     assert.deepEqual(r.entries.map((e) => e.category), ['sensitive', 'banned']);
     assert.equal(r.total, 2);
     assert.equal(c.checkRanges(r).length, 2);
   });
 
-  test('同一个词出现三次就是三处', () => {
-    const r = c.runCheck('赌博、赌博，又是赌博', VOCAB);
+  test('同一個詞出現三次就是三處', () => {
+    const r = c.runCheck('賭博、賭博，又是賭博', VOCAB);
     assert.deepEqual(r.entries[0].offsets, [0, 3, 8]);
     assert.equal(r.counts.sensitive, 3);
   });
 
-  test('两个词叠在同一段字上（「数据」与「数据库」）各算各的', () => {
-    const r = c.runCheck('数据库', { banned: ['数据', '数据库'], sensitive: [] });
+  test('兩個詞疊在同一段字上（「資料」與「資料庫」）各算各的', () => {
+    const r = c.runCheck('資料庫', { banned: ['資料', '資料庫'], sensitive: [] });
     assert.deepEqual(r.entries.map((e) => [e.term, e.offsets]), [
-      ['数据', [0]],
-      ['数据库', [0]],
+      ['資料', [0]],
+      ['資料庫', [0]],
     ]);
   });
 });
 
-describe('写作体检：英文大小写', () => {
-  test('敏感词不分大小写，全角字母当半角；位置与长度是原文的', () => {
+describe('寫作體檢：英文大小寫', () => {
+  test('敏感詞不分大小寫，全形字母當半形；位置與長度是原文的', () => {
     const r = c.runCheck('SB、Sb、ｓｂ、sb', VOCAB);
     const e = r.entries.find((x) => x.term === 'sb');
     assert.deepEqual(e.offsets, [0, 3, 6, 9]);
     assert.equal(e.length, 2);
   });
 
-  test('禁用词区分大小写（与写完一章之后的 countBanned 一样）', () => {
-    const r = c.runCheck('Qi 与 qi', { banned: ['qi'], sensitive: [] });
+  test('禁用詞區分大小寫（與寫完一章之後的 countBanned 一樣）', () => {
+    const r = c.runCheck('Qi 與 qi', { banned: ['qi'], sensitive: [] });
     assert.deepEqual(r.entries.map((e) => e.offsets), [[5]]);
   });
 });
 
-describe('写作体检：比喻词只在超过上限时才算', () => {
-  test(`没超（${3} 次以内）：不算问题、不画，合计照记`, () => {
-    const r = c.runCheck('仿佛、犹如、宛如', c.EMPTY_VOCAB);
+describe('寫作體檢：比喻詞只在超過上限時才算', () => {
+  test(`沒超（${3} 次以內）：不算問題、不畫，合計照記`, () => {
+    const r = c.runCheck('彷彿、猶如、宛如', c.EMPTY_VOCAB);
     assert.deepEqual(plain(r.similes), { total: 3, limit: 3, over: 0 });
     assert.equal(r.counts.simile, 0);
     assert.deepEqual(c.checkRanges(r), []);
   });
 
-  test('超了：算超出的那几个，每一处都画', () => {
-    const r = c.runCheck('仿佛、犹如、宛如、仿佛、如同', c.EMPTY_VOCAB);
+  test('超了：算超出的那幾個，每一處都畫', () => {
+    const r = c.runCheck('彷彿、猶如、宛如、彷彿、如同', c.EMPTY_VOCAB);
     assert.deepEqual(plain(r.similes), { total: 5, limit: 3, over: 2 });
     assert.equal(r.counts.simile, 2);
     assert.equal(r.total, 2);
     assert.equal(c.checkRanges(r).filter((x) => x.cls === 'ed-hl-chk-simile').length, 5);
-    assert.deepEqual(r.entries[0].term, '仿佛');
+    assert.deepEqual(r.entries[0].term, '彷彿');
   });
 
-  test('上限与比喻词表就是生成链那一份', () => {
+  test('上限與比喻詞表就是生成鏈那一份', () => {
     assert.equal(c.runCheck('', c.EMPTY_VOCAB).similes.limit, mc.SIMILE_LIMIT);
   });
 });
 
-describe('写作体检：与生成链同一口径（对拍）', () => {
+describe('寫作體檢：與生成鏈同一口徑（對拍）', () => {
   const samples = [
-    '能量涌动，仿佛潮水；能量退去，犹如梦醒，仿佛未醒，宛如新生，如同隔世。他的神经绷紧，PTSD、CPU、PTSD。',
-    '没有问题的一段。',
-    '能量能量能量神经\n\n仿佛仿佛仿佛仿佛 ＤＮＡ',
+    '能量湧動，彷彿潮水；能量退去，猶如夢醒，彷彿未醒，宛如新生，如同隔世。他的神經繃緊，PTSD、CPU、PTSD。',
+    '沒有問題的一段。',
+    '能量能量能量神經\n\n彷彿彷彿彷彿彷彿 ＤＮＡ',
   ];
   for (const text of samples) {
-    test(`禁用词次数等于 countBanned、比喻词合计等于 countSimiles、缩写等于 latinAcronyms：${text.slice(0, 8)}…`, () => {
-      const terms = mc.bannedTerms({ styleBanList: '- 「能量」\n- 「神经」', genre: '仙侠' });
+    test(`禁用詞次數等於 countBanned、比喻詞合計等於 countSimiles、縮寫等於 latinAcronyms：${text.slice(0, 8)}…`, () => {
+      const terms = mc.bannedTerms({ styleBanList: '- 「能量」\n- 「神經」', genre: '仙俠' });
       const r = c.runCheck(text, { banned: terms, sensitive: [] });
       const mine = r.entries
         .filter((e) => e.category === 'banned')
@@ -159,15 +159,15 @@ describe('写作体检：与生成链同一口径（对拍）', () => {
   }
 });
 
-describe('写作体检：跳转与替换', () => {
+describe('寫作體檢：跳轉與替換', () => {
   const entry = { offsets: [2, 10, 20], length: 2 };
 
-  test('选区正好是第 k 处：下一下去 k+1；到底了绕回第一处', () => {
+  test('選區正好是第 k 處：下一下去 k+1；到底了繞回第一處', () => {
     assert.equal(c.nextOccurrence(entry, 2, 4), 1);
     assert.equal(c.nextOccurrence(entry, 20, 22), 0);
   });
 
-  test('别的选区或光标：光标处及之后的第一处；都在前面就绕回', () => {
+  test('別的選區或游標：游標處及之後的第一處；都在前面就繞回', () => {
     assert.equal(c.nextOccurrence(entry, 0, 0), 0);
     assert.equal(c.nextOccurrence(entry, 10, 10), 1);
     assert.equal(c.nextOccurrence(entry, 11, 11), 2);
@@ -175,40 +175,40 @@ describe('写作体检：跳转与替换', () => {
     assert.equal(c.nextOccurrence({ offsets: [], length: 2 }, 0, 0), -1);
   });
 
-  test('occurrenceAt 只认选区正好盖住某一处', () => {
+  test('occurrenceAt 只認選區正好蓋住某一處', () => {
     assert.equal(c.occurrenceAt(entry, 10, 12), 1);
     assert.equal(c.occurrenceAt(entry, 10, 11), -1);
     assert.equal(c.occurrenceAt(entry, 9, 11), -1);
   });
 
-  test('全部替换：只改第一处到最后一处那一段，各处之间的字原样', () => {
-    const text = '前面赌博中间赌博后面';
-    const e = c.runCheck(text, VOCAB).entries.find((x) => x.term === '赌博');
-    const edit = c.replaceAllEdit(text, e, '博戏');
-    assert.deepEqual(plain(edit), { start: 2, end: 8, text: '博戏中间博戏', count: 2 });
-    assert.equal(text.slice(0, edit.start) + edit.text + text.slice(edit.end), '前面博戏中间博戏后面');
+  test('全部替換：只改第一處到最後一處那一段，各處之間的字原樣', () => {
+    const text = '前面賭博中間賭博後面';
+    const e = c.runCheck(text, VOCAB).entries.find((x) => x.term === '賭博');
+    const edit = c.replaceAllEdit(text, e, '博戲');
+    assert.deepEqual(plain(edit), { start: 2, end: 8, text: '博戲中間博戲', count: 2 });
+    assert.equal(text.slice(0, edit.start) + edit.text + text.slice(edit.end), '前面博戲中間博戲後面');
   });
 
-  test('全部替换：大小写不同的几处一起换', () => {
+  test('全部替換：大小寫不同的幾處一起換', () => {
     const text = 'SB, sb';
     const e = c.runCheck(text, { banned: [], sensitive: [{ term: 'sb', replacement: '某人' }] }).entries[0];
     const edit = c.replaceAllEdit(text, e, '某人');
     assert.equal(text.slice(0, edit.start) + edit.text + text.slice(edit.end), '某人, 某人');
   });
 
-  test('一处都没有时 undefined', () => {
+  test('一處都沒有時 undefined', () => {
     assert.equal(c.replaceAllEdit('x', { offsets: [], length: 1 }, 'y'), undefined);
   });
 });
 
-describe('写作体检：跟着改动挪', () => {
+describe('寫作體檢：跟著改動挪', () => {
   const ranges = [
     { start: 0, end: 2, cls: 'a' },
     { start: 5, end: 7, cls: 'b' },
     { start: 10, end: 12, cls: 'c' },
   ];
 
-  test('改动之前的不动、之后的平移、压在改动上的丢掉（与 highlight.ts 同一条规则）', () => {
+  test('改動之前的不動、之後的平移、壓在改動上的丟掉（與 highlight.ts 同一條規則）', () => {
     assert.deepEqual(plain(c.shiftRanges(ranges, { at: 6, removed: '', inserted: '字' })), [
       { start: 0, end: 2, cls: 'a' },
       { start: 11, end: 13, cls: 'c' },
@@ -220,10 +220,10 @@ describe('写作体检：跟着改动挪', () => {
     ]);
   });
 
-  test('前后文字差：公共前缀与后缀之外的那一段', () => {
-    assert.deepEqual(plain(c.diffChange('他赌博了', '他nihao赌博了')), { at: 1, removed: '', inserted: 'nihao' });
+  test('前後文字差：公共字首與字尾之外的那一段', () => {
+    assert.deepEqual(plain(c.diffChange('他賭博了', '他nihao賭博了')), { at: 1, removed: '', inserted: 'nihao' });
     assert.deepEqual(plain(c.diffChange('aXb', 'aYYb')), { at: 1, removed: 'X', inserted: 'YY' });
-    assert.equal(c.diffChange('一样', '一样'), undefined);
+    assert.equal(c.diffChange('一樣', '一樣'), undefined);
     assert.deepEqual(plain(c.diffChange('aaa', 'aa')), { at: 2, removed: 'a', inserted: '' });
   });
 
@@ -232,19 +232,19 @@ describe('写作体检：跟着改动挪', () => {
     assert.equal(c.sameRanges(ranges, ranges.slice(1)), false);
   });
 
-  test('describeCounts：各类几个，比喻词说超出几个', () => {
-    const r = c.runCheck('赌博 PTSD 仿佛仿佛仿佛仿佛', VOCAB);
-    assert.equal(c.describeCounts(r), '敏感词 1 处 · 比喻词超出 1 个 · 英文缩写 1 处');
+  test('describeCounts：各類幾個，比喻詞說超出幾個', () => {
+    const r = c.runCheck('賭博 PTSD 彷彿彷彿彷彿彷彿', VOCAB);
+    assert.equal(c.describeCounts(r), '敏感詞 1 處 · 比喻詞超出 1 個 · 英文縮寫 1 處');
   });
 });
 
-describe('写作体检：大正文不卡', () => {
-  test('十万字、一千个敏感词：一趟查完（< 1.5 秒，宽裕的上限只防退化成「词数 × 全文」）', () => {
-    const words = Array.from({ length: 1000 }, (_, i) => ({ term: `词${i}号` }));
-    const text = '他走进巷子，雨下得很大。'.repeat(8500) + '词999号';
+describe('寫作體檢：大正文不卡', () => {
+  test('十萬字、一千個敏感詞：一趟查完（< 1.5 秒，寬裕的上限只防退化成「詞數 × 全文」）', () => {
+    const words = Array.from({ length: 1000 }, (_, i) => ({ term: `詞${i}號` }));
+    const text = '他走進巷子，雨下得很大。'.repeat(8500) + '詞999號';
     const t0 = Date.now();
     const r = c.runCheck(text, { banned: ['能量'], sensitive: words });
     assert.ok(Date.now() - t0 < 1500, `${Date.now() - t0}ms`);
-    assert.deepEqual(r.entries.map((e) => e.term), ['词999号']);
+    assert.deepEqual(r.entries.map((e) => e.term), ['詞999號']);
   });
 });

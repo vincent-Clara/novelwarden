@@ -1,38 +1,38 @@
 /**
- * OpenAI Responses provider 的两段纯逻辑：消息转换与事件解析。
+ * OpenAI Responses provider 的兩段純邏輯：訊息轉換與事件解析。
  *
- * 消息转换那半边钉的是与老的 `/chat/completions` 不同的那一处：**system 走
- * `instructions`**，不留在 input 里。
+ * 訊息轉換那半邊釘的是與老的 `/chat/completions` 不同的那一處：**system 走
+ * `instructions`**，不留在 input 裡。
  *
- * 事件解析那半边的硬约束是「认不出的类型一律忽略」：这条协议有二十来种
- * 事件，为未知类型报错等于上游加一个新事件就炸掉整轮生成。
+ * 事件解析那半邊的硬約束是「認不出的型別一律忽略」：這條協議有二十來種
+ * 事件，為未知型別報錯等於上游加一個新事件就炸掉整輪生成。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { loadModule } = require('../../helpers/load');
 
-describe('llm/openaiProvider · 消息转换', () => {
+describe('llm/openaiProvider · 訊息轉換', () => {
   let m;
   before(() => {
     m = loadModule('src/core/llm/openaiProvider.ts');
   });
 
-  test('system 合并进 instructions，不留在 input 里', () => {
+  test('system 合併進 instructions，不留在 input 裡', () => {
     const out = m.toResponsesInput([
       { role: 'system', content: '你是作者' },
-      { role: 'system', content: '别写画面' },
-      { role: 'user', content: '续写' },
+      { role: 'system', content: '別寫畫面' },
+      { role: 'user', content: '續寫' },
     ]);
-    assert.equal(out.instructions, '你是作者\n\n别写画面');
-    assert.deepEqual(out.input, [{ role: 'user', content: '续写' }]);
+    assert.equal(out.instructions, '你是作者\n\n別寫畫面');
+    assert.deepEqual(out.input, [{ role: 'user', content: '續寫' }]);
   });
 
-  test('assistant 是一条普通消息', () => {
+  test('assistant 是一條普通訊息', () => {
     const out = m.toResponsesInput([{ role: 'assistant', content: '上一版' }]);
     assert.deepEqual(out.input, [{ role: 'assistant', content: '上一版' }]);
   });
 
-  test('assistant 空内容时不放空消息', () => {
+  test('assistant 空內容時不放空訊息', () => {
     const out = m.toResponsesInput([{ role: 'assistant', content: '' }]);
     assert.deepEqual(out.input, []);
   });
@@ -52,7 +52,7 @@ describe('llm/openaiProvider · 事件解析', () => {
     ]);
   });
 
-  test('思考摘要与推理正文都走 reasoning 事件', () => {
+  test('思考摘要與推理正文都走 reasoning 事件', () => {
     assert.deepEqual(read({ type: 'response.reasoning_summary_text.delta', delta: '在想' }), [
       { type: 'reasoning', text: '在想' },
     ]);
@@ -61,7 +61,7 @@ describe('llm/openaiProvider · 事件解析', () => {
     ]);
   });
 
-  test('completed 带用量，报正常收尾', () => {
+  test('completed 帶用量，報正常收尾', () => {
     assert.deepEqual(
       read({
         type: 'response.completed',
@@ -69,13 +69,13 @@ describe('llm/openaiProvider · 事件解析', () => {
       }),
       [
         { type: 'usage', usage: { inputTokens: 12, outputTokens: 3 } },
-        // 续写链要分清「模型自己收了尾」与「网关没说」，completed 必须报 end。
+        // 續寫鏈要分清「模型自己收了尾」與「閘道器沒說」，completed 必須報 end。
         { type: 'stop', reason: 'end' },
       ]
     );
   });
 
-  test('incomplete 报截断；completed 里写着 incomplete 的也按截断算', () => {
+  test('incomplete 報截斷；completed 裡寫著 incomplete 的也按截斷算', () => {
     assert.deepEqual(read({ type: 'response.incomplete', response: { incomplete_details: { reason: 'max_output_tokens' } } }), [
       { type: 'stop', reason: 'maxTokens' },
     ]);
@@ -88,7 +88,7 @@ describe('llm/openaiProvider · 事件解析', () => {
     );
   });
 
-  test('incomplete 也要把用量交出来', () => {
+  test('incomplete 也要把用量交出來', () => {
     const [ev] = read({
       type: 'response.incomplete',
       response: { usage: { input_tokens: 9 } },
@@ -96,18 +96,18 @@ describe('llm/openaiProvider · 事件解析', () => {
     assert.deepEqual(ev.usage, { inputTokens: 9, outputTokens: undefined });
   });
 
-  test('failed 与 error 抛 LlmError，且带上游原文', () => {
+  test('failed 與 error 拋 LlmError，且帶上游原文', () => {
     assert.throws(
-      () => read({ type: 'response.failed', response: { error: { message: '上游过载' } } }),
-      (e) => e.name === 'LlmError' && e.message.includes('上游过载')
+      () => read({ type: 'response.failed', response: { error: { message: '上游過載' } } }),
+      (e) => e.name === 'LlmError' && e.message.includes('上游過載')
     );
     assert.throws(
-      () => read({ type: 'error', error: { message: '密钥无效' } }),
-      (e) => e.name === 'LlmError' && e.message.includes('密钥无效')
+      () => read({ type: 'error', error: { message: '金鑰無效' } }),
+      (e) => e.name === 'LlmError' && e.message.includes('金鑰無效')
     );
   });
 
-  test('认不出的事件类型一律忽略', () => {
+  test('認不出的事件型別一律忽略', () => {
     assert.deepEqual(read({ type: 'response.output_item.added', item: { type: 'message' } }), []);
     assert.deepEqual(read({ type: 'response.output_item.done', item: { type: 'reasoning', id: 'rs_1' } }), []);
     assert.deepEqual(read({ type: 'response.content_part.done' }), []);

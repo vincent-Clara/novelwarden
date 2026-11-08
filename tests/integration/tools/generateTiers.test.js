@@ -1,18 +1,18 @@
 /**
- * agent 的 `generate` 用哪个模型（AGENTS 第 12 / 13 条的延伸）。
+ * agent 的 `generate` 用哪個模型（AGENTS 第 12 / 13 條的延伸）。
  *
- * | 层 | 用哪个 | 为什么 |
+ * | 層 | 用哪個 | 為什麼 |
  * |---|---|---|
- * | 正文 | **对话页选定的那个** | 中途换人会让文风断掉 |
- * | 大纲 | 同上 | 一次定调，没有对应档位 |
- * | 架构 | `setting` 档（故事架构） | 与工程页「补齐架构」同一个模型 |
- * | 细纲 | `plotOutline` 档 | 与工程页「批量拆细纲」同一个模型 |
+ * | 正文 | **對話頁選定的那個** | 中途換人會讓文風斷掉 |
+ * | 大綱 | 同上 | 一次定調，沒有對應檔位 |
+ * | 架構 | `setting` 檔（故事架構） | 與工程頁「補齊架構」同一個模型 |
+ * | 細綱 | `plotOutline` 檔 | 與工程頁「批次拆細綱」同一個模型 |
  *
- * 还有一条容易漏的：走池时**窗口要跟着干活那个模型走**（第 13 条），
- * 拿 200k 的对话模型窗口给快速档的 32k 模型装配上下文会稳定超窗。
+ * 還有一條容易漏的：走池時**視窗要跟著幹活那個模型走**（第 13 條），
+ * 拿 200k 的對話模型視窗給快速檔的 32k 模型裝配上下文會穩定超窗。
  *
- * 正文层的 target 用**章节路径**给（`chapters/NNN-标题.md`）：一章一纲之后正文直接
- * 落在那里，工具按章号去认同号的细纲。
+ * 正文層的 target 用**章節路徑**給（`chapters/NNN-標題.md`）：一章一綱之後正文直接
+ * 落在那裡，工具按章號去認同號的細綱。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -29,8 +29,8 @@ let fake;
 let ctx;
 let settings;
 
-const PLOT_REL = '.novelwarden/summaries/001-夜入青云.md';
-const CHAPTER_REL = 'chapters/001-夜入青云.md';
+const PLOT_REL = '.novelwarden/summaries/001-夜入青雲.md';
+const CHAPTER_REL = 'chapters/001-夜入青雲.md';
 const OUTLINE_REL = '.novelwarden/outline.md';
 const CONFIG_REL = '.novelwarden/config.md';
 
@@ -83,39 +83,39 @@ before(async () => {
       },
     ],
     models: ['chat/big'],
-    // plotOutline 默认归均衡档，setting（故事架构）默认归精标档。
+    // plotOutline 預設歸均衡檔，setting（故事架構）預設歸精標檔。
     tierModels: { balanced: ['cheap/plotter'], fast: ['cheap/quick'], quality: ['cheap/architect'] },
     concurrency: 1,
   };
   bundle.host.initHost(makeFakeHost({ supportsVscodeLm: true, settings: () => settings }).host);
   fake = installFakeProvider(bundle.registry, {
-    // 这里只看每一层用的是哪个模型，产物长什么样无所谓；给的是细纲合同的单项形式，
-    // 细纲层拿到的是一份像样的应答。
+    // 這裡只看每一層用的是哪個模型，產物長什麼樣無所謂；給的是細綱合同的單項形式，
+    // 細綱層拿到的是一份像樣的應答。
     reply: () =>
       JSON.stringify({
         blueprints: [
           {
             chapterNumber: 1,
-            title: '夜入青云',
-            synopsis: '林昭进入宗门。',
+            title: '夜入青雲',
+            synopsis: '林昭進入宗門。',
             characters: ['林昭'],
-            keyEvents: ['踩点、失手、翻墙。'],
-            highlights: ['墙内有人在等他。'],
+            keyEvents: ['踩點、失手、翻牆。'],
+            highlights: ['牆內有人在等他。'],
           },
         ],
       }),
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  t = await makeTempProject(bundle.project, { prefix: 'agenttier', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'agenttier', title: '青雲劍錄' });
   project = t.project;
   const ws = new bundle.ws.Workspace(project);
   await ws.writePlot({
     no: 1,
-    title: '夜入青云',
+    title: '夜入青雲',
     upstreamHash: '',
     done: false,
-    sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '进入宗门' },
+    sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '進入宗門' },
   });
   await project.syncManifest();
   resetCtx();
@@ -125,19 +125,19 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-describe('细纲层走 plotOutline 档', () => {
+describe('細綱層走 plotOutline 檔', () => {
   before(async () => {
     resetCtx();
     await run({ target: PLOT_REL, capability: 'generate' });
   });
 
-  test('用的是那一档的首选，不是对话页那个', () => {
+  test('用的是那一檔的首選，不是對話頁那個', () => {
     assert.equal(fake.calls[0].ref, 'cheap/plotter', String(fake.calls[0].ref));
   });
 });
 
-// ★ 第 12 条：中途换人会让文风断掉。
-describe('正文层严格用对话页选定的那个模型', () => {
+// ★ 第 12 條：中途換人會讓文風斷掉。
+describe('正文層嚴格用對話頁選定的那個模型', () => {
   before(async () => {
     resetCtx();
     await run({ target: CHAPTER_REL, capability: 'generate' });
@@ -147,7 +147,7 @@ describe('正文层严格用对话页选定的那个模型', () => {
     assert.equal(fake.calls[0].ref, 'chat/big', String(fake.calls[0].ref));
   });
 
-  test('把那一档配得再满也不换', async () => {
+  test('把那一檔配得再滿也不換', async () => {
     resetCtx();
     settings.tierModels.balanced = ['cheap/plotter'];
     settings.tierModels.fast = ['cheap/quick'];
@@ -156,7 +156,7 @@ describe('正文层严格用对话页选定的那个模型', () => {
   });
 });
 
-describe('大纲层也用对话页那个（一次定调，没有对应档位）', () => {
+describe('大綱層也用對話頁那個（一次定調，沒有對應檔位）', () => {
   test('不走池', async () => {
     resetCtx();
     await run({ target: OUTLINE_REL, capability: 'generate' });
@@ -164,15 +164,15 @@ describe('大纲层也用对话页那个（一次定调，没有对应档位）'
   });
 });
 
-// 架构四件与工程页「补齐架构」是同一件事：用同一档的同一个模型，作者在设置页配一处就够。
-describe('架构层走 setting 档（故事架构）', () => {
-  test('用的是那一档的首选，不是对话页那个', async () => {
+// 架構四件與工程頁「補齊架構」是同一件事：用同一檔的同一個模型，作者在設定頁配一處就夠。
+describe('架構層走 setting 檔（故事架構）', () => {
+  test('用的是那一檔的首選，不是對話頁那個', async () => {
     resetCtx();
     await run({ target: CONFIG_REL, capability: 'generate' });
     assert.equal(fake.calls[0].ref, 'cheap/architect', String(fake.calls[0].ref));
   });
 
-  test('那一档没配就回到对话页那个', async () => {
+  test('那一檔沒配就回到對話頁那個', async () => {
     resetCtx();
     const saved = settings.tierModels.quality;
     settings.tierModels.quality = [];
@@ -182,24 +182,24 @@ describe('架构层走 setting 档（故事架构）', () => {
   });
 });
 
-// 六期定了 agent 不做审稿（报告要作者勾选才修稿）：工具不该为一件它不做的事走某个档位。
-describe('审稿当场拒绝，不走任何档位', () => {
-  test('给 error，一次模型都不调', async () => {
+// 六期定了 agent 不做審稿（報告要作者勾選才修稿）：工具不該為一件它不做的事走某個檔位。
+describe('審稿當場拒絕，不走任何檔位', () => {
+  test('給 error，一次模型都不調', async () => {
     resetCtx();
     const r = await run({ target: CHAPTER_REL, capability: 'review' });
-    assert.ok(r.error && r.error.includes('审稿'), JSON.stringify(r));
+    assert.ok(r.error && r.error.includes('審稿'), JSON.stringify(r));
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
   });
 });
 
-// 拆场景、拆卷那两档随那两层一起删掉了。忘记删的话，设置页会多出一行点了
-// 没用的档位，而作者会以为自己在配一个真存在的任务。
-describe('删掉的层没有留下档位', () => {
-  test('拆场景不在任务清单里', () => {
+// 拆場景、拆卷那兩檔隨那兩層一起刪掉了。忘記刪的話，設定頁會多出一行點了
+// 沒用的檔位，而作者會以為自己在配一個真存在的任務。
+describe('刪掉的層沒有留下檔位', () => {
+  test('拆場景不在任務清單裡', () => {
     assert.ok(!bundle.tiers.LLM_TASKS.includes('sceneBreakdown'), bundle.tiers.LLM_TASKS.join(','));
   });
 
-  test('没有卷那一层的任务', () => {
+  test('沒有卷那一層的任務', () => {
     assert.ok(
       !bundle.tiers.LLM_TASKS.some((task) => /volume|split/i.test(task)),
       bundle.tiers.LLM_TASKS.join(',')
@@ -207,8 +207,8 @@ describe('删掉的层没有留下档位', () => {
   });
 });
 
-describe('档位没配模型时沿用默认模型清单', () => {
-  test('清空那一档就回到对话页那个', async () => {
+describe('檔位沒配模型時沿用預設模型清單', () => {
+  test('清空那一檔就回到對話頁那個', async () => {
     resetCtx();
     const saved = settings.tierModels.balanced;
     settings.tierModels.balanced = [];
@@ -218,13 +218,13 @@ describe('档位没配模型时沿用默认模型清单', () => {
   });
 });
 
-// 调度交给了外部 agent（经 MCP），它用的是宿主自己的模型；这里不再给它留一档。
-describe('没有 agent 这一项任务档位', () => {
-  test('不在任务清单里', () => {
+// 排程交給了外部 agent（經 MCP），它用的是宿主自己的模型；這裡不再給它留一檔。
+describe('沒有 agent 這一項任務檔位', () => {
+  test('不在任務清單裡', () => {
     assert.ok(!bundle.tiers.LLM_TASKS.includes('agent'), bundle.tiers.LLM_TASKS.join(','));
   });
 
-  test('也没有残留的中文名、说明与默认档', () => {
+  test('也沒有殘留的中文名、說明與預設檔', () => {
     assert.equal(bundle.tiers.TASK_LABEL.agent, undefined);
     assert.equal(bundle.tiers.TASK_HINT.agent, undefined);
     assert.equal(bundle.tiers.DEFAULT_TASK_TIERS.agent, undefined);

@@ -1,13 +1,13 @@
 /**
- * 窄屏上编辑区顶上只留两行：标签条与章节条（样式在 narrow.css）。
+ * 窄屏上編輯區頂上只留兩行：標籤條與章節條（樣式在 narrow.css）。
  *
- * - 工具栏那一行收起，它的按钮挪进标签条末尾的「⋯」，外加一项「补全名词」（电脑上是 Alt+/）；
- *   「⋯」前面单留「↶」「↷」「保存」三颗（手机键盘上没有 Ctrl+Z / Ctrl+S，自动保存缺省关）。
- *   这三颗按下去不夺焦点：正在打字时点了，软键盘不收、光标还在原处。
- * - 章节条底下那一排动作（写这一章、接着写……）收进条上的「操作 ▾」（`chapterBar.ts` 挂）。
+ * - 工具欄那一行收起，它的按鈕挪進標籤條末尾的「⋯」，外加一項「補全名詞」（電腦上是 Alt+/）；
+ *   「⋯」前面單留「↶」「↷」「儲存」三顆（手機鍵盤上沒有 Ctrl+Z / Ctrl+S，自動儲存預設關）。
+ *   這三顆按下去不奪焦點：正在打字時點了，軟鍵盤不收、游標還在原處。
+ * - 章節條底下那一排動作（寫這一章、接著寫……）收進條上的「操作 ▾」（`chapterBar.ts` 掛）。
  *
- * 菜单项照着那几颗按钮现列：字、亮灭跟着按钮走，点了就是点那颗按钮——按钮以后增减、改名不用改这里。
- * 宽屏上这几颗不显示，工具栏照旧。
+ * 選單項照著那幾顆按鈕現列：字、亮滅跟著按鈕走，點了就是點那顆按鈕——按鈕以後增減、改名不用改這裡。
+ * 寬屏上這幾顆不顯示，工具欄照舊。
  */
 import { el } from '../dom';
 import { commandNames, showMenuAt } from '../globals';
@@ -17,7 +17,7 @@ import { onEditorChange } from './api';
 import type { PaneRefs } from './paneElements';
 import type { Pane } from './store';
 
-/** 一组按钮列成菜单：藏着的不列，置灰的照样置灰。菜单上要多写几个字（调用次数）的按钮带 `data-menu-label`。 */
+/** 一組按鈕列成選單：藏著的不列，置灰的照樣置灰。選單上要多寫幾個字（呼叫次數）的按鈕帶 `data-menu-label`。 */
 export function menuFromButtons(buttons: Iterable<HTMLButtonElement>): MenuItem[] {
   const items: MenuItem[] = [];
   for (const b of buttons) {
@@ -30,8 +30,8 @@ export function menuFromButtons(buttons: Iterable<HTMLButtonElement>): MenuItem[
 }
 
 /**
- * 在 `anchor` 底下弹菜单；菜单开着时再点它就收起（这一下点击冒到 document 上去收，与标签条的「▾」一样）。
- * 返回装好监听的按钮。
+ * 在 `anchor` 底下彈選單；選單開著時再點它就收起（這一下點選冒到 document 上去收，與標籤條的「▾」一樣）。
+ * 返回裝好監聽的按鈕。
  */
 export function menuButton(anchor: HTMLButtonElement, items: () => MenuItem[]): HTMLButtonElement {
   let menu: HTMLElement | undefined;
@@ -47,7 +47,7 @@ export function menuButton(anchor: HTMLButtonElement, items: () => MenuItem[]): 
   return anchor;
 }
 
-/** 按下去不夺焦点的按钮（正在打字时点了，软键盘不收）。 */
+/** 按下去不奪焦點的按鈕（正在打字時點了，軟鍵盤不收）。 */
 function keepFocus(btn: HTMLButtonElement): HTMLButtonElement {
   btn.type = 'button';
   for (const type of ['pointerdown', 'mousedown'] as const) {
@@ -56,17 +56,17 @@ function keepFocus(btn: HTMLButtonElement): HTMLButtonElement {
   return btn;
 }
 
-/** 标签条末尾的「↶」「↷」「保存」与「⋯」。 */
+/** 標籤條末尾的「↶」「↷」「儲存」與「⋯」。 */
 export function installNarrowTools(refs: PaneRefs, pane: Pane): void {
   const undo = keepFocus(el('button', 'ed-tabs-icon ed-tabs-undo', '↶'));
-  undo.title = '撤销';
-  undo.setAttribute('aria-label', '撤销');
+  undo.title = '撤銷';
+  undo.setAttribute('aria-label', '撤銷');
   undo.addEventListener('click', () => pane.undo());
   const redo = keepFocus(el('button', 'ed-tabs-icon ed-tabs-redo', '↷'));
   redo.title = '重做';
   redo.setAttribute('aria-label', '重做');
   redo.addEventListener('click', () => pane.redo());
-  // 能不能撤销看当前那份文件自己的记录：打字、撤销、切文件之后都对一次。
+  // 能不能撤銷看當前那份檔案自己的記錄：打字、撤銷、切檔案之後都對一次。
   const syncHistory = () => {
     const history = pane.activeFile()?.history;
     undo.disabled = !history?.canUndo;
@@ -78,22 +78,22 @@ export function installNarrowTools(refs: PaneRefs, pane: Pane): void {
     }
   });
 
-  const save = keepFocus(el('button', 'primary ed-tabs-save', '保存'));
+  const save = keepFocus(el('button', 'primary ed-tabs-save', '儲存'));
   save.addEventListener('click', () => refs.saveBtn.click());
 
   const tools = el('button', 'ed-tabs-tools', '⋯');
   tools.type = 'button';
-  tools.title = '预览、细纲、草稿、还原、历史……';
+  tools.title = '預覽、細綱、草稿、還原、歷史……';
   menuButton(tools, () => {
-    // 「外部打开」用的是服务端那台机器上的程序，手机、平板上点了没反应。
+    // 「外部開啟」用的是服務端那臺機器上的程式，手機、平板上點了沒反應。
     const skip = new Set<HTMLElement>([refs.saveBtn, ...(touchDevice() ? [refs.externalBtn] : [])]);
-    // 只认工具栏直属的按钮：面包屑（.ed-path）里的目录段也是按钮，点了是「在文件页中定位」。
+    // 只認工具欄直屬的按鈕：麵包屑（.ed-path）裡的目錄段也是按鈕，點了是「在檔案頁中定位」。
     const buttons = menuFromButtons([...refs.toolbar.querySelectorAll<HTMLButtonElement>(':scope > button')].filter((b) => !skip.has(b)));
-    // 补全名词：放回光标、在光标处弹候选（与 Alt+/、「视图 → 名词补全」同一条路，不归这一类文件时它自己说一句）。
-    return [...buttons, { sep: true }, { label: '补全名词', run: () => commandNames('trigger') }];
+    // 補全名詞：放回游標、在游標處彈候選（與 Alt+/、「檢視 → 名詞補全」同一條路，不歸這一類檔案時它自己說一句）。
+    return [...buttons, { sep: true }, { label: '補全名詞', run: () => commandNames('trigger') }];
   });
 
-  // 跟着工具栏：没有文件（只开着叙事线总览之类）时工具栏藏着，这几颗也藏；「保存」亮灭跟着工具栏上那颗。
+  // 跟著工具欄：沒有檔案（只開著敘事線總覽之類）時工具欄藏著，這幾顆也藏；「儲存」亮滅跟著工具欄上那顆。
   const sync = () => {
     const off = refs.toolbar.classList.contains('hidden');
     for (const btn of [undo, redo, save, tools]) {

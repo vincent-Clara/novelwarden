@@ -1,39 +1,39 @@
 /**
- * 段级 diff（五期 W11）：覆盖审阅与修稿的合并视图按段对齐两个版本，逐处「采用新版 / 保留原文」。
+ * 段級 diff（五期 W11）：覆蓋審閱與修稿的合併檢視按段對齊兩個版本，逐處「採用新版 / 保留原文」。
  *
- * **纯函数，零 import**：前端的合并视图直接打包它，单测直接跑它（总计划 §8：「diff 视图自己写
- * 有 bug」的缓解就是这里每一步都能单测）。
+ * **純函式，零 import**：前端的合併檢視直接打包它，單測直接跑它（總計劃 §8：「diff 檢視自己寫
+ * 有 bug」的緩解就是這裡每一步都能單測）。
  *
- * ## 为什么是 LCS
+ * ## 為什麼是 LCS
  *
- * AI-Novel-Writer 的 `ThreeWayMerge.tsx` 用按字频相似度的全局对齐（能认出「一段拆成两段」）。
- * 这里用段序列上的最长公共子序列：修稿与重写的改动多是整段的增、删、改，LCS 已经够用，
- * 而且结果是确定的、好解释的——「这几段两边一字不差，中间这几段是改动」。
+ * AI-Novel-Writer 的 `ThreeWayMerge.tsx` 用按字頻相似度的全域對齊（能認出「一段拆成兩段」）。
+ * 這裡用段序列上的最長公共子序列：修稿與重寫的改動多是整段的增、刪、改，LCS 已經夠用，
+ * 而且結果是確定的、好解釋的——「這幾段兩邊一字不差，中間這幾段是改動」。
  *
- * 段的比较键是去掉全部空白之后的文字：只差一个换行、一个空格的两段当成同一段，
- * 不值得让作者为它点一次「采用」。
+ * 段的比較鍵是去掉全部空白之後的文字：只差一個換行、一個空格的兩段當成同一段，
+ * 不值得讓作者為它點一次「採用」。
  */
 
-/** 合并视图里的一截：两边一样的一段（或连着的几段），或者一处改动。 */
+/** 合併檢視裡的一截：兩邊一樣的一段（或連著的幾段），或者一處改動。 */
 export type MergeSegment =
   | { kind: 'same'; paragraphs: string[] }
   | { kind: 'change'; old: string[]; new: string[] };
 
 /**
- * 两边段数的乘积超过这个数的平方时不做 LCS，整份当一处改动（表是 n × m 的）。
- * 章节远到不了这个数，这是防御。
+ * 兩邊段數的乘積超過這個數的平方時不做 LCS，整份當一處改動（表是 n × m 的）。
+ * 章節遠到不了這個數，這是防禦。
  */
 export const DIFF_MAX_PARAGRAPHS = 1500;
 
 /**
- * 按空行切段。段内的单个换行保留（诗、信件、对白里的分行是作者的排版）；首尾空白去掉；
- * 空段丢掉。frontmatter（`---` 夹着的那一块）中间没有空行，自然是一段。
+ * 按空行切段。段內的單個換行保留（詩、信件、對白裡的分行是作者的排版）；首尾空白去掉；
+ * 空段丟掉。frontmatter（`---` 夾著的那一塊）中間沒有空行，自然是一段。
  */
 export function splitParagraphs(text: string): string[] {
   return (text ?? '')
     .replace(/\r\n?/g, '\n')
     .split(/\n(?:[ \t　]*\n)+/)
-    // 只去掉开头的整行空白：首行的缩进（「　　」）是作者的排版，留着。
+    // 只去掉開頭的整行空白：首行的縮排（「　　」）是作者的排版，留著。
     .map((p) => p.replace(/^(?:[ \t　]*\n)+/, '').replace(/\s+$/, ''))
     .filter((p) => p.trim().length > 0);
 }
@@ -43,8 +43,8 @@ function keyOf(p: string): string {
 }
 
 /**
- * 两个版本的段级差异。相同的段连成一截 `same`，相邻的增删改并成一处 `change`
- * （一段改写 = 删一段 + 加一段，挨在一起就是一处）。
+ * 兩個版本的段級差異。相同的段連成一截 `same`，相鄰的增刪改併成一處 `change`
+ * （一段改寫 = 刪一段 + 加一段，挨在一起就是一處）。
  */
 export function diffParagraphs(before: string, after: string): MergeSegment[] {
   const a = splitParagraphs(before);
@@ -56,7 +56,7 @@ export function diffParagraphs(before: string, after: string): MergeSegment[] {
   const kb = b.map(keyOf);
   const n = a.length;
   const m = b.length;
-  // lcs[i][j] = a[i..] 与 b[j..] 的 LCS 长度；一维数组按行存。
+  // lcs[i][j] = a[i..] 與 b[j..] 的 LCS 長度；一維陣列按行存。
   const w = m + 1;
   const lcs = new Uint32Array((n + 1) * w);
   for (let i = n - 1; i >= 0; i--) {
@@ -86,7 +86,7 @@ export function diffParagraphs(before: string, after: string): MergeSegment[] {
   let j = 0;
   while (i < n && j < m) {
     if (ka[i] === kb[j]) {
-      // 相同的段取新版那一份：两边只差空白时，新版的排版是要写下去的那一份。
+      // 相同的段取新版那一份：兩邊只差空白時，新版的排版是要寫下去的那一份。
       same(b[j]);
       i++;
       j++;
@@ -105,19 +105,19 @@ export function diffParagraphs(before: string, after: string): MergeSegment[] {
   return out;
 }
 
-/** 一共几处改动。合并视图顶上「已处理 k / n 处」的 n。 */
+/** 一共幾處改動。合併檢視頂上「已處理 k / n 處」的 n。 */
 export function changeCount(segments: readonly MergeSegment[]): number {
   return segments.filter((s) => s.kind === 'change').length;
 }
 
-/** 一处改动「采用新版」「保留原文」时结果格里的那一份文字。 */
+/** 一處改動「採用新版」「保留原文」時結果格里的那一份文字。 */
 export function sideText(segment: Extract<MergeSegment, { kind: 'change' }>, side: 'old' | 'new'): string {
   return segment[side].join('\n\n');
 }
 
 /**
- * 拼出合并结果。`results[k]` 是第 k 截（下标与 `segments` 对齐）结果格里的文字：没给就用新版。
- * 结果格可以是空的（这一处整段删掉）。段与段之间一个空行，文件末尾一个换行。
+ * 拼出合併結果。`results[k]` 是第 k 截（下標與 `segments` 對齊）結果格里的文字：沒給就用新版。
+ * 結果格可以是空的（這一處整段刪掉）。段與段之間一個空行，檔案末尾一個換行。
  */
 export function joinMerge(segments: readonly MergeSegment[], results: Readonly<Record<number, string>> = {}): string {
   const pieces: string[] = [];

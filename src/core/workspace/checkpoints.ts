@@ -1,46 +1,46 @@
 /**
- * 存档点：整本书在某一刻的样子。作者在工程页「存档点…」里手动存一个（带一句备注），批量动作之前机器自动存一个
- * （`features/checkpoint.ts` 的 `checkpointBefore`）；之后可以看每个存档点跟现在比改了哪几份，整本或单份退回去。
- * 设计见 `docs/design/plans/2026-10-20-checkpoints.md`。
+ * 存檔點：整本書在某一刻的樣子。作者在工程頁「存檔點…」裡手動存一個（帶一句備註），批次動作之前機器自動存一個
+ * （`features/checkpoint.ts` 的 `checkpointBefore`）；之後可以看每個存檔點跟現在比改了哪幾份，整本或單份退回去。
+ * 設計見 `docs/design/plans/2026-10-20-checkpoints.md`。
  *
- * 历史版本（`history.ts`）管的是**一份文件**被覆盖之前的那一版；这里管的是**整本书一起**——批量写了二十章、全书替换
- * 改了几十份，按文件一份一份找回去不现实。两层互不替代：退回存档点时，被盖掉的每一份照样先存一版历史。
+ * 歷史版本（`history.ts`）管的是**一份檔案**被覆蓋之前的那一版；這裡管的是**整本書一起**——批次寫了二十章、全書替換
+ * 改了幾十份，按檔案一份一份找回去不現實。兩層互不替代：退回存檔點時，被蓋掉的每一份照樣先存一版歷史。
  *
- * ## 布局
+ * ## 佈局
  *
  * ```
  * .novelwarden/checkpoints/
- * ├── .gitignore                                第一次建这个目录时放进来，内容 `*`（同历史版本）
- * ├── objects/3f/a9c1…                          文件内容，按 sha256 寻址：前两位当目录，余下 62 位当文件名；字节原样
- * └── points/2026-10-20_22-30-05+0800.json      一个存档点一份清单（名字的格式同历史版本的快照，去掉 `.txt`）
+ * ├── .gitignore                                第一次建這個目錄時放進來，內容 `*`（同歷史版本）
+ * ├── objects/3f/a9c1…                          檔案內容，按 sha256 定址：前兩位當目錄，餘下 62 位當檔名；位元組原樣
+ * └── points/2026-10-20_22-30-05+0800.json      一個存檔點一份清單（名字的格式同歷史版本的快照，去掉 `.txt`）
  * ```
  *
- * - **同样的内容只存一份**：第二个存档点只多存这期间改过的那几份，外加一份清单。
- * - **先写对象、最后写清单**：清单是提交点。写到一半失败，剩下的只是没人引用的对象，清理时带走。对象先写进临时文件
- *   再改名：断电时不会留下一个名字对、内容只有半截的对象。
- * - **字节原样**：不转码（GBK 的章节存下来还是 GBK）、不压缩。退回时原样写回（`Workspace.restoreBytes`）。
+ * - **同樣的內容只存一份**：第二個存檔點只多存這期間改過的那幾份，外加一份清單。
+ * - **先寫物件、最後寫清單**：清單是提交點。寫到一半失敗，剩下的只是沒人引用的物件，清理時帶走。物件先寫進臨時檔案
+ *   再改名：斷電時不會留下一個名字對、內容只有半截的物件。
+ * - **位元組原樣**：不轉碼（GBK 的章節存下來還是 GBK）、不壓縮。退回時原樣寫回（`Workspace.restoreBytes`）。
  *
  * ## 存哪些（{@link trackedFiles}）
  *
- * `kindOfPath` 不是 `other` 的——与历史版本同一个口径（章节、草稿、细纲、角色卡、设定、架构、大纲、文风、叙事线、
- * 全文大纲、技能、敏感词表）。只扫章节根、草稿根与 `.novelwarden/` 三处，不扫整个工程根；隐藏目录、会话、回收站、
- * 历史版本、存档点自己都不进。超过网关大小上限（2 MB）的单份不存，记进清单的 `skipped`，界面上说出来（第 2 条）。
+ * `kindOfPath` 不是 `other` 的——與歷史版本同一個口徑（章節、草稿、細綱、角色卡、設定、架構、大綱、文風、敘事線、
+ * 全文大綱、技能、敏感詞表）。只掃章節根、草稿根與 `.novelwarden/` 三處，不掃整個工程根；隱藏目錄、會話、回收站、
+ * 歷史版本、存檔點自己都不進。超過閘道器大小上限（2 MB）的單份不存，記進清單的 `skipped`，介面上說出來（第 2 條）。
  *
  * ## 保留（{@link checkpointsToPrune}）
  *
- * 手动的永远留；自动的留最近 {@link CHECKPOINT_AUTO_KEEP} 个。给自动的写备注就是留住它（{@link noteCheckpoint}：变成手动）。
- * 删掉清单之后清理没人引用的对象（{@link collectGarbage}）：只删写下超过 {@link ORPHAN_GRACE_MS} 的——另一个进程可能
- * 正在存、对象写了清单还没写。有一份清单读不懂就整个不清（不知道它引用了哪些，宁可多留）。
+ * 手動的永遠留；自動的留最近 {@link CHECKPOINT_AUTO_KEEP} 個。給自動的寫備註就是留住它（{@link noteCheckpoint}：變成手動）。
+ * 刪掉清單之後清理沒人引用的物件（{@link collectGarbage}）：只刪寫下超過 {@link ORPHAN_GRACE_MS} 的——另一個程序可能
+ * 正在存、物件寫了清單還沒寫。有一份清單讀不懂就整個不清（不知道它引用了哪些，寧可多留）。
  *
- * ## 内部文件
+ * ## 內部檔案
  *
- * 整个目录是 Novelwarden 的内部文件（`guard.ts` 的 `isInternalPath`）：搜不到、读当不存在、写搬删都拒；监听也挡掉它
- * （`watchPolicy.ts`）。这里的写盘都是这一层自己的（与 `history.ts` 一样在网关里），不经 `Workspace.write`。
+ * 整個目錄是 Novelwarden 的內部檔案（`guard.ts` 的 `isInternalPath`）：搜不到、讀當不存在、寫搬刪都拒；監聽也擋掉它
+ * （`watchPolicy.ts`）。這裡的寫盤都是這一層自己的（與 `history.ts` 一樣在閘道器裡），不經 `Workspace.write`。
  *
- * ## 排队
+ * ## 排隊
  *
- * 同一个工程的存、写备注、清理在进程里排队（{@link withCheckpointLock}，按工程根一把锁）：自动存档点可能与作者手动存的
- * 撞在一起，清理不能删掉另一个正在存的那一份的对象。
+ * 同一個工程的存、寫備註、清理在程序裡排隊（{@link withCheckpointLock}，按工程根一把鎖）：自動存檔點可能與作者手動存的
+ * 撞在一起，清理不能刪掉另一個正在存的那一份的物件。
  */
 import { createHash, randomBytes } from 'node:crypto';
 import * as fs from 'node:fs/promises';
@@ -53,51 +53,51 @@ import { MAX_EDITABLE_BYTES, WsError, isInHistory, isInTrash, isInternalPath } f
 import { parseSnapshotFileName, snapshotFileName } from './history';
 import { ArtifactKind, kindOfPath } from './kind';
 
-const log = scoped('存档点');
+const log = scoped('存檔點');
 
-/** 自动存档点留最近几个。 */
+/** 自動存檔點留最近幾個。 */
 export const CHECKPOINT_AUTO_KEEP = 30;
-/** 没人引用的对象，写下多久之后才清（另一个进程可能正在存）。 */
+/** 沒人引用的物件，寫下多久之後才清（另一個程序可能正在存）。 */
 export const ORPHAN_GRACE_MS = 60 * 60 * 1000;
-/** 第一次建存档点目录时放进去的 `.gitignore`。 */
+/** 第一次建存檔點目錄時放進去的 `.gitignore`。 */
 export const CHECKPOINT_GITIGNORE = '*\n';
-/** 扫目录的最大深度（同 `model/project.ts` 列章节）。 */
+/** 掃目錄的最大深度（同 `model/project.ts` 列章節）。 */
 const MAX_DEPTH = 8;
 
-/** 清单里的一份文件。 */
+/** 清單裡的一份檔案。 */
 export interface CheckpointFile {
-  /** 内容的 sha256（十六进制）：对象的名字。 */
+  /** 內容的 sha256（十六進位制）：物件的名字。 */
   sha: string;
   bytes: number;
   words: number;
 }
 
-/** 一份清单（`points/<id>.json`）。 */
+/** 一份清單（`points/<id>.json`）。 */
 export interface CheckpointManifest {
   v: 1;
-  /** 存下的那一刻（毫秒时间戳）。 */
+  /** 存下的那一刻（毫秒時間戳）。 */
   time: number;
   note: string;
   auto: boolean;
-  /** 工程内相对路径 → 那一刻的内容。 */
+  /** 工程內相對路徑 → 那一刻的內容。 */
   files: Record<string, CheckpointFile>;
-  /** 超过大小上限、没存进去的。 */
+  /** 超過大小上限、沒存進去的。 */
   skipped: string[];
 }
 
 export interface CheckpointInfo extends CheckpointManifest {
-  /** 清单的文件名去掉 `.json`。 */
+  /** 清單的檔名去掉 `.json`。 */
   id: string;
 }
 
-// ---------------------------------------------------------------- 纯函数
+// ---------------------------------------------------------------- 純函式
 
-/** 存档点的名字：那一刻的本地时间 + 时区，同一秒的第二个带序号。格式同历史版本的快照（去掉 `.txt`）。 */
+/** 存檔點的名字：那一刻的本地時間 + 時區，同一秒的第二個帶序號。格式同歷史版本的快照（去掉 `.txt`）。 */
 export function checkpointIdOf(at: Date, dup = 1): string {
   return snapshotFileName(at, dup).replace(/\.txt$/, '');
 }
 
-/** 读存档点的名字：那一刻（毫秒时间戳）。不是存档点的名字（带斜杠、`..`、乱写的）给 undefined。 */
+/** 讀存檔點的名字：那一刻（毫秒時間戳）。不是存檔點的名字（帶斜槓、`..`、亂寫的）給 undefined。 */
 export function parseCheckpointId(id: string): number | undefined {
   if (typeof id !== 'string' || id.includes('/') || id.includes('\\')) {
     return undefined;
@@ -108,8 +108,8 @@ export function parseCheckpointId(id: string): number | undefined {
 const SHA_RE = /^[0-9a-f]{64}$/;
 
 /**
- * 解析一份清单。**容错**（第 1 条）：认不出的整份给 undefined；单份文件的记录坏了就丢掉那一份（路径越界、sha 不像、
- * 数字不对）。`id` 用来在 `time` 缺了时从名字补。
+ * 解析一份清單。**容錯**（第 1 條）：認不出的整份給 undefined；單份檔案的記錄壞了就丟掉那一份（路徑越界、sha 不像、
+ * 數字不對）。`id` 用來在 `time` 缺了時從名字補。
  */
 export function parseManifest(text: string, id?: string): CheckpointManifest | undefined {
   let raw: unknown;
@@ -154,7 +154,7 @@ function numberOr(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : fallback;
 }
 
-/** 清单里的路径只认工程内的相对路径（手改坏了的清单不能把退回引到工程外面去）。 */
+/** 清單裡的路徑只認工程內的相對路徑（手改壞了的清單不能把退回引到工程外面去）。 */
 function isSafeRel(rel: string): boolean {
   if (!rel || rel.startsWith('/') || rel.includes('\\') || /^[A-Za-z]:/.test(rel)) {
     return false;
@@ -162,7 +162,7 @@ function isSafeRel(rel: string): boolean {
   return rel.split('/').every((seg) => seg !== '' && seg !== '.' && seg !== '..');
 }
 
-/** 两个存档点（或存档点与此刻）的文件是不是一模一样：路径一样、每份的 sha 一样。 */
+/** 兩個存檔點（或存檔點與此刻）的檔案是不是一模一樣：路徑一樣、每份的 sha 一樣。 */
 export function sameFiles(a: Record<string, { sha: string }>, b: Record<string, { sha: string }>): boolean {
   const ka = Object.keys(a);
   if (ka.length !== Object.keys(b).length) {
@@ -171,11 +171,11 @@ export function sameFiles(a: Record<string, { sha: string }>, b: Record<string, 
   return ka.every((k) => b[k]?.sha === a[k].sha);
 }
 
-/** 此刻磁盘上的一份（比较用）。 */
+/** 此刻磁碟上的一份（比較用）。 */
 export interface CurrentFile {
   sha: string;
   words: number;
-  /** 网关乐观锁的口径（`model/fs.ts` 的 `hash`，按 utf8 读出来算，与 `guardWrite` 读盘的方式一致）。 */
+  /** 閘道器樂觀鎖的口徑（`model/fs.ts` 的 `hash`，按 utf8 讀出來算，與 `guardWrite` 讀盤的方式一致）。 */
   hash: string;
 }
 
@@ -188,8 +188,8 @@ export interface FileDiff {
 }
 
 /**
- * 存档点 ↔ 此刻逐份比：改过的、之后删掉的、之后新建的。一模一样的只计数。按路径排（中文、数字按数值）。
- * 存档点里因为太大没存的（`skipped`）不算「之后新建」——那一份当时就在，只是没存。
+ * 存檔點 ↔ 此刻逐份比：改過的、之後刪掉的、之後新建的。一模一樣的只計數。按路徑排（中文、數字按數值）。
+ * 存檔點裡因為太大沒存的（`skipped`）不算「之後新建」——那一份當時就在，只是沒存。
  */
 export function compareFiles(
   then: Record<string, CheckpointFile>,
@@ -218,7 +218,7 @@ export function compareFiles(
   return { unchanged, entries };
 }
 
-/** 该删掉的存档点（`list` 新的在前）：自动的超出保留数的那几个（最旧的）。手动的一个不删。 */
+/** 該刪掉的存檔點（`list` 新的在前）：自動的超出保留數的那幾個（最舊的）。手動的一個不刪。 */
 export function checkpointsToPrune(
   list: readonly Pick<CheckpointInfo, 'id' | 'auto'>[],
   keep = CHECKPOINT_AUTO_KEEP
@@ -229,23 +229,23 @@ export function checkpointsToPrune(
     .map((c) => c.id);
 }
 
-// ---------------------------------------------------------------- 路径
+// ---------------------------------------------------------------- 路徑
 
 const pointsDirOf = (project: NovelProject) => path.join(project.checkpointsDir, 'points');
 const objectsDirOf = (project: NovelProject) => path.join(project.checkpointsDir, 'objects');
 const objectPathOf = (project: NovelProject, sha: string) => path.join(objectsDirOf(project), sha.slice(0, 2), sha.slice(2));
 
-/** 能不能存存档点。能就给 undefined，不能给一句给人看的原因。 */
+/** 能不能存存檔點。能就給 undefined，不能給一句給人看的原因。 */
 export async function checkpointUnavailable(project: NovelProject): Promise<string | undefined> {
-  return (await isDir(project.novelDir)) ? undefined : '这个目录还不是小说工程（没有 .novelwarden/），存不了存档点。';
+  return (await isDir(project.novelDir)) ? undefined : '這個目錄還不是小說工程（沒有 .novelwarden/），存不了存檔點。';
 }
 
-// ---------------------------------------------------------------- 扫
+// ---------------------------------------------------------------- 掃
 
 /**
- * 要进存档点的文件（工程内相对路径，排好序）。只扫章节根、草稿根与 `.novelwarden/`；隐藏目录（含回收站）、
- * 会话、历史版本、存档点自己都不进；符号链接不跟。种类是 `other` 的不要；情节大纲也不要（它没有文件，是各章细纲梗概的汇总，
- * 细纲在存档点里就退得回；磁盘上残留的老 `outline.md` 不是现在的书）。
+ * 要進存檔點的檔案（工程內相對路徑，排好序）。只掃章節根、草稿根與 `.novelwarden/`；隱藏目錄（含回收站）、
+ * 會話、歷史版本、存檔點自己都不進；符號連結不跟。種類是 `other` 的不要；情節大綱也不要（它沒有檔案，是各章細綱梗概的彙總，
+ * 細綱在存檔點裡就退得回；磁碟上殘留的老 `outline.md` 不是現在的書）。
  */
 export async function trackedFiles(project: NovelProject): Promise<string[]> {
   const skip = new Set([project.draftsDir, project.historyDir, project.checkpointsDir, project.sessionsDir, project.trashDir].map((d) => path.resolve(d)));
@@ -281,8 +281,8 @@ export async function trackedFiles(project: NovelProject): Promise<string[]> {
       }
     }
   };
-  // 三个根各自从里面开始走：`.novelwarden/` 本身是隐藏目录，从工程根走过来会被跳过。草稿根在章节根下面时
-  // （`chaptersDir` 配成 `.`）走章节根时跳过它，单独再走一遍。
+  // 三個根各自從裡面開始走：`.novelwarden/` 本身是隱藏目錄，從工程根走過來會被跳過。草稿根在章節根下面時
+  // （`chaptersDir` 配成 `.`）走章節根時跳過它，單獨再走一遍。
   await walk(project.chaptersDir, 1);
   await walk(project.draftsDir, 1);
   await walk(project.novelDir, 1);
@@ -294,13 +294,13 @@ function shaOf(buf: Buffer): string {
 }
 
 /**
- * 读过、算过的那几样按「大小 + 修改时间 + 状态改变时间」记着（绝对路径为键）：编辑器「版本」侧栏的全书改动每存一次盘就
- * 跟存档点比一次，全书几千份每次都整份读、整份算 sha 不值得。写过的文件 ctime 一定变（`utimes` 改不了它），记着的就不认了；
- * 万一认错，`hashNow` 只是退回时的乐观锁，对不上就跳过那一份，不会拿旧稿盖新稿。
+ * 讀過、算過的那幾樣按「大小 + 修改時間 + 狀態改變時間」記著（絕對路徑為鍵）：編輯器「版本」側欄的全書改動每存一次盤就
+ * 跟存檔點比一次，全書幾千份每次都整份讀、整份算 sha 不值得。寫過的檔案 ctime 一定變（`utimes` 改不了它），記著的就不認了；
+ * 萬一認錯，`hashNow` 只是退回時的樂觀鎖，對不上就跳過那一份，不會拿舊稿蓋新稿。
  */
 const scanCache = new Map<string, { stamp: string; file: CurrentFile }>();
 
-/** 此刻磁盘上要进存档点的每一份：sha、字数、乐观锁 hash。读不动的跳过（刚被删掉）。 */
+/** 此刻磁碟上要進存檔點的每一份：sha、字數、樂觀鎖 hash。讀不動的跳過（剛被刪掉）。 */
 export async function scanCurrent(project: NovelProject): Promise<Record<string, CurrentFile>> {
   const out: Record<string, CurrentFile> = {};
   const seen = new Set<string>();
@@ -329,7 +329,7 @@ export async function scanCurrent(project: NovelProject): Promise<Record<string,
     scanCache.set(abs, { stamp, file });
     out[rel] = file;
   }
-  // 这个工程里不在了的（删了、搬了）不再占着内存。
+  // 這個工程裡不在了的（刪了、搬了）不再佔著記憶體。
   const root = path.resolve(project.root) + path.sep;
   for (const key of scanCache.keys()) {
     if (key.startsWith(root) && !seen.has(key)) {
@@ -339,11 +339,11 @@ export async function scanCurrent(project: NovelProject): Promise<Record<string,
   return out;
 }
 
-// ---------------------------------------------------------------- 排队
+// ---------------------------------------------------------------- 排隊
 
 const locks = new Map<string, Promise<void>>();
 
-/** 同一个工程的存档点操作在进程里排队，一个做完再做下一个。 */
+/** 同一個工程的存檔點操作在程序裡排隊，一個做完再做下一個。 */
 export async function withCheckpointLock<T>(project: NovelProject, fn: () => Promise<T>): Promise<T> {
   const key = path.resolve(project.root);
   const prev = locks.get(key) ?? Promise.resolve();
@@ -362,11 +362,11 @@ export async function withCheckpointLock<T>(project: NovelProject, fn: () => Pro
   }
 }
 
-// ---------------------------------------------------------------- 读
+// ---------------------------------------------------------------- 讀
 
 /**
- * 列出存档点，新的在前。读不懂的清单跳过（记一条 warn），不抛。读过的清单记着（{@link manifestCache}）：「版本」侧栏
- * 每存一次盘就要一次列表。裁旧的、清理对象那两处要知道有没有读不懂的，走 {@link readAll}，不用记着的。
+ * 列出存檔點，新的在前。讀不懂的清單跳過（記一條 warn），不拋。讀過的清單記著（{@link manifestCache}）：「版本」側欄
+ * 每存一次盤就要一次列表。裁舊的、清理物件那兩處要知道有沒有讀不懂的，走 {@link readAll}，不用記著的。
  */
 export async function listCheckpoints(project: NovelProject): Promise<CheckpointInfo[]> {
   const dir = pointsDirOf(project);
@@ -401,7 +401,7 @@ export async function listCheckpoints(project: NovelProject): Promise<Checkpoint
         manifest = undefined;
       }
       if (!manifest) {
-        log.warn(`读不懂存档点清单 ${name}，跳过`);
+        log.warn(`讀不懂存檔點清單 ${name}，跳過`);
       }
       cached = { stamp, manifest };
       manifestCache.set(abs, cached);
@@ -410,7 +410,7 @@ export async function listCheckpoints(project: NovelProject): Promise<Checkpoint
       list.push({ ...cached.manifest, id });
     }
   }
-  // 裁掉了的存档点不再占着内存。
+  // 裁掉了的存檔點不再佔著記憶體。
   for (const key of manifestCache.keys()) {
     if (path.dirname(key) === dir && !seen.has(key)) {
       manifestCache.delete(key);
@@ -421,8 +421,8 @@ export async function listCheckpoints(project: NovelProject): Promise<Checkpoint
 }
 
 /**
- * 读过的清单按「文件名 + 大小 + 修改时间 + 状态改变时间」记着：一份清单列着全书每份文件，几十个存档点每次都整份重读重解析不值得。
- * 写备注改了清单、裁掉了旧的，大小或修改时间变了、名字没了，自然重读。
+ * 讀過的清單按「檔名 + 大小 + 修改時間 + 狀態改變時間」記著：一份清單列著全書每份檔案，幾十個存檔點每次都整份重讀重解析不值得。
+ * 寫備註改了清單、裁掉了舊的，大小或修改時間變了、名字沒了，自然重讀。
  */
 const manifestCache = new Map<string, { stamp: string; manifest: CheckpointManifest | undefined }>();
 
@@ -451,7 +451,7 @@ async function readAll(project: NovelProject): Promise<{ list: CheckpointInfo[];
     }
     if (!manifest) {
       unreadable++;
-      log.warn(`读不懂存档点清单 ${name}，跳过`);
+      log.warn(`讀不懂存檔點清單 ${name}，跳過`);
       continue;
     }
     list.push({ ...manifest, id });
@@ -460,43 +460,43 @@ async function readAll(project: NovelProject): Promise<{ list: CheckpointInfo[];
   return { list, unreadable };
 }
 
-/** 读一个存档点的清单。不在、读不懂都抛 `WsError('notFound')`。 */
+/** 讀一個存檔點的清單。不在、讀不懂都拋 `WsError('notFound')`。 */
 export async function readCheckpoint(project: NovelProject, id: string): Promise<CheckpointInfo> {
   if (parseCheckpointId(id) === undefined) {
-    throw new WsError('notFound', `找不到这个存档点：${id}`);
+    throw new WsError('notFound', `找不到這個存檔點：${id}`);
   }
   let text: string;
   try {
     text = await fs.readFile(path.join(pointsDirOf(project), `${id}.json`), 'utf8');
   } catch {
-    throw new WsError('notFound', `找不到这个存档点（可能已经被裁掉了）：${id}`);
+    throw new WsError('notFound', `找不到這個存檔點（可能已經被裁掉了）：${id}`);
   }
   const manifest = parseManifest(text, id);
   if (!manifest) {
-    throw new WsError('notFound', `存档点的清单读不懂：${id}`);
+    throw new WsError('notFound', `存檔點的清單讀不懂：${id}`);
   }
   return { ...manifest, id };
 }
 
-/** 读存档点里的一份（字节原样）。存档点里没有这一份、对象丢了、对象内容与 sha 对不上，都抛 `WsError('notFound')`。 */
+/** 讀存檔點裡的一份（位元組原樣）。存檔點裡沒有這一份、物件丟了、物件內容與 sha 對不上，都拋 `WsError('notFound')`。 */
 export async function readCheckpointBytes(project: NovelProject, cp: CheckpointInfo, rel: string): Promise<Buffer> {
   const f = cp.files[rel];
   if (!f) {
-    throw new WsError('notFound', `存档点「${cp.id}」里没有 ${rel}`);
+    throw new WsError('notFound', `存檔點「${cp.id}」裡沒有 ${rel}`);
   }
   let buf: Buffer;
   try {
     buf = await fs.readFile(objectPathOf(project, f.sha));
   } catch {
-    throw new WsError('notFound', `存档点「${cp.id}」里 ${rel} 的内容丢了`);
+    throw new WsError('notFound', `存檔點「${cp.id}」裡 ${rel} 的內容丟了`);
   }
   if (shaOf(buf) !== f.sha) {
-    throw new WsError('notFound', `存档点「${cp.id}」里 ${rel} 的内容坏了（与记下的指纹对不上）`);
+    throw new WsError('notFound', `存檔點「${cp.id}」裡 ${rel} 的內容壞了（與記下的指紋對不上）`);
   }
   return buf;
 }
 
-/** 存档点 ↔ 此刻（见 {@link compareFiles}），每份带种类。 */
+/** 存檔點 ↔ 此刻（見 {@link compareFiles}），每份帶種類。 */
 export async function diffCheckpoint(
   project: NovelProject,
   id: string
@@ -506,9 +506,9 @@ export async function diffCheckpoint(
   return { unchanged, entries: entries.map((e) => ({ ...e, kind: kindOfPath(project, e.path).kind })) };
 }
 
-/** 一份文件在某个存档点里的样子（编辑器「版本」侧栏的时间线上一行）。 */
+/** 一份檔案在某個存檔點裡的樣子（編輯器「版本」側欄的時間線上一行）。 */
 export interface CheckpointVersion {
-  /** 存档点的 id。 */
+  /** 存檔點的 id。 */
   id: string;
   time: number;
   note: string;
@@ -518,8 +518,8 @@ export interface CheckpointVersion {
 }
 
 /**
- * 一份文件在各存档点里的样子，新的在前。**内容一样的连着几个只留最早那一个**：一行说的是「到这个存档点，这一份变成了
- * 这样」——三十个自动存档点里它一字没动，就只有一行。中间有存档点里没有它（当时删了、还没建）的，之后再出现算新的一行。
+ * 一份檔案在各存檔點裡的樣子，新的在前。**內容一樣的連著幾個只留最早那一個**：一行說的是「到這個存檔點，這一份變成了
+ * 這樣」——三十個自動存檔點裡它一字沒動，就只有一行。中間有存檔點裡沒有它（當時刪了、還沒建）的，之後再出現算新的一行。
  */
 export async function checkpointVersionsOf(project: NovelProject, rel: string): Promise<CheckpointVersion[]> {
   const out: CheckpointVersion[] = [];
@@ -538,19 +538,19 @@ export async function checkpointVersionsOf(project: NovelProject, rel: string): 
 
 export interface CreateCheckpointResult {
   id: string;
-  /** false：自动存档点与最近一个一模一样，没有另存（`id` 是最近那一个）。 */
+  /** false：自動存檔點與最近一個一模一樣，沒有另存（`id` 是最近那一個）。 */
   created: boolean;
   files: number;
-  /** 这一次新写下的对象有几个（其余与以前的存档点共用）。 */
+  /** 這一次新寫下的物件有幾個（其餘與以前的存檔點共用）。 */
   newObjects: number;
   skipped: string[];
-  /** 自动的超出保留数，裁掉了哪几个。 */
+  /** 自動的超出保留數，裁掉了哪幾個。 */
   pruned: string[];
 }
 
 /**
- * 存一个存档点。`auto`：机器存的（批量动作之前、退回之前）——与最近一个存档点一模一样就不另存；存完按保留数
- * 裁掉最旧的自动存档点并清理对象。手动的一模一样也照样存。会抛（磁盘满、权限……），自动那条路由调用方兜住。
+ * 存一個存檔點。`auto`：機器存的（批次動作之前、退回之前）——與最近一個存檔點一模一樣就不另存；存完按保留數
+ * 裁掉最舊的自動存檔點並清理物件。手動的一模一樣也照樣存。會拋（磁碟滿、許可權……），自動那條路由呼叫方兜住。
  */
 export function createCheckpoint(
   project: NovelProject,
@@ -580,7 +580,7 @@ async function create(project: NovelProject, opts: { note: string; auto: boolean
       }
       buf = await fs.readFile(abs);
     } catch {
-      continue; // 列的时候还在、读的时候没了
+      continue; // 列的時候還在、讀的時候沒了
     }
     const sha = shaOf(buf);
     if (await writeObject(project, sha, buf)) {
@@ -591,7 +591,7 @@ async function create(project: NovelProject, opts: { note: string; auto: boolean
 
   const { list } = await readAll(project);
   if (opts.auto && list[0] && sameFiles(list[0].files, files)) {
-    log.debug(`与最近一个存档点一模一样，不另存`, `${opts.note}｜沿用 ${list[0].id}`);
+    log.debug(`與最近一個存檔點一模一樣，不另存`, `${opts.note}｜沿用 ${list[0].id}`);
     return { id: list[0].id, created: false, files: Object.keys(files).length, newObjects, skipped, pruned: [] };
   }
 
@@ -599,9 +599,9 @@ async function create(project: NovelProject, opts: { note: string; auto: boolean
   const manifest: CheckpointManifest = { v: 1, time: now, note: opts.note.trim(), auto: opts.auto, files, skipped };
   const id = await writeManifestUnique(project, new Date(now), manifest);
   log.info(
-    `存了一个存档点 ${id}`,
-    `${opts.auto ? '自动' : '手动'}｜${manifest.note || '（没写备注）'}｜${Object.keys(files).length} 份，新存 ${newObjects} 份内容` +
-      (skipped.length ? `｜超过大小上限没存 ${skipped.length} 份` : '')
+    `存了一個存檔點 ${id}`,
+    `${opts.auto ? '自動' : '手動'}｜${manifest.note || '（沒寫備註）'}｜${Object.keys(files).length} 份，新存 ${newObjects} 份內容` +
+      (skipped.length ? `｜超過大小上限沒存 ${skipped.length} 份` : '')
   );
 
   let pruned: string[] = [];
@@ -611,7 +611,7 @@ async function create(project: NovelProject, opts: { note: string; auto: boolean
       await fs.unlink(path.join(pointsDirOf(project), `${stale}.json`)).catch(() => undefined);
     }
     if (pruned.length > 0) {
-      log.debug(`裁掉最旧的 ${pruned.length} 个自动存档点`, `只留最近 ${CHECKPOINT_AUTO_KEEP} 个`);
+      log.debug(`裁掉最舊的 ${pruned.length} 個自動存檔點`, `只留最近 ${CHECKPOINT_AUTO_KEEP} 個`);
       await gc(project, now);
     }
   }
@@ -619,7 +619,7 @@ async function create(project: NovelProject, opts: { note: string; auto: boolean
 }
 
 /**
- * 给一个存档点写备注。自动的写了备注就留住（变成手动，不再被裁掉）；备注空着时手动的照样是手动。返回改好的那一份。
+ * 給一個存檔點寫備註。自動的寫了備註就留住（變成手動，不再被裁掉）；備註空著時手動的照樣是手動。返回改好的那一份。
  */
 export function noteCheckpoint(project: NovelProject, id: string, note: string): Promise<CheckpointInfo> {
   return withCheckpointLock(project, async () => {
@@ -637,12 +637,12 @@ export function noteCheckpoint(project: NovelProject, id: string, note: string):
     const tmp = path.join(pointsDirOf(project), `.${randomBytes(4).toString('hex')}.tmp`);
     await fs.writeFile(tmp, JSON.stringify(next, null, 1), { encoding: 'utf8', flag: 'wx' });
     await fs.rename(tmp, file);
-    log.info(`存档点 ${id} 写了备注、留住了`, trimmed);
+    log.info(`存檔點 ${id} 寫了備註、留住了`, trimmed);
     return { ...next, id };
   });
 }
 
-/** 清理没人引用的对象（见文件头）。返回删了几个。 */
+/** 清理沒人引用的物件（見檔案頭）。返回刪了幾個。 */
 export function collectGarbage(project: NovelProject, now = Date.now()): Promise<number> {
   return withCheckpointLock(project, () => gc(project, now));
 }
@@ -650,7 +650,7 @@ export function collectGarbage(project: NovelProject, now = Date.now()): Promise
 async function gc(project: NovelProject, now: number): Promise<number> {
   const { list, unreadable } = await readAll(project);
   if (unreadable > 0) {
-    log.warn(`有 ${unreadable} 份存档点清单读不懂，这一次不清理对象`, '不知道它们引用了哪些内容，宁可多留');
+    log.warn(`有 ${unreadable} 份存檔點清單讀不懂，這一次不清理物件`, '不知道它們引用了哪些內容，寧可多留');
     return 0;
   }
   const referenced = new Set<string>();
@@ -688,22 +688,22 @@ async function gc(project: NovelProject, now: number): Promise<number> {
         await fs.unlink(abs);
         removed++;
       } catch {
-        // 别处刚删掉：跳过。
+        // 別處剛刪掉：跳過。
       }
     }
-    await fs.rmdir(dir).catch(() => undefined); // 只删空的
+    await fs.rmdir(dir).catch(() => undefined); // 只刪空的
   }
   if (removed > 0) {
-    log.debug(`清掉 ${removed} 份没有存档点再用到的内容`);
+    log.debug(`清掉 ${removed} 份沒有存檔點再用到的內容`);
   }
   return removed;
 }
 
-// ---------------------------------------------------------------- 写盘（这一层自己的）
+// ---------------------------------------------------------------- 寫盤（這一層自己的）
 
 /**
- * 存档点目录第一次出现时放一个 `.gitignore`（`*`）。只在**建出这个目录**的那一次放：作者删掉它就是想让
- * git 收存档点，之后不再补回来（同历史版本）。
+ * 存檔點目錄第一次出現時放一個 `.gitignore`（`*`）。只在**建出這個目錄**的那一次放：作者刪掉它就是想讓
+ * git 收存檔點，之後不再補回來（同歷史版本）。
  */
 async function ensureRoot(project: NovelProject): Promise<void> {
   if (await isDir(project.checkpointsDir)) {
@@ -715,7 +715,7 @@ async function ensureRoot(project: NovelProject): Promise<void> {
     .catch(() => undefined);
 }
 
-/** 写一个对象；已经有了（大小也对得上）就不写。先写临时文件再改名。返回是不是新写的。 */
+/** 寫一個物件；已經有了（大小也對得上）就不寫。先寫臨時檔案再改名。返回是不是新寫的。 */
 async function writeObject(project: NovelProject, sha: string, buf: Buffer): Promise<boolean> {
   const abs = objectPathOf(project, sha);
   try {
@@ -724,7 +724,7 @@ async function writeObject(project: NovelProject, sha: string, buf: Buffer): Pro
       return false;
     }
   } catch {
-    // 没有：往下写。
+    // 沒有：往下寫。
   }
   await fs.mkdir(path.dirname(abs), { recursive: true });
   const tmp = `${abs}.${randomBytes(4).toString('hex')}.tmp`;
@@ -734,9 +734,9 @@ async function writeObject(project: NovelProject, sha: string, buf: Buffer): Pro
 }
 
 /**
- * 按那一刻起名写下清单；同一秒已经有了就加序号。先写临时文件再改名（断电时不留半份清单——半份清单读不懂，
- * 会让清理整个停下来）；改名之前看一眼那个名字没人用，绝不盖掉已有的那一份（同一进程里有锁，跨进程撞在同一秒同一个
- * 序号上的机会可以不计）。
+ * 按那一刻起名寫下清單；同一秒已經有了就加序號。先寫臨時檔案再改名（斷電時不留半份清單——半份清單讀不懂，
+ * 會讓清理整個停下來）；改名之前看一眼那個名字沒人用，絕不蓋掉已有的那一份（同一程序裡有鎖，跨程序撞在同一秒同一個
+ * 序號上的機會可以不計）。
  */
 async function writeManifestUnique(project: NovelProject, at: Date, manifest: CheckpointManifest): Promise<string> {
   const dir = pointsDirOf(project);
@@ -758,7 +758,7 @@ async function writeManifestUnique(project: NovelProject, at: Date, manifest: Ch
     throw err;
   }
   await fs.unlink(tmp).catch(() => undefined);
-  throw new Error('同一秒里存了太多存档点');
+  throw new Error('同一秒裡存了太多存檔點');
 }
 
 async function exists(abs: string): Promise<boolean> {

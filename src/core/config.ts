@@ -13,53 +13,53 @@ import {
 
 const log = scoped('配置');
 
-/** 并发与 fallback 的取值范围。超出一律 clamp，并说明一次。 */
+/** 併發與 fallback 的取值範圍。超出一律 clamp，並說明一次。 */
 export const CONCURRENCY_RANGE = { min: 1, max: 16, def: 3 };
 export const FALLBACK_RANGE = { min: 0, max: 5, def: 2 };
 
 /**
- * 配置读取层。数据源由宿主注入（ConfigStore），core 不再直接碰
+ * 配置讀取層。資料來源由宿主注入（ConfigStore），core 不再直接碰
  * vscode.workspace.getConfiguration。
  */
 
-/** 落盘的设置形状（与 SettingsPayload 对齐，另加 chaptersDir）。 */
+/** 落盤的設定形狀（與 SettingsPayload 對齊，另加 chaptersDir）。 */
 export interface PersistedSettings {
   providers?: unknown[];
   /**
-   * 默认模型列表，按顺序，第一个是首选。工程页的后台任务从这里取模型。
+   * 預設模型列表，按順序，第一個是首選。工程頁的後臺任務從這裡取模型。
    *
-   * 与 `model` 的关系：`model` 恒等于 `models[0]`，两者都写盘——
-   * 前者是 0.2.x 就有的键（对话页下拉、上下文装配都读它），
-   * 后者是本版新增的。只有 `model` 的旧配置会被自动升级成单元素列表。
+   * 與 `model` 的關係：`model` 恆等於 `models[0]`，兩者都寫盤——
+   * 前者是 0.2.x 就有的鍵（對話頁下拉、上下文裝配都讀它），
+   * 後者是本版新增的。只有 `model` 的舊配置會被自動升級成單元素列表。
    */
   models?: string[];
   model?: string;
   /**
-   * 三档（快速 / 均衡 / 精标）各自的模型清单，与 `models` 同构。
+   * 三檔（快速 / 均衡 / 精標）各自的模型清單，與 `models` 同構。
    *
-   * 某一档为空 = 该档的任务沿用 `models`。三档都空则整个分档不生效，
-   * 行为与分档之前完全一致（见 model/tiers.ts 的两条硬约束）。
+   * 某一檔為空 = 該檔的任務沿用 `models`。三檔都空則整個分檔不生效，
+   * 行為與分檔之前完全一致（見 model/tiers.ts 的兩條硬約束）。
    */
   tierModels?: Record<string, unknown>;
   /**
-   * 任务 → 档位的**覆盖**。只存与内置默认（`DEFAULT_TASK_TIERS`）不同的项，
-   * 这样日后调整默认值时，没动过的任务会跟着新默认走。
+   * 任務 → 檔位的**覆蓋**。只存與內建預設（`DEFAULT_TASK_TIERS`）不同的項，
+   * 這樣日後調整預設值時，沒動過的任務會跟著新預設走。
    */
   taskTiers?: Record<string, unknown>;
-  /** 工程页批量任务的并发请求数。 */
+  /** 工程頁批次任務的併發請求數。 */
   concurrency?: number;
-  /** 一次调用失败后，换模型重试的次数上限。 */
+  /** 一次呼叫失敗後，換模型重試的次數上限。 */
   fallbackAttempts?: number;
-  /** 写完正文删修饰。缺席 = 开。 */
+  /** 寫完正文刪修飾。缺席 = 開。 */
   trimModifiers?: boolean;
-  /** 独立版：已经开着工程时，打开另一个工程用新窗口。缺席 = 开。 */
+  /** 獨立版：已經開著工程時，開啟另一個工程用新視窗。缺席 = 開。 */
   openInNewWindow?: boolean;
-  /** @deprecated 旧版全局预算，仅作兼容兜底；设置页不再提供写入口。 */
+  /** @deprecated 舊版全域預算，僅作相容兜底；設定頁不再提供寫入口。 */
   contextWindow?: number;
-  /** @deprecated 旧版全局预算，仅作兼容兜底；设置页不再提供写入口。 */
+  /** @deprecated 舊版全域預算，僅作相容兜底；設定頁不再提供寫入口。 */
   maxOutputTokens?: number;
   temperature?: number;
-  /** 上下文详细度 1–4（model/contextDetail.ts）。缺席或认不出 = 3。 */
+  /** 上下文詳細度 1–4（model/contextDetail.ts）。缺席或認不出 = 3。 */
   contextDetail?: number;
   chaptersDir?: string;
   draftsDir?: string;
@@ -68,21 +68,21 @@ export interface PersistedSettings {
 }
 
 export interface ConfigStore {
-  /** 未迁移/未保存过时返回 undefined。 */
+  /** 未遷移/未儲存過時返回 undefined。 */
   read(): PersistedSettings | undefined;
   write(settings: PersistedSettings): Promise<void>;
 }
 
 /**
- * 0.1.x 遗留配置读取器。VS Code 壳注入（读 settings.json 的 novel.*），
- * 用于尚未迁移到 ~/.novelwarden/config.json 的老用户；独立版不注入。
+ * 0.1.x 遺留配置讀取器。VS Code 殼注入（讀 settings.json 的 novel.*），
+ * 用於尚未遷移到 ~/.novelwarden/config.json 的老使用者；獨立版不注入。
  */
 export interface LegacyConfigReader { read(): PersistedSettings; }
 
 let store: ConfigStore | undefined;
 let legacy: LegacyConfigReader | undefined;
 
-/** 由 initHost 调用：配置跟随宿主。 */
+/** 由 initHost 呼叫：配置跟隨宿主。 */
 export function initConfigFromHost(host: { config: ConfigStore }): void {
   store = host.config;
 }
@@ -96,8 +96,8 @@ function raw(): PersistedSettings {
 }
 
 /**
- * 解析后的配置。在调模型之前的确认框之后（`withCallChoice` 里）读，带着作者为这一次挑的
- * 模型（`pinnedModel`）与详细度——这是作者的选择唯一的落点（runtime/callScope.ts）。
+ * 解析後的配置。在調模型之前的確認框之後（`withCallChoice` 裡）讀，帶著作者為這一次挑的
+ * 模型（`pinnedModel`）與詳細度——這是作者的選擇唯一的落點（runtime/callScope.ts）。
  */
 export function readConfig(): NovelConfig {
   const c = raw();
@@ -106,8 +106,8 @@ export function readConfig(): NovelConfig {
   let models = normalizeModelList(c.models);
   let model = (c.model ?? '').trim();
 
-  // 0.1.x 的单服务商设置。只在新结构为空且宿主提供了遗留读取器时兜底，
-  // 不写回磁盘——用户一旦在设置页保存过，就以 providers 为准。
+  // 0.1.x 的單服務商設定。只在新結構為空且宿主提供了遺留讀取器時兜底，
+  // 不寫回磁碟——使用者一旦在設定頁儲存過，就以 providers 為準。
   if (providers.length === 0 && legacy) {
     const seeded = seedFromLegacyRaw(c);
     providers = seeded.providers;
@@ -115,11 +115,11 @@ export function readConfig(): NovelConfig {
       model = seeded.activeRef;
     }
   }
-  // 只有 `model` 的旧配置自动升级成单元素列表；两者都空则取第一个可用模型。
+  // 只有 `model` 的舊配置自動升級成單元素列表；兩者都空則取第一個可用模型。
   if (models.length === 0) {
     models = normalizeModelList([model || firstModelRef(providers)]);
   }
-  // 列表是唯一真相：`model` 恒等于首项。
+  // 列表是唯一真相：`model` 恆等於首項。
   model = models[0] ?? '';
 
   const active = resolveModelRef(providers, model);
@@ -133,7 +133,7 @@ export function readConfig(): NovelConfig {
     tierModels: normalizeTierModels(c.tierModels),
     taskTiers: normalizeTaskTiers(c.taskTiers),
     ...(choice?.model ? { pinnedModel: choice.model } : {}),
-    // 模型自带的窗口优先——同一个服务商下 32k 和 200k 的模型常常并存。
+    // 模型自帶的視窗優先——同一個服務商下 32k 和 200k 的模型常常並存。
     contextWindow: active?.model.contextWindow ?? fallbackBudget.contextWindow,
     maxOutputTokens: active?.model.maxOutputTokens ?? fallbackBudget.maxOutputTokens,
     temperature: c.temperature ?? 0.8,
@@ -143,18 +143,18 @@ export function readConfig(): NovelConfig {
     draftsDir: c.draftsDir ?? 'drafts',
     summaryBatchSize: c.summaryBatchSize ?? 15,
     requestTimeoutMs: c.requestTimeoutMs ?? 300000,
-    concurrency: clamp('并发请求数', c.concurrency, CONCURRENCY_RANGE),
-    fallbackAttempts: clamp('换模型重试次数', c.fallbackAttempts, FALLBACK_RANGE),
+    concurrency: clamp('併發請求數', c.concurrency, CONCURRENCY_RANGE),
+    fallbackAttempts: clamp('換模型重試次數', c.fallbackAttempts, FALLBACK_RANGE),
     trimModifiers: c.trimModifiers !== false,
     openInNewWindow: c.openInNewWindow !== false,
   };
 }
 
 /**
- * 默认模型列表的容错读取：去空、去重、保序。
+ * 預設模型列表的容錯讀取：去空、去重、保序。
  *
- * **不**在这里剔除解析不出的引用——保留才能让设置页说清「这个模型没了」，
- * 与 `model` 的处理一致（模型池会在构造时剔除并 warn）。
+ * **不**在這裡剔除解析不出的引用——保留才能讓設定頁說清「這個模型沒了」，
+ * 與 `model` 的處理一致（模型池會在構造時剔除並 warn）。
  */
 export function normalizeModelList(raw: unknown): string[] {
   if (!Array.isArray(raw)) {
@@ -174,11 +174,11 @@ export function normalizeModelList(raw: unknown): string[] {
 }
 
 /**
- * 三档模型清单的容错读取。每档都走 `normalizeModelList`（去空、去重、保序），
- * 缺席或类型不对的档退化为空数组 = 该档沿用默认模型清单。
+ * 三檔模型清單的容錯讀取。每檔都走 `normalizeModelList`（去空、去重、保序），
+ * 缺席或型別不對的檔退化為空陣列 = 該檔沿用預設模型清單。
  *
- * 与 `models` 一致，这里**不**剔除解析不出的引用——留着才能让设置页说清
- * 「这个模型没了」，模型池会在构造时剔除并 warn。
+ * 與 `models` 一致，這裡**不**剔除解析不出的引用——留著才能讓設定頁說清
+ * 「這個模型沒了」，模型池會在構造時剔除並 warn。
  */
 export function normalizeTierModels(raw: unknown): TierModels {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
@@ -190,10 +190,10 @@ export function normalizeTierModels(raw: unknown): TierModels {
 }
 
 /**
- * 任务 → 档位覆盖的容错读取。
+ * 任務 → 檔位覆蓋的容錯讀取。
  *
- * 认不出的任务名（旧版本留下的键、手改配置写错）与非法档位名一律丢弃，
- * 那一项回落内置默认。配置文件被手改坏不该让工程页任务无法启动。
+ * 認不出的任務名（舊版本留下的鍵、手改配置寫錯）與非法檔位名一律丟棄，
+ * 那一項回落內建預設。配置檔案被手改壞不該讓工程頁任務無法啟動。
  */
 export function normalizeTaskTiers(raw: unknown): Partial<Record<LlmTask, ModelTier>> {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
@@ -207,10 +207,10 @@ export function normalizeTaskTiers(raw: unknown): Partial<Record<LlmTask, ModelT
 }
 
 /**
- * 数字设置项收进合法区间。
+ * 數字設定項收進合法區間。
  *
- * readConfig 每次推状态都会跑，所以「被 clamp 了」只说一次：
- * 同一个越界值反复刷屏会把日志页挤没。
+ * readConfig 每次推狀態都會跑，所以「被 clamp 了」只說一次：
+ * 同一個越界值反覆刷屏會把日誌頁擠沒。
  */
 const clampWarned = new Map<string, unknown>();
 
@@ -222,34 +222,34 @@ function clamp(label: string, value: unknown, range: { min: number; max: number;
   const bounded = Math.min(range.max, Math.max(range.min, n));
   if (bounded !== n && clampWarned.get(label) !== n) {
     clampWarned.set(label, n);
-    log.warn(`${label} 设为 ${n}，超出 ${range.min}~${range.max}，按 ${bounded} 生效`);
+    log.warn(`${label} 設為 ${n}，超出 ${range.min}~${range.max}，按 ${bounded} 生效`);
   }
   return bounded;
 }
 
 /**
- * 设置页上的那一级，**不看「这一次」**：工程页表单的缺省值用它。状态推送可能就发生在某一次任务的
- * 调用链上（任务收尾时推一次），从 `readConfig()` 取会把作者只给那一次挑的级别当成设置推出去。
+ * 設定頁上的那一級，**不看「這一次」**：工程頁表單的預設值用它。狀態推送可能就發生在某一次任務的
+ * 呼叫鏈上（任務收尾時推一次），從 `readConfig()` 取會把作者只給那一次挑的級別當成設定推出去。
  */
 export function settingsContextDetail(): ContextDetail {
   return readContextDetail(raw().contextDetail);
 }
 
-/** 上下文详细度：认不出回落缺省，同一个坏值只说一次（理由同 `clamp`）。 */
+/** 上下文詳細度：認不出回落預設，同一個壞值只說一次（理由同 `clamp`）。 */
 let detailWarned: unknown;
 
 function readContextDetail(value: unknown): ContextDetail {
   const detail = normalizeContextDetail(value);
   if (value !== undefined && !isContextDetail(value) && detailWarned !== value) {
     detailWarned = value;
-    log.warn(`上下文详细度设为 ${JSON.stringify(value)}，认不出，按「${CONTEXT_DETAIL_LABEL[detail]}」生效`);
+    log.warn(`上下文詳細度設為 ${JSON.stringify(value)}，認不出，按「${CONTEXT_DETAIL_LABEL[detail]}」生效`);
   }
   return detail;
 }
 
 /**
- * 单项覆盖上下文上限，**只给测试用**：走 `readConfig()` 的那几条链（批量写章、定稿）没有地方
- * 递一份手写配置进去。生产代码从不调用——config.json 里不认这一项，作者能动的只有级别。
+ * 單項覆蓋上下文上限，**只給測試用**：走 `readConfig()` 的那幾條鏈（批次寫章、定稿）沒有地方
+ * 遞一份手寫配置進去。生產程式碼從不呼叫——config.json 裡不認這一項，作者能動的只有級別。
  */
 let contextOverride: Partial<ContextLimits> | undefined;
 
@@ -259,10 +259,10 @@ export function setContextLimitsOverride(override: Partial<ContextLimits> | unde
 
 
 /**
- * 单模型没有声明预算时的兼容兜底。
+ * 單模型沒有宣告預算時的相容兜底。
  *
- * 新设置页不再暴露全局预算：窗口与输出上限都应写在模型条目上。这里仍读取
- * 旧配置中的两个键，避免升级后让既有项目突然换预算；新用户使用内置值。
+ * 新設定頁不再暴露全域預算：視窗與輸出上限都應寫在模型條目上。這裡仍讀取
+ * 舊配置中的兩個鍵，避免升級後讓既有專案突然換預算；新使用者使用內建值。
  */
 export function readBudgetFallback(): { contextWindow: number; maxOutputTokens: number } {
   const c = raw();
@@ -272,18 +272,18 @@ export function readBudgetFallback(): { contextWindow: number; maxOutputTokens: 
   };
 }
 
-/** 整体落盘（merge 后写）。 */
+/** 整體落盤（merge 後寫）。 */
 export async function updateSettings(patch: PersistedSettings): Promise<void> {
   if (!store) {
-    throw new Error('配置后端尚未初始化');
+    throw new Error('配置後端尚未初始化');
   }
-  // 合并的基线必须是**解析后**的配置，不能是 raw()。
-  // config.json 还不存在时 raw() 来自 legacy reader，其中的 providers 可能缺席；
-  // 直接 merge 会把只改一个字段（例如下拉框切模型）的写入变成
-  // 「一份没有 providers 的 config.json」，此后 model 指向的服务商再也解析不出来。
+  // 合併的基線必須是**解析後**的配置，不能是 raw()。
+  // config.json 還不存在時 raw() 來自 legacy reader，其中的 providers 可能缺席；
+  // 直接 merge 會把只改一個欄位（例如下拉框切模型）的寫入變成
+  // 「一份沒有 providers 的 config.json」，此後 model 指向的服務商再也解析不出來。
   const merged = { ...effectiveSettings(), ...patch };
-  // 「列表是唯一真相」的落盘保证：只改了 models 的补丁也要把 model 带上，
-  // 否则磁盘上会留下一个指向旧首选的 model，被 0.2.x 的读取器当真。
+  // 「列表是唯一真相」的落盤保證：只改了 models 的補丁也要把 model 帶上，
+  // 否則磁碟上會留下一個指向舊首選的 model，被 0.2.x 的讀取器當真。
   const models = normalizeModelList(merged.models);
   if (models.length > 0) {
     merged.models = models;
@@ -293,11 +293,11 @@ export async function updateSettings(patch: PersistedSettings): Promise<void> {
 }
 
 /**
- * 把某个模型提到默认模型列表的首位（= 切换当前模型）。
+ * 把某個模型提到預設模型列表的首位（= 切換當前模型）。
  *
- * 「列表是唯一真相」的唯一写入口：`model` 由 `models[0]` 决定，所以
- * **不能只写 `model`**——那会在下一次 `updateSettings` 时被首项盖回去。
- * 对话页的下拉框与命令面板的「选择模型」都走这里。
+ * 「列表是唯一真相」的唯一寫入口：`model` 由 `models[0]` 決定，所以
+ * **不能只寫 `model`**——那會在下一次 `updateSettings` 時被首項蓋回去。
+ * 對話頁的下拉框與命令面板的「選擇模型」都走這裡。
  */
 export async function promoteModel(ref: string): Promise<string[]> {
   const target = ref.trim();
@@ -307,13 +307,13 @@ export async function promoteModel(ref: string): Promise<string[]> {
 }
 
 /**
- * 落盘用的完整快照：raw() 打底，再补上兜底推导出的 providers/models/model。
- * 保证任何一次写入都不会产出「有 model、没 providers」的配置，
- * 也不会产出「有 model、没 models」的半截列表。
+ * 落盤用的完整快照：raw() 打底，再補上兜底推匯出的 providers/models/model。
+ * 保證任何一次寫入都不會產出「有 model、沒 providers」的配置，
+ * 也不會產出「有 model、沒 models」的半截列表。
  *
- * 顺手丢掉 0.1.x 的带点键：它们只是 legacy reader 的输入，写进
- * config.json 既无人读取，又会在 providers 日后被清空时重新触发兜底。
- * 退役的键（{@link RETIRED_KEYS}）同理：下一次保存时从文件里清掉。
+ * 順手丟掉 0.1.x 的帶點鍵：它們只是 legacy reader 的輸入，寫進
+ * config.json 既無人讀取，又會在 providers 日後被清空時重新觸發兜底。
+ * 退役的鍵（{@link RETIRED_KEYS}）同理：下一次儲存時從檔案裡清掉。
  */
 function effectiveSettings(): PersistedSettings {
   const c = { ...raw() } as Record<string, unknown>;
@@ -335,15 +335,15 @@ function effectiveSettings(): PersistedSettings {
 }
 
 /**
- * 不再读的键。「注入完整原文章数」「上一章结尾字数」并进了上下文详细度：设置页保存过一次的人，
- * 这两个数都已经写在文件里，分不清是不是手改的，所以一律不读，免得级别调了却被旧数字盖住。
+ * 不再讀的鍵。「注入完整原文章數」「上一章結尾字數」並進了上下文詳細度：設定頁儲存過一次的人，
+ * 這兩個數都已經寫在檔案裡，分不清是不是手改的，所以一律不讀，免得級別調了卻被舊數字蓋住。
  */
 const RETIRED_KEYS = ['recentChaptersFullText', 'prevChapterTailChars'];
 
-/** seedFromLegacy 原本吃 vscode 配置的分散键；这里接受扁平 raw。 */
+/** seedFromLegacy 原本吃 vscode 配置的分散鍵；這裡接受扁平 raw。 */
 function seedFromLegacyRaw(c: PersistedSettings) {
-  // 遗留键（novel.provider / novel.openai.baseUrl 等）只会出现在 legacy reader
-  // 的返回值里，因此把 raw 里的带点键直接透传给 providers.ts 的宽松入口。
+  // 遺留鍵（novel.provider / novel.openai.baseUrl 等）只會出現在 legacy reader
+  // 的返回值裡，因此把 raw 裡的帶點鍵直接透傳給 providers.ts 的寬鬆入口。
   const flat = c as Record<string, unknown>;
   return seedFromLegacy({
     provider: (flat.provider as string | undefined) ?? 'openai',

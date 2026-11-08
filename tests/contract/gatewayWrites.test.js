@@ -1,16 +1,16 @@
 /**
- * AGENTS 第 7 条的普查固化下来：**工程里的写盘只经 `core/workspace/` 这一个网关**。
+ * AGENTS 第 7 條的普查固化下來：**工程裡的寫盤只經 `core/workspace/` 這一個閘道器**。
  *
- * 扫 `src/core/` 下除 `workspace/` 之外的每一份 `.ts`，找直接动磁盘的调用（`fs.writeFile` / `mkdir` / `rename` /
- * `copyFile` / `cp` / `rm` / `unlink`……，以及 `model/fs.ts` 的 `writeText`）。剩下的每一处都是**按设计不走网关**的，
- * 在下面这张表里逐个文件写明数量与理由；多出一处就红——要么改走网关，要么把理由补进这张表（并同步
- * `src/core/workspace/README.md`「哪些写入存」那一段）。
+ * 掃 `src/core/` 下除 `workspace/` 之外的每一份 `.ts`，找直接動磁碟的呼叫（`fs.writeFile` / `mkdir` / `rename` /
+ * `copyFile` / `cp` / `rm` / `unlink`……，以及 `model/fs.ts` 的 `writeText`）。剩下的每一處都是**按設計不走閘道器**的，
+ * 在下面這張表裡逐個檔案寫明數量與理由；多出一處就紅——要麼改走閘道器，要麼把理由補進這張表（並同步
+ * `src/core/workspace/README.md`「哪些寫入存」那一段）。
  *
- * 2026-10 那次普查之后收掉的：文件页粘贴的复制（`fs.cp` → `Workspace.copy`）、新建文件夹（`fs.mkdir` →
- * `Workspace.mkdir`）、设定名录按目录整理先建目录（删掉，`ws.move` 自己补父目录）、新工程的空模板（`writeIfAbsent`
- * → `Workspace.initializeProject`），以及角色卡的清理别名 / 合并重复卡（`features/characterMaintenance.ts`：
- * `writeText` → `write`、`fs.rename` 进回收站 → `remove`）。最后这一处上一次普查没扫到：那份源文件里有 NUL 字符
- * （拼键用的分隔符），`grep -r` 把它当二进制跳过了——所以这里用 Node 读全文，不靠 grep。
+ * 2026-10 那次普查之後收掉的：檔案頁貼上的複製（`fs.cp` → `Workspace.copy`）、新建資料夾（`fs.mkdir` →
+ * `Workspace.mkdir`）、設定名錄按目錄整理先建目錄（刪掉，`ws.move` 自己補父目錄）、新工程的空模板（`writeIfAbsent`
+ * → `Workspace.initializeProject`），以及角色卡的清理別名 / 合併重複卡（`features/characterMaintenance.ts`：
+ * `writeText` → `write`、`fs.rename` 進回收站 → `remove`）。最後這一處上一次普查沒掃到：那份原始檔裡有 NUL 字元
+ * （拼鍵用的分隔符），`grep -r` 把它當二進位制跳過了——所以這裡用 Node 讀全文，不靠 grep。
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -20,18 +20,18 @@ const { ROOT } = require('../helpers/load');
 
 const CORE = path.join(ROOT, 'src', 'core');
 
-/** 按设计不走网关的写盘：文件 → [处数, 理由]。 */
+/** 按設計不走閘道器的寫盤：檔案 → [處數, 理由]。 */
 const ALLOWED = {
-  'src/core/model/fs.ts': [2, '`writeText` 的实现本身（补父目录 + 写）'],
-  'src/core/model/project.ts': [3, '元数据与脚手架：旧目录（`.novel/`、`.novelforge/`）→ `.novelwarden/` 迁移、新工程建固定目录、写 manifest（`project.json`）'],
-  'src/core/model/session.ts': [3, '会话文件（内部文件，网关拒写 `sessions/`）：落盘、删会话搬进回收站（共用 `trashPathFor` 落点）'],
-  'src/core/stores.ts': [5, '工程外：`~/.novelwarden/` 的设置与 API Key'],
-  'src/core/skills/library.ts': [6, '工程外：我的技能库 `~/.novelwarden/skills/`（装：连同附带文件的子目录；卸载进它自己的回收站）'],
+  'src/core/model/fs.ts': [2, '`writeText` 的實現本身（補父目錄 + 寫）'],
+  'src/core/model/project.ts': [3, '後設資料與腳手架：舊目錄（`.novel/`、`.novelforge/`）→ `.novelwarden/` 遷移、新工程建固定目錄、寫 manifest（`project.json`）'],
+  'src/core/model/session.ts': [3, '會話檔案（內部檔案，閘道器拒寫 `sessions/`）：落盤、刪會話搬進回收站（共用 `trashPathFor` 落點）'],
+  'src/core/stores.ts': [5, '工程外：`~/.novelwarden/` 的設定與 API Key'],
+  'src/core/skills/library.ts': [6, '工程外：我的技能庫 `~/.novelwarden/skills/`（裝：連同附帶檔案的子目錄；解除安裝進它自己的回收站）'],
 };
 
 /**
- * 直接动磁盘的调用。`writeText` 的定义（`function writeText(`）不算；`ws.mkdir(` / `ws.copy(` 这种网关方法前面
- * 不是 `fs` / `fsp`，也不算。SQLite（`runtime/db.ts`，第 17 条：只放可丢弃的痕迹）经驱动写库文件，不在这张表里。
+ * 直接動磁碟的呼叫。`writeText` 的定義（`function writeText(`）不算；`ws.mkdir(` / `ws.copy(` 這種閘道器方法前面
+ * 不是 `fs` / `fsp`，也不算。SQLite（`runtime/db.ts`，第 17 條：只放可丟棄的痕跡）經驅動寫庫檔案，不在這張表裡。
  */
 const CALL =
   /(?<![\w$])(?:fs\.promises|fs|fsp|fsSync)\.(?:writeFile|appendFile|mkdir|rename|copyFile|cp|rm|rmdir|unlink|truncate|symlink|link|createWriteStream)(?:Sync)?\s*\(|(?<![\w$.])(?<!function\s)(?:writeText|writeFileSync|appendFileSync|mkdirSync|renameSync|copyFileSync|cpSync|rmSync|rmdirSync|unlinkSync)\s*\(/g;
@@ -46,12 +46,12 @@ function listTsFiles(dir) {
   return out;
 }
 
-/** 去掉注释：块注释整段、行尾 `//`。字符串里的 `//`（网址）不影响计数——那几行本来就没有写盘调用。 */
+/** 去掉註釋：塊註釋整段、行尾 `//`。字串裡的 `//`（網址）不影響計數——那幾行本來就沒有寫盤呼叫。 */
 function stripComments(text) {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
 }
 
-describe('第 7 条：网关之外没有新的直接写盘', () => {
+describe('第 7 條：閘道器之外沒有新的直接寫盤', () => {
   const files = listTsFiles(CORE).filter((p) => !p.startsWith(path.join(CORE, 'workspace') + path.sep));
   const found = {};
   for (const p of files) {
@@ -61,11 +61,11 @@ describe('第 7 条：网关之外没有新的直接写盘', () => {
     }
   }
 
-  test('扫到了文件（防止路径写错空跑通过）', () => {
+  test('掃到了檔案（防止路徑寫錯空跑通過）', () => {
     assert.ok(files.length > 50, String(files.length));
   });
 
-  test('只有表里那几处，数量对得上', () => {
+  test('只有表裡那幾處，數量對得上', () => {
     const expected = Object.fromEntries(Object.entries(ALLOWED).map(([f, [n]]) => [f, n]));
     assert.deepEqual(found, expected);
   });

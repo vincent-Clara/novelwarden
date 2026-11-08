@@ -1,6 +1,6 @@
 /**
- * 独立版入口：`bun run src/shells/standalone/main.ts [dir]` 或
- * `bun build --compile` 出的单文件可执行文件。
+ * 獨立版入口：`bun run src/shells/standalone/main.ts [dir]` 或
+ * `bun build --compile` 出的單檔案可執行檔案。
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -18,9 +18,9 @@ async function main(): Promise<void> {
   const opts = parseArgs(process.argv.slice(2));
 
   if (opts.init) {
-    // CLI 交互式 init：终端问答后写盘，不开服务。
-    // 流程本身**复用 core 的 initProjectFlow**——插件命令、网页按钮走的是同一条，
-    // 这里只是换了个把问答接到终端上的 Host。
+    // CLI 互動式 init：終端問答後寫盤，不開服務。
+    // 流程本身**複用 core 的 initProjectFlow**——外掛命令、網頁按鈕走的是同一條，
+    // 這裡只是換了個把問答接到終端上的 Host。
     const host = new TerminalHost(new FileConfigStore());
     initHost(host);
     const root = opts.root ?? path.resolve('.');
@@ -36,11 +36,11 @@ async function main(): Promise<void> {
   }
 
   if (opts.root && !hasProject(opts.root)) {
-    console.log(`提示：目录还不是小说工程：${opts.root}`);
-    console.log('可先跑 novelwarden init，或在网页上点「初始化工程」。');
+    console.log(`提示：目錄還不是小說工程：${opts.root}`);
+    console.log('可先跑 novelwarden init，或在網頁上點「初始化工程」。');
   }
 
-  // 绑非回环地址却没配令牌：宁可起不来，也不要让别的机器免密连进来。
+  // 綁非迴環地址卻沒配令牌：寧可起不來，也不要讓別的機器免密連進來。
   const token = tokenFromEnv();
   const exposure = exposureError(opts.host, token);
   if (exposure) {
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // 端口被占时顺延，最多试 20 次。
+  // 埠被佔時順延，最多試 20 次。
   let port = opts.port;
   for (let i = 0; ; i++) {
     try {
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
 
 void main();
 
-/** 三个元数据目录都算小说工程：新名 `.novelwarden/`，旧名 `.novelforge/` 与 `.novel/` 继续能打开。 */
+/** 三個後設資料目錄都算小說工程：新名 `.novelwarden/`，舊名 `.novelforge/` 與 `.novel/` 繼續能開啟。 */
 function hasProject(root: string): boolean {
   return ['.novelwarden', '.novelforge', '.novel'].some((dir) =>
     fs.existsSync(path.join(root, dir, 'project.json'))

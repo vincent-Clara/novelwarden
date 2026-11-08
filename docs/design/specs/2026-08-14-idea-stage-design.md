@@ -1,56 +1,56 @@
-# 灵感层设计（脑洞 → 全书大纲）
+# 靈感層設計（腦洞 → 全書大綱）
 
 日期：2026-08-14
-状态：待评审
+狀態：待評審
 
-## 背景与目标
+## 背景與目標
 
-项目定位从「为长篇小说做 LLM 上下文管理」改成**「把一个脑洞养成一本完整的书」**。定位一改，流水线的源头就露出一个缺口：
+專案定位從「為長篇小說做 LLM 上下文管理」改成**「把一個腦洞養成一本完整的書」**。定位一改，流水線的源頭就露出一個缺口：
 
-现在的源头是 `.novelforge/outline.md`。**在它之前的那一步——「这本书到底是个什么东西」——不在工程里**：作者只能在对话框里打一段话，让模型直接吐一份大纲。那段话不落盘、不可讨论、不可挑刺、不可重做，下一次开对话就没了；大纲写歪了也回溯不到「当初我想的是什么」。
+現在的源頭是 `.novelforge/outline.md`。**在它之前的那一步——「這本書到底是個什麼東西」——不在工程裡**：作者只能在對話方塊裡打一段話，讓模型直接吐一份大綱。那段話不落盤、不可討論、不可挑刺、不可重做，下一次開對話就沒了；大綱寫歪了也回溯不到「當初我想的是什麼」。
 
-本设计补上这一层：**灵感（idea）**，产物是 `.novelforge/idea.md`，与既有四层同构——同样的 Stage × Capability × Target 三维模型、同样的产物解析三层降级、同样的采纳才落盘、同样的零模型调用新鲜度链。
+本設計補上這一層：**靈感（idea）**，產物是 `.novelforge/idea.md`，與既有四層同構——同樣的 Stage × Capability × Target 三維模型、同樣的產物解析三層降級、同樣的採納才落盤、同樣的零模型呼叫新鮮度鏈。
 
-流水线因此变成五层：
+流水線因此變成五層：
 
 ```
-灵感      →  全书大纲  →  章节细纲  →  场景细节  →  正文
-这是个什么故事  故事讲什么   这章发生什么   这幕长什么样   怎么写出来
+靈感      →  全書大綱  →  章節細綱  →  場景細節  →  正文
+這是個什麼故事  故事講什麼   這章發生什麼   這幕長什麼樣   怎麼寫出來
 ```
 
-**非目标**：不做「一键从脑洞生成整本书」。灵感层的价值在于把那句话**变成可反复挑刺的产物**，而不是多一个自动化入口。
+**非目標**：不做「一鍵從腦洞生成整本書」。靈感層的價值在於把那句話**變成可反覆挑刺的產物**，而不是多一個自動化入口。
 
-## 关键决策
+## 關鍵決策
 
-| 决策点 | 结论 | 理由 |
+| 決策點 | 結論 | 理由 |
 | --- | --- | --- |
-| 产物落点 | `.novelforge/idea.md`，单文件，与 `outline.md` / `style.md` 同级 | 全书唯一一份，没有镜像路径问题 |
-| 文件格式 | frontmatter + 固定小节（同细纲/场景卡） | 复用 `pickSections` / `stringifySections`，解析可三层降级 |
-| 阶段能力 | `discuss / expand / critique / check / generate / rewrite`，**无 `split`** | 灵感的下一层是一份大纲文档，不是一个清单；「展开成大纲」由大纲层的 `generate` 承担，与 `scene` 层无 split 同理 |
-| 新鲜度链 | `idea.md ──hash──▶ outline.md`，hash 记在 `project.json` | `outline.md` 是作者高频手改的纯 Markdown，给它加 frontmatter 会天天撞冲突；manifest 已经是「文件自身放不下指纹」时的落点（正文的 `beatsHash` 就在那里） |
-| 灵感进不进正文上下文 | **不进**。只出现在 `idea` 与 `outline` 两张配方里 | 立意已经沉淀进大纲与细纲，写正文时再带一遍是纯浪费；这与「前三层不带正文原文」是同一条取舍 |
-| 老工程迁移 | 不自动生成、不强制补。没有 `idea.md` 就是一张空卡 | 已经写了七十章的人不需要被叫回去补一份「立意」 |
-| 初始化 | `initialize()` 写入 `IDEA_TEMPLATE`，但**不改**初始化问的那两个问题（书名 / 作者） | 让「先有个名字」变成动笔门槛是反的；名字可以最后再起 |
+| 產物落點 | `.novelforge/idea.md`，單檔案，與 `outline.md` / `style.md` 同級 | 全書唯一一份，沒有映象路徑問題 |
+| 檔案格式 | frontmatter + 固定小節（同細綱/場景卡） | 複用 `pickSections` / `stringifySections`，解析可三層降級 |
+| 階段能力 | `discuss / expand / critique / check / generate / rewrite`，**無 `split`** | 靈感的下一層是一份大綱文件，不是一個清單；「展開成大綱」由大綱層的 `generate` 承擔，與 `scene` 層無 split 同理 |
+| 新鮮度鏈 | `idea.md ──hash──▶ outline.md`，hash 記在 `project.json` | `outline.md` 是作者高頻手改的純 Markdown，給它加 frontmatter 會天天撞衝突；manifest 已經是「檔案自身放不下指紋」時的落點（正文的 `beatsHash` 就在那裡） |
+| 靈感進不進正文上下文 | **不進**。只出現在 `idea` 與 `outline` 兩張配方里 | 立意已經沉澱進大綱與細綱，寫正文時再帶一遍是純浪費；這與「前三層不帶正文原文」是同一條取捨 |
+| 老工程遷移 | 不自動生成、不強制補。沒有 `idea.md` 就是一張空卡 | 已經寫了七十章的人不需要被叫回去補一份「立意」 |
+| 初始化 | `initialize()` 寫入 `IDEA_TEMPLATE`，但**不改**初始化問的那兩個問題（書名 / 作者） | 讓「先有個名字」變成動筆門檻是反的；名字可以最後再起 |
 
-## A. 领域模型（`src/core/model/pipeline.ts`）
+## A. 領域模型（`src/core/model/pipeline.ts`）
 
-纯类型 + 纯函数层的改动，前端、装配器、编排层共用这一份。
+純型別 + 純函式層的改動，前端、裝配器、編排層共用這一份。
 
 ```ts
 export type CreationStage = 'idea' | 'outline' | 'plan' | 'scene' | 'manuscript';
 export const CREATION_STAGES = ['idea', 'outline', 'plan', 'scene', 'manuscript'];
 ```
 
-配套的五张表各加一行：
+配套的五張表各加一行：
 
 | 表 | `idea` 的值 |
 | --- | --- |
-| `STAGE_LABEL` | `灵感` |
-| `STAGE_QUESTION` | `这是个什么故事？` |
-| `STAGE_ROLE` | `选题策划` |
+| `STAGE_LABEL` | `靈感` |
+| `STAGE_QUESTION` | `這是個什麼故事？` |
+| `STAGE_ROLE` | `選題策劃` |
 | `STAGE_CAPABILITIES` | `['discuss','expand','critique','check','generate','rewrite']` |
-| `DEFAULT_CAPABILITY` | `discuss`（与其余四层一致：默认动作不花钱） |
-| `CAPABILITY_LABEL_IN.idea` | `generate: '写下这个脑洞'`、`rewrite: '重写脑洞'` |
+| `DEFAULT_CAPABILITY` | `discuss`（與其餘四層一致：預設動作不花錢） |
+| `CAPABILITY_LABEL_IN.idea` | `generate: '寫下這個腦洞'`、`rewrite: '重寫腦洞'` |
 
 `CreationTarget` 加一支：
 
@@ -59,82 +59,82 @@ export const CREATION_STAGES = ['idea', 'outline', 'plan', 'scene', 'manuscript'
 ```
 
 - `targetKey({kind:'idea'})` → `'idea'`
-- `describeTarget` → `'灵感'`
-- `chapterOfTarget` → `undefined`（与 `outline` 同）
-- `normalizeTarget` 的兜底**仍是 `outline`**：它在任何工程里都存在，改兜底会让老会话的落点漂移
+- `describeTarget` → `'靈感'`
+- `chapterOfTarget` → `undefined`（與 `outline` 同）
+- `normalizeTarget` 的兜底**仍是 `outline`**：它在任何工程裡都存在，改兜底會讓老會話的落點漂移
 
-### 全书级流水线状态（新增）
+### 全書級流水線狀態（新增）
 
-现有 `ChapterStage` / `deriveStage` 回答的是「这一章走到哪了」。灵感层不属于任何一章，需要一个同构的全书级状态机：
+現有 `ChapterStage` / `deriveStage` 回答的是「這一章走到哪了」。靈感層不屬於任何一章，需要一個同構的全書級狀態機：
 
 ```ts
 export type BookStage = 'idea' | 'outline' | 'chapters' | 'writing';
 
 export interface BookFacts {
-  ideaFilled: boolean;      // idea.md 有实质内容
-  outlineFilled: boolean;   // outline.md 去掉模板占位后有内容
+  ideaFilled: boolean;      // idea.md 有實質內容
+  outlineFilled: boolean;   // outline.md 去掉模板佔位後有內容
   chapterCount: number;
-  ideaStale: boolean;       // 大纲所依据的灵感已变（manifest.ideaHash 对不上）
+  ideaStale: boolean;       // 大綱所依據的靈感已變（manifest.ideaHash 對不上）
 }
 
 export function deriveBookStage(f: BookFacts): BookStage;
 export function deriveBookNextStep(stage: BookStage, f: BookFacts): NextStepPlan | undefined;
 ```
 
-判据自上而下取第一个不满足的：没灵感 → 写灵感；有灵感没大纲 → 生成大纲；有大纲没章节 → 拆成章节；有章节 → 交给既有的按章流水线（返回 `undefined`，创作页照旧按当前章节给下一步）。
+判據自上而下取第一個不滿足的：沒靈感 → 寫靈感；有靈感沒大綱 → 生成大綱；有大綱沒章節 → 拆成章節；有章節 → 交給既有的按章流水線（返回 `undefined`，創作頁照舊按當前章節給下一步）。
 
-`ideaStale` 只影响标记，不改变 `BookStage`——**改了灵感不等于大纲作废**，只是提醒回头看一眼（与 ⟳ 的既有语义一致）。
+`ideaStale` 隻影響標記，不改變 `BookStage`——**改了靈感不等於大綱作廢**，只是提醒回頭看一眼（與 ⟳ 的既有語義一致）。
 
-### 判据为什么不落盘
+### 判據為什麼不落盤
 
-与 `deriveStage` 同一条理由：状态字段会在作者手删内容之后开始撒谎。`ideaFilled` / `outlineFilled` 每次从磁盘现算。
+與 `deriveStage` 同一條理由：狀態欄位會在作者手刪內容之後開始撒謊。`ideaFilled` / `outlineFilled` 每次從磁碟現算。
 
-## B. 文件格式（新增 `src/core/model/ideaFile.ts`）
+## B. 檔案格式（新增 `src/core/model/ideaFile.ts`）
 
-与 `planFile.ts` / `sceneFile.ts` 同类：纯函数、零 I/O、解析绝不抛。
+與 `planFile.ts` / `sceneFile.ts` 同類：純函式、零 I/O、解析絕不拋。
 
 ```ts
 export const IDEA_SECTION_KEYS = [
-  '一句话',        // logline：一句话说清这本书是什么
-  '前提',          // 这个世界/情境哪里不一样，钩子在哪
-  '主角与欲望',    // 谁，他要什么，为什么现在
-  '核心冲突与代价', // 挡在中间的是什么，输了会怎样
-  '结局设想',      // 想收在哪儿（可以只是一个方向）
-  '基调与参照',    // 想写成什么味道，像哪几本书
+  '一句話',        // logline：一句話說清這本書是什麼
+  '前提',          // 這個世界/情境哪裡不一樣，鉤子在哪
+  '主角與慾望',    // 誰，他要什麼，為什麼現在
+  '核心衝突與代價', // 擋在中間的是什麼，輸了會怎樣
+  '結局設想',      // 想收在哪兒（可以只是一個方向）
+  '基調與參照',    // 想寫成什麼味道，像哪幾本書
 ] as const;
 
 export interface Idea {
   relPath: string;
-  title: string;          // frontmatter.title，与 project.json 的书名同步显示
+  title: string;          // frontmatter.title，與 project.json 的書名同步顯示
   sections: IdeaSections;
-  body: string;           // 小节之外作者自己加的内容，读回来时保留
+  body: string;           // 小節之外作者自己加的內容，讀回來時保留
 }
 
-export function isIdeaFilled(s: IdeaSections): boolean;  // 一句话 或 核心冲突与代价 非空
+export function isIdeaFilled(s: IdeaSections): boolean;  // 一句話 或 核心衝突與代價 非空
 export function parseIdeaFile(text: string, relPath: string): Idea;
 export function renderIdeaFile(idea: WritableIdea): string;
 ```
 
-`isIdeaFilled` 只认那两节：只写了「基调与参照」等于什么都没想清楚，流水线该停在 `idea`。占位文字（`（待补充）`）不算内容——复用 `planFile.ts` 里那个 `meaningful`，提取到 `markdown.ts` 共用。
+`isIdeaFilled` 只認那兩節：只寫了「基調與參照」等於什麼都沒想清楚，流水線該停在 `idea`。佔位文字（`（待補充）`）不算內容——複用 `planFile.ts` 裡那個 `meaningful`，提取到 `markdown.ts` 共用。
 
-模板（`IDEA_TEMPLATE`，写在 `project.ts` 与其余模板并列）：六个小节 + 每节一句括号提示，与 `OUTLINE_TEMPLATE` 的写法一致。
+模板（`IDEA_TEMPLATE`，寫在 `project.ts` 與其餘模板並列）：六個小節 + 每節一句括號提示，與 `OUTLINE_TEMPLATE` 的寫法一致。
 
-### `project.ts` 的改动
+### `project.ts` 的改動
 
 - `get ideaPath()` → `.novelforge/idea.md`
-- `readIdea()` / `writeIdea()`（与 `readOutline` / `writeOutline` 并列，缺文件时返回空 `Idea` 而不是抛）
+- `readIdea()` / `writeIdea()`（與 `readOutline` / `writeOutline` 並列，缺檔案時返回空 `Idea` 而不是拋）
 - `initialize()` 增加 `writeIfAbsent(this.ideaPath, IDEA_TEMPLATE)`
-- `ProjectManifest` 增加两个可选字段：
+- `ProjectManifest` 增加兩個可選欄位：
 
 ```ts
-ideaHash?: string;      // 生成/最后一次采纳 outline.md 时 idea.md 的 hash
+ideaHash?: string;      // 生成/最後一次採納 outline.md 時 idea.md 的 hash
 ```
 
-`MANIFEST_VERSION` 不动：新增可选字段，老 manifest 读进来就是 `undefined`，语义正好是「没有依据、不标脏」。
+`MANIFEST_VERSION` 不動：新增可選欄位，老 manifest 讀進來就是 `undefined`，語義正好是「沒有依據、不標髒」。
 
-## C. 新鲜度链
+## C. 新鮮度鏈
 
-现有链条前面接一节：
+現有鏈條前面接一節：
 
 ```
 idea.md    ──hash──▶ outline.md      (manifest.ideaHash)      ← 新增
@@ -144,20 +144,20 @@ scenes/X/* ──hash──▶ chapters/X      (manifest.beatsHash)
 chapters/X ──hash──▶ summaries/X.md  (frontmatter.sourceHash)
 ```
 
-- 采纳大纲（`acceptOutline`）时把当前 `idea.md` 的 hash 写进 `manifest.ideaHash`。
-- `manifest.ideaHash` 存在且与当前 `idea.md` 对不上 → 大纲行/大纲面包屑挂 ⟳。
-- **`ideaHash` 不存在时不标脏**——手写的大纲（以及所有老工程的大纲）永远不挂 ⟳，与「手写产物不挂 ⟳」的既有规则一致。
-- 依然是零模型调用、零 token，只是多比对一个 hash。
+- 採納大綱（`acceptOutline`）時把當前 `idea.md` 的 hash 寫進 `manifest.ideaHash`。
+- `manifest.ideaHash` 存在且與當前 `idea.md` 對不上 → 大綱行/大綱麵包屑掛 ⟳。
+- **`ideaHash` 不存在時不標髒**——手寫的大綱（以及所有老工程的大綱）永遠不掛 ⟳，與「手寫產物不掛 ⟳」的既有規則一致。
+- 依然是零模型呼叫、零 token，只是多比對一個 hash。
 
-**不做级联**：改了灵感只标大纲，不顺着往下把所有细纲一起标脏。⟳ 是「回头看一眼」的提示，不是审计报告；一次改动点亮全书三百行 ⟳，作者会学会无视所有标记。
+**不做級聯**：改了靈感只標大綱，不順著往下把所有細綱一起標髒。⟳ 是「回頭看一眼」的提示，不是審計報告；一次改動點亮全書三百行 ⟳，作者會學會無視所有標記。
 
-## D. 上下文装配
+## D. 上下文裝配
 
-### 新增层 `ideaDoc`（`src/core/context/layers/artifacts.ts`）
+### 新增層 `ideaDoc`（`src/core/context/layers/artifacts.ts`）
 
-读 `idea.md`，渲染成 `# 这本书是什么` 段落。空文件时不产出条目（而不是产出一个空段落）。
+讀 `idea.md`，渲染成 `# 這本書是什麼` 段落。空檔案時不產出條目（而不是產出一個空段落）。
 
-`ContextItemKind` 与 `LayerName` 各加 `'ideaDoc'`。
+`ContextItemKind` 與 `LayerName` 各加 `'ideaDoc'`。
 
 ### 配方（`src/core/context/recipes.ts`）
 
@@ -172,7 +172,7 @@ idea: [
 ],
 ```
 
-这一层**刻意贫瘠**：讨论「这本书是个什么故事」时，大纲、摘要、角色卡都还不存在，或者存在也没用——真正的输入是作者那句话和现有的灵感卡。`lore` 留着是为了一种真实情形：世界观是先搭起来的，脑洞长在它上面。
+這一層**刻意貧瘠**：討論「這本書是個什麼故事」時，大綱、摘要、角色卡都還不存在，或者存在也沒用——真正的輸入是作者那句話和現有的靈感卡。`lore` 留著是為了一種真實情形：世界觀是先搭起來的，腦洞長在它上面。
 
 `outline` 配方在 `outlineDoc` 之前插入：
 
@@ -180,25 +180,25 @@ idea: [
 { layer: 'ideaDoc', priority: 0, force: true },
 ```
 
-于是「从脑洞生成大纲」不需要作者再复述一遍立意——这正是这一层存在的意义。其余三张配方一字不动。
+於是「從腦洞生成大綱」不需要作者再複述一遍立意——這正是這一層存在的意義。其餘三張配方一字不動。
 
-## E. 提示词（`src/core/context/prompts.ts`）
+## E. 提示詞（`src/core/context/prompts.ts`）
 
 `STAGE_DUTY.idea`：
 
-> 你负责帮作者把一个还很模糊的念头想清楚：这个故事的钩子在哪、主角要什么、挡在中间的是什么、输了会付出什么代价、大致收在哪儿。你不排幕、不分章、不写场景——那是后面几层的事。判断一个故事成不成立，看的是「主角的欲望有没有被真正阻挡」，不是「设定够不够炫」。
+> 你負責幫作者把一個還很模糊的念頭想清楚：這個故事的鉤子在哪、主角要什麼、擋在中間的是什麼、輸了會付出什麼代價、大致收在哪兒。你不排幕、不分章、不寫場景——那是後面幾層的事。判斷一個故事成不成立，看的是「主角的慾望有沒有被真正阻擋」，不是「設定夠不夠炫」。
 
-`buildOutputContract` 的 `idea` 分支（`generate` / `rewrite`）：要求只输出 JSON，键即 `IDEA_SECTION_KEYS`，并补三条要求：
+`buildOutputContract` 的 `idea` 分支（`generate` / `rewrite`）：要求只輸出 JSON，鍵即 `IDEA_SECTION_KEYS`，並補三條要求：
 
-1. 「一句话」必须能让人一句话之内明白这书是什么，不要写成宣传语。
-2. 「核心冲突与代价」要写清失败会失去什么——没有代价的冲突撑不起一本书。
-3. 想不清楚的小节留空字符串，不要为了填满而编。
+1. 「一句話」必須能讓人一句話之內明白這書是什麼，不要寫成宣傳語。
+2. 「核心衝突與代價」要寫清失敗會失去什麼——沒有代價的衝突撐不起一本書。
+3. 想不清楚的小節留空字串，不要為了填滿而編。
 
-`critique` 在这一层最值钱，沿用通用的「只说问题和改法，不要顺手替他改写」，不额外定制。
+`critique` 在這一層最值錢，沿用通用的「只說問題和改法，不要順手替他改寫」，不額外定製。
 
-`askHeading` 不动（灵感层用通用的 `# 我的要求`）。
+`askHeading` 不動（靈感層用通用的 `# 我的要求`）。
 
-## F. 产物解析与采纳
+## F. 產物解析與採納
 
 `src/core/features/artifact.ts`：
 
@@ -206,56 +206,56 @@ idea: [
 | { kind: 'idea'; sections: IdeaSections }
 ```
 
-- `parseArtifact`：`stage === 'idea'` → `parseIdeaSections(text)`，三层降级（JSON → `## 小节` → 全文塞进「一句话」）。
+- `parseArtifact`：`stage === 'idea'` → `parseIdeaSections(text)`，三層降級（JSON → `## 小節` → 全文塞進「一句話」）。
 - `isArtifactEmpty` / `describeArtifact`（`灵感 · 4/6 节`）各加一支。
-- 另出一个 `parseIdeaStrict`（只走前两层，不做全文兜底），留给将来可能出现的批量路径；创作页用带兜底的那个。
+- 另出一個 `parseIdeaStrict`（只走前兩層，不做全文兜底），留給將來可能出現的批次路徑；創作頁用帶兜底的那個。
 
 `src/core/features/creation.ts`：
 
 - `acceptArtifact` 增加 `case 'idea': return this.acceptIdea(artifact.sections)`。
-- `acceptIdea` 走 `confirmOverwrite`（已有内容时先对比再决定），与 `acceptOutline` 同形。
-- `acceptOutline` 末尾增加一行：把当前 `idea.md` 的 hash 写进 manifest。
+- `acceptIdea` 走 `confirmOverwrite`（已有內容時先對比再決定），與 `acceptOutline` 同形。
+- `acceptOutline` 末尾增加一行：把當前 `idea.md` 的 hash 寫進 manifest。
 
-## G. 视图与协议
+## G. 檢視與協議
 
-| 位置 | 改动 |
+| 位置 | 改動 |
 | --- | --- |
 | `core/views/pipeline.ts` | 新增 `buildBookPipeline(project): BookPipeline`（取 `BookFacts` → `deriveBookStage` / `deriveBookNextStep`） |
-| `core/views/workbench.ts` | `target.kind === 'idea'` 时给出灵感卡：标题「灵感」，摊开六个小节（全书唯一一份，内容短，可以全摊）；空态文案「这本书还只是一个念头。先把它说清楚，大纲从它展开。」 |
-| `core/views/projectView.ts` | 「文风与摘要」分组顶部增加**灵感**一行（与全书大纲同类：固定文件，不可改名/删除） |
-| `core/protocol/views.ts` | `ProjectView` 增加 `ideaPath`；流水线视图增加 `bookStage` 与 `ideaStale` |
-| `core/files/attachments.ts` | `@` 引用候选增加 `idea.md`（与 `outline.md` / `style.md` 并列） |
+| `core/views/workbench.ts` | `target.kind === 'idea'` 時給出靈感卡：標題「靈感」，攤開六個小節（全書唯一一份，內容短，可以全攤）；空態文案「這本書還只是一個念頭。先把它說清楚，大綱從它展開。」 |
+| `core/views/projectView.ts` | 「文風與摘要」分組頂部增加**靈感**一行（與全書大綱同類：固定檔案，不可改名/刪除） |
+| `core/protocol/views.ts` | `ProjectView` 增加 `ideaPath`；流水線檢視增加 `bookStage` 與 `ideaStale` |
+| `core/files/attachments.ts` | `@` 引用候選增加 `idea.md`（與 `outline.md` / `style.md` 並列） |
 
 ## H. 前端
 
-- **面包屑**：最左端多一格 `灵感`，点了切到灵感层。链条变成 `灵感 › 全书大纲 › 第 12 章《…》 › 场景 2`。大纲那一格在 `ideaStale` 时挂 ⟳。
-- **主按钮（下一步）**：当前没选章节时读 `bookStage`——「写下这个脑洞 → 生成全书大纲 → 拆成章节」。**新工程第一次打开创作页，主按钮是「写下这个脑洞」而不是一片空白**，这是这次改动对新用户最直接的收益。
-- **`/` 命令面板**：`commandsFor('idea')` 自动产出六条，前端零改动。
-- **工程页**：灵感行右键给「打开 / 讨论这个脑洞 / 重写」，无「删除」。
-- 阶段徽章、进度条等按 `CREATION_STAGES` 遍历的地方自动多一格；需要检查前端是否有写死四层的地方（`media/src/view/creation/*` 的流水线条）。
+- **麵包屑**：最左端多一格 `靈感`，點了切到靈感層。鏈條變成 `靈感 › 全書大綱 › 第 12 章《…》 › 場景 2`。大綱那一格在 `ideaStale` 時掛 ⟳。
+- **主按鈕（下一步）**：當前沒選章節時讀 `bookStage`——「寫下這個腦洞 → 生成全書大綱 → 拆成章節」。**新工程第一次開啟創作頁，主按鈕是「寫下這個腦洞」而不是一片空白**，這是這次改動對新使用者最直接的收益。
+- **`/` 命令面板**：`commandsFor('idea')` 自動產出六條，前端零改動。
+- **工程頁**：靈感行右鍵給「開啟 / 討論這個腦洞 / 重寫」，無「刪除」。
+- 階段徽章、進度條等按 `CREATION_STAGES` 遍歷的地方自動多一格；需要檢查前端是否有寫死四層的地方（`media/src/view/creation/*` 的流水線條）。
 
-## I. 测试
+## I. 測試
 
-| 档 | 用例 |
+| 檔 | 用例 |
 | --- | --- |
-| `unit` | `ideaFile` 解析/渲染往返、坏 frontmatter 不抛、`isIdeaFilled` 的占位判定；`deriveBookStage` / `deriveBookNextStep` 全状态覆盖；`STAGE_CAPABILITIES.idea` 不含 `split`；`normalizeTarget('idea')` 与老会话兜底不变；`parseIdeaSections` 三层降级 |
-| `integration` | 采纳灵感产物落盘（含覆盖确认）；采纳大纲写入 `manifest.ideaHash`；改 `idea.md` 后大纲标脏、老工程（无 `ideaHash`）不标脏；`idea` / `outline` 两张配方的装配明细 |
-| `dom` | 面包屑五格与点击切层；新工程空态的主按钮文案；工程页灵感行的右键菜单 |
-| `contract` | 无新增约束；`sample-novel/` 增加一份 `idea.md` 并确认 hash 断言不受影响 |
+| `unit` | `ideaFile` 解析/渲染往返、壞 frontmatter 不拋、`isIdeaFilled` 的佔位判定；`deriveBookStage` / `deriveBookNextStep` 全狀態覆蓋；`STAGE_CAPABILITIES.idea` 不含 `split`；`normalizeTarget('idea')` 與老會話兜底不變；`parseIdeaSections` 三層降級 |
+| `integration` | 採納靈感產物落盤（含覆蓋確認）；採納大綱寫入 `manifest.ideaHash`；改 `idea.md` 後大綱標髒、老工程（無 `ideaHash`）不標髒；`idea` / `outline` 兩張配方的裝配明細 |
+| `dom` | 麵包屑五格與點選切層；新工程空態的主按鈕文案；工程頁靈感行的右鍵選單 |
+| `contract` | 無新增約束；`sample-novel/` 增加一份 `idea.md` 並確認 hash 斷言不受影響 |
 
 ## J. 分期
 
-| 期 | 内容 | 可独立交付 |
+| 期 | 內容 | 可獨立交付 |
 | --- | --- | --- |
-| **一** | 领域模型 + `ideaFile.ts` + `project.ts` 读写与模板 + 解析/采纳 + 提示词 + 两张配方 | 能在创作页选「灵感」层讨论并生成产物，写盘可用 |
-| **二** | `BookStage` 全书状态机 + 主按钮 + 面包屑 + 工程页那一行 | 新工程有明确的第一步 |
-| **三** | `ideaHash` 新鲜度链与 ⟳ | 改了脑洞能看见大纲需要回头 |
+| **一** | 領域模型 + `ideaFile.ts` + `project.ts` 讀寫與模板 + 解析/採納 + 提示詞 + 兩張配方 | 能在創作頁選「靈感」層討論並生成產物，寫盤可用 |
+| **二** | `BookStage` 全書狀態機 + 主按鈕 + 麵包屑 + 工程頁那一行 | 新工程有明確的第一步 |
+| **三** | `ideaHash` 新鮮度鏈與 ⟳ | 改了腦洞能看見大綱需要回頭 |
 
-一期是主体（八成工作量集中在模型层与解析层，且全部有既有同构实现可抄）；二三期各自小而独立，可以分开评审。
+一期是主體（八成工作量集中在模型層與解析層，且全部有既有同構實現可抄）；二三期各自小而獨立，可以分開評審。
 
-## K. 明确不做
+## K. 明確不做
 
-- **不做「一键成书」**：灵感 → 大纲 → 拆章 → 批量细纲这条链每一步都要作者点。
-- **不把灵感注入正文上下文**：写第 80 章时带上一份立意宣言，只会挤掉真正有用的前文。
-- **不做灵感的多版本管理**（同时养三个脑洞、A/B 对比）。真要比，`idea.md` 是普通 Markdown，Git 分支比任何内置版本机制都好用。
-- **不自动为老工程反推灵感**（读全书摘要倒推一份立意）。看起来聪明，实际是拿模型编一段作者从没想过的话，然后把它挂在流水线源头。
+- **不做「一鍵成書」**：靈感 → 大綱 → 拆章 → 批次細綱這條鏈每一步都要作者點。
+- **不把靈感注入正文上下文**：寫第 80 章時帶上一份立意宣言，只會擠掉真正有用的前文。
+- **不做靈感的多版本管理**（同時養三個腦洞、A/B 對比）。真要比，`idea.md` 是普通 Markdown，Git 分支比任何內建版本機制都好用。
+- **不自動為老工程反推靈感**（讀全書摘要倒推一份立意）。看起來聰明，實際是拿模型編一段作者從沒想過的話，然後把它掛在流水線源頭。

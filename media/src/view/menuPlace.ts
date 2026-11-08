@@ -1,19 +1,19 @@
 /**
- * 菜单摆在哪：右键菜单、标题栏的下拉与子菜单共用的几何（纯函数、零 DOM，`tests/unit/view/menuPlace.test.js` 钉着）。
+ * 選單擺在哪：右鍵選單、標題欄的下拉與子選單共用的幾何（純函式、零 DOM，`tests/unit/view/menuPlace.test.js` 釘著）。
  *
- * 一条规矩：**菜单整个落在可视区里**。从前右键菜单只翻转、不平移不压高——手机竖屏上在下半屏长按，菜单比剩下的空间高、
- * 往上翻又顶出屏幕顶，被截掉一截；标题栏的「帮助」下拉与「打开最近打开的」子菜单在窄屏上直接伸出右边。现在：
+ * 一條規矩：**選單整個落在可視區裡**。從前右鍵選單隻翻轉、不平移不壓高——手機豎屏上在下半屏長按，選單比剩下的空間高、
+ * 往上翻又頂出螢幕頂，被截掉一截；標題欄的「幫助」下拉與「開啟最近開啟的」子選單在窄屏上直接伸出右邊。現在：
  *
- * - **贴着一点弹**（右键）：右边放不下往左翻，翻过去还放不下就贴着右边缘；下面放不下往上翻，上面也放不下就平移到刚好
- *   贴着底边（菜单盖住按下去的那一点，手指在那儿也不碍事）；比整个可视区还高就从顶上开始、压 `max-height` 在菜单里滚。
- * - **贴着一个矩形弹**（下拉：在按钮下方左对齐；子菜单：在父菜单项右边、顶对齐，右边放不下翻到左边）：横向夹进可视区，
- *   纵向照上面同一套（下拉只往下，放不下就压高度）。
+ * - **貼著一點彈**（右鍵）：右邊放不下往左翻，翻過去還放不下就貼著右邊緣；下面放不下往上翻，上面也放不下就平移到剛好
+ *   貼著底邊（選單蓋住按下去的那一點，手指在那兒也不礙事）；比整個可視區還高就從頂上開始、壓 `max-height` 在選單裡滾。
+ * - **貼著一個矩形彈**（下拉：在按鈕下方左對齊；子選單：在父選單項右邊、頂對齊，右邊放不下翻到左邊）：橫向夾進可視區，
+ *   縱向照上面同一套（下拉只往下，放不下就壓高度）。
  *
- * 可视区不一定是 `innerWidth × innerHeight`：手机浏览器缩放过、或者软键盘顶起了可视区时，`visualViewport` 才是人眼看得到的
- * 那一块（`fixed` 的坐标仍以布局视口为准，可视区相对它偏了 `offsetLeft / offsetTop`）。取法见 {@link visibleArea}。
+ * 可視區不一定是 `innerWidth × innerHeight`：手機瀏覽器縮放過、或者軟鍵盤頂起了可視區時，`visualViewport` 才是人眼看得到的
+ * 那一塊（`fixed` 的座標仍以佈局視口為準，可視區相對它偏了 `offsetLeft / offsetTop`）。取法見 {@link visibleArea}。
  */
 
-/** 一块矩形区域（坐标与 `position: fixed` 同一个参照）。 */
+/** 一塊矩形區域（座標與 `position: fixed` 同一個參照）。 */
 export interface Area {
   left: number;
   top: number;
@@ -21,17 +21,17 @@ export interface Area {
   height: number;
 }
 
-/** 摆出来的位置。`maxHeight` 只在菜单比能用的高度还高时给（菜单里滚）。 */
+/** 擺出來的位置。`maxHeight` 只在選單比能用的高度還高時給（選單裡滾）。 */
 export interface Placement {
   left: number;
   top: number;
   maxHeight?: number;
 }
 
-/** 与可视区边缘的留白。 */
+/** 與可視區邊緣的留白。 */
 export const MENU_MARGIN = 4;
 
-/** 横向：从 `preferred` 起放 `w` 宽；放不下用 `fallback`（翻到另一边），还放不下就贴边。 */
+/** 橫向：從 `preferred` 起放 `w` 寬；放不下用 `fallback`（翻到另一邊），還放不下就貼邊。 */
 function fitX(preferred: number, fallback: number, w: number, area: Area, margin: number): number {
   const min = area.left + margin;
   const max = area.left + area.width - margin;
@@ -45,8 +45,8 @@ function fitX(preferred: number, fallback: number, w: number, area: Area, margin
 }
 
 /**
- * 纵向：从 `preferred` 往下放 `h` 高；放不下且 `flip` 给了就试往上翻（以 `flip` 为下沿），还放不下就平移到贴着底边；
- * 比整块还高就顶着上边缘压高度。
+ * 縱向：從 `preferred` 往下放 `h` 高；放不下且 `flip` 給了就試往上翻（以 `flip` 為下沿），還放不下就平移到貼著底邊；
+ * 比整塊還高就頂著上邊緣壓高度。
  */
 function fitY(preferred: number, flip: number | undefined, h: number, area: Area, margin: number): Pick<Placement, 'top' | 'maxHeight'> {
   const min = area.top + margin;
@@ -65,7 +65,7 @@ function fitY(preferred: number, flip: number | undefined, h: number, area: Area
 }
 
 /**
- * 在点 (x, y) 弹一个 `w × h` 的菜单（右键）。量不出尺寸（jsdom 里 `offsetWidth` 恒为 0）时就贴着那一点。
+ * 在點 (x, y) 彈一個 `w × h` 的選單（右鍵）。量不出尺寸（jsdom 裡 `offsetWidth` 恆為 0）時就貼著那一點。
  */
 export function placeAtPoint(x: number, y: number, w: number, h: number, area: Area, margin = MENU_MARGIN): Placement {
   if (w <= 0 || h <= 0 || area.width <= 0 || area.height <= 0) {
@@ -74,7 +74,7 @@ export function placeAtPoint(x: number, y: number, w: number, h: number, area: A
   return { left: fitX(x, x - w, w, area, margin), ...fitY(y, y, h, area, margin) };
 }
 
-/** 一个矩形（按钮、父菜单项）的四边。 */
+/** 一個矩形（按鈕、父選單項）的四邊。 */
 export interface Anchor {
   left: number;
   top: number;
@@ -83,8 +83,8 @@ export interface Anchor {
 }
 
 /**
- * 贴着 `anchor` 弹：`below` 是标题栏下拉（按钮下方、左对齐，右边放不下往左收，只往下、放不下压高度）；`side` 是子菜单
- * （父菜单项右边、顶对齐，右边放不下翻到父菜单项左边，再不行就贴边盖住一点父菜单；下面放不下往上平移）。
+ * 貼著 `anchor` 彈：`below` 是標題欄下拉（按鈕下方、左對齊，右邊放不下往左收，只往下、放不下壓高度）；`side` 是子選單
+ * （父選單項右邊、頂對齊，右邊放不下翻到父選單項左邊，再不行就貼邊蓋住一點父選單；下面放不下往上平移）。
  */
 export function placeNear(anchor: Anchor, w: number, h: number, area: Area, mode: 'below' | 'side', margin = MENU_MARGIN): Placement {
   const near = mode === 'below' ? { x: anchor.left, y: anchor.bottom } : { x: anchor.right, y: anchor.top };
@@ -100,7 +100,7 @@ export function placeNear(anchor: Anchor, w: number, h: number, area: Area, mode
   return { left: fitX(anchor.right, anchor.left - w, w, area, margin), ...fitY(anchor.top, undefined, h, area, margin) };
 }
 
-/** 人眼看得到的那一块（`fixed` 坐标系里）。有 `visualViewport` 用它，没有就是整个窗口。 */
+/** 人眼看得到的那一塊（`fixed` 座標系裡）。有 `visualViewport` 用它，沒有就是整個視窗。 */
 export function visibleArea(win: Window = window): Area {
   const vv = win.visualViewport;
   if (vv && vv.width > 0 && vv.height > 0) {

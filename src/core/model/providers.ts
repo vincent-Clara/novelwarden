@@ -1,59 +1,59 @@
 /**
- * 多服务商 / 多模型的数据模型。
+ * 多服務商 / 多模型的資料模型。
  *
- * 一个模型用「前缀/模型名」引用：
+ * 一個模型用「字首/模型名」引用：
  *   glm/glm-4-plus              智谱官方的 glm-4-plus
- *   openrouter/z-ai/glm-4.6     OpenRouter 上的同一个模型
+ *   openrouter/z-ai/glm-4.6     OpenRouter 上的同一個模型
  *
- * 前缀是服务商的 id，模型名是原样传给 API 的字符串——它自己可以含斜杠
- * （OpenRouter 的模型名本就是 `vendor/model`），所以引用只在**第一个**
- * 斜杠处切分。
+ * 字首是服務商的 id，模型名是原樣傳給 API 的字串——它自己可以含斜槓
+ * （OpenRouter 的模型名本就是 `vendor/model`），所以引用只在**第一個**
+ * 斜槓處切分。
  */
 
 export type ProviderKind = 'openai' | 'anthropic' | 'vscode-lm';
 
-/** 某个服务商下的一个模型。 */
+/** 某個服務商下的一個模型。 */
 export interface ModelEntry {
-  /** 原样传给 API 的模型名，可以含斜杠。 */
+  /** 原樣傳給 API 的模型名，可以含斜槓。 */
   name: string;
-  /** 列表里的显示名，留空则显示模型名本身。 */
+  /** 列表裡的顯示名，留空則顯示模型名本身。 */
   label?: string;
-  /** 该模型的上下文窗口；留空则用内置兼容值。 */
+  /** 該模型的上下文視窗；留空則用內建相容值。 */
   contextWindow?: number;
-  /** 该模型的最大输出 token；留空则用内置兼容值。 */
+  /** 該模型的最大輸出 token；留空則用內建相容值。 */
   maxOutputTokens?: number;
 }
 
-/** 一个服务商（一组共享 baseUrl 与 API Key 的模型）。 */
+/** 一個服務商（一組共享 baseUrl 與 API Key 的模型）。 */
 export interface ProviderProfile {
-  /** 引用前缀。不能含斜杠，否则引用无法切分。 */
+  /** 引用字首。不能含斜槓，否則引用無法切分。 */
   id: string;
   label?: string;
   kind: ProviderKind;
-  /** 留空时按 kind 取默认值。vscode-lm 不用。 */
+  /** 留空時按 kind 取預設值。vscode-lm 不用。 */
   baseUrl?: string;
   models: ModelEntry[];
 }
 
-/** 解析成功的当前模型。 */
+/** 解析成功的當前模型。 */
 export interface ActiveModel {
   ref: string;
   profile: ProviderProfile;
   model: ModelEntry;
 }
 
-/** 供下拉框展示的一项。 */
+/** 供下拉框展示的一項。 */
 export interface ModelChoice {
   ref: string;
-  /** 模型的显示名。 */
+  /** 模型的顯示名。 */
   label: string;
-  /** 所属服务商的显示名，用作分组标题。 */
+  /** 所屬服務商的顯示名，用作分組標題。 */
   group: string;
   kind: ProviderKind;
   contextWindow?: number;
 }
 
-/** id 只允许这些字符——关键是不能有斜杠。 */
+/** id 只允許這些字元——關鍵是不能有斜槓。 */
 export const PROVIDER_ID_RE = /^[A-Za-z0-9._-]+$/;
 
 export function defaultBaseUrl(kind: ProviderKind): string {
@@ -82,7 +82,7 @@ export function makeModelRef(providerId: string, modelName: string): string {
 /**
  * 拆分模型引用。
  *
- * 只在第一个斜杠处切——后面的斜杠属于模型名。
+ * 只在第一個斜槓處切——後面的斜槓屬於模型名。
  * `openrouter/z-ai/glm-4.6` → { providerId: 'openrouter', model: 'z-ai/glm-4.6' }
  */
 export function parseModelRef(ref: string): { providerId: string; model: string } | undefined {
@@ -100,10 +100,10 @@ export function parseModelRef(ref: string): { providerId: string; model: string 
 }
 
 /**
- * 容错读取用户配置里的服务商列表。
+ * 容錯讀取使用者配置裡的服務商列表。
  *
- * settings.json 是手写的，什么都可能出现。非法条目直接跳过而不是抛错——
- * 一个写错的服务商不该让整个插件用不了。
+ * settings.json 是手寫的，什麼都可能出現。非法條目直接跳過而不是拋錯——
+ * 一個寫錯的服務商不該讓整個外掛用不了。
  */
 export function normalizeProviders(raw: unknown): ProviderProfile[] {
   if (!Array.isArray(raw)) {
@@ -146,7 +146,7 @@ function normalizeModels(raw: unknown): ModelEntry[] {
   const out: ModelEntry[] = [];
   const seen = new Set<string>();
   for (const entry of raw) {
-    // 允许简写成纯字符串：models: ["gpt-4o", "gpt-4o-mini"]
+    // 允許簡寫成純字串：models: ["gpt-4o", "gpt-4o-mini"]
     const o = typeof entry === 'string' ? { name: entry } : (entry as Partial<ModelEntry> | null);
     if (!o || typeof o !== 'object') {
       continue;
@@ -175,11 +175,11 @@ function trimSlash(s: string): string {
 }
 
 /**
- * 把设置页上那份尚未保存的服务商叠加到已保存的列表上。
+ * 把設定頁上那份尚未儲存的服務商疊加到已儲存的列表上。
  *
- * 草稿只**替换同 id 的那一个**，其余原样保留——测试连接时 ref 可能指向
- * 另一个服务商，把列表整个换成草稿会让它解析不出来。
- * 草稿排在最前，保证同 id 时命中的是屏幕上这份。
+ * 草稿只**替換同 id 的那一個**，其餘原樣保留——測試連線時 ref 可能指向
+ * 另一個服務商，把列表整個換成草稿會讓它解析不出來。
+ * 草稿排在最前，保證同 id 時命中的是螢幕上這份。
  */
 export function withDraftProvider(
   providers: ProviderProfile[],
@@ -191,7 +191,7 @@ export function withDraftProvider(
   return [draft, ...providers.filter((p) => p.id !== draft.id)];
 }
 
-/** 按引用找模型。找不到返回 undefined，由调用方决定怎么提示。 */
+/** 按引用找模型。找不到返回 undefined，由呼叫方決定怎麼提示。 */
 export function resolveModelRef(providers: ProviderProfile[], ref: string): ActiveModel | undefined {
   const parsed = parseModelRef(ref);
   if (!parsed) {
@@ -205,7 +205,7 @@ export function resolveModelRef(providers: ProviderProfile[], ref: string): Acti
   return { ref: makeModelRef(profile.id, model.name), profile, model };
 }
 
-/** 第一个可用模型的引用，用作未指定时的默认值。 */
+/** 第一個可用模型的引用，用作未指定時的預設值。 */
 export function firstModelRef(providers: ProviderProfile[]): string {
   for (const profile of providers) {
     const model = profile.models[0];
@@ -217,8 +217,8 @@ export function firstModelRef(providers: ProviderProfile[]): string {
 }
 
 /**
- * 全部可选模型，按配置顺序。
- * @param includeVscodeLm 独立版没有 Copilot 授权，传 false 过滤掉 vscode-lm 模型。
+ * 全部可選模型，按配置順序。
+ * @param includeVscodeLm 獨立版沒有 Copilot 授權，傳 false 過濾掉 vscode-lm 模型。
  */
 export function listModelChoices(providers: ProviderProfile[], includeVscodeLm = true): ModelChoice[] {
   const out: ModelChoice[] = [];
@@ -240,28 +240,28 @@ export function listModelChoices(providers: ProviderProfile[], includeVscodeLm =
 }
 
 /**
- * 引用解析失败时，说清楚是哪一步不对、可选的有哪些。
- * 「模型不可用」这种错误如果不指名道姓，用户只能靠猜。
+ * 引用解析失敗時，說清楚是哪一步不對、可選的有哪些。
+ * 「模型不可用」這種錯誤如果不指名道姓，使用者只能靠猜。
  */
 export function describeModelIssue(providers: ProviderProfile[], ref: string): string {
   if (providers.length === 0) {
-    return '还没有配置任何服务商。到「设置」页添加一个。';
+    return '還沒有配置任何服務商。到「設定」頁新增一個。';
   }
   const trimmed = (ref ?? '').trim();
   if (!trimmed) {
-    return `还没有选择模型。可选：${sample(providers)}`;
+    return `還沒有選擇模型。可選：${sample(providers)}`;
   }
   const parsed = parseModelRef(trimmed);
   if (!parsed) {
-    return `模型引用「${trimmed}」格式不对，应为「服务商前缀/模型名」，例如 ${sample(providers)}`;
+    return `模型引用「${trimmed}」格式不對，應為「服務商字首/模型名」，例如 ${sample(providers)}`;
   }
   const profile = providers.find((p) => p.id === parsed.providerId);
   if (!profile) {
-    return `找不到服务商前缀「${parsed.providerId}」。已配置的前缀：${providers
+    return `找不到服務商字首「${parsed.providerId}」。已配置的字首：${providers
       .map((p) => p.id)
       .join('、')}`;
   }
-  return `服务商「${providerLabel(profile)}」下没有模型「${parsed.model}」。它已配置的模型：${profile.models
+  return `服務商「${providerLabel(profile)}」下沒有模型「${parsed.model}」。它已配置的模型：${profile.models
     .map((m) => makeModelRef(profile.id, m.name))
     .join('、')}`;
 }
@@ -275,9 +275,9 @@ function sample(providers: ProviderProfile[]): string {
   );
 }
 
-// ---------------------------------------------------------------- 旧配置兼容
+// ---------------------------------------------------------------- 舊配置相容
 
-/** 0.1.x 的单服务商配置。 */
+/** 0.1.x 的單服務商配置。 */
 export interface LegacyProviderConfig {
   provider: string;
   openaiBaseUrl: string;
@@ -288,10 +288,10 @@ export interface LegacyProviderConfig {
 }
 
 /**
- * 从 0.1.x 的单服务商设置生成一份服务商列表。
+ * 從 0.1.x 的單服務商設定生成一份服務商列表。
  *
- * 只在 `novel.providers` 为空时用作兜底——老用户升级后不该发现模型没了。
- * 不写回 settings.json：用户一旦在设置页保存过，就以新结构为准。
+ * 只在 `novel.providers` 為空時用作兜底——老使用者升級後不該發現模型沒了。
+ * 不寫回 settings.json：使用者一旦在設定頁儲存過，就以新結構為準。
  */
 export function seedFromLegacy(legacy: LegacyProviderConfig): {
   providers: ProviderProfile[];
@@ -302,7 +302,7 @@ export function seedFromLegacy(legacy: LegacyProviderConfig): {
   if (legacy.openaiModel.trim()) {
     providers.push({
       id: 'openai',
-      label: 'OpenAI 兼容接口',
+      label: 'OpenAI 相容介面',
       kind: 'openai',
       baseUrl: trimSlash(legacy.openaiBaseUrl) || defaultBaseUrl('openai'),
       models: [{ name: legacy.openaiModel.trim() }],
@@ -320,7 +320,7 @@ export function seedFromLegacy(legacy: LegacyProviderConfig): {
   if (legacy.vscodeLmFamily.trim()) {
     providers.push({
       id: 'copilot',
-      label: 'VS Code 语言模型',
+      label: 'VS Code 語言模型',
       kind: 'vscode-lm',
       models: [{ name: legacy.vscodeLmFamily.trim() }],
     });

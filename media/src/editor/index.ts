@@ -1,21 +1,21 @@
 /**
- * 独立版的内置文件编辑器。只在独立版加载（插件形态由 VS Code 自己的编辑器
- * 负责），因此这里可以自由使用 localStorage、beforeunload 等 webview 里
- * 不该用的能力。
+ * 獨立版的內建檔案編輯器。只在獨立版載入（外掛形態由 VS Code 自己的編輯器
+ * 負責），因此這裡可以自由使用 localStorage、beforeunload 等 webview 裡
+ * 不該用的能力。
  *
- * 与 view 完全解耦：各自监听 window 的 message 事件、各自 postMessage，
- * 互不调用。唯一的交集是共用 #toast 与右键菜单引擎（见 src/globals.ts）。
+ * 與 view 完全解耦：各自監聽 window 的 message 事件、各自 postMessage，
+ * 互不呼叫。唯一的交集是共用 #toast 與右鍵選單引擎（見 src/globals.ts）。
  *
- * **两块编辑区**：主区放正文，第二块（`pane: 'draft'`）放草稿或并排打开的细纲，左右并列。
- * **一个路径同一时刻只属于一块**——editorSaved / editorConflict / editorError
- * 都只带 path，靠这条不变量才认得出该送给谁（`paneOwning`）。破坏它会导致
- * 从错的那块保存时用错 baseHash，触发假冲突。
+ * **兩塊編輯區**：主區放正文，第二塊（`pane: 'draft'`）放草稿或並排開啟的細綱，左右並列。
+ * **一個路徑同一時刻只屬於一塊**——editorSaved / editorConflict / editorError
+ * 都只帶 path，靠這條不變數才認得出該送給誰（`paneOwning`）。破壞它會導致
+ * 從錯的那塊儲存時用錯 baseHash，觸發假衝突。
  *
- * 协议：
- *   发 openEditor{path,pane,preview?,replace?} / openDraft{path} / saveFile / reloadFile / openExternal / checkEditorFiles
+ * 協議：
+ *   發 openEditor{path,pane,preview?,replace?} / openDraft{path} / saveFile / reloadFile / openExternal / checkEditorFiles
  *   收 editorOpen{file,pane,preview?,replace?} / editorSaved / editorConflict / editorError / editorDiskChanged / editorDiskGone
- *   / chapterIndex（章节索引，chapterIndex.ts）/ checkTerms（写作体检的词表，check.ts）
- *   （核对磁盘那三条——checkEditorFiles / editorDiskChanged / editorDiskGone——由 diskSync.ts 收发）
+ *   / chapterIndex（章節索引，chapterIndex.ts）/ checkTerms（寫作體檢的詞表，check.ts）
+ *   （核對磁碟那三條——checkEditorFiles / editorDiskChanged / editorDiskGone——由 diskSync.ts 收發）
  */
 import { maybeById } from '../dom';
 import { acquireApi, onMessage } from '../vscodeApi';
@@ -73,7 +73,7 @@ import {
 import type { Pane } from './store';
 
 const stage = maybeById('wbEditor');
-// 插件形态没有这块 DOM，直接退出。
+// 外掛形態沒有這塊 DOM，直接退出。
 if (stage) {
   start(stage);
 }
@@ -82,44 +82,44 @@ function start(stage: HTMLElement): void {
   const vscode = acquireApi();
   const post = vscode.postMessage.bind(vscode);
   const shell = collectShell();
-  // ensurePane：「移到另一侧」往第二块搬东西时，它还没造出来就现造。
+  // ensurePane：「移到另一側」往第二塊搬東西時，它還沒造出來就現造。
   bindStore({ post, draftResizer: shell.draftResizer, ensurePane: (id) => (id === 'draft' ? ensureDraftPane() : panes.main!) });
-  // 名词补全（Alt+/ 与边打边弹，names.ts）。要在段落工具之前装：候选框开着时回车 / Tab 先归它，按键处理按挂的先后跑。
+  // 名詞補全（Alt+/ 與邊打邊彈，names.ts）。要在段落工具之前裝：候選框開著時回車 / Tab 先歸它，按鍵處理按掛的先後跑。
   installNames(post);
-  // 回车、成对符号、段落快捷键、一键排版。要在造编辑区之前装：「排版」按钮挂在第一次重画上。
+  // 回車、成對符號、段落快捷鍵、一鍵排版。要在造編輯區之前裝：「排版」按鈕掛在第一次重畫上。
   installParagraphTools();
-  // 不丢稿：磁盘改动同步到已开的标签、保存状态、自动保存（safety.ts）。
+  // 不丟稿：磁碟改動同步到已開的標籤、儲存狀態、自動儲存（safety.ts）。
   installSaveSafety();
-  // 不丢稿：冲突条的「对比合并…」与它用的 editorReplace、侧栏「版本」页与对比标签（工具栏「历史」同样挂在第一次重画上；
-  // 对比标签是特殊标签，要在 restore() 之前登记）。
+  // 不丟稿：衝突條的「對比合併…」與它用的 editorReplace、側欄「版本」頁與對比標籤（工具欄「歷史」同樣掛在第一次重畫上；
+  // 對比標籤是特殊標籤，要在 restore() 之前登記）。
   installEditorReplace();
   installConflictMerge(post);
   installVersions(post);
 
   setActivePane(registerPane(createPane('main', mainRefs(stage), post)));
-  // 章节索引（后端 chapterIndex，哪个页签都推）→ 章节条与上一章 / 下一章（Alt+PageUp / Alt+PageDown）。
+  // 章節索引（後端 chapterIndex，哪個頁籤都推）→ 章節條與上一章 / 下一章（Alt+PageUp / Alt+PageDown）。
   installChapterIndex();
   installChapterNav(post);
-  // 正开着某一章的正文或细纲时，主区顶上那一条（W6 章节工作台）。
+  // 正開著某一章的正文或細綱時，主區頂上那一條（W6 章節工作臺）。
   installChapterBar(stage, post);
-  // 标题栏「视图」菜单的编辑器那一半（单击打开为临时标签）。
+  // 標題欄「檢視」選單的編輯器那一半（單擊開啟為臨時標籤）。
   installViewPrefs();
-  // 码字统计：状态栏字数那一格（选中、距目标、本次 / 今日码字）与它的面板、「视图 → 统计」。
+  // 碼字統計：狀態列字數那一格（選中、距目標、本次 / 今日碼字）與它的面板、「檢視 → 統計」。
   installWritingStats();
-  // 查找替换（Ctrl+F / Ctrl+H / F3、「编辑」菜单的查找 / 替换）。
+  // 查詢替換（Ctrl+F / Ctrl+H / F3、「編輯」選單的查詢 / 替換）。
   installFind();
-  // 写作体检：正文里的 check 图层、状态栏「体检」那一格与它的面板、「视图 → 体检」、「编辑敏感词表…」。
+  // 寫作體檢：正文裡的 check 圖層、狀態列「體檢」那一格與它的面板、「檢視 → 體檢」、「編輯敏感詞表…」。
   installCheck(post);
-  // 名词高亮：names 图层、悬停浮窗、Ctrl+点击打开卡或条目、「视图 → 名词高亮」。名词表的收发归 installNames。
+  // 名詞高亮：names 圖層、懸停浮窗、Ctrl+點選開啟卡或條目、「檢視 → 名詞高亮」。名詞表的收發歸 installNames。
   installNameMarks(post);
 
   /**
-   * 第二块编辑区惰性创建：没用过的人不该多出一块空编辑区。它放草稿，也放点开一章时
-   * 并排打开的那一份细纲（W6）。
+   * 第二塊編輯區惰性建立：沒用過的人不該多出一塊空編輯區。它放草稿，也放點開一章時
+   * 並排開啟的那一份細綱（W6）。
    */
   function ensureDraftPane(): Pane {
     if (!panes.draft) {
-      const refs = createPaneElements('这一块放草稿或细纲');
+      const refs = createPaneElements('這一塊放草稿或細綱');
       shell.editors.appendChild(refs.root);
       registerPane(createPane('draft', refs, post));
     }
@@ -127,27 +127,27 @@ function start(stage: HTMLElement): void {
     return panes.draft!;
   }
 
-  // ---------------------------------------------------------------- 全局快捷键
+  // ---------------------------------------------------------------- 全域快捷鍵
 
-  // 键都登记在 shortcuts.ts（新增快捷键先登记在那张表里，tests/dom/standalone/shortcuts.test.js 两头核对）。
+  // 鍵都登記在 shortcuts.ts（新增快捷鍵先登記在那張表裡，tests/dom/standalone/shortcuts.test.js 兩頭核對）。
   document.addEventListener('keydown', (e) => {
-    // 输入法组字中途的 Ctrl 组合键是输入法的，放行。
+    // 輸入法組字中途的 Ctrl 組合鍵是輸入法的，放行。
     if (isImeComposing(e)) {
       return;
     }
     if (matchesShortcut(e, 'save')) {
-      // 浏览器的「保存网页」在这里毫无意义，一律拦掉。
+      // 瀏覽器的「儲存網頁」在這裡毫無意義，一律攔掉。
       e.preventDefault();
       if (activePane.activeFile()) {
         activePane.save(false);
       }
     } else if (matchesShortcut(e, 'closeTab') && (activePane.activeFile() || activePane.activeSpecial())) {
-      // Chrome 不允许拦 Ctrl+W（表里那一条写着），能拦到（桌面版）就顺手关标签页。正显示着特殊标签（叙事线总览）时关它。
+      // Chrome 不允許攔 Ctrl+W（表裡那一條寫著），能攔到（桌面版）就順手關標籤頁。正顯示著特殊標籤（敘事線總覽）時關它。
       e.preventDefault();
       closeCurrentTab();
     } else if (matchesShortcut(e, 'preview')) {
-      // 预览 / 编辑（⚑ Ctrl+Shift+V，与 VS Code 的「打开预览」同一个键）：只对 Markdown 文件拦，
-      // 别的文件（.txt 章节之类）照常是浏览器的「粘贴为纯文本」；焦点在对话输入框里不拦。
+      // 預覽 / 編輯（⚑ Ctrl+Shift+V，與 VS Code 的「開啟預覽」同一個鍵）：只對 Markdown 檔案攔，
+      // 別的檔案（.txt 章節之類）照常是瀏覽器的「貼上為純文字」；焦點在對話輸入框裡不攔。
       const pane = paneForShortcut(e);
       if (pane?.canPreview()) {
         e.preventDefault();
@@ -163,12 +163,12 @@ function start(stage: HTMLElement): void {
     e.detail.dirtyAny = Object.values(panes).some((p) => p.hasDirty());
     e.detail.path = file?.path ?? null;
     e.detail.text = file?.draft ?? '';
-    // 焦点在哪块编辑区的正文区里：标题栏「编辑 → 撤销 / 重做」据此交给编辑器自己的历史。
+    // 焦點在哪塊編輯區的正文區裡：標題欄「編輯 → 撤銷 / 重做」據此交給編輯器自己的歷史。
     e.detail.areaFocused = Object.values(panes).some((p) => p.area === document.activeElement);
   });
 
-  // 工程页「存档点…」退回时跳过这几份（view.js 经 `queryDirtyPaths` 问）：两块编辑区里开着、有未保存修改的，
-  // 与全书替换的 `dirtyPaths()`、关标签时的 `isDirty` 同一个判法。
+  // 工程頁「存檔點…」退回時跳過這幾份（view.js 經 `queryDirtyPaths` 問）：兩塊編輯區裡開著、有未儲存修改的，
+  // 與全書替換的 `dirtyPaths()`、關標籤時的 `isDirty` 同一個判法。
   window.addEventListener('nf-dirty-query', (e) => {
     for (const file of allOpenFiles()) {
       if (file.draft !== file.text) {
@@ -177,7 +177,7 @@ function start(stage: HTMLElement): void {
     }
   });
 
-  // 对话页「加入选区」：当前那块编辑区里选中的文字。预览里的 textarea 藏着，它的选区作者看不见，不算。
+  // 對話頁「加入選區」：當前那塊編輯區裡選中的文字。預覽裡的 textarea 藏著，它的選區作者看不見，不算。
   window.addEventListener('nf-selection-query', (e) => {
     const file = activePane?.activeFile();
     if (!file || activePane.isPreviewing()) {
@@ -189,7 +189,7 @@ function start(stage: HTMLElement): void {
     if (!text) {
       return;
     }
-    // 行号按去掉首尾空白之后的那一段算：多选了一个换行不该让范围多出一行。
+    // 行號按去掉首尾空白之後的那一段算：多選了一個換行不該讓範圍多出一行。
     const from = selectionStart + (raw.length - raw.trimStart().length);
     const last = selectionEnd - (raw.length - raw.trimEnd().length) - 1;
     const lineOf = (offset: number) => value.slice(0, offset).split('\n').length;
@@ -218,7 +218,7 @@ function start(stage: HTMLElement): void {
     }
   });
 
-  /** 关当前这一块正显示着的标签：一份文件（先问保存），或一个特殊标签（叙事线总览）。 */
+  /** 關當前這一塊正顯示著的標籤：一份檔案（先問儲存），或一個特殊標籤（敘事線總覽）。 */
   function closeCurrentTab(): void {
     const special = activePane.activeSpecial();
     if (special) {
@@ -229,14 +229,14 @@ function start(stage: HTMLElement): void {
   }
 
   window.addEventListener('nf-workspace-reset', () => {
-    // 不写 localStorage：标签页按工程分开记（projectStorageKey），上一个工程的那份留着下次回来用，
-    // 而此刻网址已经换成了新工程，这里写下去会把新工程那份冲成空的。
+    // 不寫 localStorage：標籤頁按工程分開記（projectStorageKey），上一個工程的那份留著下次回來用，
+    // 而此刻網址已經換成了新工程，這裡寫下去會把新工程那份衝成空的。
     cancelScheduledPersist();
     pendingDrafts.clear();
     pendingActive.clear();
     clearClosed();
     for (const pane of Object.values(panes)) {
-      // 特殊标签（叙事线总览）画的是上一个工程的东西，一并关掉（不写 localStorage）。
+      // 特殊標籤（敘事線總覽）畫的是上一個工程的東西，一併關掉（不寫 localStorage）。
       for (const id of [...pane.specials]) {
         pane.closeSpecial(id, { quiet: true });
       }
@@ -246,26 +246,26 @@ function start(stage: HTMLElement): void {
     }
     announceActive();
     syncDraftVisibility();
-    // 换来的那个工程上次开着的标签页接着开。关掉工程时 restore 自己会跳过。
+    // 換來的那個工程上次開著的標籤頁接著開。關掉工程時 restore 自己會跳過。
     restore();
   });
 
   window.addEventListener('beforeunload', (e) => {
-    // 带未保存内容离开页面要先问一句。两块都扫。
+    // 帶未儲存內容離開頁面要先問一句。兩塊都掃。
     if (Object.values(panes).some((p) => p.hasDirty())) {
       e.preventDefault();
       e.returnValue = '';
     }
   });
 
-  // ---------------------------------------------------------------- 标签搬家
+  // ---------------------------------------------------------------- 標籤搬家
 
   /**
-   * explorer 在 rename/move 成功后广播的搬家事件：把旧标签连同未保存草稿
-   * 整体挪到新路径。
+   * explorer 在 rename/move 成功後廣播的搬家事件：把舊標籤連同未儲存草稿
+   * 整體挪到新路徑。
    *
-   * 走 `moved` 标记绕开 hash 相等检查——改名后文件的 hash 基线必然变化，
-   * 但草稿本身没有理由丢。
+   * 走 `moved` 標記繞開 hash 相等檢查——改名後檔案的 hash 基線必然變化，
+   * 但草稿本身沒有理由丟。
    */
   window.addEventListener('nf-files-moved', (event) => {
     const { from, to } = event.detail;
@@ -277,7 +277,7 @@ function start(stage: HTMLElement): void {
     if (!pane || !file) {
       return;
     }
-    // 临时标签改了名还是临时的（单击打开、没动过它）。
+    // 臨時標籤改了名還是臨時的（單擊開啟、沒動過它）。
     const carry: CarriedDraft = {
       history: file.history,
       historyText: file.draft,
@@ -289,21 +289,21 @@ function start(stage: HTMLElement): void {
     }
     pane.closeSilently(from);
     rekeyStorage(from, to);
-    // 撤销历史也跟着搬：新路径的那份文件到了、内容对得上就接上。
+    // 撤銷歷史也跟著搬：新路徑的那份檔案到了、內容對得上就接上。
     pendingDrafts.set(to, carry);
     pendingActive.set(pane.id, to);
     post({ type: 'openEditor', path: to, pane: pane.id });
   });
 
-  // ---------------------------------------------------------------- 收消息
+  // ---------------------------------------------------------------- 收訊息
 
   onMessage((msg) => {
     switch (msg.type) {
       case 'editorOpen': {
-        // 窄屏上第二块不显示（只有一层覆盖）：要并排开的细纲、草稿开在主区，成了另一个标签。
+        // 窄屏上第二塊不顯示（只有一層覆蓋）：要並排開的細綱、草稿開在主區，成了另一個標籤。
         const target = msg.pane === 'draft' && !isNarrow() ? ensureDraftPane() : panes.main!;
-        // 一个路径同一时刻只属于一块编辑区。已经开在另一块里的，连同未保存的
-        // 内容一起搬过来，不留两份各自漂移的副本。
+        // 一個路徑同一時刻只屬於一塊編輯區。已經開在另一塊裡的，連同未儲存的
+        // 內容一起搬過來，不留兩份各自漂移的副本。
         let carried: CarriedDraft | undefined;
         for (const pane of Object.values(panes)) {
           if (pane !== target) {
@@ -313,13 +313,13 @@ function start(stage: HTMLElement): void {
             }
           }
         }
-        // 先认下当前这一块，再收文件：upsertFile 末尾会广播「正在编辑哪个
-        // 文件」，那句读的是 activePane，顺序反了会报出上一块的文件。上一章 / 下一章时另一块里配对的
-        // 那一份不认（不抢焦点）。
+        // 先認下當前這一塊，再收檔案：upsertFile 末尾會廣播「正在編輯哪個
+        // 檔案」，那句讀的是 activePane，順序反了會報出上一塊的檔案。上一章 / 下一章時另一塊裡配對的
+        // 那一份不認（不搶焦點）。
         if (!takeQuietOpen(target.id, msg.file.path)) {
           setActivePane(target);
         }
-        // 临时标签 / 原位换掉：打开请求上带的标记，后端原样带回。
+        // 臨時標籤 / 原位換掉：開啟請求上帶的標記，後端原樣帶回。
         target.upsertFile(msg.file, carried, { preview: msg.preview, replace: msg.replace });
         syncDraftVisibility();
         revealEditor();
@@ -334,13 +334,13 @@ function start(stage: HTMLElement): void {
         paneOwning(msg.path)?.applyConflict(msg.path, msg.diskText, msg.diskHash);
         break;
 
-      // 点审稿报告上的引文（五期）：后端先推了那一份的 editorOpen，这里选中那一句。
+      // 點審稿報告上的引文（五期）：後端先推了那一份的 editorOpen，這裡選中那一句。
       case 'editorReveal': {
         const pane = paneOwning(msg.path);
         if (pane) {
           setActivePane(pane);
           if (!pane.reveal(msg.path, msg.quote)) {
-            toast('这一句在编辑区里找不到了（可能有没保存的修改）。', true);
+            toast('這一句在編輯區裡找不到了（可能有沒儲存的修改）。', true);
           }
         }
         break;
@@ -348,27 +348,27 @@ function start(stage: HTMLElement): void {
 
       case 'editorError':
         toast(msg.message, true);
-        // 恢复时文件可能已被删/改名，别让它卡在待恢复列表里。
+        // 恢復時檔案可能已被刪/改名，別讓它卡在待恢復列表裡。
         pendingDrafts.delete(msg.path);
         break;
     }
   });
 
-  // 「转到…」（Ctrl+P）。要在上面那个 onMessage 之后装：editorOpen 先让编辑区收下文件，它才找得到该把焦点放进哪一块。
+  // 「轉到…」（Ctrl+P）。要在上面那個 onMessage 之後裝：editorOpen 先讓編輯區收下檔案，它才找得到該把焦點放進哪一塊。
   installQuickOpen(post);
-  // 全书查找替换（Ctrl+Shift+F、「编辑 → 全书查找替换…」）。同一个理由：点了一处要等那份文件的 editorOpen 先进编辑区。
+  // 全書查詢替換（Ctrl+Shift+F、「編輯 → 全書查詢替換…」）。同一個理由：點了一處要等那份檔案的 editorOpen 先進編輯區。
   installBookFind(post);
-  // 「视图」菜单的「外观」与「专注」两组（look.ts / focus.ts）。专注要在查找之后装：编辑区里的 Esc 先收查找条，
-  // 查找条关着时才退出专注模式（document 上的 keydown 按挂的先后跑，它看 defaultPrevented）。
+  // 「檢視」選單的「外觀」與「專注」兩組（look.ts / focus.ts）。專注要在查詢之後裝：編輯區裡的 Esc 先收查詢條，
+  // 查詢條關著時才退出專注模式（document 上的 keydown 按掛的先後跑，它看 defaultPrevented）。
   installLook();
   installFocus();
-  // 「帮助 → 快捷键一览」与 Ctrl+/（⚑）：按分组列出 shortcuts.ts 那张表、可以筛选。
+  // 「幫助 → 快捷鍵一覽」與 Ctrl+/（⚑）：按分組列出 shortcuts.ts 那張表、可以篩選。
   installShortcutsPanel();
-  // 「叙事线总览」「时间线总览」两个特殊标签（叙事线重做三期；2026-10-24）：要在 restore() 之前登记，刷新时才认得出存下来的标签。
+  // 「敘事線總覽」「時間線總覽」兩個特殊標籤（敘事線重做三期；2026-10-24）：要在 restore() 之前登記，重新整理時才認得出存下來的標籤。
   installThreadsOverview(post);
   installTimelineOverview(post);
 
-  // ---------------------------------------------------------------- 启动
+  // ---------------------------------------------------------------- 啟動
 
   initTheme(shell);
   initResizers(shell);

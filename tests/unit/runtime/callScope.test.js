@@ -1,14 +1,14 @@
 /**
- * 「这一次」（runtime/callScope.ts）：作者在调模型之前的确认框上挑的模型与上下文详细度，怎么落到 `readConfig()` 与模型池上
+ * 「這一次」（runtime/callScope.ts）：作者在調模型之前的確認框上挑的模型與上下文詳細度，怎麼落到 `readConfig()` 與模型池上
  * （docs/design/plans/2026-10-20-call-choice.md）。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 作用域外照设置 | 选择只管这一次，不写回设置 |
- * | 作用域里 `readConfig()` 换了详细度、多了 `pinnedModel` | `readConfig()` 是作者的选择唯一的落点 |
- * | 钉了模型：池里只有它、失败不换人、预算用它的窗口 | 选了谁就是谁（与对话页同一条规矩）；切批用干活那个模型的窗口（第 13 条） |
- * | 嵌套：模型整项替换，详细度没问就沿用外面那一次 | 里面选「按分档」就是不钉，哪怕外面钉了 |
- * | 同时跑的两次各是各的 | `AsyncLocalStorage` 按调用链分，批量写章跑着时对话页另起一次不串 |
+ * | 作用域外照設定 | 選擇只管這一次，不寫回設定 |
+ * | 作用域裡 `readConfig()` 換了詳細度、多了 `pinnedModel` | `readConfig()` 是作者的選擇唯一的落點 |
+ * | 釘了模型：池裡只有它、失敗不換人、預算用它的視窗 | 選了誰就是誰（與對話頁同一條規矩）；切批用幹活那個模型的視窗（第 13 條） |
+ * | 巢狀：模型整項替換，詳細度沒問就沿用外面那一次 | 裡面選「按分檔」就是不釘，哪怕外面釘了 |
+ * | 同時跑的兩次各是各的 | `AsyncLocalStorage` 按呼叫鏈分，批次寫章跑著時對話頁另起一次不串 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -59,7 +59,7 @@ const readConfig = () => bundle.config.readConfig();
 const withCallChoice = (choice, fn) => bundle.scope.withCallChoice(choice, fn);
 
 describe('作用域外', () => {
-  test('照设置：详细度 3，不钉模型', () => {
+  test('照設定：詳細度 3，不釘模型', () => {
     const c = readConfig();
     assert.equal(c.contextDetail, 3);
     assert.equal(c.pinnedModel, undefined);
@@ -67,23 +67,23 @@ describe('作用域外', () => {
   });
 });
 
-describe('作用域里', () => {
-  test('readConfig 换了详细度、钉了模型；对话页那个模型不动', async () => {
+describe('作用域裡', () => {
+  test('readConfig 換了詳細度、釘了模型；對話頁那個模型不動', async () => {
     const c = await withCallChoice({ model: 'p/b', contextDetail: 1 }, async () => readConfig());
     assert.equal(c.contextDetail, 1);
     assert.equal(c.pinnedModel, 'p/b');
     assert.equal(c.model, 'p/a');
   });
 
-  test('出了作用域就回到设置', async () => {
+  test('出了作用域就回到設定', async () => {
     await withCallChoice({ contextDetail: 1 }, async () => {});
     assert.equal(readConfig().contextDetail, 3);
   });
 
-  test('钉了模型：池里只有它，标「这一次指定」，预算是它的窗口', async () => {
+  test('釘了模型：池裡只有它，標「這一次指定」，預算是它的視窗', async () => {
     const pool = await withCallChoice({ model: 'p/b' }, () => bundle.pool.createModelPool({ task: 'manuscript' }));
     assert.deepEqual(pool.refs, ['p/b']);
-    assert.ok(pool.label.includes('这一次指定'), pool.label);
+    assert.ok(pool.label.includes('這一次指定'), pool.label);
     assert.equal(pool.tier, 'balanced');
     assert.equal(pool.primaryBudget.contextWindow, 32000);
     assert.equal(bundle.pool.budgetForTask('manuscript').contextWindow, 100000);
@@ -91,7 +91,7 @@ describe('作用域里', () => {
     assert.equal(pinned.contextWindow, 32000);
   });
 
-  test('钉了模型：失败不换同档其余模型', async () => {
+  test('釘了模型：失敗不換同檔其餘模型', async () => {
     for (const k of Object.keys(behavior)) delete behavior[k];
     behavior['p/b'] = 'fail';
     fake.reset();
@@ -104,14 +104,14 @@ describe('作用域里', () => {
   });
 });
 
-describe('嵌套', () => {
-  test('里面选「按分档」：不钉了；详细度没问就沿用外面', async () => {
+describe('巢狀', () => {
+  test('裡面選「按分檔」：不釘了；詳細度沒問就沿用外面', async () => {
     const c = await withCallChoice({ model: 'p/b', contextDetail: 2 }, () => withCallChoice({}, async () => readConfig()));
     assert.equal(c.pinnedModel, undefined);
     assert.equal(c.contextDetail, 2);
   });
 
-  test('里面另挑了：里面的优先', async () => {
+  test('裡面另挑了：裡面的優先', async () => {
     const c = await withCallChoice({ model: 'p/b', contextDetail: 2 }, () =>
       withCallChoice({ model: 'p/c', contextDetail: 4 }, async () => readConfig())
     );
@@ -120,8 +120,8 @@ describe('嵌套', () => {
   });
 });
 
-describe('同时跑的两次', () => {
-  test('各是各的，中间的 await 不串', async () => {
+describe('同時跑的兩次', () => {
+  test('各是各的，中間的 await 不串', async () => {
     const tick = () => new Promise((r) => setTimeout(r, 5));
     const seen = (choice) =>
       withCallChoice(choice, async () => {

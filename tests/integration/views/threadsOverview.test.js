@@ -1,15 +1,15 @@
 /**
- * 编辑区「叙事线总览」的数据（`views/threads.ts` 的 `buildThreadsOverview`，叙事线重做三期），真临时工程：读一遍叙事线目录
- * 与章节、细纲两份列表，交给纯函数 `buildThreadsMatrix`（那一半的细节在 tests/unit/views/threadsOverview.test.js）。
+ * 編輯區「敘事線總覽」的資料（`views/threads.ts` 的 `buildThreadsOverview`，敘事線重做三期），真臨時工程：讀一遍敘事線目錄
+ * 與章節、細綱兩份列表，交給純函式 `buildThreadsMatrix`（那一半的細節在 tests/unit/views/threadsOverview.test.js）。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 列 | 有细纲或正文的章一章一列：标题（细纲优先，回落标题给空串）、卷目录、四种定稿状态、正文 / 细纲路径；细纲按路径配对 |
- * | 现在 | 「定稿到第 N 章」与工程页「叙事线」页签同一个数 |
- * | 行 | 一条线一个文件读进来，分组与伏笔都在；七期的 `threads.md` 不认 |
- * | 还不是小说工程 | `initialized: false`，其余都是空的 |
- * | 不写盘 | 读完之后工程目录一个字节没变 |
- * | controller | `requestThreadsOverview` 回 `threadsOverview`，带同一个 `requestId` |
+ * | 列 | 有細綱或正文的章一章一列：標題（細綱優先，回落標題給空串）、卷目錄、四種定稿狀態、正文 / 細綱路徑；細綱按路徑配對 |
+ * | 現在 | 「定稿到第 N 章」與工程頁「敘事線」頁籤同一個數 |
+ * | 行 | 一條線一個檔案讀進來，分組與伏筆都在；七期的 `threads.md` 不認 |
+ * | 還不是小說工程 | `initialized: false`，其餘都是空的 |
+ * | 不寫盤 | 讀完之後工程目錄一個位元組沒變 |
+ * | controller | `requestThreadsOverview` 回 `threadsOverview`，帶同一個 `requestId` |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -25,9 +25,9 @@ let bundle;
 let t;
 let project;
 
-const plot = (no, title, extra = '') => `---\nno: ${no}\ntitle: ${title}\n${extra}---\n\n# ${title}\n\n## 梗概\n梗概\n\n## 关键事件\n事件\n`;
+const plot = (no, title, extra = '') => `---\nno: ${no}\ntitle: ${title}\n${extra}---\n\n# ${title}\n\n## 梗概\n梗概\n\n## 關鍵事件\n事件\n`;
 
-/** 工程目录下全部文件的「路径 → 内容」（看读完之后有没有写盘）。 */
+/** 工程目錄下全部檔案的「路徑 → 內容」（看讀完之後有沒有寫盤）。 */
 function snapshot(dir) {
   const out = {};
   const walk = (d) => {
@@ -54,52 +54,52 @@ before(async () => {
     db: './src/core/runtime/db.ts',
   });
   bundle.host.initHost(makeFakeHost({ settings: () => ({}) }).host);
-  t = await makeTempProject(bundle.project, { prefix: 'threads-overview', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'threads-overview', title: '青雲劍錄' });
   project = t.project;
 
-  // 第 1 章：根下，定稿过。
+  // 第 1 章：根下，定稿過。
   t.write('chapters/001-楔子.md', '# 楔子\n\n雨下了三天。');
   t.write('.novelwarden/summaries/001-楔子.md', plot(1, '楔子', 'sourceHash: abc\n'));
-  // 第 2 章：第一卷里，定稿过；细纲的标题优先。
-  t.write('chapters/第一卷/002-入镇.md', '# 入镇\n\n他走进镇子。');
-  t.write('.novelwarden/summaries/第一卷/002-入镇.md', plot(2, '入镇（改）', 'sourceHash: def\n'));
-  // 第 3 章：写了没定稿，没有细纲。
-  t.write('chapters/第一卷/003-夜访.txt', '夜里有人敲门。');
-  // 第 4 章：只有细纲。
+  // 第 2 章：第一卷裡，定稿過；細綱的標題優先。
+  t.write('chapters/第一卷/002-入鎮.md', '# 入鎮\n\n他走進鎮子。');
+  t.write('.novelwarden/summaries/第一卷/002-入鎮.md', plot(2, '入鎮（改）', 'sourceHash: def\n'));
+  // 第 3 章：寫了沒定稿，沒有細綱。
+  t.write('chapters/第一卷/003-夜訪.txt', '夜裡有人敲門。');
+  // 第 4 章：只有細綱。
   t.write('.novelwarden/summaries/第一卷/004-北行.md', plot(4, '北行'));
-  // 第 5 章：正文在外面改了名，旧细纲成了孤儿——不冒认，这一章「写了没定稿」。
+  // 第 5 章：正文在外面改了名，舊細綱成了孤兒——不冒認，這一章「寫了沒定稿」。
   t.write('chapters/第一卷/005-新名.md', '# 新名\n\n正文');
-  t.write('.novelwarden/summaries/第一卷/005-旧名.md', plot(5, '旧名', 'sourceHash: ghi\n'));
+  t.write('.novelwarden/summaries/第一卷/005-舊名.md', plot(5, '舊名', 'sourceHash: ghi\n'));
 
   t.write(
-    '.novelwarden/threads/林昭与沈青.md',
+    '.novelwarden/threads/林昭與沈青.md',
     [
       '---',
-      'kind: 感情线',
+      'kind: 感情線',
       'plan: 1-8',
       '---',
       '',
-      '# 林昭与沈青',
+      '# 林昭與沈青',
       '',
-      '## 意图',
-      '从互相猜忌到并肩',
+      '## 意圖',
+      '從互相猜忌到並肩',
       '',
-      '## 伏笔',
-      '- 玉佩的来历：林昭的玉佩是沈家旧物（计划第 1 章埋、第 6 章前收）',
+      '## 伏筆',
+      '- 玉佩的來歷：林昭的玉佩是沈家舊物（計劃第 1 章埋、第 6 章前收）',
       '',
-      '## 进展',
-      '- 第 1 章 · 推进：两人初遇 〔证据：「她的剑停在他喉前三寸」〕',
-      '- 第 1 章 · 埋〈玉佩的来历〉：玉佩露面 〔证据：「他摸了摸怀里的玉佩」〕',
-      '- 第 2 章 · 计划 · 推进：结盟',
-      '- 第 4 章 · 计划 · 收〈玉佩的来历〉：认出云纹',
+      '## 進展',
+      '- 第 1 章 · 推進：兩人初遇 〔證據：「她的劍停在他喉前三寸」〕',
+      '- 第 1 章 · 埋〈玉佩的來歷〉：玉佩露面 〔證據：「他摸了摸懷裡的玉佩」〕',
+      '- 第 2 章 · 計劃 · 推進：結盟',
+      '- 第 4 章 · 計劃 · 收〈玉佩的來歷〉：認出雲紋',
       '',
     ].join('\n')
   );
-  t.write('.novelwarden/threads/青崖旧案.md', '---\nkind: 主线\n---\n\n# 青崖旧案\n\n## 进展\n- 第 2 章 · 推进：找到令牌\n');
-  t.write('.novelwarden/threads/未归属的伏笔.md', '# 未归属的伏笔\n\n## 伏笔\n- 断剑（第 3 章前收）\n');
-  // 七期的单文件不认。
-  t.write('.novelwarden/threads.md', '# 叙事线\n\n## 旧的线\n- 第 1 章 · 推进：不该出现\n');
-  // 第 1、2 章定稿时叙事线判过了：水位记在 project.json（四期），偏差只算判过的章。
+  t.write('.novelwarden/threads/青崖舊案.md', '---\nkind: 主線\n---\n\n# 青崖舊案\n\n## 進展\n- 第 2 章 · 推進：找到令牌\n');
+  t.write('.novelwarden/threads/未归属的伏笔.md', '# 未歸屬的伏筆\n\n## 伏筆\n- 斷劍（第 3 章前收）\n');
+  // 七期的單檔案不認。
+  t.write('.novelwarden/threads.md', '# 敘事線\n\n## 舊的線\n- 第 1 章 · 推進：不該出現\n');
+  // 第 1、2 章定稿時敘事線判過了：水位記在 project.json（四期），偏差只算判過的章。
   await project.writeManifest({ ...(await project.readManifest()), threadsThrough: 2 });
   project.invalidate();
 });
@@ -109,15 +109,15 @@ after(() => {
 });
 
 describe('views/threads › buildThreadsOverview', () => {
-  test('列：有细纲或正文的章一章一列，标题、卷、定稿状态、两份路径；计划提到的第 6–8 章补 none', async () => {
+  test('列：有細綱或正文的章一章一列，標題、卷、定稿狀態、兩份路徑；計劃提到的第 6–8 章補 none', async () => {
     const o = await bundle.threads.buildThreadsOverview(project);
     assert.equal(o.initialized, true);
     assert.deepEqual(
       o.chapters.map((c) => [c.no, c.title, c.volume, c.state]),
       [
         [1, '楔子', '', 'finalized'],
-        [2, '入镇（改）', '第一卷', 'finalized'],
-        [3, '夜访', '第一卷', 'written'],
+        [2, '入鎮（改）', '第一卷', 'finalized'],
+        [3, '夜訪', '第一卷', 'written'],
         [4, '北行', '第一卷', 'planned'],
         [5, '新名', '第一卷', 'written'],
         [6, '', '第一卷', 'none'],
@@ -130,43 +130,43 @@ describe('views/threads › buildThreadsOverview', () => {
     assert.equal(at(1).plotPath, '.novelwarden/summaries/001-楔子.md');
     assert.equal(at(3).plotPath, undefined);
     assert.equal(at(4).chapterPath, undefined);
-    assert.equal(at(5).plotPath, undefined, '改了名的正文不冒认旧细纲');
+    assert.equal(at(5).plotPath, undefined, '改了名的正文不冒認舊細綱');
     assert.equal(o.volumes, true);
   });
 
-  test('「现在」与工程页「叙事线」页签同一个数', async () => {
+  test('「現在」與工程頁「敘事線」頁籤同一個數', async () => {
     const o = await bundle.threads.buildThreadsOverview(project);
     const tree = await bundle.projectView.buildProjectTree(project);
     assert.equal(o.current, 2);
     assert.equal(o.current, tree.threads.current);
   });
 
-  test('行：一条线一个文件，按种类分组、伏笔在线下；「未归属的伏笔」在最后；七期的 threads.md 不认', async () => {
+  test('行：一條線一個檔案，按種類分組、伏筆線上下；「未歸屬的伏筆」在最後；七期的 threads.md 不認', async () => {
     const o = await bundle.threads.buildThreadsOverview(project);
     assert.deepEqual(o.groups.map((g) => [g.kind, g.lines.map((l) => l.name)]), [
-      ['主线', ['青崖旧案']],
-      ['感情线', ['林昭与沈青']],
+      ['主线', ['青崖舊案']],
+      ['感情线', ['林昭與沈青']],
     ]);
     const pair = o.groups[1].lines[0];
-    assert.equal(pair.relPath, '.novelwarden/threads/林昭与沈青.md');
-    // 第 2 章计划结盟、第 2 章定稿了却没发生：偏差。
+    assert.equal(pair.relPath, '.novelwarden/threads/林昭與沈青.md');
+    // 第 2 章計劃結盟、第 2 章定稿了卻沒發生：偏差。
     assert.equal(pair.cells.find((c) => c.chapter === 2).deviation, true);
     const jade = pair.foreshadowing[0];
-    assert.equal(jade.name, '玉佩的来历');
-    // 第 4 章计划收、第 4 章没定稿：不是偏差；虚线从第 1 章延到回收章第 6 章。
+    assert.equal(jade.name, '玉佩的來歷');
+    // 第 4 章計劃收、第 4 章沒定稿：不是偏差；虛線從第 1 章延到回收章第 6 章。
     assert.equal(jade.cells.find((c) => c.chapter === 4).deviation, false);
     assert.deepEqual(jade.span, { from: 1, to: 6, kind: 'open' });
-    assert.deepEqual(o.unfiled.foreshadowing.map((f) => f.name), ['断剑']);
-    assert.ok(!JSON.stringify(o).includes('不该出现'));
+    assert.deepEqual(o.unfiled.foreshadowing.map((f) => f.name), ['斷劍']);
+    assert.ok(!JSON.stringify(o).includes('不該出現'));
   });
 
-  test('不写盘：读完之后工程目录一个字节没变', async () => {
+  test('不寫盤：讀完之後工程目錄一個位元組沒變', async () => {
     const before = snapshot(t.dir);
     await bundle.threads.buildThreadsOverview(project);
     assert.deepEqual(snapshot(t.dir), before);
   });
 
-  test('还不是小说工程：initialized 为 false，其余都是空的', async () => {
+  test('還不是小說工程：initialized 為 false，其餘都是空的', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'novelwarden-threads-overview-bare-'));
     try {
       const bare = bundle.project.NovelProject.open(dir);
@@ -185,7 +185,7 @@ describe('views/threads › buildThreadsOverview', () => {
 });
 
 describe('controller › requestThreadsOverview', () => {
-  test('回 threadsOverview，带同一个 requestId', async () => {
+  test('回 threadsOverview，帶同一個 requestId', async () => {
     const posted = [];
     const controller = new bundle.controller.ChatController(project);
     controller.attach({ kind: 'sidebar', post: (m) => posted.push(m), reveal() {} });

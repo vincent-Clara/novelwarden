@@ -1,17 +1,17 @@
 /**
- * `NovelProject`：数据访问层，只读——写盘全在 `core/workspace/`（第 7 条）。
+ * `NovelProject`：資料訪問層，只讀——寫盤全在 `core/workspace/`（第 7 條）。
  *
- * - 新工程的脚手架：`scaffold` 建固定目录、`createManifest` 写 manifest（按设计不走网关）；空模板的落点与内容
- *   `newProjectTemplates` 是纯数据，写模板经网关的 `Workspace.initializeProject`。不放示例角色卡。
- * - 章节索引（manifest v1）、架构的读取（`readBookConfig` / `readSettingDoc` / `settingFilled`）。
- * - 细纲按路径配对（第 8 条）：`listPlots` 递归扫 `summaries/`；`plotPathForChapter` / `plotMirrorOf` 算正文的镜像、
- *   `chapterPathForPlot` 反推；`plotOfChapter` / `plotFor` / `getPlot` 有正文只认镜像那一份、没有正文按章号认计划，
- *   `resolvePlot` 不冒认别的正文的细纲。新一章落点 `subdirForNewChapter` / `plotPathOfNo`：跟上一章同一个子目录，
- *   接在最后、又有一卷还空着时落进那一卷；分卷 `listVolumes` 是章节根下的一级目录。
- * - 定稿的查询：`finalizedPlotOf`（`sourceHash` 对得上正文才算），`staleChapters` / `finalizedFacts` 都从它取。
- * - 草稿按章节路径镜像、`nextPlotNo` / `nextChapterNo`、`.novelforge` / `.novel` → `.novelwarden` 的迁移检测、
- *   各区目录的递归扫描，以及回收站落点 `trashPathFor`（保留原相对路径、同名加序号，第 6 条；放在这一层是因为
- *   `model/` 不能依赖网关）。
+ * - 新工程的腳手架：`scaffold` 建固定目錄、`createManifest` 寫 manifest（按設計不走閘道器）；空模板的落點與內容
+ *   `newProjectTemplates` 是純資料，寫模板經閘道器的 `Workspace.initializeProject`。不放示例角色卡。
+ * - 章節索引（manifest v1）、架構的讀取（`readBookConfig` / `readSettingDoc` / `settingFilled`）。
+ * - 細綱按路徑配對（第 8 條）：`listPlots` 遞迴掃 `summaries/`；`plotPathForChapter` / `plotMirrorOf` 算正文的映象、
+ *   `chapterPathForPlot` 反推；`plotOfChapter` / `plotFor` / `getPlot` 有正文只認映象那一份、沒有正文按章號認計劃，
+ *   `resolvePlot` 不冒認別的正文的細綱。新一章落點 `subdirForNewChapter` / `plotPathOfNo`：跟上一章同一個子目錄，
+ *   接在最後、又有一卷還空著時落進那一卷；分卷 `listVolumes` 是章節根下的一級目錄。
+ * - 定稿的查詢：`finalizedPlotOf`（`sourceHash` 對得上正文才算），`staleChapters` / `finalizedFacts` 都從它取。
+ * - 草稿按章節路徑映象、`nextPlotNo` / `nextChapterNo`、`.novelforge` / `.novel` → `.novelwarden` 的遷移檢測、
+ *   各區目錄的遞迴掃描，以及回收站落點 `trashPathFor`（保留原相對路徑、同名加序號，第 6 條；放在這一層是因為
+ *   `model/` 不能依賴閘道器）。
  */
 import * as fsSync from 'node:fs';
 import * as fs from 'node:fs/promises';
@@ -54,7 +54,7 @@ import {
   settingTemplate,
 } from './settingFile';
 import { SettingDoc, isFallbackChapterTitle, isLoreListFilled } from './pipeline';
-import { TIMELINE_NAME, ThreadBook, ThreadsMark, UNFILED_NAME, parseThreadFile, parseUnfiledFile, threadsMarkOf } from './threadFile';
+import { TIMELINE_FILENAME, ThreadBook, ThreadsMark, UNFILED_FILENAME, parseThreadFile, parseUnfiledFile, threadsMarkOf } from './threadFile';
 import { parseTimelineFile } from './timelineFile';
 import {
   countWords,
@@ -71,85 +71,85 @@ import { normalizeGender } from './gender';
 import { SENSITIVE_FILE_NAME } from './sensitiveWords';
 
 /**
- * 元数据目录名。新工程只建这一个。
+ * 後設資料目錄名。新工程只建這一個。
  *
- * 改名（2026-11）之前的工程还在 `.novelforge/`（0.2.x）或 `.novel/`（0.1.x）里：
- * 读写仍落在旧目录，迁移要作者确认，**绝不在旁边新建第二个元数据目录**。
+ * 改名（2026-11）之前的工程還在 `.novelforge/`（0.2.x）或 `.novel/`（0.1.x）裡：
+ * 讀寫仍落在舊目錄，遷移要作者確認，**絕不在旁邊新建第二個後設資料目錄**。
  */
 export const NOVEL_DIR = '.novelwarden';
-/** 旧工程的元数据目录名，从新到旧。 */
+/** 舊工程的後設資料目錄名，從新到舊。 */
 export const LEGACY_NOVEL_DIRS = ['.novelforge', '.novel'] as const;
 const MANIFEST_FILE = 'project.json';
-/** 导出全文的目录名（工程根下）。 */
+/** 匯出全文的目錄名（工程根下）。 */
 const EXPORT_DIR = '导出';
 
-/** 递归扫描的深度上限。防御性的：正常工程不会有这么深的卷/册嵌套。 */
+/** 遞迴掃描的深度上限。防禦性的：正常工程不會有這麼深的卷/冊巢狀。 */
 const MAX_TREE_DEPTH = 8;
 
 /**
- * 小说工程的数据访问层。
+ * 小說工程的資料訪問層。
  *
- * 约定：所有 read* 方法每次都读盘（作者随时可能在编辑器里手改文件），
- * 只有章节列表做了一层缓存，由 FileSystemWatcher 主动失效。
+ * 約定：所有 read* 方法每次都讀盤（作者隨時可能在編輯器裡手改檔案），
+ * 只有章節列表做了一層快取，由 FileSystemWatcher 主動失效。
  *
- * ## 一条轴，细纲镜像正文的路径
+ * ## 一條軸，細綱映象正文的路徑
  *
- * 细纲（`summaries/` 下）**镜像正文在章节根下的相对路径**，扩展名换成 `.md`：
- * `chapters/第一卷/003-深处.txt` ↔ `summaries/第一卷/003-深处.md`，与草稿（`drafts/`）同一套镜像。
- * 有正文的章**按路径**认它的细纲（{@link plotPathForChapter}），定稿反向更新的也是这一份；
- * 还没有正文的章只有细纲，按文件名的章号认，正文照它的路径反推着落（{@link chapterPathForPlot}）。
- * 章号仍取文件名数字前缀，界面上一律称「第 N 章」。
+ * 細綱（`summaries/` 下）**映象正文在章節根下的相對路徑**，副檔名換成 `.md`：
+ * `chapters/第一卷/003-深处.txt` ↔ `summaries/第一卷/003-深处.md`，與草稿（`drafts/`）同一套映象。
+ * 有正文的章**按路徑**認它的細綱（{@link plotPathForChapter}），定稿反向更新的也是這一份；
+ * 還沒有正文的章只有細綱，按檔名的章號認，正文照它的路徑反推著落（{@link chapterPathForPlot}）。
+ * 章號仍取檔名數字字首，介面上一律稱「第 N 章」。
  *
- * 从前规划的单位是「剧情段」、发布的单位是章，两条轴之间隔着一个中转站（`manuscripts/`）；
- * 一章一纲之后那一层删掉了。细纲从前另放在 `plots/`、定稿另写一份单章摘要，两份并成一份之后
- * `plots/` 也不读了。老工程磁盘上的 `volumes/`、`manuscripts/`、`plots/` 一个字节都不动，
- * 这里只是不再读它们。
+ * 從前規劃的單位是「劇情段」、釋出的單位是章，兩條軸之間隔著一箇中轉站（`manuscripts/`）；
+ * 一章一綱之後那一層刪掉了。細綱從前另放在 `plots/`、定稿另寫一份單章摘要，兩份併成一份之後
+ * `plots/` 也不讀了。老工程磁碟上的 `volumes/`、`manuscripts/`、`plots/` 一個位元組都不動，
+ * 這裡只是不再讀它們。
  *
- * 架构层的三份文档（`config.md` / `premise.md` / `world.md`）与大纲、文风同级，
- * 格式定义在 model/settingFile.ts。
+ * 架構層的三份文件（`config.md` / `premise.md` / `world.md`）與大綱、文風同級，
+ * 格式定義在 model/settingFile.ts。
  *
- * 章节 / 角色 / 设定三个目录都是**递归扫描**的：作者可以按卷、按阵营
- * 分子目录整理。角色 / 设定只认 `.md`（那是插件自己的数据格式）；章节
- * 则认「数字前缀 + 非二进制扩展名」的任意文件（见 model/chapterFile.ts）。
- * 章节的顺序始终由文件名的数字前缀决定，与它在哪一层无关。
+ * 章節 / 角色 / 設定三個目錄都是**遞迴掃描**的：作者可以按卷、按陣營
+ * 分子目錄整理。角色 / 設定只認 `.md`（那是外掛自己的資料格式）；章節
+ * 則認「數字字首 + 非二進位制副檔名」的任意檔案（見 model/chapterFile.ts）。
+ * 章節的順序始終由檔名的數字字首決定，與它在哪一層無關。
  */
 export class NovelProject {
   private chapterCache: Chapter[] | undefined;
   private plotCache: Plot[] | undefined;
 
   /**
-   * 正在进行的 `listChapters()` / `listPlots()`。
+   * 正在進行的 `listChapters()` / `listPlots()`。
    *
-   * 缓存只在扫完之后才填得上，所以**并发**的两个调用方都会看到空缓存，
-   * 各扫一遍全书。`buildProjectTree` 正是这样：`Promise.all` 里
-   * `listChapters()` 与 `buildPipelineIndex()` 同时起跑，五百章工程于是
-   * 把细纲读了两遍（流水线一遍、出场索引一遍）。记住这个在途的
-   * promise，让后来者搭同一班车。
+   * 快取只在掃完之後才填得上，所以**併發**的兩個呼叫方都會看到空快取，
+   * 各掃一遍全書。`buildProjectTree` 正是這樣：`Promise.all` 裡
+   * `listChapters()` 與 `buildPipelineIndex()` 同時起跑，五百章工程於是
+   * 把細綱讀了兩遍（流水線一遍、出場索引一遍）。記住這個在途的
+   * promise，讓後來者搭同一班車。
    */
   private chapterScan: Promise<Chapter[]> | undefined;
   private plotScan: Promise<Plot[]> | undefined;
 
   /**
-   * 缓存的世代号。`invalidate()` 让它 +1。
+   * 快取的世代號。`invalidate()` 讓它 +1。
    *
-   * 光把 `*Scan` 清空不够：在途的那一轮**仍会跑完**，然后把变更之前的
-   * 结果写进缓存，于是刚改过的东西又被旧数据盖回去。扫描结束时比一下世代号，
-   * 对不上就只把结果给等它的人，不落缓存。两条轴共用一个号：`invalidate()`
-   * 本来就是「磁盘变过了」这一件事，分开记没有意义。
+   * 光把 `*Scan` 清空不夠：在途的那一輪**仍會跑完**，然後把變更之前的
+   * 結果寫進快取，於是剛改過的東西又被舊資料蓋回去。掃描結束時比一下世代號，
+   * 對不上就只把結果給等它的人，不落快取。兩條軸共用一個號：`invalidate()`
+   * 本來就是「磁碟變過了」這一件事，分開記沒有意義。
    */
   private generation = 0;
 
-  /** 解析出来的元数据目录名（见 {@link resolveNovelDirName}）。目录不在了就重新解析。 */
+  /** 解析出來的後設資料目錄名（見 {@link resolveNovelDirName}）。目錄不在了就重新解析。 */
   private novelDirCache: string | undefined;
 
   private constructor(public readonly root: string) {}
 
-  /** 以某目录为工程根打开实例（不做初始化检查）。 */
+  /** 以某目錄為工程根開啟例項（不做初始化檢查）。 */
   static open(root: string): NovelProject {
     return new NovelProject(path.resolve(root));
   }
 
-  // ---------------------------------------------------------------- 路径
+  // ---------------------------------------------------------------- 路徑
 
   get config(): NovelConfig {
     return readConfig();
@@ -160,45 +160,45 @@ export class NovelProject {
   }
 
   /**
-   * 草稿根目录。与 chapters/ 平级的兄弟目录，**不从 chaptersDir 派生**——
-   * 作者把正文目录改名成 `正文/` 时，草稿仍然落在 `drafts/` 下。
+   * 草稿根目錄。與 chapters/ 平級的兄弟目錄，**不從 chaptersDir 派生**——
+   * 作者把正文目錄改名成 `正文/` 時，草稿仍然落在 `drafts/` 下。
    */
   get draftsDir(): string {
     return path.join(this.root, this.config.draftsDir);
   }
 
   /**
-   * 导出全文的落点（`features/exportBook.ts`，2026-10-24）：工程根下的 `导出/`，一本书一份 `<书名>.txt`。不是固定目录，
-   * 用到才建；不扫章节、不进「导入原稿」的清单——导出的那份是照章节现拼的副本。
+   * 匯出全文的落點（`features/exportBook.ts`，2026-10-24）：工程根下的 `匯出/`，一本書一份 `<書名>.txt`。不是固定目錄，
+   * 用到才建；不掃章節、不進「匯入原稿」的清單——匯出的那份是照章節現拼的副本。
    */
   get exportDir(): string {
     return path.join(this.root, EXPORT_DIR);
   }
 
   /**
-   * 元数据目录（`.novelwarden/`，旧工程是 `.novelforge/` 或 `.novel/`）。
+   * 後設資料目錄（`.novelwarden/`，舊工程是 `.novelforge/` 或 `.novel/`）。
    *
-   * 解析规则见 {@link resolveNovelDirName}：已存在的目录优先，新名字只给还没初始化的工程用。
-   * 所有读写路径（细纲、角色卡、设定、会话、回收站……）都从这里派生，旧工程因此原地可读写。
+   * 解析規則見 {@link resolveNovelDirName}：已存在的目錄優先，新名字只給還沒初始化的工程用。
+   * 所有讀寫路徑（細綱、角色卡、設定、會話、回收站……）都從這裡派生，舊工程因此原地可讀寫。
    */
   get novelDir(): string {
     return path.join(this.root, this.resolveNovelDirName());
   }
 
-  /** 这个工程的元数据目录用的是哪个名字（`.novelwarden` / `.novelforge` / `.novel`）。 */
+  /** 這個工程的後設資料目錄用的是哪個名字（`.novelwarden` / `.novelforge` / `.novel`）。 */
   get novelDirName(): string {
     return this.resolveNovelDirName();
   }
 
   /**
-   * 元数据目录名的解析：**已经存在的那个优先**，从新到旧。
+   * 後設資料目錄名的解析：**已經存在的那個優先**，從新到舊。
    *
-   * - 旧工程没迁移：`.novelforge/`（0.2.x）或 `.novel/`（0.1.x）还在，读写就落在那儿，
-   *   绝不在旁边新建一个空的 `.novelwarden/`（第 3 条：不静默覆盖）。
-   * - 一个都没有：给新名字，初始化（`scaffold` / `createManifest`）才把它建出来。
+   * - 舊工程沒遷移：`.novelforge/`（0.2.x）或 `.novel/`（0.1.x）還在，讀寫就落在那兒，
+   *   絕不在旁邊新建一個空的 `.novelwarden/`（第 3 條：不靜默覆蓋）。
+   * - 一個都沒有：給新名字，初始化（`scaffold` / `createManifest`）才把它建出來。
    *
-   * 解析结果缓存在实例上，`invalidate()` 清掉（磁盘变过了）；没有目录时不缓存，
-   * 初始化建出目录之后下一次就能认到。
+   * 解析結果快取在例項上，`invalidate()` 清掉（磁碟變過了）；沒有目錄時不快取，
+   * 初始化建出目錄之後下一次就能認到。
    */
   private resolveNovelDirName(): string {
     if (this.novelDirCache !== undefined) {
@@ -222,48 +222,48 @@ export class NovelProject {
   }
 
   /**
-   * 情节大纲的**身份**：磁盘上没有这份文件，大纲是各章细纲「梗概」的汇总（{@link readOutline}）；这个路径给编辑器标签、
-   * MCP 的读写与 `@` 引用认它，网关接住它的读写（docs/design/plans/2026-10-22-outline-from-plots.md）。老工程磁盘上若还有
-   * 一份 `outline.md`，不读、不动。
+   * 情節大綱的**身份**：磁碟上沒有這份檔案，大綱是各章細綱「梗概」的彙總（{@link readOutline}）；這個路徑給編輯器標籤、
+   * MCP 的讀寫與 `@` 引用認它，閘道器接住它的讀寫（docs/design/plans/2026-10-22-outline-from-plots.md）。老工程磁碟上若還有
+   * 一份 `outline.md`，不讀、不動。
    */
   get outlinePath(): string {
     return path.join(this.novelDir, 'outline.md');
   }
 
   /**
-   * 叙事线（2026-10-20 重做）：一条线一个文件 `threads/<线名>.md`，格式见 model/threadFile.ts。可选：没有这个目录
-   * 就是还没排过，初始化时不建。七期那一份 `threads.md` 不再认（判 `other`，不读、不显示、不删）。
+   * 敘事線（2026-10-20 重做）：一條線一個檔案 `threads/<線名>.md`，格式見 model/threadFile.ts。可選：沒有這個目錄
+   * 就是還沒排過，初始化時不建。七期那一份 `threads.md` 不再認（判 `other`，不讀、不顯示、不刪）。
    */
   get threadsDir(): string {
     return path.join(this.novelDir, 'threads');
   }
 
-  /** 挂不上哪一条线的伏笔（`threads/未归属的伏笔.md`）。保留名：排线、定稿都不许用它当线名。 */
+  /** 掛不上哪一條線的伏筆（`threads/未归属的伏笔.md`）。保留名：排線、定稿都不許用它當線名。 */
   get unfiledPath(): string {
-    return path.join(this.threadsDir, `${UNFILED_NAME}.md`);
+    return path.join(this.threadsDir, UNFILED_FILENAME);
   }
 
-  /** 故事时间（`threads/时间线.md`，2026-10-24，格式见 model/timelineFile.ts）。也是保留名。同步时第一次推出时间才建。 */
+  /** 故事時間（`threads/时间线.md`，2026-10-24，格式見 model/timelineFile.ts）。也是保留名。同步時第一次推出時間才建。 */
   get timelinePath(): string {
-    return path.join(this.threadsDir, `${TIMELINE_NAME}.md`);
+    return path.join(this.threadsDir, TIMELINE_FILENAME);
   }
 
   /**
-   * 本工程的写作技能（`.novelwarden/skills/<名字>/SKILL.md`）。可选：作者手放进来的，
-   * 初始化时不建。我的技能库在工程外（`~/.novelwarden/skills/`），见 core/skills/。
+   * 本工程的寫作技能（`.novelwarden/skills/<名字>/SKILL.md`）。可選：作者手放進來的，
+   * 初始化時不建。我的技能庫在工程外（`~/.novelwarden/skills/`），見 core/skills/。
    */
   get skillsDir(): string {
     return path.join(this.novelDir, 'skills');
   }
 
-  /** 这个工程每个阶段绑了哪份技能（`.novelwarden/skills.json`）。没绑过就没有这份文件。 */
+  /** 這個工程每個階段綁了哪份技能（`.novelwarden/skills.json`）。沒綁過就沒有這份檔案。 */
   get skillBindingsPath(): string {
     return path.join(this.novelDir, 'skills.json');
   }
 
   /**
-   * 自定义敏感词表（`.novelwarden/sensitive.txt`，格式见 `model/sensitiveWords.ts`）。可选：作者在内置编辑器里点
-   * 「编辑敏感词表…」时才建。只给编辑器的写作体检用，不进生成链。
+   * 自定義敏感詞表（`.novelwarden/sensitive.txt`，格式見 `model/sensitiveWords.ts`）。可選：作者在內建編輯器裡點
+   * 「編輯敏感詞表…」時才建。只給編輯器的寫作體檢用，不進生成鏈。
    */
   get sensitivePath(): string {
     return path.join(this.novelDir, SENSITIVE_FILE_NAME);
@@ -277,21 +277,21 @@ export class NovelProject {
     return path.join(this.novelDir, 'lore');
   }
 
-  /** `summaries/`：一章一份的细纲，外加全文大纲 `global.md`。 */
+  /** `summaries/`：一章一份的細綱，外加全文大綱 `global.md`。 */
   get summariesDir(): string {
     return path.join(this.novelDir, 'summaries');
   }
 
   /**
-   * 细纲（`.novelwarden/summaries/`）。一章一份，**镜像正文的相对路径**：`chapters/第一卷/012-夜入青云.md`
-   * 的细纲是 `summaries/第一卷/012-夜入青云.md`。各级子目录里数字开头的 `.md` 都是细纲，根下的
-   * `global.md` 是全文大纲。老工程的 `plots/` 不再扫描——那些文件一个字节都不动。
+   * 細綱（`.novelwarden/summaries/`）。一章一份，**映象正文的相對路徑**：`chapters/第一卷/012-夜入青云.md`
+   * 的細綱是 `summaries/第一卷/012-夜入青云.md`。各級子目錄裡數字開頭的 `.md` 都是細綱，根下的
+   * `global.md` 是全文大綱。老工程的 `plots/` 不再掃描——那些檔案一個位元組都不動。
    */
   get plotsDir(): string {
     return this.summariesDir;
   }
 
-  /** 小说配置（`.novelwarden/config.md`）：类型、卖点、规模参数。 */
+  /** 小說配置（`.novelwarden/config.md`）：型別、賣點、規模引數。 */
   get configPath(): string {
     return path.join(this.novelDir, 'config.md');
   }
@@ -301,12 +301,12 @@ export class NovelProject {
     return path.join(this.novelDir, 'premise.md');
   }
 
-  /** 世界观（`.novelwarden/world.md`）。 */
+  /** 世界觀（`.novelwarden/world.md`）。 */
   get worldPath(): string {
     return path.join(this.novelDir, 'world.md');
   }
 
-  /** 架构文档的绝对路径。角色图谱、设定清单没有自己的文件，给的是角色目录、设定目录。 */
+  /** 架構文件的絕對路徑。角色圖譜、設定清單沒有自己的檔案，給的是角色目錄、設定目錄。 */
   settingPath(doc: SettingDoc): string {
     switch (doc) {
       case 'config':
@@ -326,28 +326,28 @@ export class NovelProject {
     return path.join(this.novelDir, 'sessions');
   }
 
-  /** 删除的东西搬这里，不真删。落点（保留原相对路径、同名加序号）见 {@link trashPathFor}，会话删除也用它。 */
+  /** 刪除的東西搬這裡，不真刪。落點（保留原相對路徑、同名加序號）見 {@link trashPathFor}，會話刪除也用它。 */
   get trashDir(): string {
     return path.join(this.novelDir, '.trash');
   }
 
   /**
-   * 历史版本（`.novelwarden/history/`）：网关覆盖一份创作产物之前存下的旧内容，镜像原文件的相对路径
-   * （布局与节流见 workspace/history.ts）。是网关自己存的副本，不是作者的文件。
+   * 歷史版本（`.novelwarden/history/`）：閘道器覆蓋一份創作產物之前存下的舊內容，映象原檔案的相對路徑
+   * （佈局與節流見 workspace/history.ts）。是閘道器自己存的副本，不是作者的檔案。
    */
   get historyDir(): string {
     return path.join(this.novelDir, 'history');
   }
 
   /**
-   * 存档点（`.novelwarden/checkpoints/`）：整本书在某一刻的样子，按内容寻址去重（布局与保留见
-   * workspace/checkpoints.ts）。Novelwarden 自己的内部文件，界面上只经「存档点」面板看。
+   * 存檔點（`.novelwarden/checkpoints/`）：整本書在某一刻的樣子，按內容定址去重（佈局與保留見
+   * workspace/checkpoints.ts）。Novelwarden 自己的內部檔案，介面上只經「存檔點」面板看。
    */
   get checkpointsDir(): string {
     return path.join(this.novelDir, 'checkpoints');
   }
 
-  /** 旧工程的元数据目录（绝对路径），从新到旧。只用于迁移检测，读写都经 {@link novelDir}。 */
+  /** 舊工程的後設資料目錄（絕對路徑），從新到舊。只用於遷移檢測，讀寫都經 {@link novelDir}。 */
   get legacyNovelDirs(): string[] {
     return LEGACY_NOVEL_DIRS.map((name) => path.join(this.root, name));
   }
@@ -356,7 +356,7 @@ export class NovelProject {
     return path.join(this.summariesDir, 'global.md');
   }
 
-  /** 正文在章节根下的那段相对路径（正斜杠）。不在章节根下（配置被改坏等）时 undefined。 */
+  /** 正文在章節根下的那段相對路徑（正斜槓）。不在章節根下（配置被改壞等）時 undefined。 */
   private underChapters(chapterRelPath: string): string | undefined {
     const under = path.relative(this.chaptersDir, this.pathOf(chapterRelPath));
     if (!under || under.startsWith('..') || path.isAbsolute(under)) {
@@ -365,7 +365,7 @@ export class NovelProject {
     return under.replace(/\\/g, '/');
   }
 
-  /** 细纲在 `summaries/` 下的那段相对路径（正斜杠）。不在 `summaries/` 下时 undefined。 */
+  /** 細綱在 `summaries/` 下的那段相對路徑（正斜槓）。不在 `summaries/` 下時 undefined。 */
   private underPlots(plotRelPath: string): string | undefined {
     const under = path.relative(this.plotsDir, this.pathOf(plotRelPath));
     if (!under || under.startsWith('..') || path.isAbsolute(under)) {
@@ -375,11 +375,11 @@ export class NovelProject {
   }
 
   /**
-   * 正文（文件或目录）→ 细纲那边的镜像（工作区相对路径，正斜杠）。不在章节根下时 undefined。
+   * 正文（檔案或目錄）→ 細綱那邊的映象（工作區相對路徑，正斜槓）。不在章節根下時 undefined。
    *
-   * 文件：扩展名换成 `.md`（{@link plotPathForChapter} 用的就是它）。
-   * 目录：原样镜像——搬 `chapters/卷一/` 时 `summaries/卷一/` 整棵跟着走（`handlers/chapter.ts` 的 `carryPlot`）。
-   * 纯计算，不碰磁盘。
+   * 檔案：副檔名換成 `.md`（{@link plotPathForChapter} 用的就是它）。
+   * 目錄：原樣映象——搬 `chapters/卷一/` 時 `summaries/卷一/` 整棵跟著走（`handlers/chapter.ts` 的 `carryPlot`）。
+   * 純計算，不碰磁碟。
    */
   plotMirrorOf(chapterRelPath: string, isDir = false): string | undefined {
     const under = this.underChapters(chapterRelPath);
@@ -392,13 +392,13 @@ export class NovelProject {
   }
 
   /**
-   * 正文 → 它的细纲落在哪（工作区相对路径，正斜杠）。纯计算，文件可能并不存在。
+   * 正文 → 它的細綱落在哪（工作區相對路徑，正斜槓）。純計算，檔案可能並不存在。
    *
-   * **镜像正文在章节根下的相对路径**，扩展名换成 `.md`（与草稿 {@link draftRelPathFor} 同一套）：
+   * **映象正文在章節根下的相對路徑**，副檔名換成 `.md`（與草稿 {@link draftRelPathFor} 同一套）：
    *   `chapters/第一卷/003-深处.txt` → `.novelwarden/summaries/第一卷/003-深处.md`
    *   `chapters/001 序.txt`          → `.novelwarden/summaries/001 序.md`
-   * 同号的两个文件（`001 序.txt` 与 `001 正文.txt`）于是各有各的细纲，互不覆盖。
-   * 正文不在章节根下（配置被改坏）时退回 `summaries/NNN.md`，绝不抛。
+   * 同號的兩個檔案（`001 序.txt` 與 `001 正文.txt`）於是各有各的細綱，互不覆蓋。
+   * 正文不在章節根下（配置被改壞）時退回 `summaries/NNN.md`，絕不拋。
    */
   plotPathForChapter(chapterRelPath: string): string {
     const mirror = this.plotMirrorOf(chapterRelPath);
@@ -410,9 +410,9 @@ export class NovelProject {
   }
 
   /**
-   * 细纲 → 照它写出来的正文该叫什么（{@link plotPathForChapter} 的逆运算，扩展名 `.txt`：正文一律出纯文本，2026-10-24 作者定的）：
+   * 細綱 → 照它寫出來的正文該叫什麼（{@link plotPathForChapter} 的逆運算，副檔名 `.txt`：正文一律出純文字，2026-10-24 作者定的）：
    *   `.novelwarden/summaries/第二卷/010-雪夜.md` → `chapters/第二卷/010-雪夜.txt`
-   * 不在 `summaries/` 下的路径给 undefined。纯计算，不碰磁盘。
+   * 不在 `summaries/` 下的路徑給 undefined。純計算，不碰磁碟。
    */
   chapterPathForPlot(plotRelPath: string): string | undefined {
     const under = path.relative(this.plotsDir, this.pathOf(plotRelPath));
@@ -424,15 +424,15 @@ export class NovelProject {
   }
 
   /**
-   * 还没有正文、也还没有细纲的第 N 章落在哪个子目录（相对章节根与 `summaries/` 的同一段，`''` = 根）：
+   * 還沒有正文、也還沒有細綱的第 N 章落在哪個子目錄（相對章節根與 `summaries/` 的同一段，`''` = 根）：
    *
-   * - **接在全书最后、又有一卷还空着**（作者右键「新建卷」刚建的，正文与细纲都还没有）：落进空着的最后一卷
-   *   （{@link listVolumes} 的顺序）——新的一卷从这一章开始（2026-10-23 作者定：新建的默认放进最新一卷）。
-   * - 否则**跟上一章放在一起**。上一章 = 章号比它小的里面最大的那一章；它有正文看正文所在的子目录，
-   *   只有细纲看细纲所在的子目录。前面一章都没有就是根。
+   * - **接在全書最後、又有一卷還空著**（作者右鍵「新建卷」剛建的，正文與細綱都還沒有）：落進空著的最後一卷
+   *   （{@link listVolumes} 的順序）——新的一卷從這一章開始（2026-10-23 作者定：新建的預設放進最新一卷）。
+   * - 否則**跟上一章放在一起**。上一章 = 章號比它小的裡面最大的那一章；它有正文看正文所在的子目錄，
+   *   只有細綱看細綱所在的子目錄。前面一章都沒有就是根。
    *
-   * 分卷的书写到第二卷时，新排的细纲与新写的正文于是都落进 `第二卷/`，不会掉回根下；
-   * 补中间空着的章号时仍跟上一章，不会被拉进最新的一卷。
+   * 分卷的書寫到第二卷時，新排的細綱與新寫的正文於是都落進 `第二卷/`，不會掉回根下；
+   * 補中間空著的章號時仍跟上一章，不會被拉進最新的一卷。
    */
   async subdirForNewChapter(no: number): Promise<string> {
     const [plots, chapters, volumes] = await Promise.all([this.listPlots(), this.listChapters(), this.listVolumes()]);
@@ -458,10 +458,10 @@ export class NovelProject {
     for (const plot of plots) {
       const under = this.underPlots(plot.relPath);
       if (!written.has(plot.no)) {
-        // 正文在的章看正文：上一轮已经按正文算过了，细纲只补「还没有正文」的那几号。
+        // 正文在的章看正文：上一輪已經按正文算過了，細綱只補「還沒有正文」的那幾號。
         consider(plot.no, under === undefined ? undefined : path.posix.dirname(under));
       } else if (under !== undefined) {
-        // 落点仍看正文，但细纲占着的卷也不算空。
+        // 落點仍看正文，但細綱佔著的卷也不算空。
         used.add(under.split('/')[0]);
       }
     }
@@ -474,12 +474,12 @@ export class NovelProject {
   }
 
   /**
-   * 还没有正文、也还没有细纲的第 N 章，细纲**应该**落在哪：与上一章同一个子目录
-   * （{@link subdirForNewChapter}），`NNN-标题.md`。纯推导，文件并不存在。
+   * 還沒有正文、也還沒有細綱的第 N 章，細綱**應該**落在哪：與上一章同一個子目錄
+   * （{@link subdirForNewChapter}），`NNN-标题.md`。純推導，檔案並不存在。
    *
-   * **回落标题不进文件名**：没有名字的章（`009.md`）在 `listChapters` 那边会
-   * 拿到「第 9 章」，那是「没有标题」的样子而不是标题——拼进去会得到
-   * `009-第-9-章.md`，一个凭空的假名字。
+   * **回落標題不進檔名**：沒有名字的章（`009.md`）在 `listChapters` 那邊會
+   * 拿到「第 9 章」，那是「沒有標題」的樣子而不是標題——拼進去會得到
+   * `009-第-9-章.md`，一個憑空的假名字。
    */
   async plotPathForNewChapter(no: number, title = ''): Promise<string> {
     const stem = isFallbackChapterTitle(no, title) ? '' : safeStem(title);
@@ -488,11 +488,11 @@ export class NovelProject {
   }
 
   /**
-   * 第 N 章的细纲**应该**在哪：已有就是那一份；有正文就是正文的镜像（{@link plotPathForChapter}）；
-   * 两样都没有就跟上一章放在一起（{@link plotPathForNewChapter}）。
+   * 第 N 章的細綱**應該**在哪：已有就是那一份；有正文就是正文的映象（{@link plotPathForChapter}）；
+   * 兩樣都沒有就跟上一章放在一起（{@link plotPathForNewChapter}）。
    *
-   * 给「这一章还没有细纲」时找落点用：界面上要能选中它、切到细纲层去补规划，那就需要一个
-   * 稳定的落点路径，而且它必须就是之后真正落盘的那一份。
+   * 給「這一章還沒有細綱」時找落點用：介面上要能選中它、切到細綱層去補規劃，那就需要一個
+   * 穩定的落點路徑，而且它必須就是之後真正落盤的那一份。
    */
   async plotPathOfNo(no: number, title = ''): Promise<string> {
     const plot = await this.getPlot(no);
@@ -503,22 +503,22 @@ export class NovelProject {
     return chapter ? this.plotPathForChapter(chapter.relPath) : this.plotPathForNewChapter(no, title);
   }
 
-  /** 绝对路径 → 工作区相对路径（正斜杠）。 */
+  /** 絕對路徑 → 工作區相對路徑（正斜槓）。 */
   relPath(absPath: string): string {
     return path.relative(this.root, absPath).replace(/\\/g, '/');
   }
 
-  /** relPath 的逆运算。 */
+  /** relPath 的逆運算。 */
   pathOf(relPath: string): string {
     return path.join(this.root, relPath);
   }
 
-  /** 这个工程初始化过没有：`novelDir` 下有没有 `project.json`。旧目录里的工程同样算初始化过。 */
+  /** 這個工程初始化過沒有：`novelDir` 下有沒有 `project.json`。舊目錄裡的工程同樣算初始化過。 */
   async isInitialized(): Promise<boolean> {
     return exists(this.manifestPath);
   }
 
-  /** 只有旧目录、没有新目录时为真——需要迁移。`.novelforge/`（0.2.x）与 `.novel/`（0.1.x）都算。 */
+  /** 只有舊目錄、沒有新目錄時為真——需要遷移。`.novelforge/`（0.2.x）與 `.novel/`（0.1.x）都算。 */
   async needsMigration(): Promise<boolean> {
     if (await exists(path.join(this.root, NOVEL_DIR))) {
       return false;
@@ -526,7 +526,7 @@ export class NovelProject {
     return (await this.legacyDirToMigrate()) !== undefined;
   }
 
-  /** 该搬到 `.novelwarden/` 的那个旧目录（从新到旧；只认有 manifest 的）。 */
+  /** 該搬到 `.novelwarden/` 的那個舊目錄（從新到舊；只認有 manifest 的）。 */
   private async legacyDirToMigrate(): Promise<string | undefined> {
     for (const dir of this.legacyNovelDirs) {
       if (await exists(path.join(dir, MANIFEST_FILE))) {
@@ -537,9 +537,9 @@ export class NovelProject {
   }
 
   /**
-   * 把旧目录整体搬到 `.novelwarden/`（`.novelforge/` 优先，其次 `.novel/`）。
-   * 用 rename 而非复制，避免留下两份会各自漂移的元数据。没有可迁移的目录、或新目录
-   * 已经存在（不能往已有的目录上 rename）时什么也不做——**绝不删除、绝不合并**。
+   * 把舊目錄整體搬到 `.novelwarden/`（`.novelforge/` 優先，其次 `.novel/`）。
+   * 用 rename 而非複製，避免留下兩份會各自漂移的後設資料。沒有可遷移的目錄、或新目錄
+   * 已經存在（不能往已有的目錄上 rename）時什麼也不做——**絕不刪除、絕不合併**。
    */
   async migrateLegacyDir(): Promise<void> {
     if (fsSync.existsSync(path.join(this.root, NOVEL_DIR))) {
@@ -557,10 +557,10 @@ export class NovelProject {
   invalidate(): void {
     this.chapterCache = undefined;
     this.plotCache = undefined;
-    // 元数据目录可能刚被初始化 / 迁移 / 改名（磁盘变过了）：下一次访问重新解析。
+    // 後設資料目錄可能剛被初始化 / 遷移 / 改名（磁碟變過了）：下一次訪問重新解析。
     this.novelDirCache = undefined;
-    // 在途的那一轮扫的是**变更之前**的磁盘状态：不能再让新调用方搭它的车，
-    // 世代号 +1 也让它扫完后不要回填缓存（见 generation）。
+    // 在途的那一輪掃的是**變更之前**的磁碟狀態：不能再讓新呼叫方搭它的車，
+    // 世代號 +1 也讓它掃完後不要回填快取（見 generation）。
     this.chapterScan = undefined;
     this.plotScan = undefined;
     this.generation++;
@@ -568,12 +568,12 @@ export class NovelProject {
 
   // ---------------------------------------------------------------- 初始化
   //
-  // 新工程分三步，由网关的 `Workspace.initializeProject` 串起来：固定目录（`scaffold`）→ 空模板（经网关 `write`，
-  // `mode: 'create'`）→ manifest（`createManifest`）。这一层只留元数据与脚手架——建目录、写 `project.json`——以及模板
-  // 的落点与内容（纯数据）；**写模板不在这里**：模板是作者的创作产物，写盘只经网关（AGENTS 第 7 条），而 `model/`
-  // 不能反过来依赖网关。
+  // 新工程分三步，由閘道器的 `Workspace.initializeProject` 串起來：固定目錄（`scaffold`）→ 空模板（經閘道器 `write`，
+  // `mode: 'create'`）→ manifest（`createManifest`）。這一層只留後設資料與腳手架——建目錄、寫 `project.json`——以及模板
+  // 的落點與內容（純資料）；**寫模板不在這裡**：模板是作者的創作產物，寫盤只經閘道器（AGENTS 第 7 條），而 `model/`
+  // 不能反過來依賴閘道器。
 
-  /** 建固定目录（已有的不动）。不写任何文件。 */
+  /** 建固定目錄（已有的不動）。不寫任何檔案。 */
   async scaffold(): Promise<void> {
     for (const dir of [this.chaptersDir, this.charactersDir, this.loreDir, this.summariesDir, this.sessionsDir]) {
       await fs.mkdir(dir, { recursive: true });
@@ -581,12 +581,12 @@ export class NovelProject {
   }
 
   /**
-   * 新工程的几份空模板：架构三件、文风、全文大纲（情节大纲是各章细纲梗概的汇总，没有文件）。**只给落点（工作区相对路径）与内容，不碰磁盘。**
+   * 新工程的幾份空模板：架構三件、文風、全文大綱（情節大綱是各章細綱梗概的彙總，沒有檔案）。**只給落點（工作區相對路徑）與內容，不碰磁碟。**
    *
-   * 架构三件是结构完整、全是占位的空模板，`isSettingFilled` 为 false，主按钮于是从「生成小说配置」开始。
-   * **不放示例角色卡**：角色图谱「有没有」看 `characters/` 下有没有卡，一张示例卡会让新工程一出生就跳过「生成角色图谱」
-   * （卡的格式见 README）。示例设定条目同理（设定清单「有没有」看 `lore/` 下有没有条目），何况它的关键词「设定」会被
-   * 任何一句带这两个字的话命中、混进上下文。
+   * 架構三件是結構完整、全是佔位的空模板，`isSettingFilled` 為 false，主按鈕於是從「生成小說配置」開始。
+   * **不放示例角色卡**：角色圖譜「有沒有」看 `characters/` 下有沒有卡，一張示例卡會讓新工程一出生就跳過「生成角色圖譜」
+   * （卡的格式見 README）。示例設定條目同理（設定清單「有沒有」看 `lore/` 下有沒有條目），何況它的關鍵詞「設定」會被
+   * 任何一句帶這兩個字的話命中、混進上下文。
    */
   newProjectTemplates(): { rel: string; text: string }[] {
     return [
@@ -596,7 +596,7 @@ export class NovelProject {
     ];
   }
 
-  /** 写新工程的 manifest（`project.json`）并同步章节索引。有了它 `isInitialized` 才为真。 */
+  /** 寫新工程的 manifest（`project.json`）並同步章節索引。有了它 `isInitialized` 才為真。 */
   async createManifest(meta: { title: string; author: string }): Promise<void> {
     this.invalidate();
     const manifest: ProjectManifest = {
@@ -609,28 +609,28 @@ export class NovelProject {
     await this.syncManifest();
   }
 
-  // ---------------------------------------------------------------- 章节（发布区）
+  // ---------------------------------------------------------------- 章節（釋出區）
 
   /**
-   * 递归扫描 chapters/ 下所有章节文件，按序号排序。
+   * 遞迴掃描 chapters/ 下所有章節檔案，按序號排序。
    *
-   * **章节是正文的唯一真相**：生成的正文直接落在这里，定稿、角色卡、设定、
-   * 文风全都从这里读。
+   * **章節是正文的唯一真相**：生成的正文直接落在這裡，定稿、角色卡、設定、
+   * 文風全都從這裡讀。
    *
-   * 「什么算章节」由 model/chapterFile.ts 定义：数字前缀 + 扩展名不在
-   * 二进制黑名单里。`001-楔子.md`、`001-楔子.txt`、`001-楔子`（无扩展名）、
+   * 「什麼算章節」由 model/chapterFile.ts 定義：數字字首 + 副檔名不在
+   * 二進位制黑名單裡。`001-楔子.md`、`001-楔子.txt`、`001-楔子`（無副檔名）、
    * `004.json` 都算；`001-封面.png` 不算。
    *
-   * 子目录只是给作者分卷用的收纳，不参与排序：`卷一/003-x.md` 与
-   * `003-x.md` 是同一个「第 3 章」。序号重复时按路径稳定排序，
-   * 让两条都出现在树上（作者能看见冲突，才能去改）。
+   * 子目錄只是給作者分卷用的收納，不參與排序：`卷一/003-x.md` 與
+   * `003-x.md` 是同一個「第 3 章」。序號重複時按路徑穩定排序，
+   * 讓兩條都出現在樹上（作者能看見衝突，才能去改）。
    */
   async listChapters(): Promise<Chapter[]> {
     if (this.chapterCache) {
       return this.chapterCache;
     }
-    // 已经有人在扫了就等它，别再扫一遍。invalidate() 会把这个句柄一起清掉，
-    // 所以「扫到一半磁盘变了」的那一轮不会被后来者当成新鲜结果。
+    // 已經有人在掃了就等它，別再掃一遍。invalidate() 會把這個控制代碼一起清掉，
+    // 所以「掃到一半磁碟變了」的那一輪不會被後來者當成新鮮結果。
     if (this.chapterScan) {
       return this.chapterScan;
     }
@@ -648,12 +648,12 @@ export class NovelProject {
     for (const abs of await listFilesDeep(this.chaptersDir, isChapterFileName, this.chapterSkipDirs())) {
       const parsed = parseChapterFileName(path.basename(abs));
       if (!parsed) {
-        continue; // 容错优先：accept 与 parse 用同一套规则，理论上到不了这里
+        continue; // 容錯優先：accept 與 parse 用同一套規則，理論上到不了這裡
       }
       const raw = await readText(abs);
       const body = raw.trim();
-      // 只有 markdown 家族才认 `# 标题`。.txt 正文里一行「# 分隔」不是标题，
-      // 认了它既会顶掉文件名标题，又会把那行留在正文里。
+      // 只有 markdown 家族才認 `# 標題`。.txt 正文裡一行「# 分隔」不是標題，
+      // 認了它既會頂掉檔名標題，又會把那行留在正文裡。
       const markdown = isMarkdownExt(parsed.ext);
       const title =
         (markdown ? extractH1(body) : undefined) ?? (parsed.stem.trim() || `第 ${parsed.order} 章`);
@@ -662,14 +662,14 @@ export class NovelProject {
         title,
         relPath: this.relPath(abs),
         wordCount: countWords(markdown ? stripH1(body) : body),
-        // 哈希的永远是整份正文（含标题行）——定稿对不对得上靠它，口径不能变。
+        // 雜湊的永遠是整份正文（含標題行）——定稿對不對得上靠它，口徑不能變。
         contentHash: hash(body),
       });
     }
 
     chapters.sort((a, b) => a.order - b.order || a.relPath.localeCompare(b.relPath));
-    // 扫的过程中磁盘变过（invalidate 被调用）：结果照样交给等它的人——那是他们
-    // 请求时的状态，不算错——但不进缓存，否则下一次读会拿到已经过时的全书列表。
+    // 掃的過程中磁碟變過（invalidate 被呼叫）：結果照樣交給等它的人——那是他們
+    // 請求時的狀態，不算錯——但不進快取，否則下一次讀會拿到已經過時的全書列表。
     if (generation === this.generation) {
       this.chapterCache = chapters;
     }
@@ -677,11 +677,11 @@ export class NovelProject {
   }
 
   /**
-   * 扫章节时要跳过的目录（绝对路径）。
+   * 掃章節時要跳過的目錄（絕對路徑）。
    *
-   * `drafts/` 正常情况下是 `chapters/` 的兄弟，本来就扫不到；这里是
-   * `chaptersDir` 被配成 `.` 或空串时的唯一防线——那时草稿会落进章节根，
-   * 每份草稿都会变成一章。导出全文的 `导出/` 同理（书名是数字开头的，那份导出就成了一章）。
+   * `drafts/` 正常情況下是 `chapters/` 的兄弟，本來就掃不到；這裡是
+   * `chaptersDir` 被配成 `.` 或空串時的唯一防線——那時草稿會落進章節根，
+   * 每份草稿都會變成一章。匯出全文的 `匯出/` 同理（書名是數字開頭的，那份匯出就成了一章）。
    */
   private chapterSkipDirs(): ReadonlySet<string> {
     return new Set([this.draftsDir, this.exportDir]);
@@ -691,20 +691,20 @@ export class NovelProject {
     return (await this.listChapters()).find((c) => c.order === order);
   }
 
-  /** 读章节正文（markdown 家族会去掉 `# 标题` 行）。 */
+  /** 讀章節正文（markdown 家族會去掉 `# 標題` 行）。 */
   async readChapterText(chapter: Chapter): Promise<string> {
     const raw = (await readText(this.pathOf(chapter.relPath))).trim();
     return isMarkdownPath(chapter.relPath) ? stripH1(raw) : raw;
   }
 
-  /** 读章节原始内容（含标题行）。 */
+  /** 讀章節原始內容（含標題行）。 */
   async readChapterRaw(chapter: Chapter): Promise<string> {
     return (await readText(this.pathOf(chapter.relPath))).trim();
   }
 
   /**
-   * 工程里能拿来拆的整本 txt（导入原稿、从参考书学写法）：`.txt`，**章节文件、草稿与导出的全文除外**，按路径排序。
-   * 隐藏目录照例不扫（`.novelwarden/` 里没有作者要导入的东西）。只列路径与大小，不读内容。
+   * 工程裡能拿來拆的整本 txt（匯入原稿、從參考書學寫法）：`.txt`，**章節檔案、草稿與匯出的全文除外**，按路徑排序。
+   * 隱藏目錄照例不掃（`.novelwarden/` 裡沒有作者要匯入的東西）。只列路徑與大小，不讀內容。
    */
   async listImportableTexts(): Promise<{ relPath: string; bytes: number }[]> {
     const chaptersRoot = path.resolve(this.chaptersDir);
@@ -719,32 +719,32 @@ export class NovelProject {
       try {
         out.push({ relPath: this.relPath(abs), bytes: (await fs.stat(abs)).size });
       } catch {
-        // 列完到 stat 之间被删了：当没有。
+        // 列完到 stat 之間被刪了：當沒有。
       }
     }
     return out;
   }
 
-  /** 下一个可用章节序号。 */
+  /** 下一個可用章節序號。 */
   async nextChapterOrder(): Promise<number> {
     const chapters = await this.listChapters();
     return chapters.length === 0 ? 1 : Math.max(...chapters.map((c) => c.order)) + 1;
   }
 
-  // 新建章节（createChapter）搬进了 `core/workspace/`：同名一律报错退出、
-  // 落盘后要 syncManifest，那些是网关的活。这一层只留领域查询。
+  // 新建章節（createChapter）搬進了 `core/workspace/`：同名一律報錯退出、
+  // 落盤後要 syncManifest，那些是閘道器的活。這一層只留領域查詢。
 
   // ---------------------------------------------------------------- 草稿
 
   /**
-   * 章节 → 它草稿的工作区相对路径（正斜杠）。
+   * 章節 → 它草稿的工作區相對路徑（正斜槓）。
    *
-   * 镜像章节在**章节根之下**的那段相对路径，文件名（含扩展名）原样沿用：
+   * 映象章節在**章節根之下**的那段相對路徑，檔名（含副檔名）原樣沿用：
    *   `chapters/卷一/003-夜访.md` → `drafts/卷一/003-夜访.md`
    *   `chapters/005-手记.txt`     → `drafts/005-手记.txt`
-   * 章节不在章节根之下（配置被改坏等）时返回 undefined。
+   * 章節不在章節根之下（配置被改壞等）時返回 undefined。
    *
-   * 纯计算，不碰磁盘——调用方常常只是想知道「草稿该在哪」，
+   * 純計算，不碰磁碟——呼叫方常常只是想知道「草稿該在哪」，
    * 而不是「草稿在不在」。
    */
   draftRelPathFor(chapterRelPath: string): string | undefined {
@@ -755,15 +755,15 @@ export class NovelProject {
     return this.relPath(path.join(this.draftsDir, under));
   }
 
-  // 草稿的按需创建（ensureDraft）搬进了 `core/workspace/`：它是**写盘**，
-  // 而这一层只留领域查询。路径推导（draftRelPathFor）留在这里——
-  // 调用方常常只是想知道「草稿该在哪」，而不是「草稿在不在」。
+  // 草稿的按需建立（ensureDraft）搬進了 `core/workspace/`：它是**寫盤**，
+  // 而這一層只留領域查詢。路徑推導（draftRelPathFor）留在這裡——
+  // 呼叫方常常只是想知道「草稿該在哪」，而不是「草稿在不在」。
 
   /**
-   * 磁盘上已存在的草稿路径集合（工作区相对路径）。
+   * 磁碟上已存在的草稿路徑集合（工作區相對路徑）。
    *
-   * 走一次递归遍历而不是每章一次 stat：工程页每次刷新都要为所有章节判断
-   * 「有没有草稿」，五百章工程逐个 stat 会把 syscall 翻一倍。
+   * 走一次遞迴遍歷而不是每章一次 stat：工程頁每次重新整理都要為所有章節判斷
+   * 「有沒有草稿」，五百章工程逐個 stat 會把 syscall 翻一倍。
    */
   async listDraftPaths(): Promise<Set<string>> {
     const files = await listFilesDeep(this.draftsDir, () => true);
@@ -780,11 +780,11 @@ export class NovelProject {
         version: parsed.version ?? MANIFEST_VERSION,
         title: parsed.title ?? '未命名',
         author: parsed.author ?? '',
-        // 读不出就是空数组。`syncManifest()` 每次都从磁盘重算，
-        // 所以哪怕整份索引丢了，也只是这一次刷新多读几个文件。
+        // 讀不出就是空陣列。`syncManifest()` 每次都從磁碟重算，
+        // 所以哪怕整份索引丟了，也只是這一次重新整理多讀幾個檔案。
         chapters: parsed.chapters ?? [],
         globalSummaryThrough: parsed.globalSummaryThrough,
-        // 叙事线的水位（四期）：原样带着，`syncManifest` 重写索引时才不会把它冲掉；认法在 `threadsMarkOf`（手改坏了不崩）。
+        // 敘事線的水位（四期）：原樣帶著，`syncManifest` 重寫索引時才不會把它沖掉；認法在 `threadsMarkOf`（手改壞了不崩）。
         ...(parsed.threadsThrough !== undefined ? { threadsThrough: parsed.threadsThrough } : {}),
         ...(parsed.threadsJudged !== undefined ? { threadsJudged: parsed.threadsJudged } : {}),
       };
@@ -798,7 +798,7 @@ export class NovelProject {
   }
 
   /**
-   * 用磁盘上的实际章节刷新 manifest 索引。返回刷新后的 manifest。
+   * 用磁碟上的實際章節重新整理 manifest 索引。返回重新整理後的 manifest。
    */
   async syncManifest(): Promise<ProjectManifest> {
     const manifest = await this.readManifest();
@@ -814,8 +814,8 @@ export class NovelProject {
   }
 
   /**
-   * 这一章定稿过、而且对得上的那份细纲：正文镜像的那份细纲的 `sourceHash` 等于正文现在的 `contentHash`。
-   * 没定稿过、或定稿之后正文又改过，都是 undefined。
+   * 這一章定稿過、而且對得上的那份細綱：正文映象的那份細綱的 `sourceHash` 等於正文現在的 `contentHash`。
+   * 沒定稿過、或定稿之後正文又改過，都是 undefined。
    */
   async finalizedPlotOf(chapter: Chapter): Promise<Plot | undefined> {
     const plot = await this.plotOfChapter(chapter);
@@ -823,11 +823,11 @@ export class NovelProject {
   }
 
   /**
-   * 该定稿还没定稿的章：有正文，镜像的那份细纲没有对得上的 `sourceHash`（从没定稿过，或定稿之后正文
-   * 又改过）。以细纲 frontmatter 为准，不另记索引。
+   * 該定稿還沒定稿的章：有正文，映象的那份細綱沒有對得上的 `sourceHash`（從沒定稿過，或定稿之後正文
+   * 又改過）。以細綱 frontmatter 為準，不另記索引。
    *
-   * **空章节不算**：那不是「定稿旧了」，是还没写。把它们混进来，批量定稿的确认框会报一个
-   * 虚高的调用次数，而那几次调用只会撞上「这一章是空的，跳过」。
+   * **空章節不算**：那不是「定稿舊了」，是還沒寫。把它們混進來，批次定稿的確認框會報一個
+   * 虛高的呼叫次數，而那幾次呼叫只會撞上「這一章是空的，跳過」。
    */
   async staleChapters(): Promise<Chapter[]> {
     const stale: Chapter[] = [];
@@ -840,9 +840,9 @@ export class NovelProject {
   }
 
   /**
-   * 第 `beforeNo` 章之前、**定稿过**的各章留下的连续性事实，按章号升序。定稿之后正文又改过、
-   * 或从没定稿过的章不收：拿一份过期的事实去判矛盾，判出来的可能正是作者改过的地方。没有事实的章也不收。
-   * 预检、写前冲突检查与装配器的 `recentFacts` 层共用这一份。
+   * 第 `beforeNo` 章之前、**定稿過**的各章留下的連續性事實，按章號升序。定稿之後正文又改過、
+   * 或從沒定稿過的章不收：拿一份過期的事實去判矛盾，判出來的可能正是作者改過的地方。沒有事實的章也不收。
+   * 預檢、寫前衝突檢查與裝配器的 `recentFacts` 層共用這一份。
    */
   async finalizedFacts(beforeNo = Number.POSITIVE_INFINITY): Promise<FinalizedFacts[]> {
     const out: FinalizedFacts[] = [];
@@ -858,31 +858,31 @@ export class NovelProject {
   }
 
   /**
-   * 下一个可用**章号**。只看 `chapters/`。空工程给 1。
+   * 下一個可用**章號**。只看 `chapters/`。空工程給 1。
    */
   async nextChapterNo(): Promise<number> {
     const nos = (await this.listChapters()).map((c) => c.order);
     return nos.length === 0 ? 1 : Math.max(...nos) + 1;
   }
 
-  // ---------------------------------------------------------------- 细纲
+  // ---------------------------------------------------------------- 細綱
 
   /**
-   * 列出全部细纲，按章号升序。
+   * 列出全部細綱，按章號升序。
    *
-   * 顺序由**文件名的数字前缀**决定，与章节同一套规则——作者重排顺序的
-   * 方式就是改文件名前缀。号码撞车（手改重名）时按路径稳定排序，两条都留在
-   * 列表里，让作者看得见冲突。
+   * 順序由**檔名的數字字首**決定，與章節同一套規則——作者重排順序的
+   * 方式就是改檔名字首。號碼撞車（手改重名）時按路徑穩定排序，兩條都留在
+   * 列表裡，讓作者看得見衝突。
    *
-   * **`summaries/` 下各级子目录都扫**：细纲镜像正文的相对路径，分卷的书细纲就在卷目录里。
-   * 根下的 `global.md` 没有数字前缀，天然不在里面。
+   * **`summaries/` 下各級子目錄都掃**：細綱映象正文的相對路徑，分卷的書細綱就在卷目錄裡。
+   * 根下的 `global.md` 沒有數字字首，天然不在裡面。
    */
   async listPlots(): Promise<Plot[]> {
     if (this.plotCache) {
       return this.plotCache;
     }
-    // 与 listChapters 同构：已经有人在扫了就搭它的车。工程页刷新时
-    // 流水线索引与出场索引会同时要这份列表，各扫一遍等于把细纲读两遍。
+    // 與 listChapters 同構：已經有人在掃了就搭它的車。工程頁重新整理時
+    // 流水線索引與出場索引會同時要這份列表，各掃一遍等於把細綱讀兩遍。
     if (this.plotScan) {
       return this.plotScan;
     }
@@ -902,46 +902,46 @@ export class NovelProject {
       try {
         plots.push(parsePlotFile(await readText(abs), this.relPath(abs)));
       } catch {
-        // 读盘失败（权限、编码）当作这一章没有细纲。解析失败在 parsePlotFile
-        // 里已经退化过一层了，能走到这里的只有 I/O 异常。
+        // 讀盤失敗（許可權、編碼）當作這一章沒有細綱。解析失敗在 parsePlotFile
+        // 裡已經退化過一層了，能走到這裡的只有 I/O 異常。
       }
     }
     plots.sort((a, b) => a.no - b.no || a.relPath.localeCompare(b.relPath));
-    // 扫的过程中磁盘变过：结果照样交给等它的人（那是他们请求时的状态），
-    // 但不进缓存——否则下一次读会拿到已经过时的全书列表。
+    // 掃的過程中磁碟變過：結果照樣交給等它的人（那是他們請求時的狀態），
+    // 但不進快取——否則下一次讀會拿到已經過時的全書列表。
     if (generation === this.generation) {
       this.plotCache = plots;
     }
     return plots;
   }
 
-  /** 读一章的细纲。没有不是错误——那个路径可能刚被改名或删除。 */
+  /** 讀一章的細綱。沒有不是錯誤——那個路徑可能剛被改名或刪除。 */
   async readPlot(plotRelPath: string): Promise<Plot | undefined> {
     const abs = this.pathOf(plotRelPath);
     try {
-      // 直接读、读不到才当没有：省掉一次 stat，也堵掉「查到了、读之前被
-      // 改名了」的竞态——作者随时在手改文件，那条竞态是真会发生的。
+      // 直接讀、讀不到才當沒有：省掉一次 stat，也堵掉「查到了、讀之前被
+      // 改名了」的競態——作者隨時在手改檔案，那條競態是真會發生的。
       const raw = await readTextIfExists(abs);
       return raw === undefined ? undefined : parsePlotFile(raw, plotRelPath);
     } catch {
-      // 读盘本身失败（权限、编码）当作没有这份细纲：解析失败在 parsePlotFile
-      // 里已经退化过一层了，能走到这里的只有 I/O 异常。
+      // 讀盤本身失敗（許可權、編碼）當作沒有這份細綱：解析失敗在 parsePlotFile
+      // 裡已經退化過一層了，能走到這裡的只有 I/O 異常。
       return undefined;
     }
   }
 
   /**
-   * 按 target 里的细纲路径找那一章的细纲。
+   * 按 target 裡的細綱路徑找那一章的細綱。
    *
-   * 路径上那一份正是某一章正文的镜像、或者这个号还没有正文（只有计划）时就是它；**否则按路径里的
-   * 章号认这一章现在的那一份**（{@link getPlot}）。
+   * 路徑上那一份正是某一章正文的映象、或者這個號還沒有正文（只有計劃）時就是它；**否則按路徑裡的
+   * 章號認這一章現在的那一份**（{@link getPlot}）。
    *
-   * 主按钮给的落点常常是纯序号的占位路径（`summaries/003.md`——拆细纲那一刻标题还没定），
-   * 而采纳时按产物带的标题落成了 `003-雪夜.md`。之后凡是「按 target 找细纲」的地方
-   * 都要认得它：只按路径读的话，流水线会说「这一章还没有细纲」，再采纳一次就绕过了
-   * 覆盖审阅（第 3 条）。反过来，路径上躺着一份**不归这一章**的细纲（作者在外面给正文改了名，
-   * 旧的那份成了孤儿）也不冒认——对话页与工程页看到的必须是同一份。作者手里的文件路径
-   * （工程页右键、编辑器）不走这里，那是实打实的路径。
+   * 主按鈕給的落點常常是純序號的佔位路徑（`summaries/003.md`——拆細綱那一刻標題還沒定），
+   * 而採納時按產物帶的標題落成了 `003-雪夜.md`。之後凡是「按 target 找細綱」的地方
+   * 都要認得它：只按路徑讀的話，流水線會說「這一章還沒有細綱」，再採納一次就繞過了
+   * 覆蓋審閱（第 3 條）。反過來，路徑上躺著一份**不歸這一章**的細綱（作者在外面給正文改了名，
+   * 舊的那份成了孤兒）也不冒認——對話頁與工程頁看到的必須是同一份。作者手裡的檔案路徑
+   * （工程頁右鍵、編輯器）不走這裡，那是實打實的路徑。
    */
   async resolvePlot(plotRelPath: string): Promise<Plot | undefined> {
     const no = parsePlotFileNameOf(plotRelPath);
@@ -960,26 +960,26 @@ export class NovelProject {
     return this.plotFor(no, plots, chapters);
   }
 
-  /** 第 N 章的细纲（配对规则见 {@link plotFor}）。 */
+  /** 第 N 章的細綱（配對規則見 {@link plotFor}）。 */
   async getPlot(no: number): Promise<Plot | undefined> {
     const [plots, chapters] = await Promise.all([this.listPlots(), this.listChapters()]);
     return this.plotFor(no, plots, chapters);
   }
 
-  /** 这一章正文的细纲：正文镜像的那一份（{@link plotPathForChapter}）。还没有就是 undefined。 */
+  /** 這一章正文的細綱：正文映象的那一份（{@link plotPathForChapter}）。還沒有就是 undefined。 */
   async plotOfChapter(chapter: Chapter): Promise<Plot | undefined> {
     const rel = this.plotPathForChapter(chapter.relPath);
     return (await this.listPlots()).find((p) => p.relPath === rel);
   }
 
   /**
-   * 第 N 章的细纲，**按路径配对**：
+   * 第 N 章的細綱，**按路徑配對**：
    *
-   * - 有正文：只认正文镜像的那一份。没有就是没有——作者在外面给正文改了名，那就是一章新的，
-   *   旧的细纲不冒认（同号的正文有两份时认路径排序第一份，与流水线同一个口径）。
-   * - 还没有正文：认同号的第一份（计划），正文照它的路径反推着落（{@link chapterPathForPlot}）。
+   * - 有正文：只認正文映象的那一份。沒有就是沒有——作者在外面給正文改了名，那就是一章新的，
+   *   舊的細綱不冒認（同號的正文有兩份時認路徑排序第一份，與流水線同一個口徑）。
+   * - 還沒有正文：認同號的第一份（計劃），正文照它的路徑反推著落（{@link chapterPathForPlot}）。
    *
-   * 手上已经有两份列表的调用方（流水线索引、装配器）直接用它，免得每章再读一遍。
+   * 手上已經有兩份列表的呼叫方（流水線索引、裝配器）直接用它，免得每章再讀一遍。
    */
   plotFor(no: number, plots: readonly Plot[], chapters: readonly Chapter[]): Plot | undefined {
     const chapter = chapters.find((c) => c.order === no);
@@ -991,27 +991,27 @@ export class NovelProject {
   }
 
   /**
-   * 每个章号认下的那一份细纲（{@link plotFor}），按章号升序。孤儿（作者在外面给正文改了名，旧细纲
-   * 没人认）不在里面——叙事线、出场统计、拆细纲区间这些「一章一份」的地方都吃这一份，与工程页
-   * 一行一章的口径一致。
+   * 每個章號認下的那一份細綱（{@link plotFor}），按章號升序。孤兒（作者在外面給正文改了名，舊細綱
+   * 沒人認）不在裡面——敘事線、出場統計、拆細綱區間這些「一章一份」的地方都吃這一份，與工程頁
+   * 一行一章的口徑一致。
    */
   pairPlots(plots: readonly Plot[], chapters: readonly Chapter[]): Plot[] {
     const nos = [...new Set(plots.map((p) => p.no))].sort((a, b) => a - b);
     return nos.map((no) => this.plotFor(no, plots, chapters)).filter((p): p is Plot => !!p);
   }
 
-  /** {@link pairPlots} 的读盘版。 */
+  /** {@link pairPlots} 的讀盤版。 */
   async listChapterPlots(): Promise<Plot[]> {
     const [plots, chapters] = await Promise.all([this.listPlots(), this.listChapters()]);
     return this.pairPlots(plots, chapters);
   }
 
   /**
-   * 下一个可用章号。**跨细纲与 `chapters/` 取最大号再 +1。**
+   * 下一個可用章號。**跨細綱與 `chapters/` 取最大號再 +1。**
    *
-   * 两边都要看：只看细纲的话，一个写了 99 章、从没用过本工具的老工程会
-   * 从第 1 章开始规划，直接撞上已有的章；只看 `chapters/` 的话，规划了但还没写
-   * 的章会被反复重号。工程页「新建细纲」用它。
+   * 兩邊都要看：只看細綱的話，一個寫了 99 章、從沒用過本工具的老工程會
+   * 從第 1 章開始規劃，直接撞上已有的章；只看 `chapters/` 的話，規劃了但還沒寫
+   * 的章會被反覆重號。工程頁「新建細綱」用它。
    */
   async nextPlotNo(): Promise<number> {
     const [plots, chapters] = await Promise.all([this.listPlots(), this.listChapters()]);
@@ -1019,19 +1019,19 @@ export class NovelProject {
     return nos.length === 0 ? 1 : Math.max(...nos) + 1;
   }
 
-  // 细纲的写入（writePlot / deletePlot）搬进了 `core/workspace/`：写入要记
-  // `upstreamHash`，删除要进 `.trash/`——那些是网关的活，不是数据访问的活。
-  // 这一层只留领域查询。
+  // 細綱的寫入（writePlot / deletePlot）搬進了 `core/workspace/`：寫入要記
+  // `upstreamHash`，刪除要進 `.trash/`——那些是閘道器的活，不是資料訪問的活。
+  // 這一層只留領域查詢。
 
-  // ---------------------------------------------------------------- 架构
+  // ---------------------------------------------------------------- 架構
 
-  /** 读小说配置。文件不在就是一份全空的配置（字段全部缺席），绝不抛。 */
+  /** 讀小說配置。檔案不在就是一份全空的配置（欄位全部缺席），絕不拋。 */
   async readBookConfig(): Promise<BookConfig> {
     const raw = (await readTextIfExists(this.configPath).catch(() => undefined)) ?? '';
     return parseBookConfig(raw, this.relPath(this.configPath));
   }
 
-  /** 读前提 / 世界观（配置也能读，只取小节）。文件不在就是全空的小节。 */
+  /** 讀前提 / 世界觀（配置也能讀，只取小節）。檔案不在就是全空的小節。 */
   async readSettingDoc(doc: SettingFileDoc): Promise<SettingDocFile> {
     const abs = this.settingPath(doc);
     const raw = (await readTextIfExists(abs).catch(() => undefined)) ?? '';
@@ -1039,14 +1039,14 @@ export class NovelProject {
   }
 
   /**
-   * 架构五件各自填过没有。全书状态机的第一格读它。
+   * 架構五件各自填過沒有。全書狀態機的第一格讀它。
    *
-   * 角色图谱没有自己的文件，**至少有一张角色卡就算**——作者手写的卡、从正文里
-   * 提取的卡都算数。设定清单同理（至少一条条目），另外**已经有正文的书一律算填过**
-   * （`isLoreListFilled`）：在写的书的设定从定稿里长出来，不被推回架构。有正文时连目录都不必扫。
+   * 角色圖譜沒有自己的檔案，**至少有一張角色卡就算**——作者手寫的卡、從正文裡
+   * 提取的卡都算數。設定清單同理（至少一條條目），另外**已經有正文的書一律算填過**
+   * （`isLoreListFilled`）：在寫的書的設定從定稿裡長出來，不被推回架構。有正文時連目錄都不必掃。
    *
-   * `known` 收调用方手上已经读过的：工程页一次刷新里配置、角色卡、设定条目与章节都已经读过一遍，
-   * 再读一遍只是多几次 I/O（`tests/integration/views/projectTreeReads.test.js` 盯着）。
+   * `known` 收呼叫方手上已經讀過的：工程頁一次重新整理裡配置、角色卡、設定條目與章節都已經讀過一遍，
+   * 再讀一遍只是多幾次 I/O（`tests/integration/views/projectTreeReads.test.js` 盯著）。
    */
   async settingFilled(known?: {
     config?: BookConfig;
@@ -1062,7 +1062,7 @@ export class NovelProject {
       known?.chapters ?? this.listChapters(),
     ]);
     const hasProse = chapters.some((c) => c.wordCount > 0);
-    // 只要知道有没有：不读条目内容，列一下文件就够了。
+    // 只要知道有沒有：不讀條目內容，列一下檔案就夠了。
     const entries = hasProse ? 0 : known?.lore ? known.lore.length : (await listMarkdownDeep(this.loreDir)).length;
     return {
       config: isSettingFilled('config', config.sections),
@@ -1073,12 +1073,12 @@ export class NovelProject {
     };
   }
 
-  // ---------------------------------------------------------------- 全文大纲 / 叙事线
+  // ---------------------------------------------------------------- 全文大綱 / 敘事線
 
   /**
-   * 全文大纲（原全书摘要）的正文，去掉 H1。老文件里「已收伏笔 / 未收伏笔 / 人物关系变动」那三节当认不出的小节，
-   * 不读（叙事线重做：伏笔与关系的变动归叙事线，同一样东西只留一份）——文件一个字不动，装配与增量更新都看不见它们，
-   * 下一次更新只写「主线进展」。
+   * 全文大綱（原全書摘要）的正文，去掉 H1。老檔案裡「已收伏筆 / 未收伏筆 / 人物關係變動」那三節當認不出的小節，
+   * 不讀（敘事線重做：伏筆與關係的變動歸敘事線，同一樣東西只留一份）——檔案一個字不動，裝配與增量更新都看不見它們，
+   * 下一次更新只寫「主線進展」。
    */
   async readGlobalSummary(): Promise<string> {
     if (!(await exists(this.globalSummaryPath))) {
@@ -1088,8 +1088,8 @@ export class NovelProject {
   }
 
   /**
-   * 叙事线目录里的文件（工作区相对路径，只列不读）：`threads/` 这一层的 `.md`，各条线按文件名排在前，
-   * 「未归属的伏笔」「时间线」（有的话）排在最后。线不分子目录，更深的不认（与 `kindOfPath` 同一个口径）。
+   * 敘事線目錄裡的檔案（工作區相對路徑，只列不讀）：`threads/` 這一層的 `.md`，各條線按檔名排在前，
+   * 「未歸屬的伏筆」「時間線」（有的話）排在最後。線不分子目錄，更深的不認（與 `kindOfPath` 同一個口徑）。
    */
   async listThreadPaths(): Promise<string[]> {
     let names: string[];
@@ -1107,8 +1107,8 @@ export class NovelProject {
   }
 
   /**
-   * 叙事线：一次把 `threads/` 读完——各条线（按文件名排，`index` 是这个顺序）、「未归属的伏笔」与故事时间（「时间线」）。没有目录、
-   * 没有那两份保留文件都当空的。解析失败退化为认不出的行跳过，绝不抛（第 1 条）。
+   * 敘事線：一次把 `threads/` 讀完——各條線（按檔名排，`index` 是這個順序）、「未歸屬的伏筆」與故事時間（「時間線」）。沒有目錄、
+   * 沒有那兩份保留檔案都當空的。解析失敗退化為認不出的行跳過，絕不拋（第 1 條）。
    */
   async readThreads(): Promise<ThreadBook> {
     const unfiledRel = this.relPath(this.unfiledPath);
@@ -1130,14 +1130,14 @@ export class NovelProject {
   }
 
   /**
-   * 叙事线判到哪（四期）：`project.json` 的水位 `threadsThrough` 与水位之后另外判过的 `threadsJudged`。手改坏了的不认（第 1 条）；
-   * 没有这两项是一章都没判过。推水位在网关（`Workspace.markThreadsJudged`）。
+   * 敘事線判到哪（四期）：`project.json` 的水位 `threadsThrough` 與水位之後另外判過的 `threadsJudged`。手改壞了的不認（第 1 條）；
+   * 沒有這兩項是一章都沒判過。推水位在閘道器（`Workspace.markThreadsJudged`）。
    */
   async readThreadsMark(): Promise<ThreadsMark> {
     return threadsMarkOf(await this.readManifest());
   }
 
-  // ---------------------------------------------------------------- 角色 / 设定 / 文风
+  // ---------------------------------------------------------------- 角色 / 設定 / 文風
 
   async listCharacters(): Promise<CharacterCard[]> {
     const files = await listMarkdownDeep(this.charactersDir);
@@ -1192,8 +1192,8 @@ export class NovelProject {
   }
 
   /**
-   * 本书的分类表：`lore/` 下的全部目录（相对 `lore/`，可多层，空目录也算）。每本书的分类不一样，
-   * 没有固定表（model/loreFile.ts）。
+   * 本書的分類表：`lore/` 下的全部目錄（相對 `lore/`，可多層，空目錄也算）。每本書的分類不一樣，
+   * 沒有固定表（model/loreFile.ts）。
    */
   async listLoreCategories(): Promise<string[]> {
     const root = this.relPath(this.loreDir);
@@ -1201,17 +1201,17 @@ export class NovelProject {
   }
 
   /**
-   * 某个区目录下的文件标识：去掉扩展名的相对路径（正斜杠）。
-   * 根目录下的文件与改造前一致（就是文件名），子目录里的形如 `主角/林昭`——
-   * 上下文明细里的 `character:<slug>` 因此仍然唯一。
+   * 某個區目錄下的檔案標識：去掉副檔名的相對路徑（正斜槓）。
+   * 根目錄下的檔案與改造前一致（就是檔名），子目錄裡的形如 `主角/林昭`——
+   * 上下文明細裡的 `character:<slug>` 因此仍然唯一。
    */
   private slugUnder(dirAbs: string, fileAbs: string): string {
     return path.relative(dirAbs, fileAbs).replace(/\\/g, '/').replace(/\.md$/i, '');
   }
 
   /**
-   * 递归列出某目录下的全部子目录（工作区相对路径，正斜杠，已排序）。
-   * 空目录也在内——作者建好卷目录还没往里写，树上也该看得见。
+   * 遞迴列出某目錄下的全部子目錄（工作區相對路徑，正斜槓，已排序）。
+   * 空目錄也在內——作者建好卷目錄還沒往裡寫，樹上也該看得見。
    */
   async listFolders(dirAbs: string): Promise<string[]> {
     const out: string[] = [];
@@ -1240,9 +1240,9 @@ export class NovelProject {
   }
 
   /**
-   * 分卷（2026-10-23）：章节根下的一级目录名，空的也在内（作者右键「新建卷」刚建好、还没往里放章）。
-   * 按名字排（数字按大小：`第2卷` 在 `第10卷` 前面）。一卷就是一个目录，卷里还可以再分子目录；
-   * 细纲在 `summaries/` 下镜像同一个目录，卷只是收纳——章号全书连续，不按卷重排。
+   * 分卷（2026-10-23）：章節根下的一級目錄名，空的也在內（作者右鍵「新建卷」剛建好、還沒往裡放章）。
+   * 按名字排（數字按大小：`第2卷` 在 `第10卷` 前面）。一卷就是一個目錄，卷裡還可以再分子目錄；
+   * 細綱在 `summaries/` 下映象同一個目錄，卷只是收納——章號全書連續，不按卷重排。
    */
   async listVolumes(): Promise<string[]> {
     let entries: import('node:fs').Dirent[];
@@ -1265,11 +1265,11 @@ export class NovelProject {
   }
 
   /**
-   * 文风指南还没被作者动过：文件不在、是空的，或者一字不差还是初始化写的那份模板。
+   * 文風指南還沒被作者動過：檔案不在、是空的，或者一字不差還是初始化寫的那份模板。
    *
-   * 生成小说配置时模型会顺带给一段文风，只在这种时候才写进 `style.md`（D14 + 第 3 条）。
-   * 模板是插件自己写的通用建议，替换它不会吞掉作者的任何一个字；作者改过一个字，
-   * 它就是作者的文件了。
+   * 生成小說配置時模型會順帶給一段文風，只在這種時候才寫進 `style.md`（D14 + 第 3 條）。
+   * 模板是外掛自己寫的通用建議，替換它不會吞掉作者的任何一個字；作者改過一個字，
+   * 它就是作者的檔案了。
    */
   async styleGuideUntouched(): Promise<boolean> {
     const raw = (await readTextIfExists(this.stylePath).catch(() => undefined)) ?? '';
@@ -1277,28 +1277,28 @@ export class NovelProject {
   }
 
   /**
-   * 情节大纲：各章细纲（每个章号认下的那一份）里梗概非空的，一章一条拼起来（`## 第N章：标题` + 梗概）。没有标题行与说明——
-   * 装配器、状态机、排叙事线读的都是这一份。给编辑器的整份见 {@link readOutlineDoc}。
+   * 情節大綱：各章細綱（每個章號認下的那一份）裡梗概非空的，一章一條拼起來（`## 第N章：標題` + 梗概）。沒有標題行與說明——
+   * 裝配器、狀態機、排敘事線讀的都是這一份。給編輯器的整份見 {@link readOutlineDoc}。
    */
   async readOutline(): Promise<string> {
     return renderOutline(outlineEntriesOf(await this.listChapterPlots()));
   }
 
-  /** 编辑器、覆盖审阅、MCP 读到的整份情节大纲：标题行、一段说明、一章一条。存盘时按章号拆回各章细纲（网关的 `writeOutline`）。 */
+  /** 編輯器、覆蓋審閱、MCP 讀到的整份情節大綱：標題行、一段說明、一章一條。存檔時按章號拆回各章細綱（閘道器的 `writeOutline`）。 */
   async readOutlineDoc(): Promise<string> {
     return renderOutlineDoc(outlineEntriesOf(await this.listChapterPlots()));
   }
 }
 
-// ---------------------------------------------------------------- 回收站落点
+// ---------------------------------------------------------------- 回收站落點
 
 /**
- * 删掉的东西搬进回收站的哪里（绝对路径）：**保留原相对路径**（`.trash/<rel>`），同名冲突时加序号
- * （`003-深处-2.md`），不覆盖之前删掉的东西（AGENTS 第 6 条）。只算落点、只读（看一眼哪个名字没被占），不搬任何东西。
+ * 刪掉的東西搬進回收站的哪裡（絕對路徑）：**保留原相對路徑**（`.trash/<rel>`），同名衝突時加序號
+ * （`003-深处-2.md`），不覆蓋之前刪掉的東西（AGENTS 第 6 條）。只算落點、只讀（看一眼哪個名字沒被佔），不搬任何東西。
  *
- * 规则只有这一份：网关的 `remove` / `deletePlot` / 定稿前复制旧版（`core/workspace/` 重新导出它），与会话删除
- * （`session.ts`，会话是 Novelwarden 自己的内部文件，网关拒写 `sessions/`，所以会话不走网关、只共用这条落点规则）。
- * 放在数据层而不是网关里：`model/` 不能反过来依赖 `workspace/`。
+ * 規則只有這一份：閘道器的 `remove` / `deletePlot` / 定稿前複製舊版（`core/workspace/` 重新匯出它），與會話刪除
+ * （`session.ts`，會話是 Novelwarden 自己的內部檔案，閘道器拒寫 `sessions/`，所以會話不走閘道器、只共用這條落點規則）。
+ * 放在資料層而不是閘道器裡：`model/` 不能反過來依賴 `workspace/`。
  */
 export async function trashPathFor(project: Pick<NovelProject, 'trashDir'>, rel: string): Promise<string> {
   const base = path.join(project.trashDir, rel);
@@ -1318,18 +1318,18 @@ export async function trashPathFor(project: Pick<NovelProject, 'trashDir'>, rel:
 // ---------------------------------------------------------------- 渲染模板
 
 /**
- * 写角色卡时的入参。
+ * 寫角色卡時的入參。
  *
- * `appearsIn` 可省：手工新建的空卡还没有出场记录，硬要调用方传个 `[]`
- * 只是噪音。读回来的 `CharacterCard.appearsIn` 则一定是数组（缺席即空）。
+ * `appearsIn` 可省：手工新建的空卡還沒有出場記錄，硬要呼叫方傳個 `[]`
+ * 只是噪音。讀回來的 `CharacterCard.appearsIn` 則一定是陣列（缺席即空）。
  */
 export type WritableCharacterCard = Omit<CharacterCard, 'relPath' | 'body' | 'appearsIn'> & {
   appearsIn?: number[];
 };
 
 /**
- * 写设定条目时的入参。slug 可以带子目录前缀（就是分类）。`brief` / `updatedThrough` / `bodyHash`
- * 没给就不写——改写一条已有条目时由调用方把读回来的原样带上。
+ * 寫設定條目時的入參。slug 可以帶子目錄字首（就是分類）。`brief` / `updatedThrough` / `bodyHash`
+ * 沒給就不寫——改寫一條已有條目時由呼叫方把讀回來的原樣帶上。
  */
 export type WritableLoreEntry = Omit<LoreEntry, 'relPath' | 'category' | 'brief'> & { brief?: string };
 
@@ -1341,12 +1341,12 @@ export function renderCharacterCard(card: WritableCharacterCard): string {
     gender: card.gender,
     firstAppear: card.firstAppear,
     lastSeen: card.lastSeen,
-    // 出场章节列表落在卡里，角色页不必读全部细纲就能显示「出场 12 章」，
-    // 也方便作者/日后的检索功能按人物找章节。
+    // 出場章節列表落在卡裡，角色頁不必讀全部細綱就能顯示「出場 12 章」，
+    // 也方便作者/日後的檢索功能按人物找章節。
     appearsIn: card.appearsIn?.length ? card.appearsIn.map(String) : undefined,
     updatedThrough: card.updatedThrough,
-    // 「当前状态」归谁（D15，model/characterState.ts）：原样带着走。维护类动作重写整张卡时
-    // 不重新盖章——作者改过的那一节，换个别名不该让它变成「机器写的」。
+    // 「當前狀態」歸誰（D15，model/characterState.ts）：原樣帶著走。維護類動作重寫整張卡時
+    // 不重新蓋章——作者改過的那一節，換個別名不該讓它變成「機器寫的」。
     stateThrough: card.stateThrough,
     stateHash: card.stateHash,
   });
@@ -1356,7 +1356,7 @@ export function renderCharacterCard(card: WritableCharacterCard): string {
   return `${fm}\n\n# ${card.name}\n\n${body}\n`;
 }
 
-/** 将设定条目渲染成作者可继续手改的普通 Markdown。 */
+/** 將設定條目渲染成作者可繼續手改的普通 Markdown。 */
 export function renderLoreEntry(entry: WritableLoreEntry): string {
   const fm = stringifyFrontmatter({
     title: entry.title,
@@ -1380,13 +1380,13 @@ export function emptyCharacterSections(): CharacterSections {
   };
 }
 
-// ---------------------------------------------------------------- 工具函数
+// ---------------------------------------------------------------- 工具函式
 
 /**
- * 递归列出目录下满足 `accept` 的文件的绝对路径（按路径排序，保证稳定）。
+ * 遞迴列出目錄下滿足 `accept` 的檔案的絕對路徑（按路徑排序，保證穩定）。
  *
- * 隐藏目录与 node_modules 一律跳过：`.trash/` 里躺着刚删掉的东西，
- * 再扫出来就等于没删。`skipDirs` 是额外要跳过的目录绝对路径。
+ * 隱藏目錄與 node_modules 一律跳過：`.trash/` 裡躺著剛刪掉的東西，
+ * 再掃出來就等於沒刪。`skipDirs` 是額外要跳過的目錄絕對路徑。
  */
 async function listFilesDeep(
   dir: string,
@@ -1421,9 +1421,9 @@ async function listFilesDeep(
 }
 
 /**
- * 只列 `.md`。角色 / 设定用这一条——那两个区是插件自己的数据格式
- * （frontmatter + 固定小节），不跟着章节一起放宽扩展名。只列路径、不读内容。名词补全的表（`views/nameIndex.ts`）
- * 用同一条列文件，好跟 `listCharacters` / `listLore` 认的是同一批；全书查找也按它列角色卡与设定条目（`views/bookFind.ts`）。
+ * 只列 `.md`。角色 / 設定用這一條——那兩個區是外掛自己的資料格式
+ * （frontmatter + 固定小節），不跟著章節一起放寬副檔名。只列路徑、不讀內容。名詞補全的表（`views/nameIndex.ts`）
+ * 用同一條列檔案，好跟 `listCharacters` / `listLore` 認的是同一批；全書查詢也按它列角色卡與設定條目（`views/bookFind.ts`）。
  */
 export async function listMarkdownDeep(dir: string): Promise<string[]> {
   return listFilesDeep(dir, (name) => name.toLowerCase().endsWith('.md'));
@@ -1434,73 +1434,73 @@ function baseName(absPath: string): string {
 }
 
 /**
- * 标题 → 文件名词干。**空标题给空串，不给「未命名」**。
+ * 標題 → 檔名詞幹。**空標題給空串，不給「未命名」**。
  *
- * `sanitizeFileName` 的兜底名是「未命名」，那是给「作者输了一串全是非法
- * 字符的名字」用的。但细纲与场景都允许**没有标题**——流水线新建出来的章
- * 就是纯序号名 `030.md`（标题要等剧情排完才定得下来，见 actions.ts 的
- * `newPlotFlow`）。直接套 sanitize 会得到 `030-未命名.md`：那是个假标题，
- * 而且它会进文件名、进段落说法、进上下文，作者还得手动去掉。
+ * `sanitizeFileName` 的兜底名是「未命名」，那是給「作者輸了一串全是非法
+ * 字元的名字」用的。但細綱與場景都允許**沒有標題**——流水線新建出來的章
+ * 就是純序號名 `030.md`（標題要等劇情排完才定得下來，見 actions.ts 的
+ * `newPlotFlow`）。直接套 sanitize 會得到 `030-未命名.md`：那是個假標題，
+ * 而且它會進檔名、進段落說法、進上下文，作者還得手動去掉。
  */
 function safeStem(title: string): string {
   return title.trim() ? sanitizeFileName(title) : '';
 }
 
-/** 细纲路径的文件名里那个章号；认不出是 undefined。 */
+/** 細綱路徑的檔名裡那個章號；認不出是 undefined。 */
 function parsePlotFileNameOf(plotRelPath: string): number | undefined {
   return parsePlotFileName(path.basename(plotRelPath))?.no;
 }
 
 // ---------------------------------------------------------------- 初始化模板
 
-const STYLE_TEMPLATE = `# 文风指南
+const STYLE_TEMPLATE = `# 文風指南
 
-> 这份文件会在每次续写时注入 LLM。可以手写，也可以用命令「Novel: 提取文风指南」从已写章节自动生成。
+> 這份檔案會在每次續寫時注入 LLM。可以手寫，也可以用命令「Novel: 提取文風指南」從已寫章節自動生成。
 
-## 叙事视角
+## 敘事視角
 
-第三人称限知视角，跟随主角。
+第三人稱限知視角，跟隨主角。
 
-## 句式节奏
+## 句式節奏
 
-以短句为主，动作场面进一步压缩句长；描写段落可适当铺陈。
+以短句為主，動作場面進一步壓縮句長；描寫段落可適當鋪陳。
 
-## 对白比例
+## 對白比例
 
-对白约占三成，人物说话要有各自的口癖，不写「他说道」以外的花哨提示语。
+對白約佔三成，人物說話要有各自的口癖，不寫「他說道」以外的花哨提示語。
 
-## 修辞偏好
+## 修辭偏好
 
-克制使用比喻，避免堆砌形容词。
+剋制使用比喻，避免堆砌形容詞。
 
-## 禁用词表
+## 禁用詞表
 
-- 不使用「不禁」「顿时」「仿佛整个世界」这类套话
-- 不写「总之」「综上」等议论腔
+- 不使用「不禁」「頓時」「彷彿整個世界」這類套話
+- 不寫「總之」「綜上」等議論腔
 `;
 
 /**
- * 全文大纲（原全书摘要）的空模板：只有「主线进展」一节——已经写完的部分，主线是怎么走过来的。伏笔与关系的变动
- * 归叙事线（`threads/`），往后的计划是情节大纲。
+ * 全文大綱（原全書摘要）的空模板：只有「主線進展」一節——已經寫完的部分，主線是怎麼走過來的。伏筆與關係的變動
+ * 歸敘事線（`threads/`），往後的計劃是情節大綱。
  */
 const GLOBAL_SUMMARY_TEMPLATE = `---
 through: 0
 generatedBy: novelwarden
 ---
 
-# 全文大纲
+# 全文大綱
 
-## 主线进展
+## 主線進展
 
-（尚未生成。写完若干章后运行命令「Novel: 重建全文大纲」。）
+（尚未生成。寫完若干章後執行命令「Novel: 重建全文大綱」。）
 `;
 
-/** 全文大纲从前另有的三节（全书摘要时代）。老文件里留着，不读（{@link NovelProject.readGlobalSummary}）。 */
-const RETIRED_GLOBAL_SECTIONS = new Set(['已收伏笔', '未收伏笔', '人物关系变动']);
+/** 全文大綱從前另有的三節（全書摘要時代）。老檔案裡留著，不讀（{@link NovelProject.readGlobalSummary}）。 */
+const RETIRED_GLOBAL_SECTIONS = new Set(['已收伏笔', '未收伏笔', '人物关系变动', '已收伏筆', '未收伏筆', '人物關係變動']);
 
 /**
- * 去掉 {@link RETIRED_GLOBAL_SECTIONS} 那三节：标题（`##` 或 `###`，只有一批时阶段那一份直接落盘，是三级标题）
- * 到下一个同级或更高的标题为止。别的小节、作者自己加的，原样留着。
+ * 去掉 {@link RETIRED_GLOBAL_SECTIONS} 那三節：標題（`##` 或 `###`，只有一批時階段那一份直接落盤，是三級標題）
+ * 到下一個同級或更高的標題為止。別的小節、作者自己加的，原樣留著。
  */
 function dropRetiredGlobalSections(body: string): string {
   const out: string[] = [];

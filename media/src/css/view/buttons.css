@@ -1,28 +1,28 @@
 /*
- * 按钮的几种样式。
+ * 按鈕的幾種樣式。
  *
- * ## 一套尺寸，别再各自加 padding
+ * ## 一套尺寸，別再各自加 padding
  *
- * 从前主次按钮的 padding 是 `5px 12px`、字号继承 body 的 13px，于是主按钮
- * 「保存」「发送」在一排 0.8em 的小控件（chip-btn、下拉框）中间显得比周围粗一号
- * ——本来是要让人看见主按钮，结果是三个大色块各占一角，界面被它们撑散了。
+ * 從前主次按鈕的 padding 是 `5px 12px`、字號繼承 body 的 13px，於是主按鈕
+ * 「儲存」「傳送」在一排 0.8em 的小控制元件（chip-btn、下拉框）中間顯得比周圍粗一號
+ * ——本來是要讓人看見主按鈕，結果是三個大色塊各佔一角，介面被它們撐散了。
  *
- * 现在**主次按钮与 chip-btn、composer-tool、下拉框共用同一套尺寸**
- * （`--nf-ctl-*`）：主按钮靠**颜色**从一排控件里跳出来，不靠体积。要改高度只动
- * 这三个变量。
+ * 現在**主次按鈕與 chip-btn、composer-tool、下拉框共用同一套尺寸**
+ * （`--nf-ctl-*`）：主按鈕靠**顏色**從一排控制元件裡跳出來，不靠體積。要改高度只動
+ * 這三個變數。
  *
- * ## 为什么尺寸挂在变体类上，不挂在 `button` 上
+ * ## 為什麼尺寸掛在變體類上，不掛在 `button` 上
  *
- * 页面上大半的 `button` 不是「一排控件里的一颗」：菜单项、页签、标签页的关闭
- * 叉、chip 上的 ×、命令面板的每一项、流水线条上的细纲 / 正文两格——它们各有各的
- * 高度与内边距。把 `min-height` 写在裸 `button` 上，这些地方全都会被拽到 24px
- * （`min-height` 压得过它们自己的 `height`），而它们又都没声明过 min-height
- * 来挡。所以裸 `button` 只留「字体、光标、无边框」这类人人都要的东西，
- * 尺寸交给 `.nf-control` 那几个变体。
+ * 頁面上大半的 `button` 不是「一排控制元件裡的一顆」：選單項、頁籤、標籤頁的關閉
+ * 叉、chip 上的 ×、命令面板的每一項、流水線條上的細綱 / 正文兩格——它們各有各的
+ * 高度與內邊距。把 `min-height` 寫在裸 `button` 上，這些地方全都會被拽到 24px
+ * （`min-height` 壓得過它們自己的 `height`），而它們又都沒宣告過 min-height
+ * 來擋。所以裸 `button` 只留「字型、游標、無邊框」這類人人都要的東西，
+ * 尺寸交給 `.nf-control` 那幾個變體。
  */
 
 :root {
-  /* 一排控件的公共高度与内边距。composer 的下拉框也读它。 */
+  /* 一排控制元件的公共高度與內邊距。composer 的下拉框也讀它。 */
   --nf-ctl-height: 24px;
   --nf-ctl-padding-x: 10px;
   --nf-ctl-radius: 4px;
@@ -59,9 +59,9 @@ button:disabled {
 }
 
 /*
- * 「一排控件里的一颗」的公共尺寸。主次按钮、描边胶囊、输入区工具按钮都是它。
- * 高度统一之后，一行里按钮与下拉框、数字框才不会高低不齐——那是「按钮突兀」
- * 里最容易被漏掉的一半原因。
+ * 「一排控制元件裡的一顆」的公共尺寸。主次按鈕、描邊膠囊、輸入區工具按鈕都是它。
+ * 高度統一之後，一行裡按鈕與下拉框、數字框才不會高低不齊——那是「按鈕突兀」
+ * 裡最容易被漏掉的一半原因。
  */
 button.primary,
 button.secondary,
@@ -104,8 +104,8 @@ button.danger {
   color: #fff;
 }
 
-/* 文字按钮。行内跟在文字后面（「已写入 xxx · 打开」），所以不吃那套尺寸——
-   按钮盒子会把那一行的行距顶开。 */
+/* 文字按鈕。行內跟在文字後面（「已寫入 xxx · 開啟」），所以不吃那套尺寸——
+   按鈕盒子會把那一行的行距頂開。 */
 button.link {
   background: none;
   color: var(--vscode-textLink-foreground);
@@ -118,7 +118,7 @@ button.link.danger {
   color: var(--vscode-errorForeground);
 }
 
-/* 描边胶囊。工程页工具栏、日志页工具栏、气泡里的「采纳写入」都是它。 */
+/* 描邊膠囊。工程頁工具欄、日誌頁工具欄、氣泡裡的「採納寫入」都是它。 */
 button.chip-btn {
   background: none;
   border-color: var(--vscode-panel-border, rgba(128, 128, 128, 0.4));
@@ -133,11 +133,11 @@ button.chip-btn:hover:not(:disabled) {
 }
 
 /*
- * 输入区左侧那几颗工具按钮（@ 引用 / 加入选区 / / 命令）。
+ * 輸入區左側那幾顆工具按鈕（@ 引用 / 加入選區 / / 命令）。
  *
- * 比 chip-btn 再轻一档：平时只有文字，hover 才浮起底色——它们是「随时可用
- * 但不催你用」的入口，画成三枚描边胶囊会跟发送按钮抢注意力。取自 Cursor
- * 输入框底下那一排。
+ * 比 chip-btn 再輕一檔：平時只有文字，hover 才浮起底色——它們是「隨時可用
+ * 但不催你用」的入口，畫成三枚描邊膠囊會跟傳送按鈕搶注意力。取自 Cursor
+ * 輸入框底下那一排。
  */
 button.composer-tool {
   background: none;
@@ -154,13 +154,13 @@ button.composer-tool.active {
   color: var(--vscode-foreground);
 }
 
-/* @ / 斜杠：等宽字体压住，好认成「一个键」而不是标点。 */
+/* @ / 斜槓：等寬字型壓住，好認成「一個鍵」而不是標點。 */
 button.composer-tool .tool-key {
   font-family: var(--vscode-editor-font-family);
   opacity: 0.75;
 }
 
-/* 只剩一个键的两颗（@、/）：方一点，键帽字略大，不跟「加入选区」那种带字的抢宽度。 */
+/* 只剩一個鍵的兩顆（@、/）：方一點，鍵帽字略大，不跟「加入選區」那種帶字的搶寬度。 */
 button.composer-tool.key-only {
   min-width: var(--nf-ctl-height);
   padding: 0 4px;

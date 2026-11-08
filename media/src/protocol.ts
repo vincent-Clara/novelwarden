@@ -1,12 +1,12 @@
 /**
- * 前端与后端的唯一契约：直接从 core 的协议定义里取类型。
+ * 前端與後端的唯一契約：直接從 core 的協議定義裡取型別。
  *
- * 改造前这是一句注释约定（「改协议要同时改 view.js」），漏改只能靠手测发现；
- * 现在 `npm run typecheck` 会替我们盯着——后端往 `OutMessage` 里加一个分支、
- * 改一个字段名，前端对不上就编译不过。
+ * 改造前這是一句註釋約定（「改協議要同時改 view.js」），漏改只能靠手測發現；
+ * 現在 `npm run typecheck` 會替我們盯著——後端往 `OutMessage` 里加一個分支、
+ * 改一個欄位名，前端對不上就編譯不過。
  *
- * 全部走 `import type`：只有类型跨过这条边界，一行运行时代码都不会被打包进来
- * （core 是 Node 侧的，带进浏览器会立刻炸）。
+ * 全部走 `import type`：只有型別跨過這條邊界，一行執行時程式碼都不會被打包進來
+ * （core 是 Node 側的，帶進瀏覽器會立刻炸）。
  */
 export type {
   ArchitectureRow,
@@ -82,7 +82,7 @@ export type {
   WorkbenchView,
 } from '../../src/core/protocol';
 
-/** 全书查找替换（`core/protocol/bookFind.ts`）。 */
+/** 全書查詢替換（`core/protocol/bookFind.ts`）。 */
 export type {
   BookFindFile,
   BookFindHit,
@@ -95,7 +95,7 @@ export type {
   BookReplaceSummary,
 } from '../../src/core/protocol';
 
-/** 存档点（`core/protocol/checkpoints.ts`）。 */
+/** 存檔點（`core/protocol/checkpoints.ts`）。 */
 export type {
   CheckpointDiffEntry,
   CheckpointDiffView,
@@ -105,8 +105,8 @@ export type {
 } from '../../src/core/protocol';
 
 /**
- * 全书查找替换的范围表与上限：面板上的勾选框写着「角色卡」，后端搜的就得是角色卡那个区。`bookFindScope.ts` 是纯数据、
- * 零 import，打进浏览器产物是安全的。
+ * 全書查詢替換的範圍表與上限：面板上的勾選框寫著「角色卡」，後端搜的就得是角色卡那個區。`bookFindScope.ts` 是純資料、
+ * 零 import，打進瀏覽器產物是安全的。
  */
 export {
   BOOK_FIND_LIMIT,
@@ -117,10 +117,10 @@ export {
   isBookFindScope,
 } from '../../src/core/model/bookFindScope';
 
-/** 新建一本书时文件夹叫什么：表单上预览的与后端真建的同一个名字。`bookDir.ts` 是纯函数、零 import。 */
+/** 新建一本書時資料夾叫什麼：表單上預覽的與後端真建的同一個名字。`bookDir.ts` 是純函式、零 import。 */
 export { bookDirName } from '../../src/core/model/bookDir';
 
-/** 「转到…」（Ctrl+P）的索引（`core/protocol/quickOpen.ts`）。 */
+/** 「轉到…」（Ctrl+P）的索引（`core/protocol/quickOpen.ts`）。 */
 export type {
   QuickOpenChapter,
   QuickOpenCharacter,
@@ -131,10 +131,10 @@ export type {
   QuickOpenLore,
 } from '../../src/core/protocol';
 
-/** 「名词补全」的名词表（`core/protocol/nameIndex.ts`）。 */
+/** 「名詞補全」的名詞表（`core/protocol/nameIndex.ts`）。 */
 export type { NameEntry, NameIndex, NameSource } from '../../src/core/protocol';
 
-/** 编辑区「叙事线总览」标签的矩阵（`core/protocol/threadsOverview.ts`，叙事线重做三期）。 */
+/** 編輯區「敘事線總覽」標籤的矩陣（`core/protocol/threadsOverview.ts`，敘事線重做三期）。 */
 export type {
   ThreadsOverview,
   ThreadsOverviewChapter,
@@ -147,7 +147,7 @@ export type {
   ThreadsOverviewSpan,
 } from '../../src/core/protocol';
 
-/** 编辑区「时间线总览」标签的数据（`core/protocol/timelineOverview.ts`，2026-10-24）。 */
+/** 編輯區「時間線總覽」標籤的資料（`core/protocol/timelineOverview.ts`，2026-10-24）。 */
 export type {
   TimelineOverview,
   TimelineOverviewCard,
@@ -157,11 +157,11 @@ export type {
 } from '../../src/core/protocol';
 
 /**
- * 创作流水线的类型与那几张对照表。
+ * 創作流水線的型別與那幾張對照表。
  *
- * 与 `tiers.ts` 同一套理由：**标签、命令表、状态机推荐必须与后端同源**。
- * 前端自己抄一份的话，界面上会出现一个后端不认的命令，点了什么都不发生。
- * `model/pipeline.ts` 是纯类型 + 纯函数、**零 import**，打进浏览器产物是安全的。
+ * 與 `tiers.ts` 同一套理由：**標籤、命令表、狀態機推薦必須與後端同源**。
+ * 前端自己抄一份的話，介面上會出現一個後端不認的命令，點了什麼都不發生。
+ * `model/pipeline.ts` 是純型別 + 純函式、**零 import**，打進瀏覽器產物是安全的。
  */
 export {
   CAPABILITIES,
@@ -184,50 +184,50 @@ export {
   labelOf,
   outputKindOf,
   targetKey,
-  // 调用次数与批次切分：弹窗的实时说明与后端的确认框必须是同一个算法（第 4 条）。
+  // 呼叫次數與批次切分：彈窗的實時說明與後端的確認框必須是同一個演算法（第 4 條）。
   CONFIG_CALLS,
   PLOT_BATCH,
   describeCalls,
   planPlotBatches,
-  // 「2980 / 3000 字 · 已达标」：气泡上那一行与落盘卡片是同一句（W7）。
+  // 「2980 / 3000 字 · 已達標」：氣泡上那一行與落盤卡片是同一句（W7）。
   describeWriteLength,
-  // 章节工作台工具条的按钮提示与主按钮报同一个调用次数（W6、D16）。
+  // 章節工作臺工具條的按鈕提示與主按鈕報同一個呼叫次數（W6、D16）。
   ONE_CALL,
   WRITE_CALLS,
-  // 定稿与批量写章（四期）：弹窗、章节条与后端确认框同源（第 4 条）。
+  // 定稿與批次寫章（四期）：彈窗、章節條與後端確認框同源（第 4 條）。
   FINALIZE_CALLS,
   WRITE_BATCH_DEFAULT,
   WRITE_BATCH_MAX,
   planWriteBatch,
-  // 审稿与修稿（五期）：章节条、报告卡上的调用次数与后端同一份。
+  // 審稿與修稿（五期）：章節條、報告卡上的呼叫次數與後端同一份。
   REVIEW_CALLS,
   REVISE_CALLS,
-  // 设定名录：建条目、整合这一条的右键菜单与后端确认框同一个数。
+  // 設定名錄：建條目、整合這一條的右鍵選單與後端確認框同一個數。
   LORE_ENTRY_CALLS,
-  // 写 1 次、转写 1 次（2026-10-25 起改成转写）：「记设定」右键菜单与后端确认框同一个数。
+  // 寫 1 次、轉寫 1 次（2026-10-25 起改成轉寫）：「記設定」右鍵選單與後端確認框同一個數。
   TRANSCRIBED_CALLS,
-  // 完善设定：展开一条的右键菜单与后端问要求的那一句同一个数；单条设定目标的说法也同源。
+  // 完善設定：展開一條的右鍵選單與後端問要求的那一句同一個數；單條設定目標的說法也同源。
   LORE_EXPAND_CALLS,
-  // 完善设定三期：「全部展开」与后端确认框同一个数；写前提醒在弹窗与确认框里同一句。
+  // 完善設定三期：「全部展開」與後端確認框同一個數；寫前提醒在彈窗與確認框裡同一句。
   loreExpandCalls,
   describeThinLore,
-  // 叙事线：排线、判一章的调用次数，叙事线页签上的按钮提示与后端确认框同一个数（2026-10-25 起含转写）。
+  // 敘事線：排線、判一章的呼叫次數，敘事線頁簽上的按鈕提示與後端確認框同一個數（2026-10-25 起含轉寫）。
   THREAD_PLAN_CALLS,
   THREADS_JUDGE_CALLS,
-  // 叙事线二期：写前检查的两类提醒（伏笔逾期、线断了），批量写章弹窗与后端确认框同一个算法、同一句。
+  // 敘事線二期：寫前檢查的兩類提醒（伏筆逾期、線斷了），批次寫章彈窗與後端確認框同一個演算法、同一句。
   threadRemindersFor,
   describeThreadReminders,
   unrecordedBefore,
   describeTarget,
   loreOfTarget,
-  // 续写大纲（2026-10-24）：工程页右键上的「续写（第 a–b 章）」与后端真续的那一段是同一个算法。
+  // 續寫大綱（2026-10-24）：工程頁右鍵上的「續寫（第 a–b 章）」與後端真續的那一段是同一個演算法。
   OUTLINE_TARGET,
   outlineNextRange,
 } from '../../src/core/model/pipeline';
 
 /**
- * 审稿报告（五期 W10）。标签、能勾哪几条、定位引文的归一化都必须与后端同源：报告里说找得到的
- * 引文，点下去就得在编辑器里选得中。`review.ts` 是纯类型 + 纯函数、零 import，打进浏览器产物是安全的。
+ * 審稿報告（五期 W10）。標籤、能勾哪幾條、定位引文的歸一化都必須與後端同源：報告裡說找得到的
+ * 引文，點下去就得在編輯器裡選得中。`review.ts` 是純型別 + 純函式、零 import，打進瀏覽器產物是安全的。
  */
 export {
   AUTHOR_CATEGORY,
@@ -240,16 +240,16 @@ export {
 export type { ReviewGoal, ReviewIssue, ReviewIssueEdit, ReviewReport } from '../../src/core/model/review';
 
 /**
- * 段级 diff（五期 W11）：独立版的合并视图按它对齐两个版本、拼合并结果。纯函数、零 import；
- * 算法在 core 里单测，前端不另写一份。
+ * 段級 diff（五期 W11）：獨立版的合併檢視按它對齊兩個版本、組合合併結果。純函式、零 import；
+ * 演算法在 core 裡單測，前端不另寫一份。
  */
 export { changeCount, diffParagraphs, joinMerge, sideText } from '../../src/core/model/paragraphDiff';
 export type { MergeSegment } from '../../src/core/model/paragraphDiff';
 
 /**
- * 查找替换的匹配口径（大小写、正则、零长度、`$1`）。内置编辑器的查找条（`editor/findCore.ts` 原样转出）与
- * 后端的全书查找替换必须是同一份——同一个查找串在一份文件里与在全书里找到的得是同一批。`textFind.ts` 是纯函数、
- * 零 import，打进浏览器产物是安全的。
+ * 查詢替換的匹配口徑（大小寫、正則、零長度、`$1`）。內建編輯器的查詢條（`editor/findCore.ts` 原樣轉出）與
+ * 後端的全書查詢替換必須是同一份——同一個查詢串在一份檔案裡與在全書裡找到的得是同一批。`textFind.ts` 是純函式、
+ * 零 import，打進瀏覽器產物是安全的。
  */
 export {
   MATCH_LIMIT,
@@ -287,12 +287,12 @@ export type {
 } from '../../src/core/model/pipeline';
 
 /**
- * 模型分档的类型与那几张对照表。
+ * 模型分檔的型別與那幾張對照表。
  *
- * 标签（档位名、任务名、内置默认映射）**必须与后端同源**：设置页上写着
- * 「定稿 → 快速档」，跑起来却是另一档，作者就再也不信这张表了。
- * 所以这里连值一起 import（不是 `import type`）——`tiers.ts` 是纯数据 +
- * 纯函数，没有任何 Node 依赖，打进浏览器产物是安全的。
+ * 標籤（檔位名、任務名、內建預設對映）**必須與後端同源**：設定頁上寫著
+ * 「定稿 → 快速檔」，跑起來卻是另一檔，作者就再也不信這張表了。
+ * 所以這裡連值一起 import（不是 `import type`）——`tiers.ts` 是純資料 +
+ * 純函式，沒有任何 Node 依賴，打進瀏覽器產物是安全的。
  */
 export {
   DEFAULT_TASK_TIERS,
@@ -306,9 +306,9 @@ export {
 export type { LlmTask, ModelTier } from '../../src/core/model/tiers';
 
 /**
- * 思考深度的档位与说法。与分档同一套理由：下拉框上写着「深思考」而后端
- * 按别的档发请求，作者就再也不信这个开关了。`thinking.ts` 是纯数据 +
- * 纯函数、零 import，打进浏览器产物是安全的。
+ * 思考深度的檔位與說法。與分檔同一套理由：下拉框上寫著「深思考」而後端
+ * 按別的檔發請求，作者就再也不信這個開關了。`thinking.ts` 是純資料 +
+ * 純函式、零 import，打進瀏覽器產物是安全的。
  */
 export {
   DEFAULT_THINKING_DEPTH,
@@ -320,8 +320,8 @@ export {
 export type { ThinkingDepth } from '../../src/core/model/thinking';
 
 /**
- * 上下文详细度的级别、说法与每一级带多少。同一套理由：下拉框上写着「精简」而后端按别的级别装，
- * 作者就再也不信这个开关了。`contextDetail.ts` 是纯数据 + 纯函数、零 import，打进浏览器产物是安全的。
+ * 上下文詳細度的級別、說法與每一級帶多少。同一套理由：下拉框上寫著「精簡」而後端按別的級別裝，
+ * 作者就再也不信這個開關了。`contextDetail.ts` 是純資料 + 純函式、零 import，打進瀏覽器產物是安全的。
  */
 export {
   CONTEXT_DETAILS,
@@ -335,15 +335,15 @@ export {
 export type { ContextDetail } from '../../src/core/model/contextDetail';
 
 /**
- * 调模型之前的确认框（与工程页批量表单）上那两个下拉框：作者为这一次挑模型与详细度。「按分档」那一项的说法与后端、
- * VS Code 的 QuickPick 同一份。`callChoice.ts` 只 import 零 import 的 `contextDetail.ts`，打进浏览器产物是安全的。
+ * 調模型之前的確認框（與工程頁批次表單）上那兩個下拉框：作者為這一次挑模型與詳細度。「按分檔」那一項的說法與後端、
+ * VS Code 的 QuickPick 同一份。`callChoice.ts` 只 import 零 import 的 `contextDetail.ts`，打進瀏覽器產物是安全的。
  */
 export { TIERED_LABEL } from '../../src/core/model/callChoice';
 export type { CallChoice, CallPrompt } from '../../src/core/model/callChoice';
 
 /**
- * 写作技能的阶段、来源与不兼容原因的说法。与分档同一套理由：设置页上写着「写正文」而后端按
- * 别的阶段带，作者就再也不信这张表了。`writingSkill.ts` 零运行时 import，打进浏览器产物是安全的。
+ * 寫作技能的階段、來源與不相容原因的說法。與分檔同一套理由：設定頁上寫著「寫正文」而後端按
+ * 別的階段帶，作者就再也不信這張表了。`writingSkill.ts` 零執行時 import，打進瀏覽器產物是安全的。
  */
 export {
   SKILL_SOURCE_LABEL,
@@ -354,8 +354,8 @@ export {
 export type { SkillSource, SkillStage } from '../../src/core/model/writingSkill';
 
 /**
- * 正文的分段格式与一键排版。回车插什么、「一键排版」排成什么样、标题栏「段落格式」的说法、段落聚焦认哪一段，
- * 都必须与后端认的 `paragraphStyle` 同源。`paragraphFormat.ts` 是纯函数、零 import，打进浏览器产物是安全的。
+ * 正文的分段格式與一鍵排版。回車插什麼、「一鍵排版」排成什麼樣、標題欄「段落格式」的說法、段落聚焦認哪一段，
+ * 都必須與後端認的 `paragraphStyle` 同源。`paragraphFormat.ts` 是純函式、零 import，打進瀏覽器產物是安全的。
  */
 export {
   DEFAULT_PARAGRAPH_STYLE,
@@ -374,9 +374,9 @@ export {
 export type { ParagraphStyle, PunctEdit } from '../../src/core/model/paragraphFormat';
 
 /**
- * 写作体检（独立版内置编辑器，`editor/check.ts`）：比喻词表与上限、找词的位置、拉丁缩写——**与写完一章之后数的是同一个
- * 函数**（生成链的 `countSimiles` / `countBanned` / `latinAcronyms` 都建在这几个找位置的函数上）。禁用词与敏感词表由后端
- * 算好推来（`checkTerms`）。`manuscriptCheck.ts` 是纯函数、零 import，打进浏览器产物是安全的。
+ * 寫作體檢（獨立版內建編輯器，`editor/check.ts`）：比喻詞表與上限、找詞的位置、拉丁縮寫——**與寫完一章之後數的是同一個
+ * 函式**（生成鏈的 `countSimiles` / `countBanned` / `latinAcronyms` 都建在這幾個找位置的函式上）。禁用詞與敏感詞表由後端
+ * 算好推來（`checkTerms`）。`manuscriptCheck.ts` 是純函式、零 import，打進瀏覽器產物是安全的。
  */
 export {
   SIMILE_LIMIT,

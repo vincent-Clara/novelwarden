@@ -1,29 +1,29 @@
 /**
- * 架构层的三份文档：小说配置 `config.md`、故事前提 `premise.md`、世界观 `world.md`。
+ * 架構層的三份文件：小說配置 `config.md`、故事前提 `premise.md`、世界觀 `world.md`。
  *
- * **纯函数、零 I/O**，与 plotFile.ts / chapterFile.ts 同类；路径在 model/project.ts，
- * 解析与渲染只在这里定义一次。
+ * **純函式、零 I/O**，與 plotFile.ts / chapterFile.ts 同類；路徑在 model/project.ts，
+ * 解析與渲染只在這裡定義一次。
  *
- * ## 为什么要一层「架构」
+ * ## 為什麼要一層「架構」
  *
- * 从前没有前置设定：角色卡与设定条目都是写完正文之后从摘要里反推的，等于拿模型
- * 上一次的发挥去约束它下一次的发挥。第一章动笔时没有角色名单、没有世界规则、
- * 没有金手指的机制，人物和设定全靠边写边编。
+ * 從前沒有前置設定：角色卡與設定條目都是寫完正文之後從摘要裡反推的，等於拿模型
+ * 上一次的發揮去約束它下一次的發揮。第一章動筆時沒有角色名單、沒有世界規則、
+ * 沒有金手指的機制，人物和設定全靠邊寫邊編。
  *
- * 现在的顺序是 **配置 → 前提 → 角色图谱 → 世界观 → 情节大纲**，每一步都吃上一步
- * 的产出（思路来自 AI-Novel-Writer，GPL-3.0，源自 AI_NovelGenerator）。角色图谱
- * 没有自己的文件，它就是 `characters/` 下那一组角色卡；这里只管另外三份。
+ * 現在的順序是 **配置 → 前提 → 角色圖譜 → 世界觀 → 情節大綱**，每一步都吃上一步
+ * 的產出（思路來自 AI-Novel-Writer，GPL-3.0，源自 AI_NovelGenerator）。角色圖譜
+ * 沒有自己的檔案，它就是 `characters/` 下那一組角色卡；這裡只管另外三份。
  *
- * ## `config.md` 的两个硬性规模参数
+ * ## `config.md` 的兩個硬性規模引數
  *
- * `totalChapters` 与 `wordsPerChapter` 是整条链的长度锚点：大纲按总章数算章号
- * 区间，细纲没写 `targetWords` 时正文按每章字数判「写够没有」。**两者都可以不写**
- * ——不写就没有这条锚点，状态机会如实退化（「有字就算写够」），不拿一个猜出来的
- * 数字骗人。
+ * `totalChapters` 與 `wordsPerChapter` 是整條鏈的長度錨點：大綱按總章數算章號
+ * 區間，細綱沒寫 `targetWords` 時正文按每章字數判「寫夠沒有」。**兩者都可以不寫**
+ * ——不寫就沒有這條錨點，狀態機會如實退化（「有字就算寫夠」），不拿一個猜出來的
+ * 數字騙人。
  *
- * ## 文风不在这里
+ * ## 文風不在這裡
  *
- * 文风的唯一出处是 `style.md`（D14）。配置里再写一份，作者就不知道该信哪一份。
+ * 文風的唯一出處是 `style.md`（D14）。配置裡再寫一份，作者就不知道該信哪一份。
  */
 import {
   asNumber,
@@ -36,17 +36,17 @@ import {
 } from './markdown';
 import { PARAGRAPH_STYLES, PARAGRAPH_STYLE_LABEL, ParagraphStyle } from './paragraphFormat';
 
-/** 有自己文件的三件。「角色图谱」就是 `characters/` 目录，「设定清单」就是 `lore/` 目录。 */
+/** 有自己檔案的三件。「角色圖譜」就是 `characters/` 目錄，「設定清單」就是 `lore/` 目錄。 */
 export type SettingFileDoc = 'config' | 'premise' | 'world';
 
 export const SETTING_FILE_DOCS: readonly SettingFileDoc[] = ['config', 'premise', 'world'];
 
 /**
- * 小说配置的八节。顺序即「读它们的顺序」：先是作者的那句话，再是展开后的梗概与读者追读的理由（核心卖点），
- * 然后是世界、金手指、主角，最后是跨章的规则与参考。
+ * 小說配置的八節。順序即「讀它們的順序」：先是作者的那句話，再是展開後的梗概與讀者追讀的理由（核心賣點），
+ * 然後是世界、金手指、主角，最後是跨章的規則與參考。
  *
- * 「全局要求」只写**跨章**的规则（≤600 字、4–8 行），禁止逐章列大纲——那是
- * 大纲与细纲的活，写在这里会被每一章都读一遍。
+ * 「全域要求」只寫**跨章**的規則（≤600 字、4–8 行），禁止逐章列大綱——那是
+ * 大綱與細綱的活，寫在這裡會被每一章都讀一遍。
  */
 export const CONFIG_SECTION_KEYS = [
   '一句话',
@@ -59,15 +59,15 @@ export const CONFIG_SECTION_KEYS = [
   '参考作品',
 ] as const;
 
-/** 故事前提四节：一句话前提、冲突链、爽点循环（金手指怎样一次次兑现爽点）、悬念骨架。 */
+/** 故事前提四節：一句話前提、衝突鏈、爽點迴圈（金手指怎樣一次次兌現爽點）、懸念骨架。 */
 export const PREMISE_SECTION_KEYS = ['一句话前提', '核心冲突链', '爽点循环', '悬念骨架'] as const;
 
-/** 世界观三节：规则与它的漏洞、阶层与资源、深层危机。 */
+/** 世界觀三節：規則與它的漏洞、階層與資源、深層危機。 */
 export const WORLD_SECTION_KEYS = ['规则与漏洞', '阶层与资源', '深层危机'] as const;
 
 /**
- * 「全局要求」一节的合同：4–8 条跨章规则，总计不超过 600 字，不许逐章列大纲。
- * 来自 AI-Novel-Writer 的 `novel-config-expansion.ts`；提示词与生成链的质检共用。
+ * 「全域要求」一節的合同：4–8 條跨章規則，總計不超過 600 字，不許逐章列大綱。
+ * 來自 AI-Novel-Writer 的 `novel-config-expansion.ts`；提示詞與生成鏈的質檢共用。
  */
 export const GUIDANCE_MAX_CHARS = 600;
 export const GUIDANCE_MIN_RULES = 4;
@@ -80,10 +80,10 @@ export const SETTING_SECTION_KEYS: Record<SettingFileDoc, readonly string[]> = {
 };
 
 /**
- * 判「填过没有」看哪几节——任意一节有内容就算。
+ * 判「填過沒有」看哪幾節——任意一節有內容就算。
  *
- * 配置只看「核心梗概」：只写了「一句话」的配置是作者刚把脑洞丢进来，还没展开，
- * 主按钮仍该是「生成小说配置」。前提看冲突链：那是它的主体，一句话前提只是标题。
+ * 配置只看「核心梗概」：只寫了「一句話」的配置是作者剛把腦洞丟進來，還沒展開，
+ * 主按鈕仍該是「生成小說配置」。前提看衝突鏈：那是它的主體，一句話前提只是標題。
  */
 const FILLED_BY: Record<SettingFileDoc, readonly string[]> = {
   config: ['核心梗概'],
@@ -91,18 +91,18 @@ const FILLED_BY: Record<SettingFileDoc, readonly string[]> = {
   world: WORLD_SECTION_KEYS,
 };
 
-/** 文档标题行。渲染时写，解析时忽略（身份由路径决定）。 */
+/** 文件標題行。渲染時寫，解析時忽略（身份由路徑決定）。 */
 export const SETTING_DOC_HEADING: Record<SettingFileDoc, string> = {
-  config: '小说配置',
+  config: '小說配置',
   premise: '故事前提',
-  world: '世界观',
+  world: '世界觀',
 };
 
-// ---------------------------------------------------------------- 故事结构与视角
+// ---------------------------------------------------------------- 故事結構與視角
 
 /**
- * 故事结构。大纲那一步按它算章号区间（三幕 20/55/25 等）。
- * 值是英文枚举（与 AI-Novel-Writer 的配置合同一致，便于移植提示词），界面显示中文。
+ * 故事結構。大綱那一步按它算章號區間（三幕 20/55/25 等）。
+ * 值是英文列舉（與 AI-Novel-Writer 的配置合同一致，便於移植提示詞），介面顯示中文。
  */
 export const PLOT_STRUCTURES = [
   'three_act',
@@ -116,12 +116,12 @@ export const PLOT_STRUCTURES = [
 export type PlotStructure = (typeof PLOT_STRUCTURES)[number];
 
 export const PLOT_STRUCTURE_LABEL: Record<PlotStructure, string> = {
-  three_act: '三幕结构',
+  three_act: '三幕結構',
   heros_journey: '英雄之旅',
-  save_the_cat: '节拍表',
-  kishotenketsu: '起承转合',
-  multi_thread: '多线叙事',
-  freeform: '自由结构',
+  save_the_cat: '節拍表',
+  kishotenketsu: '起承轉合',
+  multi_thread: '多線敘事',
+  freeform: '自由結構',
 };
 
 export const NARRATIVE_POVS = ['third_limited', 'first_person', 'third_omniscient', 'multi_pov'] as const;
@@ -129,15 +129,15 @@ export const NARRATIVE_POVS = ['third_limited', 'first_person', 'third_omniscien
 export type NarrativePov = (typeof NARRATIVE_POVS)[number];
 
 export const NARRATIVE_POV_LABEL: Record<NarrativePov, string> = {
-  third_limited: '第三人称限知',
-  first_person: '第一人称',
-  third_omniscient: '第三人称全知',
-  multi_pov: '多视角',
+  third_limited: '第三人稱限知',
+  first_person: '第一人稱',
+  third_omniscient: '第三人稱全知',
+  multi_pov: '多視角',
 };
 
 /**
- * 枚举字段的容错取值：英文值、中文标签都认，认不出就是 undefined（不猜）。
- * 作者手改 frontmatter 时写「三幕结构」比写 `three_act` 自然得多。
+ * 列舉欄位的容錯取值：英文值、中文標籤都認，認不出就是 undefined（不猜）。
+ * 作者手改 frontmatter 時寫「三幕結構」比寫 `three_act` 自然得多。
  */
 function pickEnum<T extends string>(raw: string, values: readonly T[], labels: Record<T, string>): T | undefined {
   const s = raw.trim();
@@ -151,46 +151,46 @@ function pickEnum<T extends string>(raw: string, values: readonly T[], labels: R
   return values.find((v) => labels[v] === s);
 }
 
-// ---------------------------------------------------------------- 小说配置
+// ---------------------------------------------------------------- 小說配置
 
 export type ConfigSectionKey = (typeof CONFIG_SECTION_KEYS)[number];
 
 export interface BookConfig {
   relPath: string;
-  /** 类型（玄幻 / 都市 / 悬疑……）。自由文本。 */
+  /** 型別（玄幻 / 都市 / 懸疑……）。自由文字。 */
   genre: string;
   subGenre: string;
-  /** 目标读者（男频 / 女频 / 出版……）。自由文本。 */
+  /** 目標讀者（男頻 / 女頻 / 出版……）。自由文字。 */
   audience: string;
   structure?: PlotStructure;
   pov?: NarrativePov;
-  /** 全书计划多少章。大纲按它算章号区间。 */
+  /** 全書計劃多少章。大綱按它算章號區間。 */
   totalChapters?: number;
-  /** 每章目标字数。细纲没写 `targetWords` 时正文按它判写够没有。 */
+  /** 每章目標字數。細綱沒寫 `targetWords` 時正文按它判寫夠沒有。 */
   wordsPerChapter?: number;
   /**
-   * 正文的分段格式（`model/paragraphFormat.ts`）：内置编辑器的回车、一键排版按它来。没写或写坏了是缺席，
-   * 用的地方按缺省 `blank`（空行分段）。**会重写 `config.md` 的路径都要把它带过去**，不许静默丢掉。
+   * 正文的分段格式（`model/paragraphFormat.ts`）：內建編輯器的回車、一鍵排版按它來。沒寫或寫壞了是缺席，
+   * 用的地方按預設 `blank`（空行分段）。**會重寫 `config.md` 的路徑都要把它帶過去**，不許靜默丟掉。
    */
   paragraphStyle?: ParagraphStyle;
   sections: Record<ConfigSectionKey, string>;
-  /** frontmatter 之外的正文全文。作者可能加了自定义小节，读回来时保留。 */
+  /** frontmatter 之外的正文全文。作者可能加了自定義小節，讀回來時保留。 */
   body: string;
 }
 
 export type WritableBookConfig = Omit<BookConfig, 'relPath' | 'body'>;
 
-/** 只接受正整数；`0`、负数、小数、`三千` 一律当没写。 */
+/** 只接受正整數；`0`、負數、小數、`三千` 一律當沒寫。 */
 function positiveInt(v: string | string[] | undefined): number | undefined {
   const n = asNumber(v);
   return n !== undefined && Number.isInteger(n) && n > 0 ? n : undefined;
 }
 
 /**
- * 按小节表抽取，**占位文字读回来就是空串**。
+ * 按小節表抽取，**佔位文字讀回來就是空串**。
  *
- * 渲染时空小节写成 `（待补充）`（作者手改时知道该往哪填），读回来要认得它：
- * 不然这行字会被当成内容一路送进 prompt，模型读到的是「金手指：（待补充）」。
+ * 渲染時空小節寫成 `（待補充）`（作者手改時知道該往哪填），讀回來要認得它：
+ * 不然這行字會被當成內容一路送進 prompt，模型讀到的是「金手指：（待補充）」。
  */
 function pickFilled<K extends string>(body: string, keys: readonly K[]): Record<K, string> {
   const raw = pickSections<K>(body, keys);
@@ -202,7 +202,7 @@ function pickFilled<K extends string>(body: string, keys: readonly K[]): Record<
   return raw;
 }
 
-/** 解析 `config.md`。**绝不抛**：frontmatter 写坏只让对应字段退化成缺席。 */
+/** 解析 `config.md`。**絕不拋**：frontmatter 寫壞只讓對應欄位退化成缺席。 */
 export function parseBookConfig(text: string, relPath: string): BookConfig {
   const { frontmatter, body } = parseMarkdown(text);
   return {
@@ -221,10 +221,10 @@ export function parseBookConfig(text: string, relPath: string): BookConfig {
 }
 
 /**
- * 渲染成落盘的 Markdown。空小节保留占位，作者手改时知道该往哪填。
+ * 渲染成落盤的 Markdown。空小節保留佔位，作者手改時知道該往哪填。
  *
- * 字符串字段是空串时**也写出这一行**（`genre: `）：这份文件是给人填的表，
- * 空着的键正好告诉作者「这里可以写」。数字与枚举（含 `paragraphStyle`）缺席就不写。
+ * 字串欄位是空串時**也寫出這一行**（`genre: `）：這份檔案是給人填的表，
+ * 空著的鍵正好告訴作者「這裡可以寫」。數字與列舉（含 `paragraphStyle`）缺席就不寫。
  */
 export function renderBookConfig(config: WritableBookConfig): string {
   const fm = stringifyFrontmatter({
@@ -243,22 +243,22 @@ export function renderBookConfig(config: WritableBookConfig): string {
 }
 
 /**
- * 只改 `config.md` frontmatter 里 `paragraphStyle` 这一行（切换分段格式用），**别的字节一个不动**——
- * 不经 `renderBookConfig` 整份重渲染：作者手排的小节、注释、键的顺序与写法都原样留着。
+ * 只改 `config.md` frontmatter 裡 `paragraphStyle` 這一行（切換分段格式用），**別的位元組一個不動**——
+ * 不經 `renderBookConfig` 整份重渲染：作者手排的小節、註釋、鍵的順序與寫法都原樣留著。
  *
- * - frontmatter 里已有这一行：只换它的值。
- * - 有 frontmatter 但没有这一行：加在收尾的 `---` 之前。
- * - 没有 frontmatter（作者手写的、或文件根本不存在传了空串）：最前面补一段只有这一行的 frontmatter。
- *   这不加任何小节，「小说配置」照旧算没填（`isSettingFilled` 只看「核心梗概」）。
+ * - frontmatter 裡已有這一行：只換它的值。
+ * - 有 frontmatter 但沒有這一行：加在收尾的 `---` 之前。
+ * - 沒有 frontmatter（作者手寫的、或檔案根本不存在傳了空串）：最前面補一段只有這一行的 frontmatter。
+ *   這不加任何小節，「小說配置」照舊算沒填（`isSettingFilled` 只看「核心梗概」）。
  *
- * BOM 与换行符（`\r\n` / `\n`）原样留着。
+ * BOM 與換行符（`\r\n` / `\n`）原樣留著。
  */
 export function setConfigParagraphStyle(text: string, style: ParagraphStyle): string {
   const bom = text.startsWith('﻿') ? '﻿' : '';
   const rest = bom ? text.slice(1) : text;
   const eol = rest.includes('\r\n') ? '\r\n' : '\n';
   const line = `paragraphStyle: ${style}`;
-  // 与 markdown.ts 的 `parseMarkdown` 同一个认法：解析认得出的 frontmatter，这里才去改它。
+  // 與 markdown.ts 的 `parseMarkdown` 同一個認法：解析認得出的 frontmatter，這裡才去改它。
   const fence = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(rest);
   if (!fence) {
     return `${bom}---${eol}${line}${eol}---${eol}${rest}`;
@@ -274,7 +274,7 @@ export function setConfigParagraphStyle(text: string, style: ParagraphStyle): st
   return bom + rest.slice(0, bodyEnd) + eol + line + rest.slice(bodyEnd);
 }
 
-// ---------------------------------------------------------------- 前提 / 世界观
+// ---------------------------------------------------------------- 前提 / 世界觀
 
 export interface SettingDocFile {
   doc: SettingFileDoc;
@@ -284,28 +284,28 @@ export interface SettingDocFile {
 }
 
 /**
- * 解析任意一份架构文档，按它自己的小节表抽取。**绝不抛**。
+ * 解析任意一份架構文件，按它自己的小節表抽取。**絕不拋**。
  *
- * 配置也能走这条路（只取小节，不管 frontmatter）——判「填过没有」时用得上。
+ * 配置也能走這條路（只取小節，不管 frontmatter）——判「填過沒有」時用得上。
  */
 export function parseSettingDoc(doc: SettingFileDoc, text: string, relPath: string): SettingDocFile {
   const { body } = parseMarkdown(text);
   return { doc, relPath, sections: pickFilled(body, SETTING_SECTION_KEYS[doc]), body };
 }
 
-/** 渲染前提或世界观。配置有 frontmatter 字段，走 {@link renderBookConfig}。 */
+/** 渲染前提或世界觀。配置有 frontmatter 欄位，走 {@link renderBookConfig}。 */
 export function renderSettingDoc(doc: Exclude<SettingFileDoc, 'config'>, sections: Record<string, string>): string {
   const fm = stringifyFrontmatter({ generatedBy: 'novelwarden' });
   const body = stringifySections(sections, SETTING_SECTION_KEYS[doc], { keepEmpty: true });
   return `${fm}\n\n# ${SETTING_DOC_HEADING[doc]}\n\n${body}\n`;
 }
 
-/** 这份文档填过没有。判据见 `FILLED_BY`；占位文字不算内容。 */
+/** 這份文件填過沒有。判據見 `FILLED_BY`；佔位文字不算內容。 */
 export function isSettingFilled(doc: SettingFileDoc, sections: Record<string, string>): boolean {
   return FILLED_BY[doc].some((key) => hasContent(sections[key]));
 }
 
-/** 初始化工程时写入的空模板：结构完整、全是占位，`isSettingFilled` 为 false。 */
+/** 初始化工程時寫入的空模板：結構完整、全是佔位，`isSettingFilled` 為 false。 */
 export function settingTemplate(doc: SettingFileDoc): string {
   if (doc === 'config') {
     return renderBookConfig({

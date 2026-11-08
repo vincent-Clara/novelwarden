@@ -1,16 +1,16 @@
 /**
- * 审稿报告、按勾选修稿、一致性预检、合并结果与定位引文（五期的 controller 一半）。
+ * 審稿報告、按勾選修稿、一致性預檢、合併結果與定位引文（五期的 controller 一半）。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 审稿那一轮没有落盘卡片；报告在这一轮上、在草稿表里、在会话文件里 | D22：报告不落盘，随会话保存 |
- * | 章节条「审稿」发一轮审稿；没有正文不发 | W6 的第五颗按钮 |
- * | 修稿只把勾选的交给模型；用户气泡带清单 | 作者没勾的不该出现在模型眼前 |
- * | 正文改过之后，引文已经不在的勾选项作废并写进卡片说明 | 第 2 条 |
- * | 修稿当场问写不写，写入前审阅；合并视图交回的那一份落盘 | 第 19 条、第 3 条、W11 |
- * | 预检：细纲排了死人，先亮一张卡；「先不写」不调模型；「仅本次忽略」照写 | 零调用、不挡路但不静默 |
- * | 接着写不预检 | 开头已经写下了 |
- * | 定位引文：宿主有 revealText 就交给它，没有就打开文件并提示那一句 | 能力探测，不判断壳 |
+ * | 審稿那一輪沒有落盤卡片；報告在這一輪上、在草稿表裡、在會話檔案裡 | D22：報告不落盤，隨會話儲存 |
+ * | 章節條「審稿」發一輪審稿；沒有正文不發 | W6 的第五顆按鈕 |
+ * | 修稿只把勾選的交給模型；使用者氣泡帶清單 | 作者沒勾的不該出現在模型眼前 |
+ * | 正文改過之後，引文已經不在的勾選項作廢並寫進卡片說明 | 第 2 條 |
+ * | 修稿當場問寫不寫，寫入前審閱；合併檢視交回的那一份落盤 | 第 19 條、第 3 條、W11 |
+ * | 預檢：細綱排了死人，先亮一張卡；「先不寫」不調模型；「僅本次忽略」照寫 | 零呼叫、不擋路但不靜默 |
+ * | 接著寫不預檢 | 開頭已經寫下了 |
+ * | 定位引文：宿主有 revealText 就交給它，沒有就開啟檔案並提示那一句 | 能力探測，不判斷殼 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -33,27 +33,27 @@ let gates = [];
 let gateAnswer = 'proceed';
 let script = [];
 
-const P2 = '.novelwarden/summaries/002-客栈.md';
+const P2 = '.novelwarden/summaries/002-客棧.md';
 const P3 = '.novelwarden/summaries/003-夜访.md';
 const P4 = '.novelwarden/summaries/004-井.md';
 
 const CH2 = [
-  '雨下了一整夜。林昭推开客栈的门，檐下的灯笼被风吹得直晃。',
-  '沈氏在柜台后看着他，没说话。她把那块残令收进了袖中。',
+  '雨下了一整夜。林昭推開客棧的門，簷下的燈籠被風吹得直晃。',
+  '沈氏在櫃檯後看著他，沒說話。她把那塊殘令收進了袖中。',
   filler(700, 7),
-  '“你明天就走？”她问。林昭点了点头，说：“天一亮就走。”',
+  '“你明天就走？”她問。林昭點了點頭，說：“天一亮就走。”',
 ].join('\n\n');
 
 const REVIEW_JSON = JSON.stringify({
-  summary: '一处硬伤',
+  summary: '一處硬傷',
   items: [
-    { category: '剧情合理性', severity: 'error', quote: '她把那块残令收进了袖中', description: '残令前文已经交出去了' },
-    { category: '角色状态', severity: 'warning', quote: '林昭点了点头', description: '左臂有伤却动作如常' },
-    { category: '角色状态', severity: 'warning', quote: '林昭拔剑指着她', description: '编的' },
+    { category: '劇情合理性', severity: 'error', quote: '她把那塊殘令收進了袖中', description: '殘令前文已經交出去了' },
+    { category: '角色狀態', severity: 'warning', quote: '林昭點了點頭', description: '左臂有傷卻動作如常' },
+    { category: '角色狀態', severity: 'warning', quote: '林昭拔劍指著她', description: '編的' },
   ],
   goalReviews: [
-    { id: 'g1', status: 'completed', description: 'x', evidence: [{ quote: '林昭推开客栈的门' }] },
-    { id: 'g2', status: 'unknown', description: '没写到', evidence: [] },
+    { id: 'g1', status: 'completed', description: 'x', evidence: [{ quote: '林昭推開客棧的門' }] },
+    { id: 'g2', status: 'unknown', description: '沒寫到', evidence: [] },
   ],
 });
 
@@ -91,7 +91,7 @@ async function reviewChapter2() {
   return lastAssistant();
 }
 
-/** 写一份还没定稿的细纲：计划出场写在「出场人物」一节里，预检照它查谁已经死了。 */
+/** 寫一份還沒定稿的細綱：計劃出場寫在「出場人物」一節裡，預檢照它查誰已經死了。 */
 async function writePlot(ws, no, title, characters, extra = {}) {
   const empty = bundle.plotFile.emptyPlotSections();
   await ws.writePlot({
@@ -100,8 +100,8 @@ async function writePlot(ws, no, title, characters, extra = {}) {
       ...empty,
       梗概: `第 ${no} 章的梗概`,
       出场人物: characters.join('、'),
-      关键事件: extra.events ?? `第 ${no} 章的关键事件`,
-      看点: `- 第 ${no} 章的看点`,
+      关键事件: extra.events ?? `第 ${no} 章的關鍵事件`,
+      看点: `- 第 ${no} 章的看點`,
     },
   });
 }
@@ -130,22 +130,22 @@ before(async () => {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  t = await makeTempProject(bundle.project, { prefix: 'review-card', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'review-card', title: '青雲劍錄' });
   project = t.project;
   const ws = new bundle.ws.Workspace(project);
-  await writePlot(ws, 1, '夜入青云', ['林昭']);
-  await writePlot(ws, 2, '客栈', ['林昭', '沈氏'], { events: '林昭回到客栈；林昭当晚离开青崖镇' });
-  await writePlot(ws, 3, '夜访', ['林昭', '阿秋']);
+  await writePlot(ws, 1, '夜入青雲', ['林昭']);
+  await writePlot(ws, 2, '客棧', ['林昭', '沈氏'], { events: '林昭回到客棧；林昭當晚離開青崖鎮' });
+  await writePlot(ws, 3, '夜訪', ['林昭', '阿秋']);
   await writePlot(ws, 4, '井', ['林昭']);
-  await ws.createChapter(1, '夜入青云', filler(900, 1));
-  await ws.createChapter(2, '客栈', CH2);
+  await ws.createChapter(1, '夜入青雲', filler(900, 1));
+  await ws.createChapter(2, '客棧', CH2);
   await project.syncManifest();
-  // 沈秋（别名阿秋）在角色卡上已经死了，第 3 章的细纲还排着他。
+  // 沈秋（別名阿秋）在角色卡上已經死了，第 3 章的細綱還排著他。
   const dir = path.join(t.dir, '.novelwarden/characters');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, '沈秋.md'),
-    ['---', 'name: 沈秋', 'aliases: [阿秋]', 'stateThrough: 2', '---', '', '# 沈秋', '', '## 当前状态', '', '已死亡（第 2 章被刺杀）', ''].join('\n')
+    ['---', 'name: 沈秋', 'aliases: [阿秋]', 'stateThrough: 2', '---', '', '# 沈秋', '', '## 當前狀態', '', '已死亡（第 2 章被刺殺）', ''].join('\n')
   );
   project.invalidate();
 
@@ -158,35 +158,35 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('审稿：章节条「审稿」发一轮', () => {
+describe('審稿：章節條「審稿」發一輪', () => {
   let a;
   before(async () => {
     a = await reviewChapter2();
   });
 
-  test('一次调用，没有落盘卡片', () => {
+  test('一次呼叫，沒有落盤卡片', () => {
     assert.equal(fake.calls.length, 1);
     assert.equal(gates.length, 0);
     assert.equal(a.artifact, undefined);
   });
 
-  test('用户气泡是 /审稿', () => {
-    assert.equal(lastUserTurn().command, '审稿');
+  test('使用者氣泡是 /審稿', () => {
+    assert.equal(lastUserTurn().command, '審稿');
   });
 
-  test('报告在这一轮上：伪造引文的那条丢了，缺省勾选是两条问题', () => {
+  test('報告在這一輪上：偽造引文的那條丟了，預設勾選是兩條問題', () => {
     assert.ok(a.review);
     assert.deepEqual(a.review.report.issues.map((i) => i.id), ['i1', 'i2']);
     assert.deepEqual(a.review.picks, ['i1', 'i2']);
-    assert.match(a.review.notes.join(), /丢掉 1 条/);
+    assert.match(a.review.notes.join(), /丟掉 1 條/);
     assert.equal(a.review.calls, 1);
   });
 
-  test('气泡正文是给人读的报告', () => {
-    assert.match(a.content, /^# 第 2 章《客栈》审稿/);
+  test('氣泡正文是給人讀的報告', () => {
+    assert.match(a.content, /^# 第 2 章《客棧》審稿/);
   });
 
-  test('会话文件里存着报告，草稿表里也有一份', async () => {
+  test('會話檔案裡存著報告，草稿表裡也有一份', async () => {
     const file = path.join(project.sessionsDir, `${controller.current.id}.json`);
     const json = JSON.parse(fs.readFileSync(file, 'utf8'));
     const turn = json.turns.find((x) => x.id === a.id);
@@ -194,99 +194,99 @@ describe('审稿：章节条「审稿」发一轮', () => {
     assert.ok(json.drafts.some((d) => d.review && d.review.chapterNo === 2));
   });
 
-  test('这一章没有正文：不发', async () => {
-    reset(['不该被调用']);
+  test('這一章沒有正文：不發', async () => {
+    reset(['不該被呼叫']);
     await controller.handle({ type: 'chapterAction', plotRelPath: P3, action: 'review' });
     assert.equal(fake.calls.length, 0);
-    assert.ok(toastsPosted().some((x) => /还没有正文，没法审稿/.test(x)), JSON.stringify(toastsPosted()));
+    assert.ok(toastsPosted().some((x) => /還沒有正文，沒法審稿/.test(x)), JSON.stringify(toastsPosted()));
   });
 });
 
-describe('按勾选修稿', () => {
+describe('按勾選修稿', () => {
   let reviewTurn;
-  const REVISED = CH2.replace('她把那块残令收进了袖中。', '她看了一眼他空着的手，什么也没问。');
+  const REVISED = CH2.replace('她把那塊殘令收進了袖中。', '她看了一眼他空著的手，什麼也沒問。');
 
   before(async () => {
     reviewTurn = await reviewChapter2();
   });
 
-  test('只把勾选的交给模型；用户气泡带清单；当场问写不写，写入前审阅', async () => {
+  test('只把勾選的交給模型；使用者氣泡帶清單；當場問寫不寫，寫入前審閱', async () => {
     reset([{ text: REVISED, stop: 'end' }]);
     h.reviewed.length = 0;
     h.setReviewVerdict('apply');
     await controller.handle({ type: 'reviseChapter', turnId: reviewTurn.id, picks: ['i1', 'g1', 'nope'] });
     assert.equal(fake.calls.length, 1);
     const prompt = userPrompts()[0];
-    assert.match(prompt, /残令前文已经交出去了/);
-    assert.doesNotMatch(prompt, /左臂有伤/);
+    assert.match(prompt, /殘令前文已經交出去了/);
+    assert.doesNotMatch(prompt, /左臂有傷/);
     const user = lastUserTurn();
-    assert.equal(user.command, '按审稿修稿');
-    assert.deepEqual(user.revise.items, ['[严重] 剧情合理性：残令前文已经交出去了']);
+    assert.equal(user.command, '按審稿修稿');
+    assert.deepEqual(user.revise.items, ['[嚴重] 劇情合理性：殘令前文已經交出去了']);
     assert.equal(gates.length, 1);
-    assert.match(gates[0].detail, /按 1 条勾选的审稿意见修稿/);
+    assert.match(gates[0].detail, /按 1 條勾選的審稿意見修稿/);
     assert.equal(h.reviewed.length, 1);
     assert.equal(h.reviewed[0].merge, true);
     const text = await project.readChapterText(await project.getChapter(2));
-    assert.ok(text.includes('她看了一眼他空着的手'));
+    assert.ok(text.includes('她看了一眼他空著的手'));
   });
 
-  test('正文在审稿之后改过：引文已经不在的那条作废并写进卡片说明', async () => {
-    // 上一个用例已经把那一句改掉了；再按同一份报告勾 i1 + i2。
-    reset([{ text: CH2.replace('林昭点了点头', '林昭用右手托着左臂，点了点头'), stop: 'end' }]);
+  test('正文在審稿之後改過：引文已經不在的那條作廢並寫進卡片說明', async () => {
+    // 上一個用例已經把那一句改掉了；再按同一份報告勾 i1 + i2。
+    reset([{ text: CH2.replace('林昭點了點頭', '林昭用右手託著左臂，點了點頭'), stop: 'end' }]);
     h.setReviewVerdict('discard');
     await controller.handle({ type: 'reviseChapter', turnId: reviewTurn.id, picks: ['i1', 'i2'] });
     assert.equal(fake.calls.length, 1);
-    assert.doesNotMatch(userPrompts()[0], /残令前文已经交出去了/);
-    assert.match(userPrompts()[0], /左臂有伤却动作如常/);
-    assert.match(gates[0].detail, /正文在审稿之后改过/);
-    assert.match(gates[0].detail, /1 条的引文已经不在正文里了/);
+    assert.doesNotMatch(userPrompts()[0], /殘令前文已經交出去了/);
+    assert.match(userPrompts()[0], /左臂有傷卻動作如常/);
+    assert.match(gates[0].detail, /正文在審稿之後改過/);
+    assert.match(gates[0].detail, /1 條的引文已經不在正文裡了/);
   });
 
-  test('勾选的都作废了：不调模型', async () => {
-    reset(['不该被调用']);
+  test('勾選的都作廢了：不調模型', async () => {
+    reset(['不該被呼叫']);
     await controller.handle({ type: 'reviseChapter', turnId: reviewTurn.id, picks: ['i1'] });
     assert.equal(fake.calls.length, 0);
     assert.match(lastAssistant().error, /都找不到了/);
   });
 
-  test('合并视图交回的那一份落盘', async () => {
+  test('合併檢視交回的那一份落盤', async () => {
     const fresh = await reviewChapter2();
     const now = await project.readChapterText(await project.getChapter(2));
-    reset([{ text: now.replace('林昭推开客栈的门', '林昭推开客栈那扇旧门'), stop: 'end' }]);
-    h.setReviewVerdict(({ proposed }) => ({ merged: `${proposed.trim()}\n\n作者在合并视图里加的一句。\n` }));
-    // 这一章已经改过：第一条的引文不在了，重新审出来的报告里只剩「左臂有伤」那一条（i1）。
-    assert.deepEqual(fresh.review.report.issues.map((i) => i.description), ['左臂有伤却动作如常']);
+    reset([{ text: now.replace('林昭推開客棧的門', '林昭推開客棧那扇舊門'), stop: 'end' }]);
+    h.setReviewVerdict(({ proposed }) => ({ merged: `${proposed.trim()}\n\n作者在合併檢視裡加的一句。\n` }));
+    // 這一章已經改過：第一條的引文不在了，重新審出來的報告裡只剩「左臂有傷」那一條（i1）。
+    assert.deepEqual(fresh.review.report.issues.map((i) => i.description), ['左臂有傷卻動作如常']);
     await controller.handle({ type: 'reviseChapter', turnId: fresh.id, picks: ['i1'] });
     assert.equal(fake.calls.length, 1);
     const after = await project.readChapterText(await project.getChapter(2));
-    assert.ok(after.includes('作者在合并视图里加的一句。'));
+    assert.ok(after.includes('作者在合併檢視裡加的一句。'));
     h.setReviewVerdict('apply');
   });
 
-  test('认不出的报告：不发', async () => {
-    reset(['不该被调用']);
+  test('認不出的報告：不發', async () => {
+    reset(['不該被呼叫']);
     await controller.handle({ type: 'reviseChapter', turnId: 'no-such-turn', picks: ['i1'] });
     assert.equal(fake.calls.length, 0);
-    assert.ok(toastsPosted().some((x) => /找不到这份审稿报告/.test(x)));
+    assert.ok(toastsPosted().some((x) => /找不到這份審稿報告/.test(x)));
   });
 });
 
-describe('一致性预检', () => {
-  test('细纲排了角色卡上已经死了的人：先亮一张卡，「先不写」一次模型都不调', async () => {
-    reset(['不该被调用']);
+describe('一致性預檢', () => {
+  test('細綱排了角色卡上已經死了的人：先亮一張卡，「先不寫」一次模型都不調', async () => {
+    reset(['不該被呼叫']);
     gateAnswer = 'skip';
     await controller.handle({ type: 'chapterAction', plotRelPath: P3, action: 'write' });
     gateAnswer = 'proceed';
     assert.equal(fake.calls.length, 0);
     assert.equal(gates.length, 1);
     assert.equal(gates[0].name, 'preflight');
-    assert.equal(gates[0].proceed, '仅本次忽略，照写');
-    assert.equal(gates[0].skip, '先不写');
-    assert.match(gates[0].danger, /沈秋的当前状态（截至第 2 章）写着「已死亡」/);
-    assert.match(lastAssistant().content, /一致性预检发现 1 处问题，这一次先不写——没有调用模型/);
+    assert.equal(gates[0].proceed, '僅本次忽略，照寫');
+    assert.equal(gates[0].skip, '先不寫');
+    assert.match(gates[0].danger, /沈秋的當前狀態（截至第 2 章）寫著「已死亡」/);
+    assert.match(lastAssistant().content, /一致性預檢發現 1 處問題，這一次先不寫——沒有呼叫模型/);
   });
 
-  test('「仅本次忽略」照写', async () => {
+  test('「僅本次忽略」照寫', async () => {
     reset([{ text: filler(700, 40), stop: 'end' }]);
     await controller.handle({ type: 'chapterAction', plotRelPath: P3, action: 'write' });
     assert.equal(fake.calls.length, 1);
@@ -294,13 +294,13 @@ describe('一致性预检', () => {
     assert.equal(gates[1].name, 'artifact');
   });
 
-  test('接着写不预检', async () => {
+  test('接著寫不預檢', async () => {
     reset([{ text: filler(300, 41), stop: 'end' }]);
     await controller.handle({ type: 'chapterAction', plotRelPath: P3, action: 'continue' });
     assert.ok(gates.every((g) => g.name !== 'preflight'));
   });
 
-  test('没排死人的章不亮卡', async () => {
+  test('沒排死人的章不亮卡', async () => {
     reset([{ text: filler(700, 42), stop: 'end' }]);
     await controller.handle({ type: 'chapterAction', plotRelPath: P4, action: 'write' });
     assert.ok(gates.every((g) => g.name !== 'preflight'));
@@ -308,30 +308,30 @@ describe('一致性预检', () => {
 });
 
 describe('定位引文', () => {
-  test('宿主有 revealText：交给它', async () => {
+  test('宿主有 revealText：交給它', async () => {
     const seen = [];
     h.host.revealText = async (rel, quote) => {
       seen.push([rel, quote]);
       return true;
     };
-    await controller.handle({ type: 'revealQuote', relPath: 'chapters/002-客栈.md', quote: '林昭推开' });
-    assert.deepEqual(seen, [['chapters/002-客栈.md', '林昭推开']]);
+    await controller.handle({ type: 'revealQuote', relPath: 'chapters/002-客棧.md', quote: '林昭推開' });
+    assert.deepEqual(seen, [['chapters/002-客棧.md', '林昭推開']]);
     delete h.host.revealText;
   });
 
-  test('找不到那一句：提示正文可能改过', async () => {
+  test('找不到那一句：提示正文可能改過', async () => {
     h.host.revealText = async () => false;
     reset();
-    await controller.handle({ type: 'revealQuote', relPath: 'chapters/002-客栈.md', quote: '根本没有' });
-    assert.ok(toastsPosted().some((x) => /找不到了（正文可能改过）/.test(x)));
+    await controller.handle({ type: 'revealQuote', relPath: 'chapters/002-客棧.md', quote: '根本沒有' });
+    assert.ok(toastsPosted().some((x) => /找不到了（正文可能改過）/.test(x)));
     delete h.host.revealText;
   });
 
-  test('宿主没有 revealText：打开文件并提示那一句', async () => {
+  test('宿主沒有 revealText：開啟檔案並提示那一句', async () => {
     h.opened.length = 0;
     reset();
-    await controller.handle({ type: 'revealQuote', relPath: 'chapters/002-客栈.md', quote: '林昭推开客栈' });
-    assert.deepEqual(h.opened, ['chapters/002-客栈.md'], JSON.stringify({ opened: h.opened, rt: typeof h.host.revealText }));
-    assert.ok(toastsPosted().some((x) => /在编辑器里找这一句：「林昭推开客栈」/.test(x)));
+    await controller.handle({ type: 'revealQuote', relPath: 'chapters/002-客棧.md', quote: '林昭推開客棧' });
+    assert.deepEqual(h.opened, ['chapters/002-客棧.md'], JSON.stringify({ opened: h.opened, rt: typeof h.host.revealText }));
+    assert.ok(toastsPosted().some((x) => /在編輯器裡找這一句：「林昭推開客棧」/.test(x)));
   });
 });

@@ -1,13 +1,13 @@
 /**
- * 完善设定三期的前端（设计稿 §5、§6）：「待完善」组标题的「全部展开」、拆细纲弹窗的「拆完展开本批新设定」、
- * 批量写章弹窗与工作台的写前提醒。
+ * 完善設定三期的前端（設計稿 §5、§6）：「待完善」組標題的「全部展開」、拆細綱彈窗的「拆完展開本批新設定」、
+ * 批次寫章彈窗與工作臺的寫前提醒。
  *
- * | 用例组 | 钉的是什么 |
+ * | 用例組 | 釘的是什麼 |
  * |---|---|
- * | 全部展开 | 组标题右键「全部展开（K 条，预计 2K 次调用，最多 4K 次）」（写完转写，2026-10-25 起），K 不算作者写过的（`authored`）；点了发 `expandLoreAll`；全是作者写过的就没有这一项 |
- * | 拆细纲弹窗 | 多一项「拆完展开本批新设定」，缺省「否」；选「是」时说明里写清拆完再问次数，提交带 `expandLore`；选「否」不带 |
- * | 批量写章弹窗 | 要写的几章用到的待完善设定在说明里提一句（区间外的不算），不拦 |
- * | 工作台 | `notice` 在浮窗里淡色一句，入口挂淡色记号；有 ⟳ 时入口仍是 ⟳ |
+ * | 全部展開 | 組標題右鍵「全部展開（K 條，預計 2K 次呼叫，最多 4K 次）」（寫完轉寫，2026-10-25 起），K 不算作者寫過的（`authored`）；點了發 `expandLoreAll`；全是作者寫過的就沒有這一項 |
+ * | 拆細綱彈窗 | 多一項「拆完展開本批新設定」，預設「否」；選「是」時說明裡寫清拆完再問次數，提交帶 `expandLore`；選「否」不帶 |
+ * | 批次寫章彈窗 | 要寫的幾章用到的待完善設定在說明裡提一句（區間外的不算），不攔 |
+ * | 工作臺 | `notice` 在浮窗裡淡色一句，入口掛淡色記號；有 ⟳ 時入口仍是 ⟳ |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -30,15 +30,15 @@ function type(ui, key, value) {
 const esc = (ui) => ui.doc.dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
 const thin = [
-  { name: '九层楼', category: '地域', kind: 'missing', chapters: [5, 6], detail: '第 5 章起要用 · 还没有条目' },
-  { name: '天机阁', category: '宗门', relPath: `${LORE}/宗门/天机阁.md`, kind: 'empty', chapters: [5], detail: '第 5 章起要用 · 只有一句话' },
-  { name: '后山', category: '地域', relPath: `${LORE}/地域/后山.md`, kind: 'untold', chapters: [9], detail: '第 9 章起要用 · 三节全是未交代', authored: true },
+  { name: '九層樓', category: '地域', kind: 'missing', chapters: [5, 6], detail: '第 5 章起要用 · 還沒有條目' },
+  { name: '天機閣', category: '宗門', relPath: `${LORE}/宗門/天機閣.md`, kind: 'empty', chapters: [5], detail: '第 5 章起要用 · 只有一句話' },
+  { name: '後山', category: '地域', relPath: `${LORE}/地域/後山.md`, kind: 'untold', chapters: [9], detail: '第 9 章起要用 · 三節全是未交代', authored: true },
 ];
 const treeWith = (loreThin) => ({ ...sampleTree(), loreThin });
-/** 「章节」组标题右键点一项：两个批量弹窗的入口。 */
+/** 「章節」組標題右鍵點一項：兩個批次彈窗的入口。 */
 const pickFromChapters = (ui, label) =>
   ui.pick(
-    ui.rightClick([...ui.doc.querySelectorAll('#projectBody .group-head')].find((n) => n.querySelector('.group-name').textContent === '章节')),
+    ui.rightClick([...ui.doc.querySelectorAll('#projectBody .group-head')].find((n) => n.querySelector('.group-name').textContent === '章節')),
     label
   );
 const thinHead = (ui) =>
@@ -46,21 +46,21 @@ const thinHead = (ui) =>
     .find((g) => g.querySelector('.group-name')?.textContent === '待完善')
     ?.querySelector('.group-head');
 
-describe('「待完善」组标题的「全部展开」', { skip: JSDOM_SKIP }, () => {
+describe('「待完善」組標題的「全部展開」', { skip: JSDOM_SKIP }, () => {
   let ui;
-  const ALL = '全部展开（2 条，预计 4 次调用，最多 8 次）';
+  const ALL = '全部展開（2 條，預計 4 次呼叫，最多 8 次）';
 
   before(() => {
     ui = mount();
     ui.post({ type: 'project', tree: treeWith(thin) });
   });
 
-  test('次数与后端确认框同一个数，不算作者写过的', () => {
+  test('次數與後端確認框同一個數，不算作者寫過的', () => {
     const items = ui.itemsOf(ui.rightClick(thinHead(ui)));
     assert.equal(items[0], ALL, JSON.stringify(items));
   });
 
-  test('点了发 expandLoreAll，不带路径', () => {
+  test('點了發 expandLoreAll，不帶路徑', () => {
     ui.sent.length = 0;
     ui.pick(ui.doc.querySelector('.ctx-menu'), ALL);
     const msg = ui.last('projectAction');
@@ -68,17 +68,17 @@ describe('「待完善」组标题的「全部展开」', { skip: JSDOM_SKIP }, 
     assert.equal(msg.relPath, undefined);
   });
 
-  test('全是作者写过的：没有这一项', () => {
+  test('全是作者寫過的：沒有這一項', () => {
     ui.post({ type: 'project', tree: treeWith([thin[2]]) });
     const items = ui.itemsOf(ui.rightClick(thinHead(ui)));
     ui.closeMenu();
-    assert.ok(!items.some((i) => i.startsWith('全部展开')), JSON.stringify(items));
+    assert.ok(!items.some((i) => i.startsWith('全部展開')), JSON.stringify(items));
   });
 });
 
-describe('拆细纲弹窗的「拆完展开本批新设定」', { skip: JSDOM_SKIP }, () => {
+describe('拆細綱彈窗的「拆完展開本批新設定」', { skip: JSDOM_SKIP }, () => {
   let ui;
-  const open = () => pickFromChapters(ui, '批量拆细纲…');
+  const open = () => pickFromChapters(ui, '批次拆細綱…');
 
   before(() => {
     ui = mount();
@@ -86,12 +86,12 @@ describe('拆细纲弹窗的「拆完展开本批新设定」', { skip: JSDOM_SK
     open();
   });
 
-  test('缺省「否」，说明里不提', () => {
+  test('預設「否」，說明裡不提', () => {
     assert.equal(field(ui, 'expandLore')?.value, 'off');
-    assert.ok(!note(ui).includes('拆完展开本批新设定'), note(ui));
+    assert.ok(!note(ui).includes('拆完展開本批新設定'), note(ui));
   });
 
-  test('选「否」提交不带 expandLore', () => {
+  test('選「否」提交不帶 expandLore', () => {
     ui.sent.length = 0;
     ui.clickEl(submitBtn(ui));
     const msg = ui.last('projectAction');
@@ -99,12 +99,12 @@ describe('拆细纲弹窗的「拆完展开本批新设定」', { skip: JSDOM_SK
     assert.equal(msg.expandLore, undefined);
   });
 
-  test('选「是」：说明里写清拆完再报次数、再问一次；提交带 expandLore', () => {
+  test('選「是」：說明裡寫清拆完再報次數、再問一次；提交帶 expandLore', () => {
     open();
     choose(ui, 'expandLore', 'on');
-    assert.ok(note(ui).includes('拆完展开本批新设定：每条 1 次，有几条要拆完才知道，到时再报次数、再问一次'), note(ui));
-    // 拆细纲那一段的次数不变（展开那几次不在这里的数里）。
-    assert.ok(note(ui).includes('预计 2 次调用，最多 23 次'), note(ui));
+    assert.ok(note(ui).includes('拆完展開本批新設定：每條 1 次，有幾條要拆完才知道，到時再報次數、再問一次'), note(ui));
+    // 拆細綱那一段的次數不變（展開那幾次不在這裡的數里）。
+    assert.ok(note(ui).includes('預計 2 次呼叫，最多 23 次'), note(ui));
     ui.sent.length = 0;
     ui.clickEl(submitBtn(ui));
     const msg = ui.last('projectAction');
@@ -113,42 +113,42 @@ describe('拆细纲弹窗的「拆完展开本批新设定」', { skip: JSDOM_SK
   });
 });
 
-describe('批量写章弹窗的写前提醒', { skip: JSDOM_SKIP }, () => {
+describe('批次寫章彈窗的寫前提醒', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
     ui = mount();
     ui.post({ type: 'project', tree: treeWith(thin) });
-    pickFromChapters(ui, '批量写章…');
+    pickFromChapters(ui, '批次寫章…');
   });
 
-  // 缺省写第 4–6 章：九层楼（第 5、6 章）、天机阁（第 5 章）在区间里，后山（第 9 章）不在。
-  test('区间里要用到的待完善设定提一句，不拦', () => {
+  // 預設寫第 4–6 章：九層樓（第 5、6 章）、天機閣（第 5 章）在區間裡，後山（第 9 章）不在。
+  test('區間裡要用到的待完善設定提一句，不攔', () => {
     assert.ok(
-      note(ui).includes('区间里 2 条要用到的设定还只有一句话（九层楼、天机阁），写之前可以先在工程页「待完善」里展开；不展开也照写。'),
+      note(ui).includes('區間裡 2 條要用到的設定還只有一句話（九層樓、天機閣），寫之前可以先在工程頁「待完善」裡展開；不展開也照寫。'),
       note(ui)
     );
     assert.ok(!submitBtn(ui).disabled);
   });
 
-  test('区间里没有就不提', () => {
+  test('區間裡沒有就不提', () => {
     type(ui, 'from', 7);
     type(ui, 'to', 8);
-    assert.ok(!note(ui).includes('还只有一句话'), note(ui));
+    assert.ok(!note(ui).includes('還只有一句話'), note(ui));
     esc(ui);
   });
 });
 
-describe('工作台的写前提醒', { skip: JSDOM_SKIP }, () => {
+describe('工作臺的寫前提醒', { skip: JSDOM_SKIP }, () => {
   let ui;
   const entry = () => ui.doc.getElementById('workbench');
   const tip = () => ui.doc.querySelector('.workbench-tip');
-  const NOTICE = '本章要用的 天机阁 还只有一句话，写之前可以先展开（在工程页「待完善」里右键「展开…」）。';
+  const NOTICE = '本章要用的 天機閣 還只有一句話，寫之前可以先展開（在工程頁「待完善」裡右鍵「展開…」）。';
   const post = (extra) =>
     ui.post({
       type: 'pipeline',
       pipeline: pipelineView(),
-      workbench: workbenchView({ stage: 'manuscript', title: '正文 · 第 12 章《夜入青云》', ...extra }),
+      workbench: workbenchView({ stage: 'manuscript', title: '正文 · 第 12 章《夜入青雲》', ...extra }),
     });
 
   before(() => {
@@ -157,20 +157,20 @@ describe('工作台的写前提醒', { skip: JSDOM_SKIP }, () => {
     post({ notice: NOTICE });
   });
 
-  test('入口挂淡色记号，不是 ⟳', () => {
+  test('入口掛淡色記號，不是 ⟳', () => {
     const mark = entry().querySelector('.wbt-entry-mark');
     assert.equal(mark?.textContent, '◌');
     assert.ok(mark.classList.contains('is-notice'));
   });
 
-  test('浮窗里淡色一句，与 ⟳ 分开', () => {
+  test('浮窗裡淡色一句，與 ⟳ 分開', () => {
     ui.clickEl(entry());
     assert.equal(tip()?.querySelector('.wbt-notice')?.textContent, `◌ ${NOTICE}`);
     assert.equal(tip().querySelector('.wbt-warning'), null);
   });
 
-  test('同时有上游变更：入口仍是 ⟳，浮窗两句都在', () => {
-    post({ notice: NOTICE, warning: '这一章的细纲在正文写完（或定稿）之后改过。' });
+  test('同時有上游變更：入口仍是 ⟳，浮窗兩句都在', () => {
+    post({ notice: NOTICE, warning: '這一章的細綱在正文寫完（或定稿）之後改過。' });
     assert.equal(entry().querySelector('.wbt-entry-mark')?.textContent, '⟳');
     assert.ok(tip()?.querySelector('.wbt-warning'));
     assert.ok(tip()?.querySelector('.wbt-notice'));

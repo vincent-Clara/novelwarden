@@ -39,33 +39,33 @@ import {
   writeWindowState,
 } from './windowState';
 
-const log = scoped('工作区');
+const log = scoped('工作區');
 
-/** 最后一个窗口离开之后，工程再留多久才关（刷新页面、断线重连都在这段时间里回来）。 */
+/** 最後一個視窗離開之後，工程再留多久才關（重新整理頁面、斷線重連都在這段時間裡回來）。 */
 const IDLE_MS = 60_000;
 
 export interface WorkspaceHubOptions {
-  /** 所有窗口共用的设置读写。 */
+  /** 所有視窗共用的設定讀寫。 */
   config: FileHost['config'];
-  /** window.json 所在目录。测试注入，缺省为 ~/.novelwarden。 */
+  /** window.json 所在目錄。測試注入，預設為 ~/.novelwarden。 */
   windowDir?: string;
-  /** 没有窗口的工程多久之后关。测试注入。 */
+  /** 沒有視窗的工程多久之後關。測試注入。 */
   idleMs?: number;
 }
 
-/** 一个网页窗口（一条 WebSocket）。 */
+/** 一個網頁視窗（一條 WebSocket）。 */
 export interface WindowConn {
   send(msg: OutMessage): void;
-  /** 这个窗口开着的工程。空窗口没有。 */
+  /** 這個視窗開著的工程。空視窗沒有。 */
   runtime?: Runtime;
-  /** 空窗口自己的宿主：弹窗、toast 只回这个窗口。 */
+  /** 空視窗自己的宿主：彈窗、toast 只回這個視窗。 */
   readonly host: FileHost;
   readonly scope: WindowScope;
-  /** 连接时绑定工程的那一步。之后的消息要等它做完。 */
+  /** 連線時繫結工程的那一步。之後的訊息要等它做完。 */
   ready: Promise<void>;
 }
 
-/** 一个打开着的工程。几个窗口开同一个工程时共用这一份。 */
+/** 一個開啟著的工程。幾個視窗開同一個工程時共用這一份。 */
 export interface Runtime {
   id: string;
   root: string;
@@ -80,19 +80,19 @@ export interface Runtime {
 }
 
 /**
- * 独立版进程里的工作区登记处。
+ * 獨立版程序裡的工作區登記處。
  *
- * 一个进程同时开着几个工程，每个窗口（WebSocket 连接）各自绑一个，或者是空窗口。
- * `ChatController` 仍然一对一绑一份 `NovelProject`；同一个工程开在几个窗口里，它们共用一份。
- * 广播只发给开着这个工程的那几个窗口，设置与最近打开的列表是全局的。
+ * 一個程序同時開著幾個工程，每個視窗（WebSocket 連線）各自綁一個，或者是空視窗。
+ * `ChatController` 仍然一對一綁一份 `NovelProject`；同一個工程開在幾個視窗裡，它們共用一份。
+ * 廣播只發給開著這個工程的那幾個視窗，設定與最近開啟的列表是全域的。
  *
- * core 里的 `getHost()` 靠 {@link runInScope} 落到对应窗口：处理哪个窗口的消息、跑哪个工程的
- * 监听与 MCP 调用，就在哪个上下文里跑。
+ * core 裡的 `getHost()` 靠 {@link runInScope} 落到對應視窗：處理哪個視窗的訊息、跑哪個工程的
+ * 監聽與 MCP 呼叫，就在哪個上下文裡跑。
  */
 export class WorkspaceHub {
   private readonly runtimes = new Map<string, Runtime>();
   private readonly conns = new Set<WindowConn>();
-  /** 最近操作的那个工程：没指定工程的 MCP 调用、不带 `?project=` 的新窗口都落到它上面。 */
+  /** 最近操作的那個工程：沒指定工程的 MCP 呼叫、不帶 `?project=` 的新視窗都落到它上面。 */
   private lastActive: Runtime | undefined;
   private readonly config: FileHost['config'];
   private readonly windowDir?: string;
@@ -104,11 +104,11 @@ export class WorkspaceHub {
     this.idleMs = opts.idleMs ?? IDLE_MS;
   }
 
-  // ---------------------------------------------------------------- 连接
+  // ---------------------------------------------------------------- 連線
 
   /**
-   * 一个窗口连上来。`requested` 是它网址上的 `?project=`：给了就开那个工程（已经开着就共用），
-   * 没给就落到最近操作的那个工程上；都没有是空窗口。
+   * 一個視窗連上來。`requested` 是它網址上的 `?project=`：給了就開那個工程（已經開著就共用），
+   * 沒給就落到最近操作的那個工程上；都沒有是空視窗。
    */
   connect(send: (msg: OutMessage) => void, requested?: string): WindowConn {
     const host = new FileHost(this.config, send);
@@ -121,7 +121,7 @@ export class WorkspaceHub {
         this.attach(conn, this.lastActive);
       }
       await this.pushReady(conn);
-    })().catch((err) => log.error(`窗口连接失败：${describeError(err)}`, err));
+    })().catch((err) => log.error(`視窗連線失敗：${describeError(err)}`, err));
     return conn;
   }
 
@@ -131,7 +131,7 @@ export class WorkspaceHub {
     this.detach(conn);
   }
 
-  /** 网页发来的一条消息。 */
+  /** 網頁發來的一條訊息。 */
   async receive(conn: WindowConn, msg: InMessage): Promise<void> {
     await conn.ready;
     if (msg.type === 'promptResult') {
@@ -146,20 +146,20 @@ export class WorkspaceHub {
           return;
         }
         if (!conn.runtime) {
-          conn.send({ type: 'toast', message: '请先打开文件夹', level: 'error' });
+          conn.send({ type: 'toast', message: '請先開啟資料夾', level: 'error' });
           return;
         }
         await conn.runtime.controller.handle(msg);
       } catch (err) {
-        log.error(`处理网页消息失败：${describeError(err)}`, err);
+        log.error(`處理網頁訊息失敗：${describeError(err)}`, err);
         conn.send({ type: 'toast', message: describeError(err), level: 'error' });
       }
     });
   }
 
-  // ---------------------------------------------------------------- 查询
+  // ---------------------------------------------------------------- 查詢
 
-  /** 某个窗口眼里的工作区：它自己开着的那一个，加上全局的最近打开。 */
+  /** 某個視窗眼裡的工作區：它自己開著的那一個，加上全域的最近開啟。 */
   snapshot(conn?: WindowConn): {
     currentId: string | null;
     items: WorkspaceItem[];
@@ -181,19 +181,19 @@ export class WorkspaceHub {
     };
   }
 
-  /** 不带 `?project=` 的窗口会落到哪个工程上。 */
+  /** 不帶 `?project=` 的視窗會落到哪個工程上。 */
   defaultRoot(): string | undefined {
     return this.lastActive?.root;
   }
 
-  /** 现在开着的所有工程根。 */
+  /** 現在開著的所有工程根。 */
   openRoots(): string[] {
     return [...this.runtimes.keys()];
   }
 
   /**
-   * MCP 的执行端。`project` 给了就找那个工程（必须开着），没给用最近操作的那个窗口的工程。
-   * 调用在那个工程的上下文里跑：确认框、写入审阅弹在开着它的窗口上。
+   * MCP 的執行端。`project` 給了就找那個工程（必須開著），沒給用最近操作的那個視窗的工程。
+   * 呼叫在那個工程的上下文裡跑：確認框、寫入審閱彈在開著它的視窗上。
    */
   mcpBackend(project?: string): McpBackend | undefined {
     const rt = project ? this.findRuntime(project) : this.lastActive;
@@ -207,16 +207,16 @@ export class WorkspaceHub {
     };
   }
 
-  /** 测试与 server 用：某个工程的 controller。不给就是最近操作的那个。 */
+  /** 測試與 server 用：某個工程的 controller。不給就是最近操作的那個。 */
   controllerOf(root?: string): ChatController | undefined {
     return (root ? this.findRuntime(root) : this.lastActive)?.controller;
   }
 
-  // ---------------------------------------------------------------- 启动
+  // ---------------------------------------------------------------- 啟動
 
   /**
-   * 启动时打开：CLI 给了目录就打开它；否则看 window.json 的 lastOpen。
-   * 路径已经不在盘上则清掉该字段。还没有窗口连上来，它成为「最近操作」的那个。
+   * 啟動時開啟：CLI 給了目錄就開啟它；否則看 window.json 的 lastOpen。
+   * 路徑已經不在盤上則清掉該欄位。還沒有視窗連上來，它成為「最近操作」的那個。
    */
   async bootstrap(cliRoot?: string): Promise<void> {
     const target = cliRoot ?? readWindowState(this.windowDir).lastOpen;
@@ -243,14 +243,14 @@ export class WorkspaceHub {
       this.lastActive = rt;
       rememberOpen(resolved, this.windowDir);
     } catch (err) {
-      log.error(`打开工程失败：${describeError(err)}`, err);
+      log.error(`開啟工程失敗：${describeError(err)}`, err);
     }
   }
 
-  // ---------------------------------------------------------------- 消息
+  // ---------------------------------------------------------------- 訊息
 
   /**
-   * 重连 / 前端 ready：有工程则 workspaces + 全量状态；空窗口不发假 init。
+   * 重連 / 前端 ready：有工程則 workspaces + 全量狀態；空視窗不發假 init。
    */
   async pushReady(conn: WindowConn): Promise<void> {
     conn.send({ type: 'workspaces', ...this.snapshot(conn) });
@@ -265,7 +265,7 @@ export class WorkspaceHub {
   }
 
   /**
-   * 吃掉 Hub 自己的消息。true = 已处理，不要再交给 controller。
+   * 吃掉 Hub 自己的訊息。true = 已處理，不要再交給 controller。
    */
   async handle(conn: WindowConn, msg: InMessage): Promise<boolean> {
     const rt = conn.runtime;
@@ -293,7 +293,7 @@ export class WorkspaceHub {
         this.activate(conn, msg.id);
         return true;
       case 'windowFocus':
-        // touch() 已经记下了。
+        // touch() 已經記下了。
         return true;
       case 'openLogDir':
         openWithSystem(homeDir());
@@ -305,7 +305,7 @@ export class WorkspaceHub {
         await this.openReadme(conn);
         return true;
       case 'saveSettings':
-        // 设置是全局的：所有窗口都收新设置，开着的工程都刷新一遍（模型清单在工程状态里）。
+        // 設定是全域的：所有視窗都收新設定，開著的工程都重新整理一遍（模型清單在工程狀態裡）。
         await saveSettingsFrom(msg.settings, this.globalSink(conn), () => this.refreshAll());
         this.pushSnapshots();
         return true;
@@ -325,12 +325,12 @@ export class WorkspaceHub {
         await this.pushReady(conn);
         return true;
       case 'openNativeSettings':
-        // 独立版没有原生设置页：空窗口也要吃掉这条，避免落到「请先打开文件夹」。
+        // 獨立版沒有原生設定頁：空視窗也要吃掉這條，避免落到「請先開啟資料夾」。
         return true;
       case 'checkEditorFiles':
       case 'listDir':
-        // 编辑器在后台核对磁盘、「文件」页一装好就要根目录：空窗口里都没有工程可读，静静吃掉，别为它弹「请先打开文件夹」
-        // ——从前欢迎页一打开右下角就挂着这一句红字，新人第一眼看到的是报错（2026-10-24）。
+        // 編輯器在後臺核對磁碟、「檔案」頁一裝好就要根目錄：空視窗裡都沒有工程可讀，靜靜吃掉，別為它彈「請先開啟資料夾」
+        // ——從前歡迎頁一開啟右下角就掛著這一句紅字，新人第一眼看到的是報錯（2026-10-24）。
         if (!rt) {
           return true;
         }
@@ -343,7 +343,7 @@ export class WorkspaceHub {
       return false;
     }
 
-    // 空窗口仍要能切设置/日志、停任务。其余创作类消息由 receive 拦。
+    // 空視窗仍要能切設定/日誌、停任務。其餘創作類訊息由 receive 攔。
     switch (msg.type) {
       case 'switchTab':
         conn.send({ type: 'tab', tab: msg.tab });
@@ -369,7 +369,7 @@ export class WorkspaceHub {
           conn.send({ type: 'tasks', tasks: activeTasks(null) });
         }
         return true;
-      // 设置页「技能」：技能库与工程无关，空窗口也能看、能装、能卸；绑定要工程（bindSkillFrom 会说）。
+      // 設定頁「技能」：技能庫與工程無關，空視窗也能看、能裝、能卸；繫結要工程（bindSkillFrom 會說）。
       case 'requestSkills':
         await pushSkillsTo(sink, {});
         return true;
@@ -390,11 +390,11 @@ export class WorkspaceHub {
     }
   }
 
-  // ---------------------------------------------------------------- 打开 / 关闭
+  // ---------------------------------------------------------------- 開啟 / 關閉
 
   /**
-   * 这个窗口打开一个工程（换掉它原来的那个）。别的窗口不受影响；原来那个工程没有窗口了就按
-   * 空闲回收。打不开时窗口保持原样。`quiet`：连接时按网址打开，不另外推一遍状态（connect 会推）。
+   * 這個視窗開啟一個工程（換掉它原來的那個）。別的視窗不受影響；原來那個工程沒有視窗了就按
+   * 空閒回收。打不開時視窗保持原樣。`quiet`：連線時按網址開啟，不另外推一遍狀態（connect 會推）。
    */
   async openIn(
     conn: WindowConn,
@@ -407,7 +407,7 @@ export class WorkspaceHub {
     }
 
     if (opts.mode === 'add' && conn.runtime && conn.runtime.id !== resolved) {
-      conn.host.toast('一个窗口只能开一个工程', 'error');
+      conn.host.toast('一個視窗只能開一個工程', 'error');
       return;
     }
 
@@ -421,7 +421,7 @@ export class WorkspaceHub {
       rt = await this.ensureRuntime(resolved);
     } catch (err) {
       conn.host.toast(describeError(err), 'error');
-      log.error(`打开工程失败：${describeError(err)}`, err);
+      log.error(`開啟工程失敗：${describeError(err)}`, err);
       return;
     }
     this.detach(conn);
@@ -431,11 +431,11 @@ export class WorkspaceHub {
     if (!opts.quiet) {
       await this.pushReady(conn);
     }
-    // 最近打开的列表变了，别的窗口的欢迎页也要跟着变。
+    // 最近開啟的列表變了，別的視窗的歡迎頁也要跟著變。
     this.pushSnapshots(conn);
   }
 
-  /** 这个窗口关掉它的工程。没有别的窗口开着它就当场关（停生成、关库）。 */
+  /** 這個視窗關掉它的工程。沒有別的視窗開著它就當場關（停生成、關庫）。 */
   closeIn(conn: WindowConn, id?: string): void {
     const rt = conn.runtime;
     if (!rt || (id && id !== rt.id)) {
@@ -443,10 +443,10 @@ export class WorkspaceHub {
     }
     this.detach(conn, { immediate: true });
     this.pushSnapshots();
-    log.info('已关闭文件夹');
+    log.info('已關閉資料夾');
   }
 
-  /** 测试用：关掉所有工程，所有窗口回到空窗口。 */
+  /** 測試用：關掉所有工程，所有視窗回到空視窗。 */
   async closeAll(): Promise<void> {
     for (const conn of this.conns) {
       conn.runtime = undefined;
@@ -462,10 +462,10 @@ export class WorkspaceHub {
       conn.send({ type: 'workspaces', ...this.snapshot(conn) });
       return;
     }
-    conn.host.toast('找不到这个工作区', 'error');
+    conn.host.toast('找不到這個工作區', 'error');
   }
 
-  // ---------------------------------------------------------------- 内部
+  // ---------------------------------------------------------------- 內部
 
   private attach(conn: WindowConn, rt: Runtime): void {
     conn.runtime = rt;
@@ -477,8 +477,8 @@ export class WorkspaceHub {
   }
 
   /**
-   * 窗口离开它的工程。那个工程没有窗口了：`immediate` 当场关；否则等一会儿（刷新、重连会回来），
-   * 到时还没人、也没在跑东西才关。最近操作的那个不关——没指定工程的 MCP 调用还要落到它上面。
+   * 視窗離開它的工程。那個工程沒有視窗了：`immediate` 當場關；否則等一會兒（重新整理、重連會回來），
+   * 到時還沒人、也沒在跑東西才關。最近操作的那個不關——沒指定工程的 MCP 呼叫還要落到它上面。
    */
   private detach(conn: WindowConn, opts: { immediate?: boolean } = {}): void {
     const rt = conn.runtime;
@@ -490,7 +490,7 @@ export class WorkspaceHub {
     if (rt.clients.size > 0) {
       return;
     }
-    // 没人答得了的弹窗按取消处理（与从前「全部网页断开」同一条规矩）。
+    // 沒人答得了的彈窗按取消處理（與從前「全部網頁斷開」同一條規矩）。
     rt.host.prompts.cancelAll();
     if (opts.immediate) {
       this.teardown(rt);
@@ -517,14 +517,14 @@ export class WorkspaceHub {
         this.scheduleIdle(rt);
         return;
       }
-      log.info(`工程已没有窗口，关闭：${rt.root}`);
+      log.info(`工程已沒有視窗，關閉：${rt.root}`);
       this.teardown(rt);
     }, this.idleMs);
-    // 不要因为这个计时器拖住进程退出。
+    // 不要因為這個計時器拖住程序退出。
     (rt.idleTimer as { unref?: () => void }).unref?.();
   }
 
-  /** 记下这个窗口在操作。它开着的工程成为「最近操作」的那个。 */
+  /** 記下這個視窗在操作。它開著的工程成為「最近操作」的那個。 */
   private touch(conn: WindowConn): void {
     const rt = conn.runtime;
     if (!rt || rt === this.lastActive) {
@@ -577,14 +577,14 @@ export class WorkspaceHub {
         clients,
       };
       this.runtimes.set(resolved, rt);
-      log.info(`已打开工程：${resolved}`);
+      log.info(`已開啟工程：${resolved}`);
       return rt;
     });
   }
 
   /**
-   * 停生成 → 关库 → 停 watcher → 卸 FileHost。
-   * 先关库再停 watcher：反过来 Windows 上 sqlite 文件会 EBUSY。
+   * 停生成 → 關庫 → 停 watcher → 卸 FileHost。
+   * 先關庫再停 watcher：反過來 Windows 上 sqlite 檔案會 EBUSY。
    */
   private teardown(rt: Runtime): void {
     this.runtimes.delete(rt.id);
@@ -618,7 +618,7 @@ export class WorkspaceHub {
     try {
       want.push(normalizePath(fsSync.realpathSync.native(path.resolve(root))));
     } catch {
-      // 不在盘上就只按字面比
+      // 不在盤上就只按字面比
     }
     for (const rt of this.runtimes.values()) {
       if (want.includes(normalizePath(rt.id))) {
@@ -633,22 +633,22 @@ export class WorkspaceHub {
       const target = path.resolve(absPath);
       const st = await fsp.stat(target);
       if (!st.isDirectory()) {
-        fail('不是目录');
+        fail('不是目錄');
         return undefined;
       }
       return await fsp.realpath(target);
     } catch {
-      fail('目录不存在');
+      fail('目錄不存在');
       return undefined;
     }
   }
 
-  /** 这个窗口自己的回执：设置页、技能页的推送与提示只回它。 */
+  /** 這個視窗自己的回執：設定頁、技能頁的推送與提示只回它。 */
   private sinkOf(conn: WindowConn): SettingsSink {
     return { post: (msg) => conn.send(msg), toast: (message, level) => conn.host.toast(message, level) };
   }
 
-  /** 设置改了：新设置推给所有窗口，提示只给发起的那个。 */
+  /** 設定改了：新設定推給所有視窗，提示只給發起的那個。 */
   private globalSink(conn: WindowConn): SettingsSink {
     return {
       post: (msg) => {
@@ -666,7 +666,7 @@ export class WorkspaceHub {
     }
   }
 
-  /** 每个窗口各推一份它眼里的 workspaces。`except` 那个刚推过。 */
+  /** 每個視窗各推一份它眼裡的 workspaces。`except` 那個剛推過。 */
   private pushSnapshots(except?: WindowConn): void {
     for (const c of this.conns) {
       if (c !== except) {
@@ -675,16 +675,16 @@ export class WorkspaceHub {
     }
   }
 
-  /** 经 workspace 网关新建文件；已存在拒绝，不覆盖。 */
+  /** 經 workspace 閘道器新建檔案；已存在拒絕，不覆蓋。 */
   private async createFile(conn: WindowConn, relPath: string, text?: string): Promise<void> {
     const rt = conn.runtime;
     if (!rt) {
-      conn.host.toast('请先打开文件夹', 'error');
+      conn.host.toast('請先開啟資料夾', 'error');
       return;
     }
     const rel = (relPath ?? '').trim();
     if (!rel) {
-      rt.host.toast('路径不能为空', 'error');
+      rt.host.toast('路徑不能為空', 'error');
       return;
     }
     try {
@@ -696,16 +696,16 @@ export class WorkspaceHub {
   }
 
   /**
-   * 欢迎页「新建一本书」「导入写好的书」：建文件夹、初始化（`createBookAt`），成了回 `projectCreated`，由前端照常打开
-   * ——开在这个窗口还是新窗口看「新窗口中打开项目」，那是前端 `openProject` 的事。没建成只说一句，什么都不回。
+   * 歡迎頁「新建一本書」「匯入寫好的書」：建資料夾、初始化（`createBookAt`），成了回 `projectCreated`，由前端照常開啟
+   * ——開在這個視窗還是新視窗看「新視窗中開啟專案」，那是前端 `openProject` 的事。沒建成只說一句，什麼都不回。
    */
   private async createProject(conn: WindowConn, msg: Extract<InMessage, { type: 'createProject' }>): Promise<void> {
     let root: string;
     try {
-      // 回真实路径：与打开之后 `workspaces` 的 `currentId` 同一个口径，前端据此认出「换成的就是这一本」。
+      // 回真實路徑：與開啟之後 `workspaces` 的 `currentId` 同一個口徑，前端據此認出「換成的就是這一本」。
       root = await fsp.realpath(await createBookAt(expandHome(msg.parent), { title: msg.title, author: msg.author }));
     } catch (err) {
-      log.warn('新建一本书没建成', describeError(err));
+      log.warn('新建一本書沒建成', describeError(err));
       conn.send({ type: 'toast', message: describeError(err), level: 'error' });
       return;
     }
@@ -713,8 +713,8 @@ export class WorkspaceHub {
   }
 
   /**
-   * 有工程且根下有 README → 内置编辑器打开。
-   * 否则找产品仓库根的 README 交给系统打开。都没有则 toast。
+   * 有工程且根下有 README → 內建編輯器開啟。
+   * 否則找產品倉庫根的 README 交給系統開啟。都沒有則 toast。
    */
   private async openReadme(conn: WindowConn): Promise<void> {
     const rt = conn.runtime;
@@ -728,7 +728,7 @@ export class WorkspaceHub {
             return;
           }
         } catch {
-          // 下一候选
+          // 下一候選
         }
       }
     }
@@ -737,13 +737,13 @@ export class WorkspaceHub {
       openWithSystem(product);
       return;
     }
-    conn.host.toast('找不到使用说明', 'error');
+    conn.host.toast('找不到使用說明', 'error');
   }
 }
 
 /**
- * 「新建一本书」的「放在」缺省值：最近打开的那本书所在的目录（书多半放在一处），那个目录已经不在了、或者一本都没打开过，
- * 就是家目录（Docker 里是 `/data`，书也放在那下面）。
+ * 「新建一本書」的「放在」預設值：最近開啟的那本書所在的目錄（書多半放在一處），那個目錄已經不在了、或者一本都沒開啟過，
+ * 就是家目錄（Docker 裡是 `/data`，書也放在那下面）。
  */
 function newProjectParent(recents: WorkspaceRecent[]): string {
   for (const r of recents) {
@@ -759,7 +759,7 @@ function newProjectParent(recents: WorkspaceRecent[]): string {
   return os.homedir();
 }
 
-/** 表单上手打的 `~/小说` 也认。 */
+/** 表單上手打的 `~/小說` 也認。 */
 function expandHome(p: string): string {
   const trimmed = p.trim();
   if (trimmed === '~') {
@@ -790,7 +790,7 @@ function findProductReadme(): string | undefined {
           }
         }
       } catch {
-        // 下一层
+        // 下一層
       }
       const parent = path.dirname(dir);
       if (parent === dir) {

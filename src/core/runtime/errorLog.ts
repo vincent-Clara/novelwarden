@@ -1,30 +1,30 @@
 /**
- * 失败记录：让「刚才那张卡没更新成功」这件事在界面上看得见。
+ * 失敗記錄：讓「剛才那張卡沒更新成功」這件事在介面上看得見。
  *
- * ## 为什么需要它
+ * ## 為什麼需要它
  *
- * 此前所有失败都只有两条出口：一条 `log.error`，和一条五秒就消失的 toast。
- * 两者都要求用户**恰好在看**。于是出现了这个 bug：角色卡的批次全部解析失败、
- * 卡一字未改（这个行为本身是对的），但工程页上那张卡跟成功的一模一样——
- * 作者以为更新过了，此后一直拿着一张旧卡续写。
+ * 此前所有失敗都只有兩條出口：一條 `log.error`，和一條五秒就消失的 toast。
+ * 兩者都要求使用者**恰好在看**。於是出現了這個 bug：角色卡的批次全部解析失敗、
+ * 卡一字未改（這個行為本身是對的），但工程頁上那張卡跟成功的一模一樣——
+ * 作者以為更新過了，此後一直拿著一張舊卡續寫。
  *
- * 更隐蔽的是「部分失败」：三批里有一批挂了，成果照写，但「已读到」水位线
- * 停在失败之前，下次增量会重来。这件事以前只有一条 `log.warn`，界面上
- * 完全无痕。
+ * 更隱蔽的是「部分失敗」：三批裡有一批掛了，成果照寫，但「已讀到」水位線
+ * 停在失敗之前，下次增量會重來。這件事以前只有一條 `log.warn`，介面上
+ * 完全無痕。
  *
- * 所以失败要**留在目标身上**，而不是留在时间线上：工程页那一行上挂个感叹号，
- * 一直挂到它成功为止。
+ * 所以失敗要**留在目標身上**，而不是留在時間線上：工程頁那一行上掛個感嘆號，
+ * 一直掛到它成功為止。
  *
- * ## 三条约定
+ * ## 三條約定
  *
- * 1. **写失败记录本身绝不会失败**：全部 API 内部吞掉异常。库打不开时
- *    整套机制静默退化成「只有日志」，一个功能都不受影响。
- * 2. **成功必须清记录**（{@link clearFailures}）。修好了还挂着感叹号，
- *    比一开始不报错更糟——用户会学会无视它。
- * 3. **`targetKey` 用 relPath 而不是名字**：名字会被作者改，路径才是当下的
- *    身份，而且前端的树本来就按 relPath 索引，能直接对上。代价是改名/移动
- *    之后旧记录对不上而不再显示；这可接受（重跑一次就有新记录），不为它
- *    去给 `fileOps.ts` 加联动。
+ * 1. **寫失敗記錄本身絕不會失敗**：全部 API 內部吞掉異常。庫打不開時
+ *    整套機制靜默退化成「只有日誌」，一個功能都不受影響。
+ * 2. **成功必須清記錄**（{@link clearFailures}）。修好了還掛著感嘆號，
+ *    比一開始不報錯更糟——使用者會學會無視它。
+ * 3. **`targetKey` 用 relPath 而不是名字**：名字會被作者改，路徑才是當下的
+ *    身份，而且前端的樹本來就按 relPath 索引，能直接對上。代價是改名/移動
+ *    之後舊記錄對不上而不再顯示；這可接受（重跑一次就有新記錄），不為它
+ *    去給 `fileOps.ts` 加聯動。
  */
 
 import { openDatabase } from './db';
@@ -32,48 +32,48 @@ import { NovelProject } from '../model/project';
 import { FailureView } from '../protocol';
 
 /**
- * 失败挂在什么东西上。与工程页的分区一一对应。
+ * 失敗掛在什麼東西上。與工程頁的分割槽一一對應。
  *
- * `plot` 是创作流水线那一区（细纲）；`chapter` 是发布章节（定稿失败挂这里）。库里可能还躺着
- * 换轴之前记下的行——它们指向 `chapters/` 下的路径，读出来只是挂不到任何
- * 一行上，不该因此让整张表读不出来。
+ * `plot` 是創作流水線那一區（細綱）；`chapter` 是釋出章節（定稿失敗掛這裡）。庫裡可能還躺著
+ * 換軸之前記下的行——它們指向 `chapters/` 下的路徑，讀出來只是掛不到任何
+ * 一行上，不該因此讓整張表讀不出來。
  */
 export type FailureTargetKind = 'character' | 'plot' | 'chapter' | 'lore' | 'setting' | 'threads';
 
 /**
- * - `error`：这次动作整体没成，目标**一字未改**。
- * - `warn`：部分成了（成果已写回），但有一块没成，下次会重来。
+ * - `error`：這次動作整體沒成，目標**一字未改**。
+ * - `warn`：部分成了（成果已寫回），但有一塊沒成，下次會重來。
  */
 export type FailureSeverity = 'error' | 'warn';
 
 export interface FailureRecord {
-  /** 日志来源名，与 `scoped()` 用的那个一致（「角色卡」「定稿」「设定」）。 */
+  /** 日誌來源名，與 `scoped()` 用的那個一致（「角色卡」「定稿」「設定」）。 */
   scope: string;
   targetKind: FailureTargetKind;
-  /** 目标的工作区相对路径。 */
+  /** 目標的工作區相對路徑。 */
   targetKey: string;
   severity: FailureSeverity;
-  /** 哪个动作失败了，如 `updateCard` / `summarize`。清记录时按它筛。 */
+  /** 哪個動作失敗了，如 `updateCard` / `summarize`。清記錄時按它篩。 */
   op: string;
-  /** 一句人话，直接显示在浮窗的标题行。 */
+  /** 一句人話，直接顯示在浮窗的標題行。 */
   message: string;
-  /** 多行补充：失败的批次/章节、水位线停在哪、建议怎么办。 */
+  /** 多行補充：失敗的批次/章節、水位線停在哪、建議怎麼辦。 */
   detail?: string;
 }
 
 /**
- * 一个目标最多显示几条。
+ * 一個目標最多顯示幾條。
  *
- * 浮窗里摊开五条以上就没人看了，而最近的那条才是当下的状态。
- * 在查询处限制，不在写入处删——历史留着，日志页将来要按目标翻。
+ * 浮窗裡攤開五條以上就沒人看了，而最近的那條才是當下的狀態。
+ * 在查詢處限制，不在寫入處刪——歷史留著，日誌頁將來要按目標翻。
  */
 const MAX_PER_TARGET = 3;
 
 /**
- * 记一条失败。
+ * 記一條失敗。
  *
- * 调用方**不必** try/catch：库不可用、盘满、表被手删，都只是这条记录没留下，
- * 绝不往上抛。失败路径上再抛一个异常，会把「更新失败」变成「更新崩溃」。
+ * 呼叫方**不必** try/catch：庫不可用、盤滿、表被手刪，都只是這條記錄沒留下，
+ * 絕不往上拋。失敗路徑上再拋一個異常，會把「更新失敗」變成「更新崩潰」。
  */
 export async function recordFailure(project: NovelProject, record: FailureRecord): Promise<void> {
   const db = await openDatabase(project);
@@ -81,8 +81,8 @@ export async function recordFailure(project: NovelProject, record: FailureRecord
     return;
   }
   try {
-    // 同一个目标 + 同一个动作只保留最新一条未清除的：连着重试三次失败，
-    // 用户要看的是「现在还错着」，不是三条一模一样的记录。
+    // 同一個目標 + 同一個動作只保留最新一條未清除的：連著重試三次失敗，
+    // 使用者要看的是「現在還錯著」，不是三條一模一樣的記錄。
     db.run(
       "UPDATE errors SET cleared_at = ? WHERE target_kind = ? AND target_key = ? AND op = ? AND cleared_at IS NULL",
       new Date().toISOString(),
@@ -103,15 +103,15 @@ export async function recordFailure(project: NovelProject, record: FailureRecord
       record.detail ?? null
     );
   } catch {
-    /* 见函数注释：记不下来也不能影响正事 */
+    /* 見函式註釋：記不下來也不能影響正事 */
   }
 }
 
 /**
- * 目标成功了，把它挂着的失败记录清掉。
+ * 目標成功了，把它掛著的失敗記錄清掉。
  *
- * `op` 给了就只清那个动作的——「定稿成功了」不该顺手把「角色卡失败了」
- * 一起抹掉。不给则清该目标的全部。
+ * `op` 給了就只清那個動作的——「定稿成功了」不該順手把「角色卡失敗了」
+ * 一起抹掉。不給則清該目標的全部。
  */
 export async function clearFailures(
   project: NovelProject,
@@ -119,8 +119,8 @@ export async function clearFailures(
   targetKey: string,
   op?: string
 ): Promise<void> {
-  // 没有库就没有要清的记录——别为了「清空」把库建出来。
-  // 成功路径每章/每卡都会走一次，这是最热的调用点。
+  // 沒有庫就沒有要清的記錄——別為了「清空」把庫建出來。
+  // 成功路徑每章/每卡都會走一次，這是最熱的呼叫點。
   const db = await openDatabase(project, { create: false });
   if (!db) {
     return;
@@ -149,11 +149,11 @@ export async function clearFailures(
 }
 
 /**
- * 某个目标上某个动作还挂着的那一条（最新的）。没有、或库打不开时返回 undefined。
+ * 某個目標上某個動作還掛著的那一條（最新的）。沒有、或庫打不開時返回 undefined。
  *
- * 只有一处要它：定稿时作者改过的角色状态没被覆盖，黄 ❗ 的说明里带着机器给出的那一版，
- * 「对比…」入口从这里把它取回来（features/characterState.ts）。那一版是可以重新生成的
- * 痕迹，放在库里符合第 17 条；库没了只是这个入口说「没有待对比的」，卡本身不受影响。
+ * 只有一處要它：定稿時作者改過的角色狀態沒被覆蓋，黃 ❗ 的說明裡帶著機器給出的那一版，
+ * 「對比…」入口從這裡把它取回來（features/characterState.ts）。那一版是可以重新生成的
+ * 痕跡，放在庫裡符合第 17 條；庫沒了只是這個入口說「沒有待對比的」，卡本身不受影響。
  */
 export async function activeFailure(
   project: NovelProject,
@@ -187,16 +187,16 @@ export async function activeFailure(
 }
 
 /**
- * 全部未清除的失败记录，按 `targetKey` 聚合，每个目标最多 {@link MAX_PER_TARGET} 条（新的在前）。
+ * 全部未清除的失敗記錄，按 `targetKey` 聚合，每個目標最多 {@link MAX_PER_TARGET} 條（新的在前）。
  *
- * **一次查询拿全部**，不要按目标逐个查：工程页每次刷新都要为几十张卡、
- * 几百章各查一次的话，一次 `pushState` 就是几百条 SQL。
+ * **一次查詢拿全部**，不要按目標逐個查：工程頁每次重新整理都要為幾十張卡、
+ * 幾百章各查一次的話，一次 `pushState` 就是幾百條 SQL。
  */
 export async function listActiveFailures(
   project: NovelProject
 ): Promise<Record<string, FailureView[]>> {
-  // 纯读取：库还不存在就别建。工程页每次刷新都走这里，为一个从没出过错的
-  // 工程凭空生出一个 db 文件是不该有的副作用。
+  // 純讀取：庫還不存在就別建。工程頁每次重新整理都走這裡，為一個從沒出過錯的
+  // 工程憑空生出一個 db 檔案是不該有的副作用。
   const db = await openDatabase(project, { create: false });
   if (!db) {
     return {};
@@ -222,7 +222,7 @@ export async function listActiveFailures(
       }
       list.push({
         at: row.at,
-        // 库是文件，作者可能拿别的工具改过；认不出的一律当 error（宁可多提醒）。
+        // 庫是檔案，作者可能拿別的工具改過；認不出的一律當 error（寧可多提醒）。
         severity: row.severity === 'warn' ? 'warn' : 'error',
         message: row.message,
         detail: row.detail ?? undefined,
@@ -231,7 +231,7 @@ export async function listActiveFailures(
     }
     return out;
   } catch {
-    // 读不出来就当没有失败记录——工程页照常显示，只是没有感叹号。
+    // 讀不出來就當沒有失敗記錄——工程頁照常顯示，只是沒有感嘆號。
     return {};
   }
 }

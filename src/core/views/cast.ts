@@ -5,77 +5,77 @@ import { CharacterCard, SummaryCast } from '../model/types';
 import { normalizeName, sanitizeAliases } from '../model/naming';
 
 /**
- * 出场人物索引：把各章**定稿过的**细纲里的 `cast` 反向聚合成「谁在哪几章出现过」。
+ * 出場人物索引：把各章**定稿過的**細綱裡的 `cast` 反向聚合成「誰在哪幾章出現過」。
  *
- * 这是「定稿 → 角色」这条链路的中枢，三处在用：
- * - 工程页的角色区：已建卡的角色补出场章数，未建卡的单列一组等待建卡；
- * - 「更新角色卡」：拿某个角色的出场章去装配语料；
- * - 角色卡的 `appearsIn` 字段：写卡时从这里取。
+ * 這是「定稿 → 角色」這條鏈路的中樞，三處在用：
+ * - 工程頁的角色區：已建卡的角色補出場章數，未建卡的單列一組等待建卡；
+ * - 「更新角色卡」：拿某個角色的出場章去裝配語料；
+ * - 角色卡的 `appearsIn` 欄位：寫卡時從這裡取。
  *
- * 关键约定：
+ * 關鍵約定：
  *
- * - **定稿过的细纲是真相，角色卡里的 appearsIn 只是缓存**（第 14 条）。任何时候想知道谁在哪出场，
- *   都从这里重算，不要读角色卡的字段——重新定稿之后卡里的值就旧了。**没定稿的细纲不算**：
- *   那一节写的是计划出场，混进来会污染出场统计与角色卡语料（D13）。
- * - **匹配按名字与别名，不按 slug**。细纲里的名字是模型写的，角色卡的
- *   文件名是作者起的，两者没有硬关联；靠 `name ∪ aliases` 建索引。
- * - **正式名压过别名**。两趟登记：先把所有卡的 `name` 占上，再登记别名，
- *   别名抢不走别人的正式名。实战里模型给方源的卡挂过一条 `方正` 别名
- *   （那是她孪生弟弟），先到先得会让方正的出场章节整批记到方源头上。
- * - **卡上的别名先过泛称过滤**（[model/naming.ts](../model/naming.ts)）。`姐姐`、`她` 这类
- *   称呼谁都能用，拿去匹配会把几个角色串成一个。只影响匹配，不改文件。
- * - **未建卡的人物经 [model/identity.ts](../model/identity.ts) 聚类**，不再按主名硬分——
- *   细纲里 `方源` 与 `古月方源` 交替出现，只按主名分会各建一张卡。
- * - 一个名字被两张卡同时声明时先到先得，并在 `conflicts` 里留下记录，
- *   由工程页提示作者（出场统计必然有一张是错的）。
+ * - **定稿過的細綱是真相，角色卡裡的 appearsIn 只是快取**（第 14 條）。任何時候想知道誰在哪出場，
+ *   都從這裡重算，不要讀角色卡的欄位——重新定稿之後卡裡的值就舊了。**沒定稿的細綱不算**：
+ *   那一節寫的是計劃出場，混進來會汙染出場統計與角色卡語料（D13）。
+ * - **匹配按名字與別名，不按 slug**。細綱裡的名字是模型寫的，角色卡的
+ *   檔名是作者起的，兩者沒有硬關聯；靠 `name ∪ aliases` 建索引。
+ * - **正式名壓過別名**。兩趟登記：先把所有卡的 `name` 占上，再登記別名，
+ *   別名搶不走別人的正式名。實戰裡模型給方源的卡掛過一條 `方正` 別名
+ *   （那是她孿生弟弟），先到先得會讓方正的出場章節整批記到方源頭上。
+ * - **卡上的別名先過泛稱過濾**（[model/naming.ts](../model/naming.ts)）。`姐姐`、`她` 這類
+ *   稱呼誰都能用，拿去匹配會把幾個角色串成一個。隻影響匹配，不改檔案。
+ * - **未建卡的人物經 [model/identity.ts](../model/identity.ts) 聚類**，不再按主名硬分——
+ *   細綱裡 `方源` 與 `古月方源` 交替出現，只按主名分會各建一張卡。
+ * - 一個名字被兩張卡同時宣告時先到先得，並在 `conflicts` 裡留下記錄，
+ *   由工程頁提示作者（出場統計必然有一張是錯的）。
  */
 
-/** 一位出场人物的聚合结果。 */
+/** 一位出場人物的聚合結果。 */
 export interface CastMember {
-  /** 展示名。已建卡的用卡上的 name，未建卡的用细纲里出现最多的那个写法。 */
+  /** 展示名。已建卡的用卡上的 name，未建卡的用細綱裡出現最多的那個寫法。 */
   name: string;
-  /** 细纲里见过的其它称呼（不含 name 本身）。 */
+  /** 細綱裡見過的其它稱呼（不含 name 本身）。 */
   aliases: string[];
-  /** 出场章号，升序去重。 */
+  /** 出場章號，升序去重。 */
   plots: number[];
-  /** 已建卡时给出那张卡；未建卡为 undefined。 */
+  /** 已建卡時給出那張卡；未建卡為 undefined。 */
   card?: CharacterCard;
 }
 
-/** 两张卡抢同一个称呼。 */
+/** 兩張卡搶同一個稱呼。 */
 export interface CastConflict {
-  /** 被抢的称呼。 */
+  /** 被搶的稱呼。 */
   name: string;
-  /** 卷入的角色卡 slug。第一个是当前占着这个称呼的那张。 */
+  /** 捲入的角色卡 slug。第一個是當前佔著這個稱呼的那張。 */
   slugs: string[];
   /**
-   * - `name`：两张卡的**正式名**一模一样，多半是同一个人被建了两张卡。
-   * - `alias`：一个称呼被多张卡当成自己的（别名撞别名，或别名撞上别人的正式名）。
+   * - `name`：兩張卡的**正式名**一模一樣，多半是同一個人被建了兩張卡。
+   * - `alias`：一個稱呼被多張卡當成自己的（別名撞別名，或別名撞上別人的正式名）。
    */
   kind: 'name' | 'alias';
 }
 
 export interface CastIndex {
-  /** 已建卡的角色（含一次都没在定稿里出现过的——手写的卡也要列出来）。 */
+  /** 已建卡的角色（含一次都沒在定稿裡出現過的——手寫的卡也要列出來）。 */
   known: CastMember[];
-  /** 定稿里出现、但还没有角色卡的人物，按出场章数降序。 */
+  /** 定稿裡出現、但還沒有角色卡的人物，按出場章數降序。 */
   unknown: CastMember[];
-  /** 被多张角色卡同时声明的称呼，供上层提示作者。 */
+  /** 被多張角色卡同時宣告的稱呼，供上層提示作者。 */
   conflicts: CastConflict[];
   /**
-   * 聚类时被守卫拦下的「看着像同一人但判定为两个人」的链接。
-   * 维护命令用它解释「为什么方源和方正没有合并」。
+   * 聚類時被守衛攔下的「看著像同一人但判定為兩個人」的連結。
+   * 維護命令用它解釋「為什麼方源和方正沒有合併」。
    */
   rejectedLinks: RejectedLink[];
-  /** 参与统计的（定稿过的）细纲数。为 0 时上层不该显示「没有出场人物」——是还没定稿过。 */
+  /** 參與統計的（定稿過的）細綱數。為 0 時上層不該顯示「沒有出場人物」——是還沒定稿過。 */
   summaryCount: number;
 }
 
 /**
- * 扫全部定稿过的细纲，建出场索引。
+ * 掃全部定稿過的細綱，建出場索引。
  *
- * 细纲列表本身有缓存（`NovelProject.listPlots`）；`plots` 传进来就直接用——工程页刷新时
- * 流水线那一趟已经拿到这一份了。单独调用（角色卡维护等）不传即可。
+ * 細綱列表本身有快取（`NovelProject.listPlots`）；`plots` 傳進來就直接用——工程頁重新整理時
+ * 流水線那一趟已經拿到這一份了。單獨呼叫（角色卡維護等）不傳即可。
  */
 export async function buildCastIndex(project: NovelProject, plots?: readonly Plot[]): Promise<CastIndex> {
   const cards = await project.listCharacters();
@@ -83,11 +83,11 @@ export async function buildCastIndex(project: NovelProject, plots?: readonly Plo
 
   const { cardByName, conflicts } = indexCards(cards);
 
-  /** slug → 出场章号。 */
+  /** slug → 出場章號。 */
   const plotsOf = new Map<string, Set<number>>();
-  /** slug → 细纲里见过的别称。 */
+  /** slug → 細綱裡見過的別稱。 */
   const aliasesOf = new Map<string, Set<string>>();
-  /** 没能归到任何一张卡的条目，按章收着，稍后整体聚类。 */
+  /** 沒能歸到任何一張卡的條目，按章收著，稍後整體聚類。 */
   const orphanPlots: IdentityChapter[] = [];
 
   for (const plot of finalized) {
@@ -95,7 +95,7 @@ export async function buildCastIndex(project: NovelProject, plots?: readonly Plo
 
     for (const entry of plot.cast) {
       const aliases = sanitizeAliases(entry.aliases, entry.name);
-      // 名字与别名都拿去找卡：模型这一章写的是「阿昭」，也该记到林昭头上。
+      // 名字與別名都拿去找卡：模型這一章寫的是「阿昭」，也該記到林昭頭上。
       const card =
         cardByName.get(normalizeName(entry.name)) ??
         aliases.map((a) => cardByName.get(normalizeName(a))).find(Boolean);
@@ -132,16 +132,16 @@ export async function buildCastIndex(project: NovelProject, plots?: readonly Plo
     aliases: group.names.slice(1),
     plots: group.chapters,
   }));
-  // 戏份重的排前面：作者要建的卡多半是这些。
+  // 戲份重的排前面：作者要建的卡多半是這些。
   unknown.sort((a, b) => b.plots.length - a.plots.length || a.name.localeCompare(b.name, 'zh-Hans-CN'));
 
   return { known, unknown, conflicts, rejectedLinks: identity.rejected, summaryCount: finalized.length };
 }
 
 /**
- * 出场统计认的那几份细纲：**定稿过的**（有 `sourceHash`，第 14 条），同号只认路径排序第一份
- * （与流水线认号同一个口径）。定稿之后正文又改过的照样算——那是最后一次定稿时的实际出场，
- * 比没有强；重新定稿就跟上了。设定名录（views/lore.ts）认的也是这几份。
+ * 出場統計認的那幾份細綱：**定稿過的**（有 `sourceHash`，第 14 條），同號只認路徑排序第一份
+ * （與流水線認號同一個口徑）。定稿之後正文又改過的照樣算——那是最後一次定稿時的實際出場，
+ * 比沒有強；重新定稿就跟上了。設定名錄（views/lore.ts）認的也是這幾份。
  */
 export function finalizedPlots(plots: readonly Plot[]): Plot[] {
   const seen = new Set<number>();
@@ -149,11 +149,11 @@ export function finalizedPlots(plots: readonly Plot[]): Plot[] {
 }
 
 /**
- * 建「称呼 → 角色卡」表。
+ * 建「稱呼 → 角色卡」表。
  *
- * **两趟**：先登记全部卡的正式名，再登记别名。正式名之间撞车才是真冲突
- * （同一个人两张卡）；别名撞上别人的正式名一律判别名输——那多半是模型给
- * 张三的卡挂了李四的名字，让它抢走李四的出场章节是最坏的结果。
+ * **兩趟**：先登記全部卡的正式名，再登記別名。正式名之間撞車才是真衝突
+ * （同一個人兩張卡）；別名撞上別人的正式名一律判別名輸——那多半是模型給
+ * 張三的卡掛了李四的名字，讓它搶走李四的出場章節是最壞的結果。
  */
 function indexCards(cards: readonly CharacterCard[]): {
   cardByName: Map<string, CharacterCard>;
@@ -182,7 +182,7 @@ function indexCards(cards: readonly CharacterCard[]): {
     }
     const owner = cardByName.get(key);
     if (owner && owner.slug !== card.slug) {
-      // 两张卡的正式名撞了：出场统计必然有一张是错的，作者需要知道。
+      // 兩張卡的正式名撞了：出場統計必然有一張是錯的，作者需要知道。
       clash(card.name, 'name', owner, card);
       continue;
     }
@@ -203,8 +203,8 @@ function indexCards(cards: readonly CharacterCard[]): {
       if (owner.slug === card.slug) {
         continue;
       }
-      // 别名撞车一律判别名输：撞上别人的正式名尤其如此——那多半是模型给张三
-      // 的卡挂了李四的名字，让它抢走李四的出场章节是最坏的结果。
+      // 別名撞車一律判別名輸：撞上別人的正式名尤其如此——那多半是模型給張三
+      // 的卡掛了李四的名字，讓它搶走李四的出場章節是最壞的結果。
       clash(alias, 'alias', owner, card);
     }
   }
@@ -213,9 +213,9 @@ function indexCards(cards: readonly CharacterCard[]): {
 }
 
 /**
- * 「定稿里的一位出场人物 → 他的角色卡」，与 {@link buildCastIndex} 同一张表（正式名压过别名、
- * 泛称先滤掉）。定稿更新角色状态时用：本章细纲定稿说谁出场了，就给谁的卡更新——两处认人
- * 的规则一旦分叉，出场统计说他在、状态却没人更新。
+ * 「定稿裡的一位出場人物 → 他的角色卡」，與 {@link buildCastIndex} 同一張表（正式名壓過別名、
+ * 泛稱先濾掉）。定稿更新角色狀態時用：本章細綱定稿說誰出場了，就給誰的卡更新——兩處認人
+ * 的規則一旦分叉，出場統計說他在、狀態卻沒人更新。
  */
 export function cardLookup(cards: readonly CharacterCard[]): (entry: SummaryCast | string) => CharacterCard | undefined {
   const { cardByName } = indexCards(cards);
@@ -226,17 +226,17 @@ export function cardLookup(cards: readonly CharacterCard[]): (entry: SummaryCast
   };
 }
 
-/** 某个角色的出场章号。找不到（名字对不上任何定稿）时返回空数组。 */
+/** 某個角色的出場章號。找不到（名字對不上任何定稿）時返回空陣列。 */
 export function appearancesOf(index: CastIndex, card: CharacterCard): number[] {
   return index.known.find((m) => m.card?.slug === card.slug)?.plots ?? [];
 }
 
 /**
- * 读出全部定稿过的细纲的 cast，作为聚类的原料。
+ * 讀出全部定稿過的細綱的 cast，作為聚類的原料。
  *
- * 与 `buildCastIndex` 的区别：那里**先**把条目分给角色卡、只对剩下的孤儿聚类；
- * 这里不分卡，全量给出去——维护命令要问的恰恰是「已建的这几张卡是不是同一个人」，
- * 先按卡分开就什么也看不出来了。
+ * 與 `buildCastIndex` 的區別：那裡**先**把條目分給角色卡、只對剩下的孤兒聚類；
+ * 這裡不分卡，全量給出去——維護命令要問的恰恰是「已建的這幾張卡是不是同一個人」，
+ * 先按卡分開就什麼也看不出來了。
  */
 export async function readCastPlots(project: NovelProject): Promise<IdentityChapter[]> {
   return finalizedPlots(await project.listChapterPlots())
@@ -255,12 +255,12 @@ function sortedNos(set: Set<number> | undefined): number[] {
 }
 
 /**
- * `第 3、7、12 章` / `第 3、7、12 章等 20 章`——列表太长时只列前几个。
- * 前端与日志共用，保证同一份数据在两处说法一致。
+ * `第 3、7、12 章` / `第 3、7、12 章等 20 章`——列表太長時只列前幾個。
+ * 前端與日誌共用，保證同一份資料在兩處說法一致。
  */
 export function describePlots(nos: number[], max = 6): string {
   if (nos.length === 0) {
-    return '未在同步过的章里出现';
+    return '未在同步過的章裡出現';
   }
   const head = nos.slice(0, max).join('、');
   return nos.length > max ? `第 ${head} 章等 ${nos.length} 章` : `第 ${head} 章`;

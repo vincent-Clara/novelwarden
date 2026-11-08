@@ -1,19 +1,19 @@
 /**
- * 工具栏上的路径：面包屑「细纲 › 第一卷 › 第 3 章 夜访」。
+ * 工具欄上的路徑：麵包屑「細綱 › 第一卷 › 第 3 章 夜訪」。
  *
- * 称呼由后端算（`EditorFileView.label.crumbs`，`views/editorLabel.ts`），前端不拿路径猜。原始相对路径挂在
- * 悬停提示上。带 `dir` 的段是目录：点了在「文件」页定位到它（`nf-reveal-in-files`，资源管理器自己展开、
- * view 切页签——编辑器不碰它们的状态）。
+ * 稱呼由後端算（`EditorFileView.label.crumbs`，`views/editorLabel.ts`），前端不拿路徑猜。原始相對路徑掛在
+ * 懸停提示上。帶 `dir` 的段是目錄：點了在「檔案」頁定位到它（`nf-reveal-in-files`，資源管理器自己展開、
+ * view 切頁籤——編輯器不碰它們的狀態）。
  *
- * **章节那一段的标题优先取章节索引**（`chapterIndex.ts`，后端的 `chapterIndex` 消息）：`editorLabel` 是纯函数、
- * 不读盘，只能拿文件名里的那一段；而有正文的章改了标题，文件名是不动的（第 7 条）——那时章节条、「转到…」、
- * 工程页说的都是新标题，面包屑不该还写旧的。索引里没有这一份（还没收到、不是正文或细纲）时照后端给的写；
- * 索引变了重画一遍。标签上仍写文件名（它说的是这个文件）。
+ * **章節那一段的標題優先取章節索引**（`chapterIndex.ts`，後端的 `chapterIndex` 訊息）：`editorLabel` 是純函式、
+ * 不讀盤，只能拿檔名裡的那一段；而有正文的章改了標題，檔名是不動的（第 7 條）——那時章節條、「轉到…」、
+ * 工程頁說的都是新標題，麵包屑不該還寫舊的。索引裡沒有這一份（還沒收到、不是正文或細綱）時照後端給的寫；
+ * 索引變了重畫一遍。標籤上仍寫檔名（它說的是這個檔案）。
  *
- * 太长时**前面的段先省略**，最后一段（这份文件）最后才让：从前用 `direction: rtl` 做左侧省略，
- * `.novelwarden/…` 开头的路径会把那个点号排到末尾去。
+ * 太長時**前面的段先省略**，最後一段（這份檔案）最後才讓：從前用 `direction: rtl` 做左側省略，
+ * `.novelwarden/…` 開頭的路徑會把那個點號排到末尾去。
  *
- * 后端没给称呼（没打开工程）时只写原始路径，一段，不能点。
+ * 後端沒給稱呼（沒開啟工程）時只寫原始路徑，一段，不能點。
  */
 import { el } from '../dom';
 import { revealInFiles } from '../globals';
@@ -21,7 +21,7 @@ import type { EditorCrumb } from '../protocol';
 import { chapterAt, onChapterIndex } from './chapterIndex';
 import type { OpenFile } from './paneElements';
 
-/** 画过面包屑的那几格（两块编辑区各一格）与当时那份文件：章节索引变了重画。 */
+/** 畫過麵包屑的那幾格（兩塊編輯區各一格）與當時那份檔案：章節索引變了重畫。 */
 const shown = new Map<HTMLElement, OpenFile>();
 
 onChapterIndex(() => {
@@ -46,7 +46,7 @@ export function renderBreadcrumb(target: HTMLElement, file: OpenFile): void {
       const dir = crumb.dir;
       const btn = el('button', 'ed-crumb ed-crumb-dir', crumb.label);
       btn.type = 'button';
-      btn.title = `在「文件」页定位到 ${dir || '工程根目录'}`;
+      btn.title = `在「檔案」頁定位到 ${dir || '工程根目錄'}`;
       btn.addEventListener('click', () => revealInFiles(dir, true));
       target.appendChild(btn);
     } else {
@@ -55,7 +55,7 @@ export function renderBreadcrumb(target: HTMLElement, file: OpenFile): void {
   });
 }
 
-/** 最后一段：这份文件是某一章的正文或细纲、索引里有标题时写「第 N 章 标题」，否则照后端给的。 */
+/** 最後一段：這份檔案是某一章的正文或細綱、索引裡有標題時寫「第 N 章 標題」，否則照後端給的。 */
 function leafOf(file: OpenFile, crumb: EditorCrumb): string {
   if (!file.label) {
     return crumb.label;

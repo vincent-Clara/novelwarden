@@ -1,33 +1,33 @@
 /**
- * 码字统计（独立版内置编辑器，阶段四）的装配：状态栏字数那一格、本次码字、今日码字、「视图 → 统计」那一组的
- * 编辑器一半。口径在 `writingStats.ts`（纯函数），「今日」怎么存在 `statsDaily.ts`，面板在 `statsPanel.ts`。
+ * 碼字統計（獨立版內建編輯器，階段四）的裝配：狀態列字數那一格、本次碼字、今日碼字、「檢視 → 統計」那一組的
+ * 編輯器一半。口徑在 `writingStats.ts`（純函式），「今日」怎麼存在 `statsDaily.ts`，面板在 `statsPanel.ts`。
  *
- * ## 状态栏字数那一格
+ * ## 狀態列字數那一格
  *
- * 每块编辑区一格（`#edStatusWords` 与草稿区那一格），`pane.ts` 的 `updateStatus` 调 {@link renderWordStatus}，
- * 别的都是这里自己挂上的：
+ * 每塊編輯區一格（`#edStatusWords` 與草稿區那一格），`pane.ts` 的 `updateStatus` 調 {@link renderWordStatus}，
+ * 別的都是這裡自己掛上的：
  *
- * - 全文：「全文 3,120 字」；有选区时前面加「选中 120 字 / 」（口径同 `countWords`）。
- * - 距目标（缺省开）：当前标签是某一章的**正文**、章节索引里这一章有 `targetWords`（细纲的目标字数，没写就是
- *   `config.md` 的每章字数——与写正文时判「写够没有」的是同一个数，后端 `views/pipeline.ts` 算）时，换成
- *   「3,120 / 4,000 字，还差 880」（超了写「超出 120」）＋一条细进度条，到八成换色。字数用编辑区里的当前内容
- *   实时算、不等保存；细纲、草稿、角色卡不显示目标；没写目标、索引里还没有这一章也不显示。
- * - 本次码字 / 今日码字（缺省关）：「· 本次 +356 字」「· 今日 1,820 字」。
- * - 章节（Markdown）开头的「# 标题」那一行不算字数——后端数章节字数就是这么数的（`countWords(stripH1(body))`），
- *   状态栏与工程页、章节条才对得上。
- * - 点一下（或获得焦点时回车 / 空格）弹出码字统计面板。按下鼠标不夺编辑区的焦点。
+ * - 全文：「全文 3,120 字」；有選區時前面加「選中 120 字 / 」（口徑同 `countWords`）。
+ * - 距目標（預設開）：當前標籤是某一章的**正文**、章節索引裡這一章有 `targetWords`（細綱的目標字數，沒寫就是
+ *   `config.md` 的每章字數——與寫正文時判「寫夠沒有」的是同一個數，後端 `views/pipeline.ts` 算）時，換成
+ *   「3,120 / 4,000 字，還差 880」（超了寫「超出 120」）＋一條細進度條，到八成換色。字數用編輯區裡的當前內容
+ *   實時算、不等儲存；細綱、草稿、角色卡不顯示目標；沒寫目標、索引裡還沒有這一章也不顯示。
+ * - 本次碼字 / 今日碼字（預設關）：「· 本次 +356 字」「· 今日 1,820 字」。
+ * - 章節（Markdown）開頭的「# 標題」那一行不算字數——後端數章節字數就是這麼數的（`countWords(stripH1(body))`），
+ *   狀態列與工程頁、章節條才對得上。
+ * - 點一下（或獲得焦點時回車 / 空格）彈出碼字統計面板。按下滑鼠不奪編輯區的焦點。
  *
- * ## 大章节不卡
+ * ## 大章節不卡
  *
- * 每敲一下都可能要数一遍全文。做法：
- * 1. `countWords` 一趟循环数完（`words.ts`），不造中间字符串与数组。
- * 2. 每份文件缓存「数过的是哪一份文字、几个字」。打字、上屏、粘贴、程序改写都带着这一处改动（`change`），
- *    核对缓存的正是改动之前那一份，就只数改动那一段（`wordDelta`，英文按词往两边扩到词边界）——几万字的章节
- *    每敲一下也只数几个字。
- * 3. 没有改动可用（撤销 / 重做、输入法组字中途）时整份重数：两万字以内当场数，更长的至多每 300ms 数一次
- *    （其间先显示上一次的数）。
- * 4. 选中字数只数选中的那一段，按（文字、起止）记住，光标挪动不重数。
- * 5. 本次 / 今日码字只看改动那一段，与全文多长无关。
+ * 每敲一下都可能要數一遍全文。做法：
+ * 1. `countWords` 一趟迴圈數完（`words.ts`），不造中間字串與陣列。
+ * 2. 每份檔案快取「數過的是哪一份文字、幾個字」。打字、上屏、貼上、程式改寫都帶著這一處改動（`change`），
+ *    核對快取的正是改動之前那一份，就只數改動那一段（`wordDelta`，英文按詞往兩邊擴到詞邊界）——幾萬字的章節
+ *    每敲一下也只數幾個字。
+ * 3. 沒有改動可用（撤銷 / 重做、輸入法組字中途）時整份重數：兩萬字以內當場數，更長的至多每 300ms 數一次
+ *    （其間先顯示上一次的數）。
+ * 4. 選中字數只數選中的那一段，按（文字、起止）記住，游標挪動不重數。
+ * 5. 本次 / 今日碼字只看改動那一段，與全文多長無關。
  */
 import { el, setHidden } from '../dom';
 import { toast } from '../globals';
@@ -54,16 +54,16 @@ import {
 import type { GoalProgress } from './writingStats';
 import { countWords, groupDigits } from './words';
 
-/** 这么长以内的文字没有改动可用时当场整份重数；更长的节流。 */
+/** 這麼長以內的文字沒有改動可用時當場整份重數；更長的節流。 */
 export const SYNC_COUNT_LIMIT = 20_000;
-/** 长文字整份重数至多这么久一次。 */
+/** 長文字整份重數至多這麼久一次。 */
 export const RECOUNT_MS = 300;
-/** 与 core 的 `isMarkdownExt` 同一组扩展名：只有这些章节认开头的 `# 标题`。 */
+/** 與 core 的 `isMarkdownExt` 同一組副檔名：只有這些章節認開頭的 `# 標題`。 */
 const MARKDOWN_RE = /\.(md|markdown)$/i;
 
 // ---------------------------------------------------------------- 偏好
 
-/** 状态栏字数那一格除了全文 / 选中还显示哪几项。按浏览器记在 `novelforge.editor.prefs` 的 `stats` 里。 */
+/** 狀態列字數那一格除了全文 / 選中還顯示哪幾項。按瀏覽器記在 `novelforge.editor.prefs` 的 `stats` 裡。 */
 interface StatsPrefs {
   goal: boolean;
   session: boolean;
@@ -75,35 +75,35 @@ let prefs: StatsPrefs = loadPrefs();
 function loadPrefs(): StatsPrefs {
   const raw = storedPrefs().stats as Partial<StatsPrefs> | undefined;
   const s = raw && typeof raw === 'object' ? raw : {};
-  // 距目标缺省开（只认明明白白的 false）；本次 / 今日缺省关（只认明明白白的 true）。
+  // 距目標預設開（只認明明白白的 false）；本次 / 今日預設關（只認明明白白的 true）。
   return { goal: s.goal !== false, session: s.session === true, today: s.today === true };
 }
 
 function setPref(key: keyof StatsPrefs, on: boolean): void {
   prefs = { ...prefs, [key]: on };
   try {
-    // 同一个键里还有段落那几项（`paragraphState.ts`）：读出来合上再写。
+    // 同一個鍵裡還有段落那幾項（`paragraphState.ts`）：讀出來合上再寫。
     localStorage.setItem(PREFS_KEY, JSON.stringify({ ...storedPrefs(), stats: prefs }));
   } catch {
-    /* 不可写就只在内存里生效 */
+    /* 不可寫就只在記憶體裡生效 */
   }
   refreshCells();
 }
 
-// ---------------------------------------------------------------- 全文字数（带缓存）
+// ---------------------------------------------------------------- 全文字數（帶快取）
 
 interface WordCache {
-  /** 数过的是哪一份文字。 */
+  /** 數過的是哪一份文字。 */
   text: string;
   words: number;
-  /** 上一次整份重数的时刻（节流用）。 */
+  /** 上一次整份重數的時刻（節流用）。 */
   countedAt: number;
   timer?: ReturnType<typeof setTimeout>;
 }
 
 const wordCache = new WeakMap<OpenFile, WordCache>();
 
-/** 这份文件（编辑区里的当前内容）一共几个字。 */
+/** 這份檔案（編輯區裡的當前內容）一共幾個字。 */
 function textWords(file: OpenFile): number {
   const cache = wordCache.get(file);
   if (cache && cache.text === file.draft) {
@@ -143,7 +143,7 @@ function scheduleRecount(file: OpenFile, cache: WordCache): void {
   }, wait);
 }
 
-/** 内容变了（`edit` 事件）：带着改动、缓存又正是改动之前那一份，就只数改动那一段。 */
+/** 內容變了（`edit` 事件）：帶著改動、快取又正是改動之前那一份，就只數改動那一段。 */
 function syncWordCache(file: OpenFile, change: TextChange | undefined): void {
   const cache = wordCache.get(file);
   if (!cache || cache.text === file.draft) {
@@ -168,24 +168,24 @@ function syncWordCache(file: OpenFile, change: TextChange | undefined): void {
   }
 }
 
-/** 章节（Markdown）不算开头的 `# 标题` 那一行——与后端数章节字数同一个数法。 */
+/** 章節（Markdown）不算開頭的 `# 標題` 那一行——與後端數章節字數同一個數法。 */
 function skipsHeading(file: OpenFile): boolean {
   return file.kind === 'chapter' && MARKDOWN_RE.test(file.path);
 }
 
-/** 状态栏与面板上说的「全文 N 字」。 */
+/** 狀態列與面板上說的「全文 N 字」。 */
 function fileWords(file: OpenFile): number {
   const words = textWords(file);
   return skipsHeading(file) ? words - headingWords(file.draft) : words;
 }
 
-/** 当前标签是某一章的正文、且这一章有目标字数时的进度。 */
+/** 當前標籤是某一章的正文、且這一章有目標字數時的進度。 */
 function goalOf(file: OpenFile, words: number): GoalProgress | undefined {
   const at = chapterAt(file.path);
   return at && at.side === 'chapter' ? goalProgress(words, at.entry.targetWords) : undefined;
 }
 
-// ---------------------------------------------------------------- 选中字数
+// ---------------------------------------------------------------- 選中字數
 
 const selectionMemo = new WeakMap<Pane, { text: string; start: number; end: number; words: number }>();
 
@@ -206,10 +206,10 @@ function selectionWords(pane: Pane, file: OpenFile): number {
   return words;
 }
 
-// ---------------------------------------------------------------- 本次码字
+// ---------------------------------------------------------------- 本次碼字
 
 let session = new WritingSession(Date.now());
-/** 每份撤销历史一本账：撤销 / 重做的是哪一步、那一步计入过几个字。重新开始计时就换一批新的。 */
+/** 每份撤銷歷史一本賬：撤銷 / 重做的是哪一步、那一步計入過幾個字。重新開始計時就換一批新的。 */
 let ledgers = new WeakMap<EditHistory, StepLedger>();
 
 function ledgerOf(history: EditHistory): StepLedger {
@@ -221,11 +221,11 @@ function ledgerOf(history: EditHistory): StepLedger {
   return ledger;
 }
 
-/** 明细上怎么称呼这份文件：章节用章节索引的说法，别的用标签上的名字。 */
+/** 明細上怎麼稱呼這份檔案：章節用章節索引的說法，別的用標籤上的名字。 */
 function titleOf(file: OpenFile): string {
   const at = chapterAt(file.path);
   if (at) {
-    return at.side === 'plot' ? `${at.entry.label} · 细纲` : at.entry.label;
+    return at.side === 'plot' ? `${at.entry.label} · 細綱` : at.entry.label;
   }
   if (file.label) {
     return file.label.tag ? `${file.label.tag} · ${file.label.title}` : file.label.title;
@@ -233,7 +233,7 @@ function titleOf(file: OpenFile): string {
   return file.name;
 }
 
-/** 一次内容变化：算这一下码了几个字、记时长，记进本次与今日。 */
+/** 一次內容變化：算這一下碼了幾個字、記時長，記進本次與今日。 */
 function onEdit(file: OpenFile, source: EditSource, change: TextChange | undefined): void {
   syncWordCache(file, change);
   const now = Date.now();
@@ -259,11 +259,11 @@ function restart(quiet = false): void {
   refreshCells();
   refreshStatsPanel();
   if (!quiet) {
-    toast('本次码字从现在起重新算。');
+    toast('本次碼字從現在起重新算。');
   }
 }
 
-// ---------------------------------------------------------------- 状态栏那一格
+// ---------------------------------------------------------------- 狀態列那一格
 
 interface Cell {
   root: HTMLElement;
@@ -296,7 +296,7 @@ function cellOf(root: HTMLElement, pane: Pane): Cell {
   cell.bar.appendChild(cell.fill);
   root.replaceChildren(cell.sel, cell.total, cell.bar, cell.extra);
   if (known?.root !== root) {
-    // 按下鼠标不夺编辑区的焦点（点开面板看一眼，回来接着打字）。
+    // 按下滑鼠不奪編輯區的焦點（點開面板看一眼，回來接著打字）。
     root.addEventListener('mousedown', (e) => e.preventDefault());
     root.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -314,8 +314,8 @@ function cellOf(root: HTMLElement, pane: Pane): Cell {
 }
 
 /**
- * 画一块编辑区状态栏上字数那一格（`pane.ts` 的 `updateStatus` 调；没开文件时传 undefined：清空）。
- * 打字、挪光标、换选区都会调到，所以只用缓存过的数（见文件头「大章节不卡」）。
+ * 畫一塊編輯區狀態列上字數那一格（`pane.ts` 的 `updateStatus` 調；沒開檔案時傳 undefined：清空）。
+ * 打字、挪游標、換選區都會調到，所以只用快取過的數（見檔案頭「大章節不卡」）。
  */
 export function renderWordStatus(root: HTMLElement, pane: Pane, file: OpenFile | undefined): void {
   const cell = cellOf(root, pane);
@@ -331,7 +331,7 @@ export function renderWordStatus(root: HTMLElement, pane: Pane, file: OpenFile |
   const sel = selectionWords(pane, file);
   const goal = prefs.goal ? goalOf(file, words) : undefined;
 
-  cell.sel.textContent = sel > 0 ? `选中 ${groupDigits(sel)} 字${goal ? ' · ' : ' / '}` : '';
+  cell.sel.textContent = sel > 0 ? `選中 ${groupDigits(sel)} 字${goal ? ' · ' : ' / '}` : '';
   cell.total.textContent = goal ? `${goal.count}，${goal.rest}` : `全文 ${groupDigits(words)} 字`;
   setHidden(cell.bar, !goal);
   cell.bar.classList.toggle('enough', !!goal?.enough);
@@ -347,18 +347,18 @@ export function renderWordStatus(root: HTMLElement, pane: Pane, file: OpenFile |
   }
   cell.extra.textContent = extras.length ? ` · ${extras.join(' · ')}` : '';
 
-  const tips = [`${groupDigits(file.draft.length)} 字符（含标点与空白）`];
+  const tips = [`${groupDigits(file.draft.length)} 字元（含標點與空白）`];
   if (skipsHeading(file)) {
-    tips.push('开头的「# 标题」那一行不算字数，与工程页同一个数法');
+    tips.push('開頭的「# 標題」那一行不算字數，與工程頁同一個數法');
   }
   if (goal) {
-    tips.push(`本章目标 ${groupDigits(goal.target)} 字（细纲的目标字数，没写就是小说配置的每章字数）`);
+    tips.push(`本章目標 ${groupDigits(goal.target)} 字（細綱的目標字數，沒寫就是小說配置的每章字數）`);
   }
-  tips.push('点一下看码字统计（本次、今日、按文件）');
+  tips.push('點一下看碼字統計（本次、今日、按檔案）');
   root.title = tips.join('\n');
 }
 
-/** 两块编辑区的那一格都重画（本次 / 今日码字是全局的，章节索引变了目标可能变）。 */
+/** 兩塊編輯區的那一格都重畫（本次 / 今日碼字是全域的，章節索引變了目標可能變）。 */
 function refreshCells(): void {
   for (const [pane, cell] of cells) {
     renderWordStatus(cell.root, pane, pane.activeFile());
@@ -386,7 +386,7 @@ function panelData(pane: Pane): StatsPanelData {
       words,
       chars: file.draft.length,
       goal,
-      goalNote: chapter && !goal ? '这一章没有目标字数（细纲里没写，小说配置里也没写每章字数）。' : undefined,
+      goalNote: chapter && !goal ? '這一章沒有目標字數（細綱裡沒寫，小說配置裡也沒寫每章字數）。' : undefined,
       headingExcluded: skipsHeading(file),
     };
   }
@@ -397,9 +397,9 @@ function panelData(pane: Pane): StatsPanelData {
   };
 }
 
-// ---------------------------------------------------------------- 装配
+// ---------------------------------------------------------------- 裝配
 
-/** 装一次（`index.ts`）。 */
+/** 裝一次（`index.ts`）。 */
 export function installWritingStats(): void {
   installDaily();
 
@@ -416,7 +416,7 @@ export function installWritingStats(): void {
     refreshCells();
     refreshStatsPanel();
   });
-  // 别的窗口记了今日码字。
+  // 別的視窗記了今日碼字。
   onDailyChange(() => {
     refreshCells();
     refreshStatsPanel();
@@ -428,7 +428,7 @@ export function installWritingStats(): void {
     }
   });
 
-  // 换了工程（或关掉了）：还没写进去的今日码字按原来那个工程的键写掉；本次从头算（明细里是上一个工程的文件）。
+  // 換了工程（或關掉了）：還沒寫進去的今日碼字按原來那個工程的鍵寫掉；本次從頭算（明細裡是上一個工程的檔案）。
   window.addEventListener('nf-workspace-reset', () => {
     flushDaily();
     closeStatsPanel();

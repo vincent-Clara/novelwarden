@@ -1,35 +1,35 @@
 /**
- * 名词补全（角色名、地名、势力、物品……）：在光标处弹一个候选框，列出这本书的角色卡名字与别名、设定条目的标题与
- * 关键词、设定名录里出现过还没建条目的名字，挑一个补上。**不调模型**（第 4 条），名词表来自后端
- * （`core/views/nameIndex.ts`），匹配与排序在零 DOM 的 `namesCore.ts`。
+ * 名詞補全（角色名、地名、勢力、物品……）：在游標處彈一個候選框，列出這本書的角色卡名字與別名、設定條目的標題與
+ * 關鍵詞、設定名錄裡出現過還沒建條目的名字，挑一個補上。**不調模型**（第 4 條），名詞表來自後端
+ * （`core/views/nameIndex.ts`），匹配與排序在零 DOM 的 `namesCore.ts`。
  *
- * ## 两种弹法
+ * ## 兩種彈法
  *
- * - **按键弹（缺省）**：`Alt+/`（⚑ 登记在 `shortcuts.ts` 的 `names`；`Ctrl+Space` 在 Windows / Linux 上常被系统拿去切输入法，
- *   浏览器与编辑器都没占 `Alt+/`，它也是 Emacs / Eclipse 的「补全一个词」）或「视图 → 名词补全」。用光标前几个字当查询词
- *   （`queryBefore`：往前 1~4 个字里能匹配上名字开头的最长那段），什么都匹配不上就列全部、最近在本文件出现的排前面。
- *   之后接着打字跟着筛，碰到空白标点、光标退到起点前面、一个都对不上就收起。`↑↓` 选，`Enter` / `Tab` 接受，`Esc` 收起。
- * - **边打边弹**（「视图 → 边打边弹名词补全」，缺省关，记在 `novelforge.editor.prefs` 的 `nameAutoPopup`）：输入法上屏
- *   或直接打字之后，光标前的字是某个名字的开头（至少两个字、还没打完整，`autoPopQuery`）就弹。**不抢回车**：回车照常换段
- *   （顺手收起），`Tab` 接受（⚑），`↑↓` 在框里选，`Esc` 收起；接着打别的字就收起。
+ * - **按鍵彈（預設）**：`Alt+/`（⚑ 登記在 `shortcuts.ts` 的 `names`；`Ctrl+Space` 在 Windows / Linux 上常被系統拿去切輸入法，
+ *   瀏覽器與編輯器都沒佔 `Alt+/`，它也是 Emacs / Eclipse 的「補全一個詞」）或「檢視 → 名詞補全」。用游標前幾個字當查詢詞
+ *   （`queryBefore`：往前 1~4 個字裡能匹配上名字開頭的最長那段），什麼都匹配不上就列全部、最近在本檔案出現的排前面。
+ *   之後接著打字跟著篩，碰到空白標點、游標退到起點前面、一個都對不上就收起。`↑↓` 選，`Enter` / `Tab` 接受，`Esc` 收起。
+ * - **邊打邊彈**（「檢視 → 邊打邊彈名詞補全」，預設關，記在 `novelforge.editor.prefs` 的 `nameAutoPopup`）：輸入法上屏
+ *   或直接打字之後，游標前的字是某個名字的開頭（至少兩個字、還沒打完整，`autoPopQuery`）就彈。**不搶回車**：回車照常換段
+ *   （順手收起），`Tab` 接受（⚑），`↑↓` 在框裡選，`Esc` 收起；接著打別的字就收起。
  *
- * ## 几条规矩
+ * ## 幾條規矩
  *
- * - **输入法组字中途绝不弹、不接管任何键**：按键经 `addKeyHandler`，组字中途的键根本送不到；自动弹只认带 `change` 的
- *   `edit`（上屏那一下）；框开着时一开始组字就先藏起来，上屏之后按新的文字重新筛（取消组字也重新看一眼）。
- * - **插入只走 `Pane.applyEdit`**（`opts.source: 'completion'`），一步撤销：换掉作者已经打的那几个字、补全剩下的，光标落在
- *   名字后面。别名命中时框里写「别名 → 正名」，插入的是那个别名（作者打的就是它，⚑）。码字统计把补上的字算作者码的字
- *   （⚑，见 `writingStats.ts`）。
- * - **只对作者会写到名字的文件**：后端给的 `kind`（`completionApplies`：正文、草稿、细纲、角色卡、设定、大纲、叙事线），
- *   前端不拿路径猜；配置之类按键只说一句、不弹，自动模式不弹。
- * - **贴着光标**：位置借高亮镜像层量（`highlight.ts` 的 `measureOffset`，与打字机滚动同一个办法），不另起测量 DOM；
- *   放在光标那一行下面，靠近底边翻到上面，两边都不够就压高度。挂在 `body` 上 `position: fixed`。
- * - **点外面、切标签、滚动时收起**：document 捕获阶段的 `mousedown`（点在框里的不算，框里按下不夺焦点）、编辑区换了文件 /
- *   切了预览、滚轮、别处滚动、窗口改大小、编辑区失焦；编辑区自己滚（打字机滚动、打到底自动滚）时跟着挪，光标那一行滚出
- *   视口才收。
- * - **名词表按需要**：第一次要用时发 `requestNameIndex`（带 requestId 与手上那份的 `sig`），回 `nameIndex`；收到 `state`
- *   （磁盘上变过）就记一笔「可能过期」，下一次要用时再问（边打边弹时至多 3 秒问一次），没变的话后端只回指纹。问的工夫里照样
- *   拿手上那份筛；手上还没有时按键那一下等表到了再弹。换工程作废。
+ * - **輸入法組字中途絕不彈、不接管任何鍵**：按鍵經 `addKeyHandler`，組字中途的鍵根本送不到；自動彈只認帶 `change` 的
+ *   `edit`（上屏那一下）；框開著時一開始組字就先藏起來，上屏之後按新的文字重新篩（取消組字也重新看一眼）。
+ * - **插入只走 `Pane.applyEdit`**（`opts.source: 'completion'`），一步撤銷：換掉作者已經打的那幾個字、補全剩下的，游標落在
+ *   名字後面。別名命中時框裡寫「別名 → 正名」，插入的是那個別名（作者打的就是它，⚑）。碼字統計把補上的字算作者碼的字
+ *   （⚑，見 `writingStats.ts`）。
+ * - **只對作者會寫到名字的檔案**：後端給的 `kind`（`completionApplies`：正文、草稿、細綱、角色卡、設定、大綱、敘事線），
+ *   前端不拿路徑猜；配置之類按鍵只說一句、不彈，自動模式不彈。
+ * - **貼著游標**：位置借高亮映象層量（`highlight.ts` 的 `measureOffset`，與打字機滾動同一個辦法），不另起測量 DOM；
+ *   放在游標那一行下面，靠近底邊翻到上面，兩邊都不夠就壓高度。掛在 `body` 上 `position: fixed`。
+ * - **點外面、切標籤、滾動時收起**：document 捕獲階段的 `mousedown`（點在框裡的不算，框裡按下不奪焦點）、編輯區換了檔案 /
+ *   切了預覽、滾輪、別處滾動、視窗改大小、編輯區失焦；編輯區自己滾（打字機滾動、打到底自動滾）時跟著挪，游標那一行滾出
+ *   視口才收。
+ * - **名詞表按需要**：第一次要用時發 `requestNameIndex`（帶 requestId 與手上那份的 `sig`），回 `nameIndex`；收到 `state`
+ *   （磁碟上變過）就記一筆「可能過期」，下一次要用時再問（邊打邊彈時至多 3 秒問一次），沒變的話後端只回指紋。問的工夫裡照樣
+ *   拿手上那份篩；手上還沒有時按鍵那一下等表到了再彈。換工程作廢。
  */
 import { clear, el } from '../dom';
 import { toast } from '../globals';
@@ -53,35 +53,35 @@ import { onPrefsChange, setStoredPrefs, storedPrefs } from './paragraphState';
 import { highlightSegments } from './quickOpenCore';
 import { claimRequest, newRequestId } from './replace';
 
-/** 偏好里边打边弹那一项的键（只认明明白白的 `true`）。 */
+/** 偏好裡邊打邊彈那一項的鍵（只認明明白白的 `true`）。 */
 const PREF_KEY = 'nameAutoPopup';
-/** 边打边弹时，表可能过期了多久最多问一次。 */
+/** 邊打邊彈時，表可能過期了多久最多問一次。 */
 const REFRESH_THROTTLE_MS = 3000;
-/** 按了键、表还没到：等多久，之后到的不再弹。 */
+/** 按了鍵、表還沒到：等多久，之後到的不再彈。 */
 const PENDING_TRIGGER_MS = 3000;
-/** 问出去多久没回音就当丢了（断线时消息可能一直在 outbox 里）。 */
+/** 問出去多久沒回音就當丟了（斷線時訊息可能一直在 outbox 裡）。 */
 const WAIT_GIVE_UP_MS = 10_000;
 
-const NOT_HERE = '名词补全只在正文、草稿、细纲、角色卡、设定、情节大纲与叙事线里用。';
+const NOT_HERE = '名詞補全只在正文、草稿、細綱、角色卡、設定、情節大綱與敘事線裡用。';
 
-// ---------------------------------------------------------------- 名词表
+// ---------------------------------------------------------------- 名詞表
 
 let post: (msg: InMessage) => void = () => {};
 let catalog: NameCatalog | null = null;
 let sig: string | undefined;
-/** 收到过几次 `state`（磁盘上变过）；问的时候记下当时的数，回来时对不上就还算过期。 */
+/** 收到過幾次 `state`（磁碟上變過）；問的時候記下當時的數，回來時對不上就還算過期。 */
 let epoch = 0;
 let fetchedEpoch = -1;
 let waiting: { id: string; epoch: number } | null = null;
 let lastAsk = 0;
-/** 按了键、表还没到：到了就在那里弹（同一块编辑区、同一份文件还开着的话）。 */
+/** 按了鍵、表還沒到：到了就在那裡彈（同一塊編輯區、同一份檔案還開著的話）。 */
 let pendingTrigger: { pane: Pane; file: OpenFile; until: number } | null = null;
 
 function fresh(): boolean {
   return !!catalog && fetchedEpoch === epoch;
 }
 
-/** 表换了（到了新的一份、换工程作废）时叫谁：名词高亮（`nameMarks.ts`）照它重画。 */
+/** 表換了（到了新的一份、換工程作廢）時叫誰：名詞高亮（`nameMarks.ts`）照它重畫。 */
 const catalogListeners = new Set<() => void>();
 
 function catalogChanged(): void {
@@ -90,12 +90,12 @@ function catalogChanged(): void {
   }
 }
 
-/** 手上那份名词表（还没要过、换了工程时是 null）。名词高亮与补全用同一份。 */
+/** 手上那份名詞表（還沒要過、換了工程時是 null）。名詞高亮與補全用同一份。 */
 export function currentNameCatalog(): NameCatalog | null {
   return catalog;
 }
 
-/** 表可能过期了就问一次（在路上的不重复问；没变的话后端只回指纹）。名词高亮打开文件、磁盘上变过时调。 */
+/** 表可能過期了就問一次（在路上的不重複問；沒變的話後端只回指紋）。名詞高亮開啟檔案、磁碟上變過時調。 */
 export function refreshNameIndex(): void {
   refresh(false);
 }
@@ -105,7 +105,7 @@ export function onNameCatalog(fn: () => void): () => void {
   return () => catalogListeners.delete(fn);
 }
 
-/** 表可能过期了就问一次（在路上的不重复问；问出去 10 秒没回音——断线了——就当丢了，可以再问）。`throttle`：边打边弹时，手上有表就至多 3 秒问一次。 */
+/** 表可能過期了就問一次（在路上的不重複問；問出去 10 秒沒回音——斷線了——就當丟了，可以再問）。`throttle`：邊打邊彈時，手上有表就至多 3 秒問一次。 */
 function refresh(throttle: boolean): void {
   if (fresh() || (waiting && Date.now() - lastAsk < WAIT_GIVE_UP_MS)) {
     return;
@@ -129,7 +129,7 @@ function onIndex(msg: Extract<OutMessage, { type: 'nameIndex' }>): void {
     catalog = buildNameCatalog(msg.index);
     catalogChanged();
   } else if (!catalog) {
-    // 说没变、手上却没有（换过工程之类）：重新要一份整的。
+    // 說沒變、手上卻沒有（換過工程之類）：重新要一份整的。
     sig = undefined;
     refresh(false);
     return;
@@ -164,13 +164,13 @@ function setAuto(on: boolean): void {
   }
 }
 
-// ---------------------------------------------------------------- 弹出框
+// ---------------------------------------------------------------- 彈出框
 
 interface Session {
   pane: Pane;
   file: OpenFile;
   mode: 'manual' | 'auto';
-  /** 查询词在全文里的起点（`area.value` 的下标）。 */
+  /** 查詢詞在全文裡的起點（`area.value` 的下標）。 */
   start: number;
   query: string;
   items: NameCandidate[];
@@ -180,28 +180,28 @@ interface Session {
   list: HTMLElement;
   note: HTMLElement;
   foot: HTMLElement;
-  /** 输入法组字中途先藏起来。 */
+  /** 輸入法組字中途先藏起來。 */
   hidden: boolean;
 }
 
 let session: Session | null = null;
-/** 自己调 `applyEdit` 的那一下也会发 `edit`，不当成作者在打字。 */
+/** 自己調 `applyEdit` 的那一下也會發 `edit`，不當成作者在打字。 */
 let accepting = false;
-/** 输入法正在组字（document 捕获阶段记，比编辑区自己的 compositionend 先跑）。 */
+/** 輸入法正在組字（document 捕獲階段記，比編輯區自己的 compositionend 先跑）。 */
 let composing = false;
 
 function snapshot(ctx: EditorContext): { text: string; selStart: number; selEnd: number } {
   return { text: ctx.area.value, selStart: ctx.area.selectionStart, selEnd: ctx.area.selectionEnd };
 }
 
-/** 按键弹。 */
+/** 按鍵彈。 */
 function trigger(ctx: EditorContext): void {
   if (!completionApplies(ctx.file.kind)) {
     toast(NOT_HERE);
     return;
   }
   if (ctx.pane.isPreviewing()) {
-    toast('预览里不能补全，先切回编辑。');
+    toast('預覽裡不能補全，先切回編輯。');
     return;
   }
   if (!catalog) {
@@ -218,18 +218,18 @@ function openManual(ctx: EditorContext): void {
     return;
   }
   if (!catalog.initialized) {
-    toast('这个文件夹还不是小说工程，没有名词可补全。');
+    toast('這個資料夾還不是小說工程，沒有名詞可補全。');
     return;
   }
   if (catalog.items.length === 0) {
-    toast('这本书还没有角色卡或设定条目，没有名词可补全。');
+    toast('這本書還沒有角色卡或設定條目，沒有名詞可補全。');
     return;
   }
   const { text, selStart } = snapshot(ctx);
   show(ctx, 'manual', queryBefore(catalog, text, selStart));
 }
 
-/** 按查询词筛出候选、开（或换掉）弹出框。一个都对不上就收起。 */
+/** 按查詢詞篩出候選、開（或換掉）彈出框。一個都對不上就收起。 */
 function show(ctx: EditorContext, mode: Session['mode'], q: NameQuery): void {
   if (!catalog) {
     return;
@@ -249,7 +249,7 @@ function show(ctx: EditorContext, mode: Session['mode'], q: NameQuery): void {
     session = { pane: ctx.pane, file: ctx.file, mode, start: q.start, query: q.query, items: [], total: 0, active: 0, hidden: false, ...dom };
   }
   const s = session;
-  // 接着打字、表换了新的一份时尽量停在原来选中的那一个上（新表里的条目是新对象，按名字与来源认）。
+  // 接著打字、表換了新的一份時儘量停在原來選中的那一個上（新表裡的條目是新物件，按名字與來源認）。
   const keep = s.pane === ctx.pane && s.file === ctx.file ? s.items[s.active]?.item : undefined;
   Object.assign(s, { pane: ctx.pane, file: ctx.file, mode, start: q.start, query: q.query, hidden: false });
   s.items = result.items;
@@ -260,7 +260,7 @@ function show(ctx: EditorContext, mode: Session['mode'], q: NameQuery): void {
   position();
 }
 
-/** 收起弹出框。 */
+/** 收起彈出框。 */
 function close(): void {
   if (!session) {
     return;
@@ -272,7 +272,7 @@ function close(): void {
   session = null;
 }
 
-/** 框开着、文字或表变了：按当前文字重新筛（模式不变）。 */
+/** 框開著、文字或表變了：按當前文字重新篩（模式不變）。 */
 function resync(): void {
   const s = session;
   if (!s || !catalog) {
@@ -330,7 +330,7 @@ function acceptActive(): void {
   }
 }
 
-/** 接受一条：换掉作者已经打的那几个字，补成整个叫法；一步撤销。 */
+/** 接受一條：換掉作者已經打的那幾個字，補成整個叫法；一步撤銷。 */
 function accept(c: NameCandidate): void {
   const s = session;
   if (!s) {
@@ -356,12 +356,12 @@ function accept(c: NameCandidate): void {
 function buildBox(): Pick<Session, 'box' | 'list' | 'note' | 'foot'> {
   const box = el('div', 'nc-box');
   box.setAttribute('role', 'listbox');
-  box.setAttribute('aria-label', '名词补全');
+  box.setAttribute('aria-label', '名詞補全');
   const list = el('div', 'nc-list');
   const note = el('div', 'nc-note hidden');
   const foot = el('div', 'nc-foot');
   box.append(list, note, foot);
-  // 框里按下鼠标不夺编辑区的焦点（夺走了 ↑↓ 就不归它了）；点一行接受由那一行的 click 做。
+  // 框裡按下滑鼠不奪編輯區的焦點（奪走了 ↑↓ 就不歸它了）；點一行接受由那一行的 click 做。
   box.addEventListener('mousedown', (e) => e.preventDefault());
   return { box, list, note, foot };
 }
@@ -375,11 +375,11 @@ function render(): void {
   s.box.classList.toggle('nc-auto', s.mode === 'auto');
   clear(s.list);
   s.items.forEach((c, i) => s.list.appendChild(buildRow(c, i)));
-  const more = s.total > s.items.length ? `只列出前 ${s.items.length} 个（一共 ${s.total} 个），多打几个字缩小范围。` : '';
+  const more = s.total > s.items.length ? `只列出前 ${s.items.length} 個（一共 ${s.total} 個），多打幾個字縮小範圍。` : '';
   s.note.textContent = more;
   s.note.classList.toggle('hidden', more === '');
   s.foot.textContent =
-    s.mode === 'auto' ? '↑↓ 选择 · Tab 插入 · 回车照常换段 · Esc 收起' : '↑↓ 选择 · Enter / Tab 插入 · Esc 收起';
+    s.mode === 'auto' ? '↑↓ 選擇 · Tab 插入 · 回車照常換段 · Esc 收起' : '↑↓ 選擇 · Enter / Tab 插入 · Esc 收起';
   markActive();
 }
 
@@ -387,7 +387,7 @@ function buildRow(c: NameCandidate, i: number): HTMLElement {
   const row = el('div', `nc-item nc-${c.item.source}`);
   row.setAttribute('role', 'option');
   row.dataset.index = String(i);
-  row.title = c.item.path ?? '还没有条目：设定名录里「出现过 · 未建条目」的名字';
+  row.title = c.item.path ?? '還沒有條目：設定名錄裡「出現過 · 未建條目」的名字';
 
   const name = el('span', 'nc-name');
   for (const seg of highlightSegments(c.form, c.hits)) {
@@ -398,7 +398,7 @@ function buildRow(c: NameCandidate, i: number): HTMLElement {
   }
   row.appendChild(name);
   row.appendChild(el('span', 'nc-badge', c.item.badge));
-  const brief = c.item.source === 'unfiled' ? ['未建条目', c.item.brief].filter(Boolean).join(' · ') : c.item.brief;
+  const brief = c.item.source === 'unfiled' ? ['未建條目', c.item.brief].filter(Boolean).join(' · ') : c.item.brief;
   row.appendChild(el('span', 'nc-brief', brief));
 
   row.addEventListener('click', () => accept(c));
@@ -423,8 +423,8 @@ function markActive(): void {
 }
 
 /**
- * 贴着光标摆：查询词开头那个字的位置借高亮镜像层量（量不了——文字太大、textarea 藏着——就摆在编辑区左上角附近）。
- * 优先放在那一行下面，放不下翻到上面，两边都不够选空间大的一侧并压高度；横向夹进视口。光标那一行滚出编辑区的视口就收起。
+ * 貼著游標擺：查詢詞開頭那個字的位置借高亮映象層量（量不了——文字太大、textarea 藏著——就擺在編輯區左上角附近）。
+ * 優先放在那一行下面，放不下翻到上面，兩邊都不夠選空間大的一側並壓高度；橫向夾進視口。游標那一行滾出編輯區的視口就收起。
  */
 function position(): void {
   const s = session;
@@ -474,7 +474,7 @@ function position(): void {
   box.classList.toggle('nc-above', !putBelow);
 }
 
-// ---------------------------------------------------------------- 收起的时机
+// ---------------------------------------------------------------- 收起的時機
 
 function onOutside(e: MouseEvent): void {
   if (session && !session.box.contains(e.target as Node)) {
@@ -490,7 +490,7 @@ function onScroll(e: Event): void {
     return;
   }
   if (e.target === s.pane.area) {
-    // 编辑区自己滚（打字机滚动、打到底自动滚、拖滚动条）：跟着挪，滚出视口才收。滚轮另有一条直接收起。
+    // 編輯區自己滾（打字機滾動、打到底自動滾、拖捲軸）：跟著挪，滾出視口才收。滾輪另有一條直接收起。
     if (!repositionQueued) {
       repositionQueued = true;
       queueMicrotask(() => {
@@ -509,7 +509,7 @@ function onResize(): void {
 
 const hooked = new WeakSet<Pane>();
 
-/** 每块编辑区第一次重画时挂上：滚轮与失焦收起。 */
+/** 每塊編輯區第一次重畫時掛上：滾輪與失焦收起。 */
 function hook(pane: Pane): void {
   if (hooked.has(pane)) {
     return;
@@ -527,7 +527,7 @@ function hook(pane: Pane): void {
   });
 }
 
-// ---------------------------------------------------------------- 编辑区的变化
+// ---------------------------------------------------------------- 編輯區的變化
 
 function onEdit(ev: Extract<EditorEvent, { type: 'edit' }>): void {
   if (accepting) {
@@ -544,12 +544,12 @@ function onEdit(ev: Extract<EditorEvent, { type: 'edit' }>): void {
       return;
     }
     if (ev.source === 'composition' && !ev.change) {
-      // 组字中途：先藏起来，什么都不接管；上屏那一下再筛。
+      // 組字中途：先藏起來，什麼都不接管；上屏那一下再篩。
       hideForComposition();
       return;
     }
     if (ev.change && ev.change.at < s.start && s.mode === 'manual') {
-      // 改动落在查询词前面（别处的程序改写）：起点对不上了。
+      // 改動落在查詢詞前面（別處的程式改寫）：起點對不上了。
       close();
       return;
     }
@@ -559,7 +559,7 @@ function onEdit(ev: Extract<EditorEvent, { type: 'edit' }>): void {
   if (!auto || !completionApplies(ev.file.kind) || ctx.pane.isPreviewing()) {
     return;
   }
-  // 只认打字与输入法上屏；先看一眼表是不是该更新了（在路上的不重复问）。
+  // 只認打字與輸入法上屏；先看一眼表是不是該更新了（在路上的不重複問）。
   if (ev.source !== 'typing' && ev.source !== 'composition') {
     return;
   }
@@ -581,7 +581,7 @@ function onEdit(ev: Extract<EditorEvent, { type: 'edit' }>): void {
   }
 }
 
-// ---------------------------------------------------------------- 按键
+// ---------------------------------------------------------------- 按鍵
 
 function isTriggerKey(e: KeyboardEvent): boolean {
   return e.altKey && !e.ctrlKey && !e.metaKey && ((e.code === 'Slash' && !e.shiftKey) || e.key === '/');
@@ -608,7 +608,7 @@ function onKey(e: KeyboardEvent, ctx: EditorContext): boolean {
         close();
         return false;
       case 'Enter':
-        // 边打边弹不抢回车：回车照常换段，框收起。按键弹出来的才拿回车接受。
+        // 邊打邊彈不搶回車：回車照常換段，框收起。按鍵彈出來的才拿回車接受。
         if (plain && s.mode === 'manual') {
           acceptActive();
           return true;
@@ -617,7 +617,7 @@ function onKey(e: KeyboardEvent, ctx: EditorContext): boolean {
         return false;
       case 'Escape':
         close();
-        // 别让查找条、专注模式那几个 document 上的 Esc 再处理一遍。
+        // 別讓查詢條、專注模式那幾個 document 上的 Esc 再處理一遍。
         e.stopPropagation();
         return true;
       case 'ArrowLeft':
@@ -637,13 +637,13 @@ function onKey(e: KeyboardEvent, ctx: EditorContext): boolean {
   return false;
 }
 
-// ---------------------------------------------------------------- 装配
+// ---------------------------------------------------------------- 裝配
 
 let installed = false;
 
 /**
- * 装上快捷键、边打边弹、名词表的收发、「视图 → 补全」的编辑器那一半。`editor/index.ts` 调一次，**要在
- * `installParagraphTools` 之前**：框开着时回车 / Tab 要先归这里（按键处理按挂的先后跑），不然回车先被分段那一条接走。
+ * 裝上快捷鍵、邊打邊彈、名詞表的收發、「檢視 → 補全」的編輯器那一半。`editor/index.ts` 調一次，**要在
+ * `installParagraphTools` 之前**：框開著時回車 / Tab 要先歸這裡（按鍵處理按掛的先後跑），不然回車先被分段那一條接走。
  */
 export function installNames(postMessage: (msg: InMessage) => void): void {
   if (installed) {
@@ -661,7 +661,7 @@ export function installNames(postMessage: (msg: InMessage) => void): void {
       if (session && session.pane === ev.pane && (ev.pane.activeFile() !== session.file || ev.pane.isPreviewing())) {
         close();
       }
-      // 开着边打边弹、正对着一份能补全的文件：表先要一份（之后打字时就有了）。
+      // 開著邊打邊彈、正對著一份能補全的檔案：表先要一份（之後打字時就有了）。
       const file = ev.pane.activeFile();
       if (auto && file && completionApplies(file.kind)) {
         refresh(true);
@@ -671,7 +671,7 @@ export function installNames(postMessage: (msg: InMessage) => void): void {
     onEdit(ev);
   });
 
-  // 组字开始 / 结束：document 捕获阶段记，比编辑区自己的监听先跑（上屏那一下的 edit 发出来时已经不算在组字了）。
+  // 組字開始 / 結束：document 捕獲階段記，比編輯區自己的監聽先跑（上屏那一下的 edit 發出來時已經不算在組字了）。
   document.addEventListener(
     'compositionstart',
     (e) => {
@@ -686,7 +686,7 @@ export function installNames(postMessage: (msg: InMessage) => void): void {
     'compositionend',
     () => {
       composing = false;
-      // 取消组字（上屏的字与原来一样）时编辑区不发 edit：藏着的框按现在的文字再看一眼。
+      // 取消組字（上屏的字與原來一樣）時編輯區不發 edit：藏著的框按現在的文字再看一眼。
       setTimeout(() => {
         if (session?.hidden) {
           resync();
@@ -717,11 +717,11 @@ export function installNames(postMessage: (msg: InMessage) => void): void {
     e.detail.auto = auto;
     e.detail.canTrigger = !!ed && completionApplies(ed.file.kind) && !ed.pane.isPreviewing();
     e.detail.reason = !ed
-      ? '没有打开的文件。'
+      ? '沒有開啟的檔案。'
       : !completionApplies(ed.file.kind)
         ? NOT_HERE
         : ed.pane.isPreviewing()
-          ? '预览里不能补全，先切回编辑。'
+          ? '預覽裡不能補全，先切回編輯。'
           : undefined;
   });
 
@@ -733,7 +733,7 @@ export function installNames(postMessage: (msg: InMessage) => void): void {
     if (e.detail.name === 'trigger') {
       const ed = activeEditor();
       if (!ed) {
-        toast('先在编辑区里打开一份文件。');
+        toast('先在編輯區裡開啟一份檔案。');
         return;
       }
       if (document.activeElement !== ed.area && !ed.pane.isPreviewing()) {
@@ -757,7 +757,7 @@ export function installNames(postMessage: (msg: InMessage) => void): void {
     if (msg.type === 'nameIndex') {
       onIndex(msg);
     } else if (msg.type === 'state' || msg.type === 'init') {
-      // 磁盘上变过（或刚连上）：手上那份可能过期了，下一次要用时再问。
+      // 磁碟上變過（或剛連上）：手上那份可能過期了，下一次要用時再問。
       epoch++;
     }
   });

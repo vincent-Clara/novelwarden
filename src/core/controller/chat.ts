@@ -97,52 +97,52 @@ import {
 
 const log = scoped('面板');
 
-/** 创作页：发送、采纳、目标与流水线。字段只给 controller/ 同包用。 */
+/** 創作頁：傳送、採納、目標與流水線。欄位只給 controller/ 同包用。 */
 
 /**
- * `extra`：后端自己发起的那几种轮次要记在用户轮上的东西（按审稿修稿的清单与写法）。前端发的
- * `send` 不带它——`SendPayload.writeMode` 只认「接着写 / 重写」，修稿只能从报告卡进来。
+ * `extra`：後端自己發起的那幾種輪次要記在使用者輪上的東西（按審稿修稿的清單與寫法）。前端發的
+ * `send` 不帶它——`SendPayload.writeMode` 只認「接著寫 / 重寫」，修稿只能從報告卡進來。
  */
 export async function send(
   c: ChatController,
   payload: SendPayload,
   extra?: Pick<ChatTurn, 'writeMode' | 'command' | 'revise'>
 ): Promise<void> {
-  // 占位必须在**任何 await 之前**：下面 `await persist(c)` 会让出事件循环，
-  // 那一瞬间 currentAbort 还没设，紧跟着进来的第二条请求照样能过 busy 检查，
-  // 于是两条都跑起来、烧两份 token。本机磁盘快，第一条往往一路同步跑完，
-  // 所以这个竞态只在 CI（或慢盘）上现形。
+  // 佔位必須在**任何 await 之前**：下面 `await persist(c)` 會讓出事件迴圈，
+  // 那一瞬間 currentAbort 還沒設，緊跟著進來的第二條請求照樣能過 busy 檢查，
+  // 於是兩條都跑起來、燒兩份 token。本機磁碟快，第一條往往一路同步跑完，
+  // 所以這個競態只在 CI（或慢盤）上現形。
   const lease = c.beginGeneration();
   if (!lease) {
-    c.toast('已有一个生成任务在进行中。', 'error');
+    c.toast('已有一個生成任務在進行中。', 'error');
     return;
   }
-  // 从这里往下任何一条提前 return 都要还位，否则这个 controller 从此发不出
-  // 第二条消息。
+  // 從這裡往下任何一條提前 return 都要還位，否則這個 controller 從此發不出
+  // 第二條訊息。
   let handedOff = false;
   try {
-    // 空输入只挡「讨论」（它不是命令，`commandOf` 查不到它）。
+    // 空輸入只擋「討論」（它不是命令，`commandOf` 查不到它）。
     //
-    // 旧界面一律要求先写点什么才能发送，而「落定细纲」「写细纲」「写正文」
-    // 本来就不需要作者说任何话——该说的都在架构、大纲与细纲里了。逼他先编一句
-    // 「请生成」，那句话还会被当成要求装进 prompt。
+    // 舊介面一律要求先寫點什麼才能傳送，而「落定細綱」「寫細綱」「寫正文」
+    // 本來就不需要作者說任何話——該說的都在架構、大綱與細綱裡了。逼他先編一句
+    // 「請生成」，那句話還會被當成要求裝進 prompt。
     //
-    // 讨论例外：它的全部内容就是作者那句话，没有话就没有讨论。
+    // 討論例外：它的全部內容就是作者那句話，沒有話就沒有討論。
     const command = commandOf(payload.stage, payload.capability, normalizeTarget(payload.target));
     if (!payload.text.trim() && !command) {
-      c.toast('请先输入内容。', 'error');
+      c.toast('請先輸入內容。', 'error');
       return;
     }
-    // `/落定设定`（完善设定二期）在任何一层都能下：这一轮临时把目标换成设定目录，落完回到原来的地方。要沉淀的是
-    // 刚才的讨论——一句都没聊过、输入框也空着，模型只能凭空编一批「定下来的设定」，不如不调。
+    // `/落定設定`（完善設定二期）在任何一層都能下：這一輪臨時把目標換成設定目錄，落完回到原來的地方。要沉澱的是
+    // 剛才的討論——一句都沒聊過、輸入框也空著，模型只能憑空編一批「定下來的設定」，不如不調。
     const settlingLore = isLoreSettle(payload) && isSameTarget(normalizeTarget(payload.target), LORE_SETTLE_TARGET);
     if (settlingLore && !payload.text.trim() && !c.current.turns.some((t) => t.content.trim())) {
-      c.toast('落定设定要把刚才讨论里定下来的设定写成条目，可这个对话里还没有讨论。先聊几句，或者在输入框里写明要定下什么。', 'error');
+      c.toast('落定設定要把剛才討論裡定下來的設定寫成條目，可這個對話裡還沒有討論。先聊幾句，或者在輸入框裡寫明要定下什麼。', 'error');
       return;
     }
-    // `/续写大纲`（2026-10-24）也在任何一层都能下，跑完同样回到原来的地方。前端不知道大纲排到了第几章，不带区间：
-    // 这里按大纲现在排到哪算（与主按钮同一份 `outlineNextRange`）；主按钮带着状态机算好的区间来，照用。
-    // 续不了（排满了、要续的那一段已经有正文）就说一句，不调模型。
+    // `/續寫大綱`（2026-10-24）也在任何一層都能下，跑完同樣回到原來的地方。前端不知道大綱排到了第幾章，不帶區間：
+    // 這裡按大綱現在排到哪算（與主按鈕同一份 `outlineNextRange`）；主按鈕帶著狀態機算好的區間來，照用。
+    // 續不了（排滿了、要續的那一段已經有正文）就說一句，不調模型。
     const continuingOutline = isOutlineContinue(payload);
     let range = normalizeRange(payload.range);
     if (continuingOutline && !range) {
@@ -159,12 +159,12 @@ export async function send(
       role: 'user',
       content: payload.text.trim(),
       at: nowIso(),
-      // 点命令时输入框可以是空的，气泡里就只剩一片空白。记下这一轮下的是哪个
-      // 命令，界面才说得出「刚才那一下是 /落定细纲」。「讨论」是默认动作，不记。
+      // 點命令時輸入框可以是空的，氣泡裡就只剩一片空白。記下這一輪下的是哪個
+      // 命令，介面才說得出「剛才那一下是 /落定細綱」。「討論」是預設動作，不記。
       command: payload.capability === 'discuss' ? undefined : command?.label,
       attachments: c.pending.length > 0 ? [...c.pending] : undefined,
       excludedIds: payload.excludedIds.length > 0 ? payload.excludedIds : undefined,
-      // 重来一轮时要原样重跑，而那条路上前端给的是输入框当下的参数。
+      // 重來一輪時要原樣重跑，而那條路上前端給的是輸入框當下的引數。
       range,
       setup: normalizeSetup(payload.setup),
       writeMode: normalizeWriteMode(payload.writeMode),
@@ -186,7 +186,7 @@ export async function send(
     c.post({ type: 'attachments', items: [] });
     await persist(c);
 
-    // 位子交给 runTurn，由它在 finally 里还——这里不能再还一次。
+    // 位子交給 runTurn，由它在 finally 裡還——這裡不能再還一次。
     handedOff = true;
     try {
       await runTurn(c, payload, userTurn, lease);
@@ -202,10 +202,10 @@ export async function send(
   }
 }
 
-/** 重来一轮：丢掉旧回复，用同一条用户消息重新生成。 */
+/** 重來一輪：丟掉舊回覆，用同一條使用者訊息重新生成。 */
 export async function retry(c: ChatController, turnId: string, payload: SendPayload): Promise<void> {
   if (c.busy) {
-    c.toast('已有一个生成任务在进行中。', 'error');
+    c.toast('已有一個生成任務在進行中。', 'error');
     return;
   }
   const idx = c.current.turns.findIndex((t) => t.id === turnId);
@@ -216,10 +216,10 @@ export async function retry(c: ChatController, turnId: string, payload: SendPayl
   if (userTurn.role !== 'user') {
     return;
   }
-  // 丢掉这条用户消息之后的所有轮次——重来意味着从这里分叉。
+  // 丟掉這條使用者訊息之後的所有輪次——重來意味著從這裡分叉。
   c.current.turns.splice(idx + 1);
   c.post({ type: 'session', session: serializeSession(c.current) });
-  // `/落定设定`、`/续写大纲` 那一轮：会话早已回到原来的目标，照样换过去、跑完再换回来（同 `send`）。
+  // `/落定設定`、`/續寫大綱` 那一輪：會話早已回到原來的目標，照樣換過去、跑完再換回來（同 `send`）。
   const away = awayOf(userTurn);
   const back = away && !atSpot(c, away) ? spotOf(c) : undefined;
   if (away && back) {
@@ -236,7 +236,7 @@ export async function retry(c: ChatController, turnId: string, payload: SendPayl
   }
 }
 
-/** 会话停在哪：目标、阶段、能力。跨层命令那一轮之前记下，跑完回到这里。 */
+/** 會話停在哪：目標、階段、能力。跨層命令那一輪之前記下，跑完回到這裡。 */
 type Spot = Pick<ChatSession, 'target' | 'stage' | 'capability'>;
 
 function spotOf(c: ChatController): Spot {
@@ -247,20 +247,20 @@ function atSpot(c: ChatController, spot: Spot): boolean {
   return c.current.stage === spot.stage && c.current.capability === spot.capability && isSameTarget(c.current.target, spot.target);
 }
 
-/** 跨层命令这一轮要换到哪（`/落定设定` → 设定目录，`/续写大纲` → 情节大纲）。别的轮次就在会话停着的地方跑。 */
+/** 跨層命令這一輪要換到哪（`/落定設定` → 設定目錄，`/續寫大綱` → 情節大綱）。別的輪次就在會話停著的地方跑。 */
 function awayOf(turn: Pick<ChatTurn, 'settleLore' | 'continueOutline'>): (Spot & { label: string }) | undefined {
   if (turn.settleLore) {
-    return { target: LORE_SETTLE_TARGET, stage: 'setting', capability: 'settle', label: '落定设定' };
+    return { target: LORE_SETTLE_TARGET, stage: 'setting', capability: 'settle', label: '落定設定' };
   }
   if (turn.continueOutline) {
-    return { target: OUTLINE_TARGET, stage: 'outline', capability: 'generate', label: '续写大纲' };
+    return { target: OUTLINE_TARGET, stage: 'outline', capability: 'generate', label: '續寫大綱' };
   }
   return undefined;
 }
 
 /**
- * 跨层命令那一轮完了（写了、没写、出错、被停）：回到之前停着的那个目标。这一轮期间作者已经另选了目标的
- * （生成跑完、落盘卡片还在等的那会儿，切目标不被挡）不动——那是他自己选的。
+ * 跨層命令那一輪完了（寫了、沒寫、出錯、被停）：回到之前停著的那個目標。這一輪期間作者已經另選了目標的
+ * （生成跑完、落盤卡片還在等的那會兒，切目標不被擋）不動——那是他自己選的。
  */
 async function returnTo(c: ChatController, back: Spot, away: Spot & { label: string }): Promise<void> {
   if (!atSpot(c, away)) {
@@ -269,7 +269,7 @@ async function returnTo(c: ChatController, back: Spot, away: Spot & { label: str
   c.current.target = back.target;
   c.current.stage = back.stage;
   c.current.capability = back.capability;
-  log.info(`${away.label}完了，创作目标回到 ${await describeCurrentTarget(c)}`);
+  log.info(`${away.label}完了，創作目標回到 ${await describeCurrentTarget(c)}`);
   await persist(c);
   c.post({ type: 'session', session: serializeSession(c.current) });
   await pushPipeline(c);
@@ -281,17 +281,17 @@ export async function runTurn(
   userTurn: ChatTurn,
   held?: ReturnType<ChatController['beginGeneration']>
 ): Promise<void> {
-  // 上一轮那张还没答的落盘卡片就此作废：它挂在上一条气泡上，点下去写的是
-  // 一份作者已经翻篇的产物。
+  // 上一輪那張還沒答的落盤卡片就此作廢：它掛在上一條氣泡上，點下去寫的是
+  // 一份作者已經翻篇的產物。
   cancelGates(c);
-  // 并发控制在 controller：生成那一层是无状态的，「有没有在跑」是调度的事。
+  // 併發控制在 controller：生成那一層是無狀態的，「有沒有在跑」是排程的事。
   //
-  // `send` 已经在它的第一行占过位了（那里必须早于任何 await，否则两条请求
-  // 会双双过检）。它把位子传进来，这里就不再抢第二次——同一个 controller
-  // 上抢不到，会把自己拒掉。retry 那条路没有前置占位，仍走这里现抢。
+  // `send` 已經在它的第一行佔過位了（那裡必須早於任何 await，否則兩條請求
+  // 會雙雙過檢）。它把位子傳進來，這裡就不再搶第二次——同一個 controller
+  // 上搶不到，會把自己拒掉。retry 那條路沒有前置佔位，仍走這裡現搶。
   const lease = held ?? c.beginGeneration();
   if (!lease) {
-    c.toast('已有一个生成任务在进行中。', 'error');
+    c.toast('已有一個生成任務在進行中。', 'error');
     return;
   }
   c.post({ type: 'busy', value: true });
@@ -302,18 +302,18 @@ export async function runTurn(
     content: '',
     at: nowIso(),
   };
-  // 先插一条空回复，前端好挂流式内容。
+  // 先插一條空回覆，前端好掛流式內容。
   c.current.turns.push(assistantTurn);
   c.post({ type: 'turnDone', turn: serializeTurn(assistantTurn) });
 
-  // 历史是本轮之前的所有轮次（不含刚插入的两条）。内置 agent 那几轮即使没说话也留着：
-  // 历史层要靠它认出前面那句是交给 agent 的指令，一起跳过。
+  // 歷史是本輪之前的所有輪次（不含剛插入的兩條）。內建 agent 那幾輪即使沒說話也留著：
+  // 歷史層要靠它認出前面那句是交給 agent 的指令，一起跳過。
   const history = c.current.turns.slice(0, -2).filter((t) => t.content.trim() || isBuiltinAgentTurn(t));
 
   const action = { stage: c.current.stage, capability: c.current.capability };
   const range = rangeFor(action, normalizeRange(payload.range) ?? userTurn.range);
   const setup = action.stage === 'setting' ? (normalizeSetup(payload.setup) ?? userTurn.setup) : undefined;
-  // 修稿那一轮的写法记在用户轮上（前端的 payload 永远不带 revise）；重来一轮时照样认得出来。
+  // 修稿那一輪的寫法記在使用者輪上（前端的 payload 永遠不帶 revise）；重來一輪時照樣認得出來。
   const writeMode =
     action.stage === 'manuscript' && action.capability === 'generate'
       ? userTurn.writeMode === 'revise'
@@ -321,8 +321,8 @@ export async function runTurn(
         : (normalizeWriteMode(payload.writeMode) ?? userTurn.writeMode)
       : undefined;
 
-  // 动手之前的两道：修稿先按报告与此刻的正文拼好清单；写一章之前先做一致性预检（零调用）。
-  // 任何一道拦下，这一轮就不调模型，回复里写明为什么停。
+  // 動手之前的兩道：修稿先按報告與此刻的正文拼好清單；寫一章之前先做一致性預檢（零呼叫）。
+  // 任何一道攔下，這一輪就不調模型，回覆裡寫明為什麼停。
   const before = await beforeGenerate(c, { action, writeMode, userTurn, assistantTurn, signal: lease.signal });
   if (!before.go) {
     lease.release();
@@ -353,8 +353,8 @@ export async function runTurn(
         setup,
         writeMode,
         ...(before.reviseBrief ? { reviseBrief: before.reviseBrief } : {}),
-        // 目标字数只有一处来源：细纲的 `targetWords`，没写就是配置的每章字数。
-        // 从前输入框下面还有一个（默认 2000），作者分不清哪个生效（W1）。
+        // 目標字數只有一處來源：細綱的 `targetWords`，沒寫就是配置的每章字數。
+        // 從前輸入框下面還有一個（預設 2000），作者分不清哪個生效（W1）。
         targetWords: await targetWordsOf(c, c.current.target),
         excludedIds: userTurn.excludedIds,
         attachments: userTurn.attachments,
@@ -362,8 +362,8 @@ export async function runTurn(
       },
       {
         onDelta: (delta) => c.post({ type: 'delta', turnId: assistantTurn.id, text: delta }),
-        // 推理模型可能先思考几十秒才开始吐正文。把思考也推给前端，
-        // 否则那段时间气泡是空的，看起来就像卡住、最后一次性蹦出来。
+        // 推理模型可能先思考幾十秒才開始吐正文。把思考也推給前端，
+        // 否則那段時間氣泡是空的，看起來就像卡住、最後一次性蹦出來。
         onReasoning: (delta, full) => {
           assistantTurn.reasoning = full;
           c.post({ type: 'reasoning', turnId: assistantTurn.id, text: delta });
@@ -377,12 +377,12 @@ export async function runTurn(
         onCancelled: () => {
           assistantTurn.interrupted = true;
         },
-        // 写正文时气泡顶上那条进度（W7）：第几轮、写到多少字、目标多少。
+        // 寫正文時氣泡頂上那條進度（W7）：第幾輪、寫到多少字、目標多少。
         onProgress: (p) => c.post({ type: 'writeProgress', turnId: assistantTurn.id, ...p }),
         onReset: (full) => c.post({ type: 'streamReset', turnId: assistantTurn.id, text: full }),
       },
-      // 作者在这个会话上选的那一档。第 12 条的另一面：**只有对话页选定的
-      // 那个模型**吃它，工程页的批量任务不吃。
+      // 作者在這個會話上選的那一檔。第 12 條的另一面：**只有對話頁選定的
+      // 那個模型**吃它，工程頁的批次任務不吃。
       { signal: lease.signal, thinking: c.current.thinking }
     ));
   } finally {
@@ -393,16 +393,16 @@ export async function runTurn(
 
   if (built) {
     assistantTurn.context = serializeDigest(built);
-    // 发出去的那份原样留下，「复制完整上下文」取它。随会话落盘，不随 turnDone 推（见 ChatTurn.contextMessages）。
+    // 發出去的那份原樣留下，「複製完整上下文」取它。隨會話落盤，不隨 turnDone 推（見 ChatTurn.contextMessages）。
     assistantTurn.contextMessages = built.messages.map(({ role, content }) => ({ role, content }));
     c.post({ type: 'context', turnId: assistantTurn.id, digest: assistantTurn.context });
   }
-  // 修稿时重新定位清单的说明排在最前：「正文在审稿之后改过，两条作废」比续写几轮更要紧。
+  // 修稿時重新定位清單的說明排在最前：「正文在審稿之後改過，兩條作廢」比續寫幾輪更要緊。
   if (draft && before.notes?.length) {
     draft.notes = [...before.notes, ...(draft.notes ?? [])];
   }
-  // 审稿报告（D22）：不落盘，随会话保存——草稿表里一份、这一轮上一份（报告卡照它画）。
-  // 没有 artifact，所以下面那张落盘卡片不会出现。
+  // 審稿報告（D22）：不落盤，隨會話儲存——草稿表裡一份、這一輪上一份（報告卡照它畫）。
+  // 沒有 artifact，所以下面那張落盤卡片不會出現。
   if (draft?.review) {
     c.drafts.put(draft, c.current.id);
     c.current.drafts = c.drafts.bySession(c.current.id);
@@ -412,11 +412,11 @@ export async function runTurn(
       ...(draft.calls ? { calls: draft.calls } : {}),
     };
   }
-  // 产出的是可落盘的东西时，把落点与形状一起记下——卡片上要说清
-  // 「新建 5 张角色卡，写到哪」，而不是一句光秃秃的「确定吗」。
+  // 產出的是可落盤的東西時，把落點與形狀一起記下——卡片上要說清
+  // 「新建 5 張角色卡，寫到哪」，而不是一句光禿禿的「確定嗎」。
   //
-  // **不再重新解析一遍**：draft 出厂就带 artifact 与 summary。从前这里
-  // 是三次解析里多余的那一次。
+  // **不再重新解析一遍**：draft 出廠就帶 artifact 與 summary。從前這裡
+  // 是三次解析裡多餘的那一次。
   if (draft?.artifact) {
     c.drafts.put(draft, c.current.id);
     c.current.drafts = c.drafts.bySession(c.current.id);
@@ -442,24 +442,24 @@ export async function runTurn(
   }
   c.post({ type: 'turnDone', turn: serializeTurn(assistantTurn) });
   await persist(c);
-  // 这一轮可能把某一层的产物写过——刷新流水线条。
+  // 這一輪可能把某一層的產物寫過——重新整理流水線條。
   await pushPipeline(c);
 
-  // 第 19 条：产物落盘前必须过一遍人。**在这里问，不是留一颗按钮**——
-  // 先推完 turnDone（气泡定稿、可以就地改）再问，作者要改完再写得来及。
+  // 第 19 條：產物落盤前必須過一遍人。**在這裡問，不是留一顆按鈕**——
+  // 先推完 turnDone（氣泡定稿、可以就地改）再問，作者要改完再寫得來及。
   if (draft?.artifact && assistantTurn.artifact && !assistantTurn.error && !assistantTurn.interrupted) {
     const r = await askArtifact(c, {
       turnId: assistantTurn.id,
       draft,
       art: assistantTurn.artifact,
-      // 气泡里当下那份：作者在卡片上点写入之前可能刚改过（blur 时经
-      // `editTurn` 落在这里），改了的那份才是他要的。
+      // 氣泡裡當下那份：作者在卡片上點寫入之前可能剛改過（blur 時經
+      // `editTurn` 落在這裡），改了的那份才是他要的。
       raw: () => assistantTurn.content,
     });
     if (r.relPath) {
       assistantTurn.acceptedTo = r.relPath;
     } else {
-      // 没写成也要留痕：翻回来看得出这一轮产出过什么、以及它没落盘。
+      // 沒寫成也要留痕：翻回來看得出這一輪產出過什麼、以及它沒落盤。
       assistantTurn.artifact = { ...assistantTurn.artifact, declined: true };
     }
     await persist(c);
@@ -468,18 +468,18 @@ export async function runTurn(
 }
 
 /**
- * 这一轮的回复能不能采纳，以及采纳到哪里。
+ * 這一輪的回覆能不能採納，以及採納到哪裡。
  *
- * 两条路进来：
+ * 兩條路進來：
  *
- * - **重开旧会话**这类拿不到 draft 的（单步生成路径直接读 `draft.artifact`）——
- *   那时按会话当下的 stage/capability/target 算；
- * - **agent 那条路**：draft 的 action 与 target 是它自己定的（agent 可能在
- *   作者选着第 12 章时去改了第 9 章），所以**必须以 draft 为准**，拿
- *   `c.current` 顶上会把落点说成另一章。
+ * - **重開舊會話**這類拿不到 draft 的（單步生成路徑直接讀 `draft.artifact`）——
+ *   那時按會話當下的 stage/capability/target 算；
+ * - **agent 那條路**：draft 的 action 與 target 是它自己定的（agent 可能在
+ *   作者選著第 12 章時去改了第 9 章），所以**必須以 draft 為準**，拿
+ *   `c.current` 頂上會把落點說成另一章。
  *
- * 解析在这里跑一遍只是为了**画界面**（几场？覆盖谁？），真正落盘时
- * `acceptArtifact` 会拿气泡里当时的文本重新解析——用户可能改过。
+ * 解析在這裡跑一遍只是為了**畫介面**（幾場？覆蓋誰？），真正落盤時
+ * `acceptArtifact` 會拿氣泡裡當時的文字重新解析——使用者可能改過。
  */
 export async function describeArtifactOf(
   c: ChatController,
@@ -514,7 +514,7 @@ export async function describeArtifactOf(
 }
 
 /**
- * 产物落到哪：卡片标题与气泡末尾那一行。落定设定的目标是设定目录，可它写的不是设定清单——说成「设定名录」。
+ * 產物落到哪：卡片標題與氣泡末尾那一行。落定設定的目標是設定目錄，可它寫的不是設定清單——說成「設定名錄」。
  */
 async function whereOf(
   c: ChatController,
@@ -522,10 +522,10 @@ async function whereOf(
   target: CreationTarget,
   range?: { from: number; to: number }
 ): Promise<string> {
-  return isLoreSettle(action) ? '设定名录' : describeTargetOf(c, target, range);
+  return isLoreSettle(action) ? '設定名錄' : describeTargetOf(c, target, range);
 }
 
-/** 落定设定会更新的已有条目（按磁盘认，与落盘同一遍，generation/loreSettle.ts）。「会新建」那一半在 `plannedLore`。 */
+/** 落定設定會更新的已有條目（按磁碟認，與落盤同一遍，generation/loreSettle.ts）。「會新建」那一半在 `plannedLore`。 */
 async function settledOf(c: ChatController, artifact: Artifact): Promise<Partial<SerializedArtifact>> {
   if (artifact.kind !== 'loreEntries' || !artifact.settle) {
     return {};
@@ -534,12 +534,12 @@ async function settledOf(c: ChatController, artifact: Artifact): Promise<Partial
   return updates.length > 0 ? { updatesLore: updates } : {};
 }
 
-/** 展开一条设定、落定设定附的「还没定的问题」：只上卡片（`SerializedArtifact.questions`），不落盘。 */
+/** 展開一條設定、落定設定附的「還沒定的問題」：只上卡片（`SerializedArtifact.questions`），不落盤。 */
 function questionsOf(artifact: Artifact): Partial<SerializedArtifact> {
   return artifact.kind === 'loreEntries' && artifact.questions.length > 0 ? { questions: [...artifact.questions] } : {};
 }
 
-/** 正文那几样要摊在卡片上的事：写了多长、是不是追加、有没有重演上一章结尾（W7）。 */
+/** 正文那幾樣要攤在卡片上的事：寫了多長、是不是追加、有沒有重演上一章結尾（W7）。 */
 function writingOf(draft: Pick<Draft, 'length' | 'replay' | 'writeMode'>): Partial<SerializedArtifact> {
   return {
     ...(draft.length ? { length: draft.length } : {}),
@@ -549,9 +549,9 @@ function writingOf(draft: Pick<Draft, 'length' | 'replay' | 'writeMode'>): Parti
 }
 
 /**
- * 这一轮请求真正带下去的区间。只有两处认它：细纲的「生成」（给了就是一批，
- * 对话页一批最多 {@link PLOT_BATCH} 章——更长的区间走工程页的批量拆细纲）与
- * 大纲的「生成」（只写那一段）。落定细纲只落一章，讨论不需要区间。
+ * 這一輪請求真正帶下去的區間。只有兩處認它：細綱的「生成」（給了就是一批，
+ * 對話頁一批最多 {@link PLOT_BATCH} 章——更長的區間走工程頁的批次拆細綱）與
+ * 大綱的「生成」（只寫那一段）。落定細綱只落一章，討論不需要區間。
  */
 function rangeFor(
   action: { stage: CreationStage; capability: Capability },
@@ -566,12 +566,12 @@ function rangeFor(
   return action.stage === 'outline' ? range : undefined;
 }
 
-/** 前端给的写法：只认「接着写」「重写」两种，其余当没给（由磁盘定）。 */
+/** 前端給的寫法：只認「接著寫」「重寫」兩種，其餘當沒給（由磁碟定）。 */
 function normalizeWriteMode(raw: unknown): 'continue' | 'rewrite' | undefined {
   return raw === 'continue' || raw === 'rewrite' ? raw : undefined;
 }
 
-/** 一句话弹窗的规模：两个数都得是正整数，否则当没给。 */
+/** 一句話彈窗的規模：兩個數都得是正整數，否則當沒給。 */
 function normalizeSetup(raw: unknown): { totalChapters: number; wordsPerChapter: number } | undefined {
   const o = (raw ?? {}) as { totalChapters?: unknown; wordsPerChapter?: unknown };
   const total = typeof o.totalChapters === 'number' ? Math.floor(o.totalChapters) : NaN;
@@ -580,12 +580,12 @@ function normalizeSetup(raw: unknown): { totalChapters: number; wordsPerChapter:
 }
 
 /**
- * 采纳的落点上已经有东西了——按钮文案据此改成「覆盖…」。
+ * 採納的落點上已經有東西了——按鈕文案據此改成「覆蓋…」。
  *
- * 只看**这一层自己的产物**，而且只认「填过」：一份只有占位的模板说「会覆盖」
- * 是吓唬人。角色图谱、设定清单永远是 false——只建新卡 / 新条目（同名走各自的审阅）。正文看写法：
- * 「接着写」是追加，不覆盖；其余在这一章已有正文时是整章覆盖。单条设定（展开）与落盘同一个判据
- * （generation/accept.ts 的 `acceptLoreEntries`）：明面正文是空的、是占位、又没有暗设才不算覆盖。
+ * 只看**這一層自己的產物**，而且只認「填過」：一份只有佔位的模板說「會覆蓋」
+ * 是嚇唬人。角色圖譜、設定清單永遠是 false——只建新卡 / 新條目（同名走各自的審閱）。正文看寫法：
+ * 「接著寫」是追加，不覆蓋；其餘在這一章已有正文時是整章覆蓋。單條設定（展開）與落盤同一個判據
+ * （generation/accept.ts 的 `acceptLoreEntries`）：明面正文是空的、是佔位、又沒有暗設才不算覆蓋。
  */
 export async function targetHasContent(
   c: ChatController,
@@ -598,7 +598,7 @@ export async function targetHasContent(
   writeMode?: WriteMode
 ): Promise<boolean> {
   void action;
-  // 带区间时只看区间里：续写第 21–40 章的大纲不覆盖前 20 章，一批细纲只覆盖这几章。
+  // 帶區間時只看區間裡：續寫第 21–40 章的大綱不覆蓋前 20 章，一批細綱只覆蓋這幾章。
   if (range && target.kind === 'outline') {
     return outlineOverlaps(await c.project.readOutline(), range);
   }
@@ -637,8 +637,8 @@ export async function targetHasContent(
 }
 
 /**
- * 这一轮生成的目标字数：细纲的 `targetWords`，没写就是 `config.md` 的每章字数。
- * 只有细纲与正文两层谈得上「这一章写多长」。
+ * 這一輪生成的目標字數：細綱的 `targetWords`，沒寫就是 `config.md` 的每章字數。
+ * 只有細綱與正文兩層談得上「這一章寫多長」。
  */
 async function targetWordsOf(c: ChatController, target: CreationTarget): Promise<number | undefined> {
   const relPath = plotOfTarget(target);
@@ -650,34 +650,34 @@ async function targetWordsOf(c: ChatController, target: CreationTarget): Promise
 }
 
 /**
- * 产物落盘前那一句问，以及同意之后的落盘。**第 19 条的落点。**
+ * 產物落盤前那一句問，以及同意之後的落盤。**第 19 條的落點。**
  *
- * ## 为什么是一张卡片，不是一颗按钮
+ * ## 為什麼是一張卡片，不是一顆按鈕
  *
- * 从前这里是气泡末尾那颗「采纳写入」：它可以拖到第二天再点，于是
- * 「产物落盘前必须过一遍人」在界面上是一颗**可以永远不点的按钮**——而
- * agent 早就接着往下做了，作者手上攒着三份没落地的产物，谁也说不清哪份
- * 已经写过。现在它和别的动手请求（写文件、改一段字）长一个样、在同一个
- * 位置、**产出的当下就问**（[gate.ts](gate.ts)）。
+ * 從前這裡是氣泡末尾那顆「採納寫入」：它可以拖到第二天再點，於是
+ * 「產物落盤前必須過一遍人」在介面上是一顆**可以永遠不點的按鈕**——而
+ * agent 早就接著往下做了，作者手上攢著三份沒落地的產物，誰也說不清哪份
+ * 已經寫過。現在它和別的動手請求（寫檔案、改一段字）長一個樣、在同一個
+ * 位置、**產出的當下就問**（[gate.ts](gate.ts)）。
  *
- * ## 不交给宿主的权限配置
+ * ## 不交給宿主的許可權配置
  *
- * 外部 agent 的宿主（Claude Code 之类）自己有一层「让不让调这个工具」的权限，
- * 可以被设成全自动。这一问不在那一层：**任何情况下都问**（`controller/mcp.ts`
- * 产出草稿后照样走这里）。那是产品承诺（第 19 条），不是偏好设置。
+ * 外部 agent 的宿主（Claude Code 之類）自己有一層「讓不讓調這個工具」的許可權，
+ * 可以被設成全自動。這一問不在那一層：**任何情況下都問**（`controller/mcp.ts`
+ * 產出草稿後照樣走這裡）。那是產品承諾（第 19 條），不是偏好設定。
  *
- * ## 落点从 draft 里取，不由前端传
+ * ## 落點從 draft 裡取，不由前端傳
  *
- * 前端猜不出一段讨论该写到哪一层。从前采纳按钮发的是 `store.session.target`
- * ——那是**当下**选中的目标，作者生成完切了一章再点采纳，产物就写到别的
+ * 前端猜不出一段討論該寫到哪一層。從前採納按鈕發的是 `store.session.target`
+ * ——那是**當下**選中的目標，作者生成完切了一章再點採納，產物就寫到別的
  * 地方去了。
  *
- * `raw` 缺省用 `draft.raw`（模型产出的原文）。单步创作那条路传的是气泡里
- * 当下的文本：作者可以先在气泡里改完再点写入，那份改动经 `editTurn` 已经
+ * `raw` 預設用 `draft.raw`（模型產出的原文）。單步創作那條路傳的是氣泡裡
+ * 當下的文字：作者可以先在氣泡裡改完再點寫入，那份改動經 `editTurn` 已經
  * 落在 `turn.content` 上。
  *
- * 目标已有内容时，落盘那一步还会走 workspace 网关的覆盖审阅（插件开 diff）
- * ——那是另一层，与这一问无关，两层都过了才真的改磁盘。
+ * 目標已有內容時，落盤那一步還會走 workspace 閘道器的覆蓋審閱（外掛開 diff）
+ * ——那是另一層，與這一問無關，兩層都過了才真的改磁碟。
  */
 export async function askArtifact(
   c: ChatController,
@@ -685,95 +685,95 @@ export async function askArtifact(
     turnId: string;
     draft: Draft;
     art: SerializedArtifact;
-    /** 谁在要求写。只影响那句话的主语（「Agent 要把生成的产物…」）。 */
+    /** 誰在要求寫。隻影響那句話的主語（「Agent 要把生成的產物…」）。 */
     byAgent?: boolean;
     callId?: string;
     /**
-     * 要落盘的那份文本，**答完之后才取**（所以是个函数）：作者在卡片上点写入
-     * 之前可能刚在气泡里改过，取早了拿到的是他改之前那份。
+     * 要落盤的那份文字，**答完之後才取**（所以是個函式）：作者在卡片上點寫入
+     * 之前可能剛在氣泡裡改過，取早了拿到的是他改之前那份。
      */
     raw?: () => string;
-    /** 写完要不要顺手打开它。单步创作打开（作者正盯着这一份），agent 不打开——它可能连着写好几份。 */
+    /** 寫完要不要順手開啟它。單步創作開啟（作者正盯著這一份），agent 不開啟——它可能連著寫好幾份。 */
     open?: boolean;
     signal?: AbortSignal;
   }
 ): Promise<{ verdict: GateVerdict; relPath?: string; message: string }> {
   const { art, draft } = ask;
-  const what = art.overwrites ? '覆盖' : art.append ? '追加' : '写入';
+  const what = art.overwrites ? '覆蓋' : art.append ? '追加' : '寫入';
   const verdict = await askGate(
     c,
     {
       turnId: ask.turnId,
       callId: ask.callId,
       name: 'artifact',
-      title: `${ask.byAgent ? 'Agent 要把生成的产物' : '把这份产物'}${what}到「${art.where}」`,
+      title: `${ask.byAgent ? 'Agent 要把生成的產物' : '把這份產物'}${what}到「${art.where}」`,
       detail: artifactDetail(art),
-      skip: '不采纳',
-      // 重演上一章结尾：标红、写明重合的原句，写入要点两下（总计划 §2.4）。不替作者拒收——
-      // 有时重合的是一句刻意呼应的台词。
+      skip: '不採納',
+      // 重演上一章結尾：標紅、寫明重合的原句，寫入要點兩下（總計劃 §2.4）。不替作者拒收——
+      // 有時重合的是一句刻意呼應的臺詞。
       ...(art.replay
         ? {
-            danger: `开头与上一章结尾大段重合，可能把上一章最后一场又演了一遍：\n「${clipQuote(art.replay)}」`,
-            confirm: '确定仍要写入',
+            danger: `開頭與上一章結尾大段重合，可能把上一章最後一場又演了一遍：\n「${clipQuote(art.replay)}」`,
+            confirm: '確定仍要寫入',
           }
         : {}),
     },
     ask.signal
   );
   if (verdict !== 'proceed') {
-    return { verdict, message: '作者没有采纳这份产物，磁盘上什么都没变。' };
+    return { verdict, message: '作者沒有採納這份產物，磁碟上什麼都沒變。' };
   }
 
-  // 气泡里当下那份优先（作者可能改过），空了退回生成时那份原文。
+  // 氣泡裡當下那份優先（作者可能改過），空了退回生成時那份原文。
   const edited = ask.raw?.();
   let raw = edited?.trim() ? edited : draft.raw;
   if (!raw.trim()) {
-    c.toast('内容是空的。', 'error');
-    return { verdict, message: '内容是空的，没有写入任何文件。' };
+    c.toast('內容是空的。', 'error');
+    return { verdict, message: '內容是空的，沒有寫入任何檔案。' };
   }
-  // 删修饰删过字：逐段对照删之前那一版，作者可以把删错的退回原文。作者已经在气泡里改过就不问——
-  // 合并视图拿删之前那版对着他改过的那份，标出来的改动里混着他自己的字。
+  // 刪修飾刪過字：逐段對照刪之前那一版，作者可以把刪錯的退回原文。作者已經在氣泡裡改過就不問——
+  // 合併檢視拿刪之前那版對著他改過的那份，標出來的改動裡混著他自己的字。
   const host = getHost();
   if (draft.untrimmed && host.mergeTexts && raw.trim() === draft.raw.trim()) {
-    const picked = await host.mergeTexts('删修饰：删之前 ↔ 删之后（可以逐段退回原文）', draft.untrimmed, raw);
+    const picked = await host.mergeTexts('刪修飾：刪之前 ↔ 刪之後（可以逐段退回原文）', draft.untrimmed, raw);
     if (typeof picked === 'object') {
       raw = picked.merged;
     } else if (picked !== 'apply') {
-      return { verdict, message: '作者在删修饰的对照里放弃了写入，磁盘上什么都没变。' };
+      return { verdict, message: '作者在刪修飾的對照裡放棄了寫入，磁碟上什麼都沒變。' };
     }
   }
-  // **重新解析一遍**而不是用 `draft.artifact`：作者可能在气泡里改过。
+  // **重新解析一遍**而不是用 `draft.artifact`：作者可能在氣泡裡改過。
   const artifact = parseDraftArtifact(draft.action, raw, draft.target, draft.range);
   if (!artifact) {
-    // 解析不出来时**不写**。写一个空产物比不写更糟：作者会以为存下了。
-    log.warn('产物解析不出内容，未写入', `阶段 ${draft.action.stage}·${draft.action.capability}`);
-    c.toast('这段内容解析不出可采纳的产物，没有写入任何文件。', 'error');
-    return { verdict, message: '这段内容解析不出可写入的产物，没有写入任何文件。' };
+    // 解析不出來時**不寫**。寫一個空產物比不寫更糟：作者會以為存下了。
+    log.warn('產物解析不出內容，未寫入', `階段 ${draft.action.stage}·${draft.action.capability}`);
+    c.toast('這段內容解析不出可採納的產物，沒有寫入任何檔案。', 'error');
+    return { verdict, message: '這段內容解析不出可寫入的產物，沒有寫入任何檔案。' };
   }
 
-  // 正文按生成那一刻定下的写法落盘：「接着写」追加，其余在已有正文时覆盖审阅。
+  // 正文按生成那一刻定下的寫法落盤：「接著寫」追加，其餘在已有正文時覆蓋審閱。
   const result = await writeArtifact(c.project, draft.target, artifact, { writeMode: draft.writeMode });
   c.toast(result.message);
   if (result.skipped || !result.relPath) {
     return { verdict, message: result.message };
   }
-  // 细纲落在占位路径（`summaries/003.md`）上时，文件其实按标题落成了 `003-雪夜.md`。
-  // 会话还指着占位路径的话，下一轮写正文、再点一次写细纲都会对着一份「不存在」的细纲
-  // ——改成真实路径。不走 setTarget：那会把能力重置、把页签切走。
+  // 細綱落在佔位路徑（`summaries/003.md`）上時，檔案其實按標題落成了 `003-雪夜.md`。
+  // 會話還指著佔位路徑的話，下一輪寫正文、再點一次寫細綱都會對著一份「不存在」的細綱
+  // ——改成真實路徑。不走 setTarget：那會把能力重置、把頁籤切走。
   if (draft.target.kind === 'plot' && result.relPath !== draft.target.plotRelPath && isPlotPath(c.project, result.relPath)) {
     await retargetPlot(c, draft.target.plotRelPath, result.relPath);
   }
   if (ask.open !== false) {
     await getHost().openFile(result.relPath);
   }
-  // pushState 连流水线条一起推。
+  // pushState 連流水線條一起推。
   await c.pushState();
   return { verdict, relPath: result.relPath, message: result.message };
 }
 
 /**
- * 落盘卡片上那几行字：形状、会新建哪几张角色卡（D19）、会不会先对比、调了几次模型、
- * 这一路上的降级（第 2 条）。**动手之前全摊开**——写完再说「顺便建了三张卡」就晚了。
+ * 落盤卡片上那幾行字：形狀、會新建哪幾張角色卡（D19）、會不會先對比、調了幾次模型、
+ * 這一路上的降級（第 2 條）。**動手之前全攤開**——寫完再說「順便建了三張卡」就晚了。
  */
 function artifactDetail(art: SerializedArtifact): string {
   const lines = [art.summary];
@@ -781,29 +781,29 @@ function artifactDetail(art: SerializedArtifact): string {
     lines.push(describeWriteLength(art.length, art.append));
   }
   if (art.creates?.length) {
-    lines.push(`会新建角色卡：${art.creates.join('、')}`);
+    lines.push(`會新建角色卡：${art.creates.join('、')}`);
   }
   if (art.createsLore?.length) {
-    lines.push(`会新建设定条目：${art.createsLore.join('、')}`);
+    lines.push(`會新建設定條目：${art.createsLore.join('、')}`);
   }
-  // 叙事线的计划随细纲写进各条线（叙事线二期）：写进哪几条、换掉原来的几条、没认出的，动手之前摊开。
+  // 敘事線的計劃隨細綱寫進各條線（敘事線二期）：寫進哪幾條、換掉原來的幾條、沒認出的，動手之前攤開。
   if (art.threadPlan?.length) {
     lines.push(...art.threadPlan);
   }
-  // 落定设定（二期）：改已有条目的，写过内容的写入前逐条对比。
+  // 落定設定（二期）：改已有條目的，寫過內容的寫入前逐條對比。
   if (art.updatesLore?.length) {
-    lines.push(`会更新设定条目：${art.updatesLore.join('、')}（写过内容的写入前逐条对比）`);
+    lines.push(`會更新設定條目：${art.updatesLore.join('、')}（寫過內容的寫入前逐條對比）`);
   }
-  // 展开一条设定、落定设定附的问题：只在这里列，不写进任何文件；作者在对话里答完再来一次。
+  // 展開一條設定、落定設定附的問題：只在這裡列，不寫進任何檔案；作者在對話裡答完再來一次。
   if (art.questions?.length) {
-    lines.push(`还没定的（不写进文件，在对话里答完可以再来一次）：\n${art.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`);
+    lines.push(`還沒定的（不寫進檔案，在對話裡答完可以再來一次）：\n${art.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`);
   }
   if (art.overwrites) {
-    lines.push('那里已经有内容了，写入前会让你先对比一遍。');
+    lines.push('那裡已經有內容了，寫入前會讓你先對比一遍。');
   }
   if (art.calls && art.calls > 1) {
-    const rounds = art.length?.rounds ? `（续写 ${art.length.rounds} 轮）` : '';
-    lines.push(`这一轮一共调了 ${art.calls} 次模型${rounds}。`);
+    const rounds = art.length?.rounds ? `（續寫 ${art.length.rounds} 輪）` : '';
+    lines.push(`這一輪一共調了 ${art.calls} 次模型${rounds}。`);
   }
   for (const note of art.notes ?? []) {
     lines.push(`· ${note}`);
@@ -811,39 +811,39 @@ function artifactDetail(art: SerializedArtifact): string {
   return lines.join('\n');
 }
 
-/** 重演的那一段太长时只摊开头：卡片上放不下一整段，作者认得出是哪一段就够了。 */
+/** 重演的那一段太長時只攤開頭：卡片上放不下一整段，作者認得出是哪一段就夠了。 */
 function clipQuote(text: string, max = 120): string {
   const one = text.replace(/\s+/g, ' ').trim();
   return one.length > max ? `${one.slice(0, max)}…` : one;
 }
 
 /**
- * 章节工作台工具条上的按钮（W6）：对这一章做一件事。
+ * 章節工作臺工具條上的按鈕（W6）：對這一章做一件事。
  *
- * 写这一章 / 接着写 / 重写 **等于对这一章按下主按钮**：切到它的正文层，按那种写法发一轮
- * 生成（输入框里没有话——该说的都在细纲里）。生成照样在对话页流式输出、照样当场问写不写
- * （第 19 条），与主按钮是同一条路，只是入口在编辑器上方。定稿走工程动作。
+ * 寫這一章 / 接著寫 / 重寫 **等於對這一章按下主按鈕**：切到它的正文層，按那種寫法發一輪
+ * 生成（輸入框裡沒有話——該說的都在細綱裡）。生成照樣在對話頁流式輸出、照樣當場問寫不寫
+ * （第 19 條），與主按鈕是同一條路，只是入口在編輯器上方。定稿走工程動作。
  */
 export async function chapterAction(c: ChatController, plotRelPath: string, action: ChapterAction): Promise<void> {
   if (c.busy) {
-    c.toast('已有一个生成任务在进行中。', 'error');
+    c.toast('已有一個生成任務在進行中。', 'error');
     return;
   }
   const entry = await resolvePlotTarget(c, plotRelPath);
   if (!entry) {
-    c.toast('这一章不存在，可能刚被改名或删除。', 'error');
+    c.toast('這一章不存在，可能剛被改名或刪除。', 'error');
     return;
   }
   if (action === 'finalize') {
     if (!entry.chapter) {
-      c.toast('这一章还没有正文，无法同步。', 'error');
+      c.toast('這一章還沒有正文，無法同步。', 'error');
       return;
     }
     await c.dispatch({ type: 'projectAction', action: 'finalizeChapter', relPath: entry.chapter.relPath });
     return;
   }
   if (action === 'review' && !(entry.chapter && entry.chapter.wordCount > 0)) {
-    c.toast('这一章还没有正文，没法审稿。', 'error');
+    c.toast('這一章還沒有正文，沒法審稿。', 'error');
     return;
   }
   const target: CreationTarget = {
@@ -854,7 +854,7 @@ export async function chapterAction(c: ChatController, plotRelPath: string, acti
   await send(c, {
     text: '',
     stage: 'manuscript',
-    // 审稿（五期）：与写这一章同一条路，只是能力换成 review——只出报告，没有落盘卡片。
+    // 審稿（五期）：與寫這一章同一條路，只是能力換成 review——只出報告，沒有落盤卡片。
     capability: action === 'review' ? 'review' : 'generate',
     target,
     targetNo: entry.no,
@@ -865,39 +865,39 @@ export async function chapterAction(c: ChatController, plotRelPath: string, acti
 }
 
 /**
- * 工程页「故事架构」那几行右键「重写…」：对那一件**直接发一轮生成**。
+ * 工程頁「故事架構」那幾行右鍵「重寫…」：對那一件**直接發一輪生成**。
  *
- * 先问一句重写要求——留空就是照上游重来一遍，写了就是修改意见（生成层本来就这么读输入）；
- * 再弹确认框报次数、挑这一次的模型与详细度（features/askCall.ts）；哪一问取消都什么都不做。
- * 生成照样在对话页流式输出，覆盖前照样先对比（第 19 条）。
- * 「讨论」走 `setTarget`：只进入这一层，不花钱。
+ * 先問一句重寫要求——留空就是照上游重來一遍，寫了就是修改意見（生成層本來就這麼讀輸入）；
+ * 再彈確認框報次數、挑這一次的模型與詳細度（features/askCall.ts）；哪一問取消都什麼都不做。
+ * 生成照樣在對話頁流式輸出，覆蓋前照樣先對比（第 19 條）。
+ * 「討論」走 `setTarget`：只進入這一層，不花錢。
  *
- * 情节大纲认得出章标题时不走对话页：按 20 章一段重写，写完一次对比（features/outlineRewrite.ts）。
+ * 情節大綱認得出章標題時不走對話頁：按 20 章一段重寫，寫完一次對比（features/outlineRewrite.ts）。
  */
 export async function rewriteArchitecture(c: ChatController, target: CreationTarget): Promise<void> {
   if (target.kind !== 'setting' && target.kind !== 'outline') {
     return;
   }
   if (c.busy) {
-    c.toast('已有一个生成任务在进行中。', 'error');
+    c.toast('已有一個生成任務在進行中。', 'error');
     return;
   }
   const where = describeTarget(target);
-  if (!(await confirmDespiteGap(await c.project.listChapters(), `重写${where}`))) {
+  if (!(await confirmDespiteGap(await c.project.listChapters(), `重寫${where}`))) {
     return;
   }
-  // 有条目的大纲按段重写（features/outlineRewrite.ts）：一次写全书，后半段稀得像目录。只重写还没写正文的章。
+  // 有條目的大綱按段重寫（features/outlineRewrite.ts）：一次寫全書，後半段稀得像目錄。只重寫還沒寫正文的章。
   const plan = target.kind === 'outline' ? await outlineRewritePlan(c.project) : undefined;
   if (plan && plan.batches.length === 0) {
-    c.toast(`情节大纲排到第 ${plan.end} 章，都已经写了正文：写过的章，大纲那一条是同步时照正文写的，不重写。要往后排，用主按钮续写大纲。`);
+    c.toast(`情節大綱排到第 ${plan.end} 章，都已經寫了正文：寫過的章，大綱那一條是同步時照正文寫的，不重寫。要往後排，用主按鈕續寫大綱。`);
     return;
   }
   const ask = await getHost().input({
-    title: `重写${where}`,
+    title: `重寫${where}`,
     prompt: plan
-      ? `这次要怎么改？${describeOutlineRewrite(plan)}`
-      : '这次要怎么改？留空就照上游重新生成一遍。写入前会先让你对比。',
-    placeHolder: '例如：主角的金手指换成……；节奏再快一点',
+      ? `這次要怎麼改？${describeOutlineRewrite(plan)}`
+      : '這次要怎麼改？留空就照上游重新生成一遍。寫入前會先讓你對比。',
+    placeHolder: '例如：主角的金手指換成……；節奏再快一點',
     multiline: true,
   });
   if (ask === undefined) {
@@ -906,29 +906,29 @@ export async function rewriteArchitecture(c: ChatController, target: CreationTar
   if (plan) {
     const n = plan.batches.length;
     const answer = await askCall({
-      message: `重写${where}：${describeCalls({ low: n, high: n, max: n })}。`,
-      actions: ['开始重写'],
+      message: `重寫${where}：${describeCalls({ low: n, high: n, max: n })}。`,
+      actions: ['開始重寫'],
       detail: describeOutlineRewrite(plan),
       tasks: ['plotOutline'],
       contextDetail: true,
     });
-    if (answer?.action !== '开始重写') {
+    if (answer?.action !== '開始重寫') {
       return;
     }
     await withCallChoice(answer.choice, () => rewriteOutline(c.project, plan, ask.trim()));
     await c.pushState();
     return;
   }
-  // 其余几件在对话页生成：模型缺省是对话页那个（与不问时一样），换了就只这一轮用它（generate 认 `pinnedModel`）。
+  // 其餘幾件在對話頁生成：模型預設是對話頁那個（與不問時一樣），換了就只這一輪用它（generate 認 `pinnedModel`）。
   const answer = await askCall({
-    message: `重写${where}：在对话页${ask.trim() ? '按你的要求' : '照上游'}重新生成一份，写入前先让你对比。${describeCalls(target.kind === 'setting' ? settingCalls(target.doc) : ONE_CALL)}。`,
-    actions: ['开始重写'],
-    // 配置、角色图谱、设定清单写完由转写模型照抄成 JSON（2026-10-25 起），单列一行说清转写交给谁。
+    message: `重寫${where}：在對話頁${ask.trim() ? '按你的要求' : '照上游'}重新生成一份，寫入前先讓你對比。${describeCalls(target.kind === 'setting' ? settingCalls(target.doc) : ONE_CALL)}。`,
+    actions: ['開始重寫'],
+    // 配置、角色圖譜、設定清單寫完由轉寫模型照抄成 JSON（2026-10-25 起），單列一行說清轉寫交給誰。
     tasks: target.kind === 'setting' && TRANSCRIBED_SETTINGS.includes(target.doc) ? ['transcribe'] : [],
     contextDetail: true,
     preset: { model: readConfig().model || undefined },
   });
-  if (answer?.action !== '开始重写') {
+  if (answer?.action !== '開始重寫') {
     return;
   }
   await withCallChoice(answer.choice, async () => {
@@ -946,17 +946,17 @@ export async function rewriteArchitecture(c: ChatController, target: CreationTar
 }
 
 /**
- * 工程页设定条目、「待完善」那一行右键「展开…」（完善设定，2026-10-19）：把对话页的目标换成这一条设定，
- * **直接发一轮生成**（展开）。照 {@link rewriteArchitecture} 那条路：先问一句要求（留空就照已排的细纲去想；
- * 取消就什么都不做），生成照样在对话页流式输出、照样当场问写不写，已经有内容的条目覆盖前先对比（第 19、3 条）。
- * 问完要求再弹确认框：模型缺省是会话选定的那个（第 12 条），可以为这一轮换一个（generate 认 `pinnedModel`）。
+ * 工程頁設定條目、「待完善」那一行右鍵「展開…」（完善設定，2026-10-19）：把對話頁的目標換成這一條設定，
+ * **直接發一輪生成**（展開）。照 {@link rewriteArchitecture} 那條路：先問一句要求（留空就照已排的細綱去想；
+ * 取消就什麼都不做），生成照樣在對話頁流式輸出、照樣當場問寫不寫，已經有內容的條目覆蓋前先對比（第 19、3 條）。
+ * 問完要求再彈確認框：模型預設是會話選定的那個（第 12 條），可以為這一輪換一個（generate 認 `pinnedModel`）。
  *
- * 只给了名字（「待完善」里还没有条目的）：问完要求之后先在「设定」一节给的分类目录下建一条空条目（同细纲带出新设定），
- * 再展开它。名字已被已有条目（标题或关键词）占了就展开那一条；是角色卡上的人就报错退出——人不是设定。
+ * 只給了名字（「待完善」裡還沒有條目的）：問完要求之後先在「設定」一節給的分類目錄下建一條空條目（同細綱帶出新設定），
+ * 再展開它。名字已被已有條目（標題或關鍵詞）佔了就展開那一條；是角色卡上的人就報錯退出——人不是設定。
  */
 export async function expandLore(c: ChatController, msg: { relPath?: string; name?: string; category?: string }): Promise<void> {
   if (c.busy) {
-    c.toast('已有一个生成任务在进行中。', 'error');
+    c.toast('已有一個生成任務在進行中。', 'error');
     return;
   }
   const entries = await c.project.listLore();
@@ -964,48 +964,48 @@ export async function expandLore(c: ChatController, msg: { relPath?: string; nam
   const name = msg.name?.trim() ?? '';
   let entry = rel ? entries.find((e) => e.relPath === rel) : name ? createLoreLookup(entries).find(name) : undefined;
   if (rel && !entry) {
-    c.toast('这条设定不在了，可能刚被改名或删除。', 'error');
+    c.toast('這條設定不在了，可能剛被改名或刪除。', 'error');
     return;
   }
   if (!entry && !name) {
-    c.toast('没说要展开哪一条设定。', 'error');
+    c.toast('沒說要展開哪一條設定。', 'error');
     return;
   }
   if (!entry) {
     const cards = await c.project.listCharacters();
     if (cards.some((card) => card.name === name || card.aliases.includes(name))) {
-      c.toast(`「${name}」是角色卡上的人，人不是设定，没法展开。`, 'error');
+      c.toast(`「${name}」是角色卡上的人，人不是設定，沒法展開。`, 'error');
       return;
     }
   }
   const label = entry?.title ?? name;
   const ask = await getHost().input({
-    title: `展开设定「${label}」`,
+    title: `展開設定「${label}」`,
     prompt:
-      `这次有什么要求？留空就照已排的细纲去想。${describeCalls(LORE_EXPAND_CALLS)}。` +
-      (entry ? '' : '还没有这一条，会先建一条空条目。') +
-      '写入前卡片上会列出展开的内容、建议拆出的子条目与还没定的问题；已经写过内容的条目会先让你对比。',
-    placeHolder: '例如：阁规要严一些；暗设里交代它和魔宗的旧账',
+      `這次有什麼要求？留空就照已排的細綱去想。${describeCalls(LORE_EXPAND_CALLS)}。` +
+      (entry ? '' : '還沒有這一條，會先建一條空條目。') +
+      '寫入前卡片上會列出展開的內容、建議拆出的子條目與還沒定的問題；已經寫過內容的條目會先讓你對比。',
+    placeHolder: '例如：閣規要嚴一些；暗設裡交代它和魔宗的舊賬',
     multiline: true,
   });
   if (ask === undefined) {
     return;
   }
-  // 模型缺省是对话页那个（与不问时一样），换了就只这一轮用它（generate 认 `pinnedModel`）。问在建空条目之前：取消不留空条目。
+  // 模型預設是對話頁那個（與不問時一樣），換了就只這一輪用它（generate 認 `pinnedModel`）。問在建空條目之前：取消不留空條目。
   const answer = await askCall({
-    message: `展开设定「${label}」：在对话页发一轮生成，${describeCalls(LORE_EXPAND_CALLS)}。${entry ? '' : '还没有这一条，会先建一条空条目。'}`,
-    actions: ['开始展开'],
+    message: `展開設定「${label}」：在對話頁發一輪生成，${describeCalls(LORE_EXPAND_CALLS)}。${entry ? '' : '還沒有這一條，會先建一條空條目。'}`,
+    actions: ['開始展開'],
     tasks: ['transcribe'],
     contextDetail: true,
     preset: { model: readConfig().model || undefined },
   });
-  if (answer?.action !== '开始展开') {
+  if (answer?.action !== '開始展開') {
     return;
   }
   await withCallChoice(answer.choice, () => expandLoreEntry(c, entry, name, msg.category, ask.trim()));
 }
 
-/** 问完之后：还没有条目就先建空条目，再把对话页的目标换成它、发一轮展开。 */
+/** 問完之後：還沒有條目就先建空條目，再把對話頁的目標換成它、發一輪展開。 */
 async function expandLoreEntry(
   c: ChatController,
   found: LoreEntry | undefined,
@@ -1019,10 +1019,10 @@ async function expandLoreEntry(
     const slug = await uniqueSlug(c.project.loreDir, `${folder ? `${folder}/` : ''}${slugify(name)}`);
     const created = await new Workspace(c.project).writeLore({ slug, title: name, keywords: [name], brief: '', body: '' });
     c.project.invalidate();
-    log.info(`展开之前先建了空条目「${name}」`, created);
+    log.info(`展開之前先建了空條目「${name}」`, created);
     entry = (await c.project.listLore()).find((e) => e.relPath === created);
     if (!entry) {
-      c.toast(`没建成「${name}」的条目。`, 'error');
+      c.toast(`沒建成「${name}」的條目。`, 'error');
       return;
     }
   }
@@ -1040,27 +1040,27 @@ async function expandLoreEntry(
 }
 
 /**
- * 审稿报告卡底部「按勾选的 n 条修稿」（五期 W10）。
+ * 審稿報告卡底部「按勾選的 n 條修稿」（五期 W10）。
  *
- * 发的是一轮正文层的生成，写法 `revise`：用户气泡是 `/按审稿修稿` + 勾选的那几条，清单在
- * 动手之前按此刻的正文重新拼（{@link planRevision}），修订稿照样当场问写不写、覆盖前先对比
- * （第 19 条、第 3 条）。能勾的只有问题与没完成的目标；认不出的 id 丢掉。
+ * 發的是一輪正文層的生成，寫法 `revise`：使用者氣泡是 `/按審稿修稿` + 勾選的那幾條，清單在
+ * 動手之前按此刻的正文重新拼（{@link planRevision}），修訂稿照樣當場問寫不寫、覆蓋前先對比
+ * （第 19 條、第 3 條）。能勾的只有問題與沒完成的目標；認不出的 id 丟掉。
  */
 export async function reviseChapter(c: ChatController, turnId: string, picks: readonly string[]): Promise<void> {
   if (c.busy) {
-    c.toast('已有一个生成任务在进行中。', 'error');
+    c.toast('已有一個生成任務在進行中。', 'error');
     return;
   }
   const turn = c.current.turns.find((t) => t.id === turnId && t.role === 'assistant');
   const report = turn?.review ? normalizeReport(turn.review.report) : undefined;
   if (!report) {
-    c.toast('找不到这份审稿报告，可能那一轮已经被删掉了。', 'error');
+    c.toast('找不到這份審稿報告，可能那一輪已經被刪掉了。', 'error');
     return;
   }
   const allowed = new Set(pickableIds(report));
   const chosen = [...new Set(picks)].filter((id) => allowed.has(id));
   if (chosen.length === 0) {
-    c.toast('没有勾选任何可以修的条目。', 'error');
+    c.toast('沒有勾選任何可以修的條目。', 'error');
     return;
   }
   const target: CreationTarget = {
@@ -1073,22 +1073,22 @@ export async function reviseChapter(c: ChatController, turnId: string, picks: re
     { text: '', stage: 'manuscript', capability: 'generate', target, targetNo: report.chapterNo, attachments: [], excludedIds: [] },
     {
       writeMode: 'revise',
-      command: '按审稿修稿',
+      command: '按審稿修稿',
       revise: { reviewTurnId: turnId, picks: chosen, items: describePicks(report, chosen) },
     }
   );
 }
 
 /**
- * 报告卡编辑模式点了「保存」（五期补遗 §3）：把那张问题表合回那一轮的报告（`applyReviewEdits`：
- * 模型给的不能删、作者加的接着编号、引文按正文校验），气泡正文换成新的文字版，落盘、推回。
- * 不调模型。引文按磁盘上此刻的正文找——审稿之后改过的话，作者对着的正是现在这一版。
+ * 報告卡編輯模式點了「儲存」（五期補遺 §3）：把那張問題表合回那一輪的報告（`applyReviewEdits`：
+ * 模型給的不能刪、作者加的接著編號、引文按正文校驗），氣泡正文換成新的文字版，落盤、推回。
+ * 不調模型。引文按磁碟上此刻的正文找——審稿之後改過的話，作者對著的正是現在這一版。
  */
 export async function editReview(c: ChatController, turnId: string, edits: readonly ReviewIssueEdit[]): Promise<void> {
   const turn = c.current.turns.find((t) => t.id === turnId && t.role === 'assistant');
   const report = turn?.review ? normalizeReport(turn.review.report) : undefined;
   if (!turn || !turn.review || !report) {
-    c.toast('找不到这份审稿报告，可能那一轮已经被删掉了。', 'error');
+    c.toast('找不到這份審稿報告，可能那一輪已經被刪掉了。', 'error');
     return;
   }
   const chapter = await c.project.getChapter(report.chapterNo);
@@ -1096,28 +1096,28 @@ export async function editReview(c: ChatController, turnId: string, edits: reado
   const { report: next, notes } = applyReviewEdits(report, edits, text);
   turn.review = { ...turn.review, report: next };
   turn.content = renderReport(next);
-  log.info(`编辑了第 ${report.chapterNo} 章的审稿报告`, notes.join('；') || `${next.issues.length} 条问题`);
+  log.info(`編輯了第 ${report.chapterNo} 章的審稿報告`, notes.join('；') || `${next.issues.length} 條問題`);
   await persist(c);
   c.post({ type: 'turnDone', turn: serializeTurn(turn) });
-  c.toast(notes.length > 0 ? `审稿报告已保存。${notes.join('；')}。` : '审稿报告已保存。');
+  c.toast(notes.length > 0 ? `審稿報告已儲存。${notes.join('；')}。` : '審稿報告已儲存。');
 }
 
-/** {@link beforeGenerate} 的结论：放行（修稿时带上拼好的清单），或者拦下并说明。 */
+/** {@link beforeGenerate} 的結論：放行（修稿時帶上拼好的清單），或者攔下並說明。 */
 type BeforeGenerate =
   | { go: true; reviseBrief?: string; notes?: string[] }
   | { go: false; content?: string; error?: string; interrupted?: boolean };
 
 /**
- * 调模型之前的两道（五期）。
+ * 調模型之前的兩道（五期）。
  *
- * - **修稿**：按那一轮的报告与磁盘上此刻的正文拼清单。正文在审稿之后改过（指纹对不上），
- *   逐条重新定位勾选的问题，引文已经不在的作废并写进说明；一条都不剩就不调模型。
- * - **一致性预检**：写一章（新写或重写）之前，零调用地查细纲有没有把角色卡上已经死了的人排进
- *   本章。有就在对话页亮一张卡：「仅本次忽略，照写」/「先不写」，或者填一句理由「记为刻意安排，
- *   照写」——记进这一章细纲的 `preflightOk`，以后写这一章不再为这几个人亮卡（五期补遗 §2）。记过的
- *   不拦，写章卡片的说明里提一句。接着写与修稿不查——开头已经写下了，这时候拦它没有意义。
- * - **叙事线提醒**（叙事线二期）：伏笔逾期、线断了，同一次预检零调用地算出来，**不拦**——有风险要亮卡时写在卡片说明里，
- *   没有风险就放进这一轮的说明（写章卡片上「· 叙事线提醒：……」），日志里也记一笔。
+ * - **修稿**：按那一輪的報告與磁碟上此刻的正文拼清單。正文在審稿之後改過（指紋對不上），
+ *   逐條重新定位勾選的問題，引文已經不在的作廢並寫進說明；一條都不剩就不調模型。
+ * - **一致性預檢**：寫一章（新寫或重寫）之前，零呼叫地查細綱有沒有把角色卡上已經死了的人排進
+ *   本章。有就在對話頁亮一張卡：「僅本次忽略，照寫」/「先不寫」，或者填一句理由「記為刻意安排，
+ *   照寫」——記進這一章細綱的 `preflightOk`，以後寫這一章不再為這幾個人亮卡（五期補遺 §2）。記過的
+ *   不攔，寫章卡片的說明裡提一句。接著寫與修稿不查——開頭已經寫下了，這時候攔它沒有意義。
+ * - **敘事線提醒**（敘事線二期）：伏筆逾期、線斷了，同一次預檢零呼叫地算出來，**不攔**——有風險要亮卡時寫在卡片說明裡，
+ *   沒有風險就放進這一輪的說明（寫章卡片上「· 敘事線提醒：……」），日誌裡也記一筆。
  */
 async function beforeGenerate(
   c: ChatController,
@@ -1147,10 +1147,10 @@ async function beforeGenerate(
   const notes = exempted.map(describeExempted);
   const threadNote = pre && no ? describeThreadNotes('本章', pre.threads, pre.threadsThrough, no) : '';
   if (threadNote) {
-    log.info(`写第 ${no} 章之前的叙事线提醒：${pre!.threads.length} 条（不拦）`, threadNote);
+    log.info(`寫第 ${no} 章之前的敘事線提醒：${pre!.threads.length} 條（不攔）`, threadNote);
     notes.push(threadNote);
   }
-  // 批量写章在这一章前面停下时挂过一个黄 ❗：这一次查过了（没问题，或作者说仅本次忽略）就收掉。
+  // 批次寫章在這一章前面停下時掛過一個黃 ❗：這一次查過了（沒問題，或作者說僅本次忽略）就收掉。
   if (!no || risks.length === 0) {
     if (plotRel) {
       await clearFailures(c.project, 'plot', plotRel, 'preflight');
@@ -1158,22 +1158,22 @@ async function beforeGenerate(
     return { go: true, ...(notes.length > 0 ? { notes } : {}) };
   }
   const lines = describeRisks(no, risks);
-  log.warn(`写第 ${no} 章之前的一致性预检：${risks.length} 处`, lines.join('\n'));
+  log.warn(`寫第 ${no} 章之前的一致性預檢：${risks.length} 處`, lines.join('\n'));
   const answer = await askGateNoted(
     c,
     {
       turnId: ctx.assistantTurn.id,
       name: 'preflight',
-      title: `写第 ${no} 章之前的一致性预检：${risks.length} 处要留意`,
-      detail: `${PREFLIGHT_SUGGESTION}\n${threadNote ? `${threadNote}\n` : ''}这一步没有调用模型。`,
+      title: `寫第 ${no} 章之前的一致性預檢：${risks.length} 處要留意`,
+      detail: `${PREFLIGHT_SUGGESTION}\n${threadNote ? `${threadNote}\n` : ''}這一步沒有呼叫模型。`,
       danger: lines.join('\n'),
-      proceed: '仅本次忽略，照写',
-      skip: '先不写',
+      proceed: '僅本次忽略，照寫',
+      skip: '先不寫',
       ...(plotRel
         ? {
             remember: {
-              label: '记为刻意安排，照写',
-              placeholder: '为什么这是刻意的安排（如：回忆里的一场）。记进这一章的细纲，以后写这一章不再为这几个人提醒',
+              label: '記為刻意安排，照寫',
+              placeholder: '為什麼這是刻意的安排（如：回憶裡的一場）。記進這一章的細綱，以後寫這一章不再為這幾個人提醒',
             },
           }
         : {}),
@@ -1184,14 +1184,14 @@ async function beforeGenerate(
     if (answer.remember && plotRel) {
       const ok = await c.workspace.recordPreflightOk(plotRel, risks.map((r) => ({ name: r.name, reason: answer.remember! })));
       const who = risks.map((r) => r.name).join('、');
-      log.info(`一致性预检：作者把${who}记为第 ${no} 章的刻意安排`, answer.remember);
+      log.info(`一致性預檢：作者把${who}記為第 ${no} 章的刻意安排`, answer.remember);
       notes.unshift(
         ok
-          ? `一致性预检：${who}在第 ${no} 章出场已记为刻意安排（${answer.remember}），写进了这一章细纲的 preflightOk，以后写这一章不再提醒`
-          : `一致性预检：这一章细纲是手写的（没有 frontmatter），没能记下「${answer.remember}」；这一次照写`
+          ? `一致性預檢：${who}在第 ${no} 章出場已記為刻意安排（${answer.remember}），寫進了這一章細綱的 preflightOk，以後寫這一章不再提醒`
+          : `一致性預檢：這一章細綱是手寫的（沒有 frontmatter），沒能記下「${answer.remember}」；這一次照寫`
       );
     } else {
-      log.info(`一致性预检：作者选择仅本次忽略，照写第 ${no} 章`);
+      log.info(`一致性預檢：作者選擇僅本次忽略，照寫第 ${no} 章`);
     }
     if (plotRel) {
       await clearFailures(c.project, 'plot', plotRel, 'preflight');
@@ -1202,64 +1202,64 @@ async function beforeGenerate(
     go: false,
     interrupted: answer.verdict === 'stop',
     content: [
-      `一致性预检发现 ${risks.length} 处问题，这一次先不写——没有调用模型。`,
+      `一致性預檢發現 ${risks.length} 處問題，這一次先不寫——沒有呼叫模型。`,
       '',
       ...lines.map((l) => `- ${l}`),
       '',
-      '改好细纲的出场角色或角色卡之后再写；如果这本来就是回忆、幻象一类的刻意安排，再点一次写这一章，选「仅本次忽略，照写」或「记为刻意安排，照写」。',
+      '改好細綱的出場角色或角色卡之後再寫；如果這本來就是回憶、幻象一類的刻意安排，再點一次寫這一章，選「僅本次忽略，照寫」或「記為刻意安排，照寫」。',
     ].join('\n'),
   };
 }
 
-/** 修稿那一轮的清单。见 {@link beforeGenerate}。 */
+/** 修稿那一輪的清單。見 {@link beforeGenerate}。 */
 async function planRevision(c: ChatController, userTurn: ChatTurn): Promise<BeforeGenerate> {
   const r = userTurn.revise;
   const reviewTurn = r ? c.current.turns.find((t) => t.id === r.reviewTurnId) : undefined;
   const report = reviewTurn?.review ? normalizeReport(reviewTurn.review.report) : undefined;
   if (!r || !report) {
-    return { go: false, error: '找不到这一轮修稿依据的那份审稿报告（可能已经被删掉了），没法按它修稿。' };
+    return { go: false, error: '找不到這一輪修稿依據的那份審稿報告（可能已經被刪掉了），沒法按它修稿。' };
   }
   const chapter = await c.project.getChapter(report.chapterNo);
   const text = chapter ? await c.project.readChapterText(chapter) : '';
   if (!chapter || !text.trim()) {
-    return { go: false, error: `第 ${report.chapterNo} 章已经没有正文了，没法修稿。` };
+    return { go: false, error: `第 ${report.chapterNo} 章已經沒有正文了，沒法修稿。` };
   }
   const notes: string[] = [];
   let picks = r.picks;
   if (chapter.contentHash !== report.chapterHash) {
     const { kept, lost } = relocatePicks(report, picks, text);
     picks = kept;
-    notes.push('正文在审稿之后改过，勾选的条目已按现在的正文重新定位');
+    notes.push('正文在審稿之後改過，勾選的條目已按現在的正文重新定位');
     if (lost.length > 0) {
       notes.push(
-        `${lost.length} 条的引文已经不在正文里了，没有交给模型：${lost.map((i) => `「${clipQuote(i.description, 24)}」`).join('、')}`
+        `${lost.length} 條的引文已經不在正文裡了，沒有交給模型：${lost.map((i) => `「${clipQuote(i.description, 24)}」`).join('、')}`
       );
     }
   }
   const brief = renderRevisionBrief(report, picks);
   if (!brief) {
-    return { go: false, error: '勾选的条目在现在的正文里都找不到了，没有可以修的。正文改过的话，重新审一遍这一章。' };
+    return { go: false, error: '勾選的條目在現在的正文裡都找不到了，沒有可以修的。正文改過的話，重新審一遍這一章。' };
   }
-  notes.unshift(`按 ${picks.length} 条勾选的审稿意见修稿`);
-  log.info(`按审稿修第 ${report.chapterNo} 章`, notes.join('；'));
+  notes.unshift(`按 ${picks.length} 條勾選的審稿意見修稿`);
+  log.info(`按審稿修第 ${report.chapterNo} 章`, notes.join('；'));
   return { go: true, reviseBrief: brief, notes };
 }
 
 /**
- * 切换当前在改哪个产物。
+ * 切換當前在改哪個產物。
  *
- * 阶段跟着 target 走，能力回落到该阶段的默认值（一律 discuss）——
- * 从「正文·生成」切到剧情还留着「生成」，等于点一下就花钱重写一章的细纲。
+ * 階段跟著 target 走，能力回落到該階段的預設值（一律 discuss）——
+ * 從「正文·生成」切到劇情還留著「生成」，等於點一下就花錢重寫一章的細綱。
  */
 export async function setTarget(c: ChatController, target: CreationTarget): Promise<void> {
   if (c.busy) {
-    c.toast('正在生成，请先停止。', 'error');
+    c.toast('正在生成，請先停止。', 'error');
     return;
   }
   c.current.target = target;
   c.current.stage = stageOfTarget(target);
   c.current.capability = DEFAULT_CAPABILITY[c.current.stage];
-  // 把章号同步过来：装配器在细纲尚未落盘时靠它定位前文边界，而这里正好知道答案。
+  // 把章號同步過來：裝配器在細綱尚未落盤時靠它定位前文邊界，而這裡正好知道答案。
   const relPath = plotOfTarget(target);
   if (relPath) {
     const no = parsePlotFileName(basename(relPath))?.no;
@@ -1267,7 +1267,7 @@ export async function setTarget(c: ChatController, target: CreationTarget): Prom
       c.current.targetNo = no;
     }
   }
-  log.info(`创作目标切到 ${await describeCurrentTarget(c)}`);
+  log.info(`創作目標切到 ${await describeCurrentTarget(c)}`);
   c.tab = 'chat';
   c.post({ type: 'tab', tab: 'chat' });
   c.post({ type: 'session', session: serializeSession(c.current) });
@@ -1275,39 +1275,39 @@ export async function setTarget(c: ChatController, target: CreationTarget): Prom
 }
 
 /**
- * 进入某一章：**由状态机决定落在哪一层**。
+ * 進入某一章：**由狀態機決定落在哪一層**。
  *
- * 这是「选中一章 = 进入它当前该做的那一步」的实现：还没排细纲就落细纲层，
- * 细纲排好了就落正文层。判断必须在后端：前端手上只有当前那一章的 pipeline。
+ * 這是「選中一章 = 進入它當前該做的那一步」的實現：還沒排細綱就落細綱層，
+ * 細綱排好了就落正文層。判斷必須在後端：前端手上只有當前那一章的 pipeline。
  *
- * **收的是「哪一章」**，界面上几个入口给的路径形状各不相同——细纲路径（可能还
- * 不存在，下拉框与老工程的章给的就是 `plotPathOfNo` 算出来的位置）或章节路径。
- * `resolvePlotTarget` 把它们认到同一章：章节路径就是那一章，细纲按路径配对（细纲镜像正文的路径）。
+ * **收的是「哪一章」**，介面上幾個入口給的路徑形狀各不相同——細綱路徑（可能還
+ * 不存在，下拉框與老工程的章給的就是 `plotPathOfNo` 算出來的位置）或章節路徑。
+ * `resolvePlotTarget` 把它們認到同一章：章節路徑就是那一章，細綱按路徑配對（細綱映象正文的路徑）。
  */
 export async function selectPlot(c: ChatController, plotRelPath: string): Promise<void> {
   const entry = await resolvePlotTarget(c, plotRelPath);
   if (!entry) {
-    c.toast('这一章不存在，可能刚被改名或删除。', 'error');
+    c.toast('這一章不存在，可能剛被改名或刪除。', 'error');
     return;
   }
   const pipeline = await buildPlotPipeline(c.project, entry);
   const next = deriveNextStep(pipeline.stage, factsOf(pipeline));
-  // 细纲还没有时落点用它**应该**在的位置（有正文就是正文的镜像）：选中它就是
-  // 「去给这一章补规划」，装配器与工作区卡都能如实退化成空壳。
+  // 細綱還沒有時落點用它**應該**在的位置（有正文就是正文的映象）：選中它就是
+  // 「去給這一章補規劃」，裝配器與工作區卡都能如實退化成空殼。
   const target = pipeline.plot.relPath;
 
-  // 全做完了（next 为空）就停在正文——那是这一章的终点，也是最可能
-  // 要回头改的一层。
+  // 全做完了（next 為空）就停在正文——那是這一章的終點，也是最可能
+  // 要回頭改的一層。
   await setTarget(c, next ? targetOf(next, target) : { kind: 'manuscript', plotRelPath: target });
 }
 
 /**
- * 前端给的路径 → 这一章（细纲与正文各自可能缺席）。两边都没有才算「不存在」。
+ * 前端給的路徑 → 這一章（細綱與正文各自可能缺席）。兩邊都沒有才算「不存在」。
  *
- * - 章节路径：就是那一章，细纲是它的镜像（同号的正文有两份时也认得准是哪一份）。
- * - 细纲路径（`summaries/` 下）：按 `resolvePlot` 认这一章现在的那一份细纲，正文是它镜像回去的那一章。
- *   `readPlot` 是纯解析，喂它一个章节文件也会**解析成功**，所以只有认得出是细纲的路径才当细纲读。
- * - 其余（还不存在的细纲路径）按文件名里的号认。
+ * - 章節路徑：就是那一章，細綱是它的映象（同號的正文有兩份時也認得準是哪一份）。
+ * - 細綱路徑（`summaries/` 下）：按 `resolvePlot` 認這一章現在的那一份細綱，正文是它映象回去的那一章。
+ *   `readPlot` 是純解析，餵它一個章節檔案也會**解析成功**，所以只有認得出是細綱的路徑才當細綱讀。
+ * - 其餘（還不存在的細綱路徑）按檔名裡的號認。
  */
 async function resolvePlotTarget(
   c: ChatController,
@@ -1331,14 +1331,14 @@ async function resolvePlotTarget(
 }
 
 /**
- * 细纲改名后，把当前会话的目标指到新路径。
+ * 細綱改名後，把當前會話的目標指到新路徑。
  *
- * 少了这一步，`current.target.plotRelPath` 还指着旧路径，创作页会拿到一份
- * 「这一章找不到」的空壳 pipeline——徽章回落成「待写细纲」、进度全归零、
- * 工作区卡说这一章不存在。而作者刚做的只是给它起个名字。
+ * 少了這一步，`current.target.plotRelPath` 還指著舊路徑，創作頁會拿到一份
+ * 「這一章找不到」的空殼 pipeline——徽章回落成「待寫細綱」、進度全歸零、
+ * 工作區卡說這一章不存在。而作者剛做的只是給它起個名字。
  *
- * **不走 `setTarget`**：那会把 capability 重置成 discuss、把页签切到创作页。
- * 改个名不该让他刚挑好的命令消失，也不该把他从工程页拽走。
+ * **不走 `setTarget`**：那會把 capability 重置成 discuss、把頁籤切到創作頁。
+ * 改個名不該讓他剛挑好的命令消失，也不該把他從工程頁拽走。
  */
 export async function retargetPlot(
   c: ChatController,
@@ -1350,28 +1350,28 @@ export async function retargetPlot(
     return;
   }
   c.current.target = { ...c.current.target, plotRelPath: toRel } as CreationTarget;
-  log.info(`创作目标跟随改名`, `${current} → ${toRel}`);
+  log.info(`創作目標跟隨改名`, `${current} → ${toRel}`);
   c.post({ type: 'session', session: serializeSession(c.current) });
   await pushPipeline(c);
 }
 
 /**
- * 把这一轮请求里的 stage/capability/target 记进会话。
+ * 把這一輪請求裡的 stage/capability/target 記進會話。
  *
- * 前端每次发送都带全量（它才知道用户点了哪个按钮），后端**校验一遍**：
- * 阶段认不出、或该阶段（在这个目标上）不支持这个能力时回落，绝不照单全收——那会让
- * `STAGE_CAPABILITIES` 这张表形同虚设。
+ * 前端每次傳送都帶全量（它才知道使用者點了哪個按鈕），後端**校驗一遍**：
+ * 階段認不出、或該階段（在這個目標上）不支援這個能力時回落，絕不照單全收——那會讓
+ * `STAGE_CAPABILITIES` 這張表形同虛設。
  */
 export function applyAction(c: ChatController, payload: SendPayload): void {
   const stage = isCreationStage(payload.stage) ? payload.stage : c.current.stage;
-  // 按这一层、这个目标算：架构那一层只有设定目录有 `settle`（落定设定）。
+  // 按這一層、這個目標算：架構那一層只有設定目錄有 `settle`（落定設定）。
   const capability: Capability = capabilitiesOn(stage, normalizeTarget(payload.target)).includes(payload.capability)
     ? payload.capability
     : DEFAULT_CAPABILITY[stage];
   if (capability !== payload.capability) {
     log.warn(
-      `「${payload.capability}」不是${stage}阶段的能力，已回落到${capability}`,
-      '前端的按钮组与 STAGE_CAPABILITIES 对不上了'
+      `「${payload.capability}」不是${stage}階段的能力，已回落到${capability}`,
+      '前端的按鈕組與 STAGE_CAPABILITIES 對不上了'
     );
   }
   c.current.stage = stage;
@@ -1379,28 +1379,28 @@ export function applyAction(c: ChatController, payload: SendPayload): void {
   c.current.target = normalizeTarget(payload.target);
 }
 
-/** 当前目标的人话描述。日志、落盘卡片、面包屑共用。 */
+/** 當前目標的人話描述。日誌、落盤卡片、麵包屑共用。 */
 export async function describeCurrentTarget(c: ChatController): Promise<string> {
   return describeTargetOf(c, c.current.target);
 }
 
 /**
- * 任意 target 的人话描述。
+ * 任意 target 的人話描述。
  *
- * 与 `describeCurrentTarget` 分开是因为 agent 那条路上的落点由 draft 决定，
- * 未必是作者当下选中的那一章——拿 `c.current` 顶上会把落点说成另一章。
+ * 與 `describeCurrentTarget` 分開是因為 agent 那條路上的落點由 draft 決定，
+ * 未必是作者當下選中的那一章——拿 `c.current` 頂上會把落點說成另一章。
  */
 export async function describeTargetOf(
   c: ChatController,
   target: CreationTarget,
   range?: { from: number; to: number }
 ): Promise<string> {
-  // 一批细纲 / 续写的那一段大纲：落点是一段章号，不是某一章。
+  // 一批細綱 / 續寫的那一段大綱：落點是一段章號，不是某一章。
   if (range && (target.kind === 'plot' || target.kind === 'outline')) {
     const span = range.from === range.to ? `第 ${range.from} 章` : `第 ${range.from}–${range.to} 章`;
-    return target.kind === 'plot' ? `${span} · 细纲` : `情节大纲 · ${span}`;
+    return target.kind === 'plot' ? `${span} · 細綱` : `情節大綱 · ${span}`;
   }
-  // 单条设定报条目的标题（文件名与标题偶尔不一样：同名时 `uniqueSlug` 会加后缀）。
+  // 單條設定報條目的標題（檔名與標題偶爾不一樣：同名時 `uniqueSlug` 會加字尾）。
   if (target.kind === 'lore') {
     return describeTarget(target, { title: (await loreEntryAt(c.project, target.relPath)).entry.title });
   }
@@ -1413,11 +1413,11 @@ export async function describeTargetOf(
 }
 
 /**
- * 推一份创作页的现场：流水线 + 工作区卡 + 下一步。
+ * 推一份創作頁的現場：流水線 + 工作區卡 + 下一步。
  *
- * 架构与大纲两层没有「这一章」，下一步问全书状态机。选中一章时问那一章的；
- * **那一章做完了就转去问全书**——主按钮于是自然落到下一个该写的章上，
- * 而不是一段做完就沉默（从前 `done` 之后没有按钮，作者得自己去找下一段）。
+ * 架構與大綱兩層沒有「這一章」，下一步問全書狀態機。選中一章時問那一章的；
+ * **那一章做完了就轉去問全書**——主按鈕於是自然落到下一個該寫的章上，
+ * 而不是一段做完就沉默（從前 `done` 之後沒有按鈕，作者得自己去找下一段）。
  */
 export async function pushPipeline(c: ChatController): Promise<void> {
   const target = c.current.target;
@@ -1441,13 +1441,13 @@ export async function pushPipeline(c: ChatController): Promise<void> {
 }
 
 /**
- * 全书级的下一步。
+ * 全書級的下一步。
  *
- * 判据在纯函数层（`deriveBookStage` / `deriveBookNextStep`），这里只取数：
+ * 判據在純函式層（`deriveBookStage` / `deriveBookNextStep`），這裡只取數：
  *
- * - 架构、大纲、拆细纲三档：`bookStepView` 补上落点（工程页的空状态用的是同一份）。
- * - 在写那一档：转去问**下一个该写的章**的单章状态机，主按钮就是「写第 N 章」一类。
- * - 写完了：不给按钮。
+ * - 架構、大綱、拆細綱三檔：`bookStepView` 補上落點（工程頁的空狀態用的是同一份）。
+ * - 在寫那一檔：轉去問**下一個該寫的章**的單章狀態機，主按鈕就是「寫第 N 章」一類。
+ * - 寫完了：不給按鈕。
  */
 export async function bookNextStep(c: ChatController): Promise<NextStepView | undefined> {
   const facts = await buildBookFacts(c.project);
@@ -1470,10 +1470,10 @@ export async function bookNextStep(c: ChatController): Promise<NextStepView | un
 }
 
 /**
- * 打开旧会话时把 target 补齐。
+ * 開啟舊會話時把 target 補齊。
  *
- * `normalize` 是纯函数，查不了磁盘，所以只记得 `targetNo` 的会话会一律落到
- * 情节大纲。这里手上能读盘，把它还原成「正文 · 第 N 章」。
+ * `normalize` 是純函式，查不了磁碟，所以只記得 `targetNo` 的會話會一律落到
+ * 情節大綱。這裡手上能讀盤，把它還原成「正文 · 第 N 章」。
  */
 export async function restoreTarget(c: ChatController, session: ChatSession): Promise<void> {
   if (session.target.kind !== 'outline' || session.targetNo === undefined) {

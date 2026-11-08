@@ -1,13 +1,13 @@
-# 独立版的 Docker 镜像（linux/amd64 + linux/arm64），推到 GHCR：ghcr.io/noir017/novelwarden。
+# 獨立版的 Docker 映象（linux/amd64 + linux/arm64），推到 GHCR：ghcr.io/noir017/novelwarden。
 #
-# 两种跑法：
-# - 手动点：推 :edge 与 :sha-<短哈希>，日常验证「还能编出来、起得来」；
-# - 发版时由 release.yml 调过来（workflow_call，带 version）：推 :X.Y.Z 与 :latest。
+# 兩種跑法：
+# - 手動點：推 :edge 與 :sha-<短雜湊>，日常驗證「還能編出來、起得來」；
+# - 發版時由 release.yml 調過來（workflow_call，帶 version）：推 :X.Y.Z 與 :latest。
 #
-# 镜像怎么编见仓库根的 Dockerfile：可执行文件两个架构都由 Bun 交叉编译；运行段有一条 apt（装 git），
-# arm64 那一层经 QEMU 模拟（setup-qemu-action）。
-# GHCR 用 GITHUB_TOKEN 登录，不另配 secret。包第一次推上去默认是私有的，要在包设置里改一次 public，
-# 否则拉镜像前得先 docker login。
+# 映象怎麼編見倉庫根的 Dockerfile：可執行檔案兩個架構都由 Bun 交叉編譯；執行段有一條 apt（裝 git），
+# arm64 那一層經 QEMU 模擬（setup-qemu-action）。
+# GHCR 用 GITHUB_TOKEN 登入，不另配 secret。包第一次推上去預設是私有的，要在包設定裡改一次 public，
+# 否則拉映象前得先 docker login。
 name: docker
 
 on:
@@ -15,11 +15,11 @@ on:
   workflow_call:
     inputs:
       version:
-        description: 发布的版本号（X.Y.Z，不带 v）
+        description: 釋出的版本號（X.Y.Z，不帶 v）
         type: string
         required: true
 
-# 与 release.yml 的 concurrency 组名不能相同：被调用时两边同名会互相等，卡死。
+# 與 release.yml 的 concurrency 組名不能相同：被呼叫時兩邊同名會互相等，卡死。
 concurrency:
   group: docker-${{ github.ref }}
   cancel-in-progress: true
@@ -32,7 +32,7 @@ jobs:
   image:
     runs-on: ubuntu-latest
     env:
-      # 冒烟用的一次性令牌，只活在这台 runner 上，不是机密。
+      # 冒煙用的一次性令牌，只活在這臺 runner 上，不是機密。
       SMOKE_TOKEN: smoke-token-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
@@ -48,14 +48,14 @@ jobs:
 
       - run: npm ci
 
-      # 闸门：测试挂了就不要出镜像。镜像里的构建不跑测试，所以在这里跑。
-      - name: 跑测试
+      # 閘門：測試掛了就不要出映象。映象裡的構建不跑測試，所以在這裡跑。
+      - name: 跑測試
         run: npm test
 
-      - name: 定镜像名与标签
+      - name: 定映象名與標籤
         id: meta
         run: |
-          # 镜像名固定为新仓库名（GitHub 仓库改名后 GITHUB_REPOSITORY 才会跟着变）。
+          # 映象名固定為新倉庫名（GitHub 倉庫改名後 GITHUB_REPOSITORY 才會跟著變）。
           image="ghcr.io/noir017/novelwarden"
           version="${{ inputs.version }}"
           if [ -n "$version" ]; then
@@ -68,14 +68,14 @@ jobs:
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
           echo "本次推：$tags"
 
-      # 运行段的 apt-get（装 git）在 arm64 上要模拟执行。
+      # 執行段的 apt-get（裝 git）在 arm64 上要模擬執行。
       - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v3
 
-      # 先只编 amd64、装进本机 docker 做冒烟，过了再编双架构推送——坏镜像不该推上去。
-      # 第二次编 amd64 全吃这次的缓存。
-      - name: 编 amd64（冒烟用）
+      # 先只編 amd64、裝進本機 docker 做冒煙，過了再編雙架構推送——壞映象不該推上去。
+      # 第二次編 amd64 全吃這次的快取。
+      - name: 編 amd64（冒煙用）
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -85,13 +85,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: 冒烟：起容器、走一遍登录
+      - name: 冒煙：起容器、走一遍登入
         run: |
-          # 镜像里绑 0.0.0.0：不给令牌必须拒绝启动（退出码 1）。起来了会一直跑，所以套个 timeout。
+          # 映象裡綁 0.0.0.0：不給令牌必須拒絕啟動（退出碼 1）。起來了會一直跑，所以套個 timeout。
           status=0
           timeout 30 docker run --rm novelwarden:smoke || status=$?
           if [ "$status" != 1 ]; then
-            echo "::error::没给 NOVELWARDEN_TOKEN 时应当拒绝启动（退出码 1），实际是 $status"
+            echo "::error::沒給 NOVELWARDEN_TOKEN 時應當拒絕啟動（退出碼 1），實際是 $status"
             exit 1
           fi
 
@@ -110,11 +110,11 @@ jobs:
             | grep -i '^set-cookie:' | sed -E 's/^[^:]+: *([^;]+).*/\1/')"
           test -n "$cookie"
           test "$(code -H "cookie: $cookie" http://127.0.0.1:3680/)" = 200
-          # 作者要在容器里用 git 同步书：git 与 ssh 得在，而且以非 root 身份跑得起来。
+          # 作者要在容器裡用 git 同步書：git 與 ssh 得在，而且以非 root 身份跑得起來。
           docker exec novelwarden-smoke git --version
           docker exec novelwarden-smoke ssh -V
           test "$(docker exec novelwarden-smoke id -u)" = 65532
-          echo "冒烟通过"
+          echo "冒煙通過"
 
       - uses: docker/login-action@v3
         with:
@@ -122,14 +122,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 编双架构并推送
+      - name: 編雙架構並推送
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          # source 这条把 GHCR 上的包关联到本仓库。
+          # source 這條把 GHCR 上的包關聯到本倉庫。
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}

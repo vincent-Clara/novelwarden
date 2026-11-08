@@ -1,11 +1,11 @@
-# 桌面 app 的双平台构建，手动点（日常验证「还能编出来」，产物只进 artifact，不发布）。
+# 桌面 app 的雙平臺構建，手動點（日常驗證「還能編出來」，產物只進 artifact，不釋出）。
 #
-# 为什么必须用 CI：sidecar 能靠 Bun 交叉编译（在 Linux 上就能出 Windows 的 .exe），
-# 但 **Tauri 的 Rust 壳不能**——Windows 安装包得在 Windows 上编。所以每个平台
-# 一台 runner，各自原生编译自己的 sidecar 与安装包。
+# 為什麼必須用 CI：sidecar 能靠 Bun 交叉編譯（在 Linux 上就能出 Windows 的 .exe），
+# 但 **Tauri 的 Rust 殼不能**——Windows 安裝包得在 Windows 上編。所以每個平臺
+# 一臺 runner，各自原生編譯自己的 sidecar 與安裝包。
 #
-# 不认 tag：推 v* tag 是发版，由 release.yml 出齐全部产物；这里也认的话同一个 tag
-# 要编两遍。版本号用的是仓库里 package.json 当下的值，这里不改它。
+# 不認 tag：推 v* tag 是發版，由 release.yml 出齊全部產物；這裡也認的話同一個 tag
+# 要編兩遍。版本號用的是倉庫裡 package.json 當下的值，這裡不改它。
 name: app
 
 on:
@@ -17,8 +17,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ubuntu-22.04 而不是 latest：deb / rpm 链接的 glibc 版本越低，
-          # 能装的发行版越多。
+          # ubuntu-22.04 而不是 latest：deb / rpm 連結的 glibc 版本越低，
+          # 能裝的發行版越多。
           - os: ubuntu-22.04
             name: linux
           - os: windows-latest
@@ -40,11 +40,11 @@ jobs:
 
       - run: npm ci
 
-      # 闸门：壳不该掩盖核心的问题。测试挂了就不要出包。
-      - name: 跑测试
+      # 閘門：殼不該掩蓋核心的問題。測試掛了就不要出包。
+      - name: 跑測試
         run: npm test
 
-      - name: Linux 构建依赖
+      - name: Linux 構建依賴
         if: matrix.name == 'linux'
         run: |
           sudo apt-get update
@@ -53,20 +53,20 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      # 编译 Rust 壳很慢，缓存能把重复构建从几分钟压到几十秒。
+      # 編譯 Rust 殼很慢，快取能把重複構建從幾分鐘壓到幾十秒。
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src/shells/desktop
 
-      # sidecar 由 tauri.conf.json 的 beforeBuildCommand 自动构建，
-      # 不必在这里单独跑一步。
+      # sidecar 由 tauri.conf.json 的 beforeBuildCommand 自動構建，
+      # 不必在這裡單獨跑一步。
 
-      # projectPath 指向桌面壳所在目录（Tauri 工程根就是它自己，里面直接放着
-      # tauri.conf.json）。不给这个参数的话 action 会从仓库根去找 src-tauri/。
+      # projectPath 指向桌面殼所在目錄（Tauri 工程根就是它自己，裡面直接放著
+      # tauri.conf.json）。不給這個引數的話 action 會從倉庫根去找 src-tauri/。
       #
-      # Linux 只出 deb + rpm：AppImage 由 linuxdeploy 打，而它会对包进去的每个
-      # 可执行跑 patchelf 改 ELF 头——sidecar 是 Bun --compile 出来的单文件，
-      # ELF 后面粘着 JS 运行时，一改就坏。详见 release.yml 里同一处的注释。
+      # Linux 只出 deb + rpm：AppImage 由 linuxdeploy 打，而它會對包進去的每個
+      # 可執行跑 patchelf 改 ELF 頭——sidecar 是 Bun --compile 出來的單檔案，
+      # ELF 後面粘著 JS 執行時，一改就壞。詳見 release.yml 裡同一處的註釋。
       - uses: tauri-apps/tauri-action@v0
         with:
           projectPath: src/shells/desktop
@@ -78,8 +78,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: novelwarden-${{ matrix.name }}
-          # 只收安装包，不收 90 MB 的 sidecar 中间产物。各平台产出什么由 Tauri
-          # 按平台决定，所以这里用通配而不是写死目录名。
+          # 只收安裝包，不收 90 MB 的 sidecar 中間產物。各平臺產出什麼由 Tauri
+          # 按平臺決定，所以這裡用通配而不是寫死目錄名。
           path: |
             src/shells/desktop/target/release/bundle/*/*.deb
             src/shells/desktop/target/release/bundle/*/*.rpm

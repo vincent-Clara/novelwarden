@@ -1,19 +1,19 @@
 /**
- * MCP 协议层（`src/core/mcp/server.ts` + `http.ts`）：**只测协议，不碰工程。**
+ * MCP 協議層（`src/core/mcp/server.ts` + `http.ts`）：**只測協議，不碰工程。**
  *
- * 执行端是一个假的 `McpBackend`——真的那一份（绑在 `ChatController` 上）在
+ * 執行端是一個假的 `McpBackend`——真的那一份（綁在 `ChatController` 上）在
  * `tests/integration/mcp/backend.test.js`。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | initialize | 版本协商、回会话 id、带上使用说明 |
- * | tools/list | 十三个工具；`costly` / `mutating` 落成 readOnlyHint / destructiveHint |
- * | tools/call | 参数原样转给执行端；出错走 `isError`，不走 JSON-RPC 错误 |
- * | 没打开工程 | 回一句能照着做的话，`isError` |
- * | 状态简报 | 第一次必贴；没变不贴；变了再贴 |
- * | 取消 | `notifications/cancelled` 与连接断开都中断那一次调用 |
- * | HTTP | 通知 202、坏 JSON 400、认不出的会话 404、DELETE 结束会话、GET 405、跨源 403 |
- * | 长调用 | `tools/call` 回 SSE：响应头先回、跑的期间发进度、读的一方走了就中断；只收 JSON 的照旧 |
+ * | initialize | 版本協商、回會話 id、帶上使用說明 |
+ * | tools/list | 十三個工具；`costly` / `mutating` 落成 readOnlyHint / destructiveHint |
+ * | tools/call | 引數原樣轉給執行端；出錯走 `isError`，不走 JSON-RPC 錯誤 |
+ * | 沒開啟工程 | 回一句能照著做的話，`isError` |
+ * | 狀態簡報 | 第一次必貼；沒變不貼；變了再貼 |
+ * | 取消 | `notifications/cancelled` 與連線斷開都中斷那一次呼叫 |
+ * | HTTP | 通知 202、壞 JSON 400、認不出的會話 404、DELETE 結束會話、GET 405、跨源 403 |
+ * | 長呼叫 | `tools/call` 回 SSE：響應頭先回、跑的期間發進度、讀的一方走了就中斷；只收 JSON 的照舊 |
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -23,13 +23,13 @@ const mcp = loadModule('src/core/mcp/index.ts');
 
 const URL_ = 'http://127.0.0.1:5000/mcp';
 
-/** 可编程的执行端。`calls` 记下每一次调用，`brief` 可随时改。 */
+/** 可程式設計的執行端。`calls` 記下每一次呼叫，`brief` 可隨時改。 */
 function fakeBackend() {
   const b = {
     calls: [],
-    brief: '# 当前工程\n下一步：写第 1 章细纲',
+    brief: '# 當前工程\n下一步：寫第 1 章細綱',
     reply: (name) => ({ text: `ran ${name}`, isError: false }),
-    /** 给了就在调用里等它（测取消）。 */
+    /** 給了就在呼叫裡等它（測取消）。 */
     hold: undefined,
     backend: {
       call: async (name, args, signal) => {
@@ -49,7 +49,7 @@ function makeHandler({ backend, allowOrigin, heartbeatMs } = {}) {
   return mcp.createNovelMcp(() => backend, { ...(allowOrigin ? { allowOrigin } : {}), ...(heartbeatMs ? { heartbeatMs } : {}) });
 }
 
-/** SSE 正文 → 逐条事件（只认 `data:` 行）。 */
+/** SSE 正文 → 逐條事件（只認 `data:` 行）。 */
 function sseEvents(text) {
   return text
     .split('\n')
@@ -58,8 +58,8 @@ function sseEvents(text) {
 }
 
 /**
- * `tools/call` 回的是 SSE：把其中的回复（不含进度通知）重新包成一份 JSON 响应，
- * 其余用例照旧 `res.json()`。
+ * `tools/call` 回的是 SSE：把其中的回覆（不含進度通知）重新包成一份 JSON 響應，
+ * 其餘用例照舊 `res.json()`。
  */
 async function post(handler, body, headers = {}) {
   const res = await handler.handle(
@@ -79,7 +79,7 @@ async function post(handler, body, headers = {}) {
 let nextId = 1;
 const rpc = (method, params = {}) => ({ jsonrpc: '2.0', id: nextId++, method, params });
 
-/** initialize 一次，返回会话 id。 */
+/** initialize 一次，返回會話 id。 */
 async function open(handler) {
   const res = await post(handler, rpc('initialize', { protocolVersion: '2025-06-18', clientInfo: { name: 'test' } }));
   return res.headers.get('mcp-session-id');
@@ -91,7 +91,7 @@ async function call(handler, sid, name, args = {}) {
 }
 
 describe('initialize', () => {
-  test('认得的版本原样回，带会话 id 与说明', async () => {
+  test('認得的版本原樣回，帶會話 id 與說明', async () => {
     const h = makeHandler({ backend: fakeBackend().backend });
     const res = await post(h, rpc('initialize', { protocolVersion: '2025-03-26', clientInfo: { name: 'x' } }));
     assert.equal(res.status, 200);
@@ -103,7 +103,7 @@ describe('initialize', () => {
     assert.ok(body.result.instructions.includes('generate'), body.result.instructions);
   });
 
-  test('认不出的版本回我们最新的那个', async () => {
+  test('認不出的版本回我們最新的那個', async () => {
     const h = makeHandler({ backend: fakeBackend().backend });
     const body = await (await post(h, rpc('initialize', { protocolVersion: '1999-01-01' }))).json();
     assert.equal(body.result.protocolVersion, mcp.PROTOCOL_VERSIONS[0]);
@@ -112,7 +112,7 @@ describe('initialize', () => {
 
 describe('tools/list', () => {
   let tools;
-  test('十三个工具，按模型看到的顺序', async () => {
+  test('十三個工具，按模型看到的順序', async () => {
     const h = makeHandler({ backend: fakeBackend().backend });
     const sid = await open(h);
     const body = await (await post(h, rpc('tools/list'), { 'mcp-session-id': sid })).json();
@@ -134,12 +134,12 @@ describe('tools/list', () => {
     ]);
   });
 
-  test('参数 schema 原样给成 inputSchema', () => {
+  test('引數 schema 原樣給成 inputSchema', () => {
     assert.equal(tools.read.inputSchema.type, 'object');
     assert.ok(tools.read.inputSchema.properties.path, JSON.stringify(tools.read.inputSchema));
   });
 
-  test('查询只读，生成不只读，写盘有破坏性', () => {
+  test('查詢只讀，生成不只讀，寫盤有破壞性', () => {
     assert.equal(tools.read.annotations.readOnlyHint, true);
     assert.equal(tools.read.annotations.destructiveHint, false);
     assert.equal(tools.generate.annotations.readOnlyHint, false);
@@ -148,9 +148,9 @@ describe('tools/list', () => {
     assert.equal(tools.write.annotations.destructiveHint, true);
   });
 
-  // 工具级的两个标记由动作表推出来：有一个动作调模型就 costly，有一个动作不是 auto 就 mutating。
-  // skills 一个模型都不调，但装与绑会改东西——所以不只读，且有破坏性。
-  test('带 action 的工具：标记由动作表推出', () => {
+  // 工具級的兩個標記由動作表推出來：有一個動作調模型就 costly，有一個動作不是 auto 就 mutating。
+  // skills 一個模型都不調，但裝與綁會改東西——所以不只讀，且有破壞性。
+  test('帶 action 的工具：標記由動作表推出', () => {
     assert.equal(tools.skills.annotations.readOnlyHint, false);
     assert.equal(tools.skills.annotations.destructiveHint, true);
     for (const name of ['pipeline', 'summary', 'characters', 'lore', 'extract', 'book']) {
@@ -159,7 +159,7 @@ describe('tools/list', () => {
     }
   });
 
-  test('带 action 的工具：action 必填且是枚举', () => {
+  test('帶 action 的工具：action 必填且是列舉', () => {
     for (const name of ['pipeline', 'summary', 'characters', 'lore', 'extract', 'book', 'skills']) {
       const schema = tools[name].inputSchema;
       assert.deepEqual(schema.required, ['action'], name);
@@ -167,7 +167,7 @@ describe('tools/list', () => {
     }
   });
 
-  test('没打开工程也列得出来', async () => {
+  test('沒開啟工程也列得出來', async () => {
     const h = makeHandler({ backend: undefined });
     const body = await (await post(h, rpc('tools/list'))).json();
     assert.equal(body.result.tools.length, 13);
@@ -175,7 +175,7 @@ describe('tools/list', () => {
 });
 
 describe('tools/call', () => {
-  test('参数原样转给执行端，结果放进 text 内容块', async () => {
+  test('引數原樣轉給執行端，結果放進 text 內容塊', async () => {
     const b = fakeBackend();
     const h = makeHandler({ backend: b.backend });
     const sid = await open(h);
@@ -186,32 +186,32 @@ describe('tools/call', () => {
     assert.ok(r.content[0].text.startsWith('ran read'), r.content[0].text);
   });
 
-  test('执行端报错走 isError，不是 JSON-RPC 错误', async () => {
+  test('執行端報錯走 isError，不是 JSON-RPC 錯誤', async () => {
     const b = fakeBackend();
-    b.reply = () => ({ text: '没有这个文件', isError: true });
+    b.reply = () => ({ text: '沒有這個檔案', isError: true });
     const h = makeHandler({ backend: b.backend });
     const sid = await open(h);
     const res = await post(h, rpc('tools/call', { name: 'read', arguments: {} }), { 'mcp-session-id': sid });
     const body = await res.json();
     assert.equal(body.error, undefined);
     assert.equal(body.result.isError, true);
-    assert.ok(body.result.content[0].text.startsWith('没有这个文件'));
+    assert.ok(body.result.content[0].text.startsWith('沒有這個檔案'));
   });
 
-  test('没打开工程：说清楚，isError', async () => {
+  test('沒開啟工程：說清楚，isError', async () => {
     const h = makeHandler({ backend: undefined });
     const r = await call(h, undefined, 'read', { path: 'a.md' });
     assert.equal(r.isError, true);
-    assert.ok(r.content[0].text.includes('打开'), r.content[0].text);
+    assert.ok(r.content[0].text.includes('開啟'), r.content[0].text);
   });
 
-  test('缺 name 是参数错误', async () => {
+  test('缺 name 是引數錯誤', async () => {
     const h = makeHandler({ backend: fakeBackend().backend });
     const body = await (await post(h, rpc('tools/call', {}))).json();
     assert.equal(body.error.code, -32602);
   });
 
-  test('地址上的 ?project= 交给壳挑工程；那个工程没开着时说出是哪个', async () => {
+  test('地址上的 ?project= 交給殼挑工程；那個工程沒開著時說出是哪個', async () => {
     const asked = [];
     const b = fakeBackend();
     const h = mcp.createNovelMcp((project) => {
@@ -236,29 +236,29 @@ describe('tools/call', () => {
   });
 });
 
-describe('状态简报：变了才贴', () => {
+describe('狀態簡報：變了才貼', () => {
   const b = fakeBackend();
   const h = makeHandler({ backend: b.backend });
   let sid;
 
-  test('会话的第一次调用必贴', async () => {
+  test('會話的第一次呼叫必貼', async () => {
     sid = await open(h);
     const r = await call(h, sid, 'list');
     assert.ok(r.content[0].text.endsWith(b.brief), r.content[0].text);
   });
 
-  test('没变不贴', async () => {
+  test('沒變不貼', async () => {
     const r = await call(h, sid, 'read');
     assert.equal(r.content[0].text, 'ran read');
   });
 
-  test('变了再贴', async () => {
-    b.brief = '# 当前工程\n下一步：写第 1 章正文';
+  test('變了再貼', async () => {
+    b.brief = '# 當前工程\n下一步：寫第 1 章正文';
     const r = await call(h, sid, 'generate');
-    assert.ok(r.content[0].text.endsWith('写第 1 章正文'), r.content[0].text);
+    assert.ok(r.content[0].text.endsWith('寫第 1 章正文'), r.content[0].text);
   });
 
-  test('另一条会话从头算', async () => {
+  test('另一條會話從頭算', async () => {
     const other = await open(h);
     const r = await call(h, other, 'list');
     assert.ok(r.content[0].text.endsWith(b.brief), r.content[0].text);
@@ -266,7 +266,7 @@ describe('状态简报：变了才贴', () => {
 });
 
 describe('取消', () => {
-  test('notifications/cancelled 中断那一次调用', async () => {
+  test('notifications/cancelled 中斷那一次呼叫', async () => {
     const b = fakeBackend();
     let aborted = false;
     b.hold = (signal) =>
@@ -293,7 +293,7 @@ describe('取消', () => {
     assert.ok(aborted);
   });
 
-  test('连接断开也中断', async () => {
+  test('連線斷開也中斷', async () => {
     const b = fakeBackend();
     let aborted = false;
     b.hold = (signal) =>
@@ -326,25 +326,25 @@ describe('取消', () => {
 describe('HTTP', () => {
   const h = makeHandler({ backend: fakeBackend().backend });
 
-  test('只有通知：202，没有正文', async () => {
+  test('只有通知：202，沒有正文', async () => {
     const sid = await open(h);
     const res = await post(h, { jsonrpc: '2.0', method: 'notifications/initialized' }, { 'mcp-session-id': sid });
     assert.equal(res.status, 202);
     assert.equal(await res.text(), '');
   });
 
-  test('坏 JSON：400 + parse error', async () => {
+  test('壞 JSON：400 + parse error', async () => {
     const res = await post(h, '{oops');
     assert.equal(res.status, 400);
     assert.equal((await res.json()).error.code, -32700);
   });
 
-  test('认不出的会话：404（客户端会重新 initialize）', async () => {
+  test('認不出的會話：404（客戶端會重新 initialize）', async () => {
     const res = await post(h, rpc('ping'), { 'mcp-session-id': 'gone' });
     assert.equal(res.status, 404);
   });
 
-  test('批量：一条请求一条回复', async () => {
+  test('批次：一條請求一條回覆', async () => {
     const sid = await open(h);
     const res = await post(h, [rpc('ping'), { jsonrpc: '2.0', method: 'notifications/initialized' }, rpc('ping')], {
       'mcp-session-id': sid,
@@ -355,12 +355,12 @@ describe('HTTP', () => {
     assert.deepEqual(body[0].result, {});
   });
 
-  test('认不出的方法：-32601', async () => {
+  test('認不出的方法：-32601', async () => {
     const body = await (await post(h, rpc('resources/list'))).json();
     assert.equal(body.error.code, -32601);
   });
 
-  test('DELETE 结束会话，之后它就认不出了', async () => {
+  test('DELETE 結束會話，之後它就認不出了', async () => {
     const sid = await open(h);
     const del = await h.handle(new Request(URL_, { method: 'DELETE', headers: { 'mcp-session-id': sid } }));
     assert.equal(del.status, 200);
@@ -368,12 +368,12 @@ describe('HTTP', () => {
     assert.equal(res.status, 404);
   });
 
-  test('GET（服务端推送流）不支持：405', async () => {
+  test('GET（服務端推送流）不支援：405', async () => {
     const res = await h.handle(new Request(URL_, { method: 'GET' }));
     assert.equal(res.status, 405);
   });
 
-  test('跨源请求：403；命令行客户端不带 Origin，放过', async () => {
+  test('跨源請求：403；命令列客戶端不帶 Origin，放過', async () => {
     const guarded = makeHandler({ backend: fakeBackend().backend, allowOrigin: (o) => !o || o === 'http://127.0.0.1:5000' });
     const evil = await post(guarded, rpc('ping'), { origin: 'http://evil.example' });
     assert.equal(evil.status, 403);
@@ -382,7 +382,7 @@ describe('HTTP', () => {
   });
 });
 
-describe('长调用走 SSE', () => {
+describe('長呼叫走 SSE', () => {
   const raw = (h, body, headers = {}) =>
     h.handle(
       new Request(URL_, {
@@ -392,13 +392,13 @@ describe('长调用走 SSE', () => {
       })
     );
 
-  test('tools/call：先回响应头，跑的期间带 progressToken 发进度，跑完发回复', async () => {
+  test('tools/call：先回響應頭，跑的期間帶 progressToken 發進度，跑完發回復', async () => {
     const b = fakeBackend();
     let release;
     b.hold = () => new Promise((r) => (release = r));
     const h = makeHandler({ backend: b.backend, heartbeatMs: 10 });
     const sid = await open(h);
-    // 调用还没跑完，响应头已经回来了
+    // 呼叫還沒跑完，響應頭已經回來了
     const res = await raw(h, rpc('tools/call', { name: 'generate', arguments: {}, _meta: { progressToken: 'p1' } }), { 'mcp-session-id': sid });
     assert.equal(res.status, 200);
     assert.match(res.headers.get('content-type'), /^text\/event-stream/);
@@ -407,14 +407,14 @@ describe('长调用走 SSE', () => {
     release();
     const events = sseEvents(await res.text());
     const progress = events.filter((e) => e.method === 'notifications/progress');
-    assert.ok(progress.length >= 2, `进度只有 ${progress.length} 条`);
+    assert.ok(progress.length >= 2, `進度只有 ${progress.length} 條`);
     assert.ok(progress.every((e) => e.params.progressToken === 'p1'));
-    assert.ok(progress[1].params.progress > progress[0].params.progress, '进度要递增');
+    assert.ok(progress[1].params.progress > progress[0].params.progress, '進度要遞增');
     const last = events[events.length - 1];
     assert.equal(last.result.content[0].text.startsWith('ran generate'), true);
   });
 
-  test('没带 progressToken：只发 SSE 注释保活', async () => {
+  test('沒帶 progressToken：只發 SSE 註釋保活', async () => {
     const b = fakeBackend();
     b.hold = () => new Promise((r) => setTimeout(r, 40));
     const h = makeHandler({ backend: b.backend, heartbeatMs: 10 });
@@ -424,7 +424,7 @@ describe('长调用走 SSE', () => {
     assert.equal(sseEvents(text).length, 1);
   });
 
-  test('客户端只收 JSON：照旧回整份 JSON', async () => {
+  test('客戶端只收 JSON：照舊回整份 JSON', async () => {
     const h = makeHandler({ backend: fakeBackend().backend });
     const sid = await open(h);
     const res = await raw(h, rpc('tools/call', { name: 'list', arguments: {} }), { 'mcp-session-id': sid, accept: 'application/json' });
@@ -432,7 +432,7 @@ describe('长调用走 SSE', () => {
     assert.equal((await res.json()).result.isError, false);
   });
 
-  test('读流的一方走了：中断那一次调用', async () => {
+  test('讀流的一方走了：中斷那一次呼叫', async () => {
     const b = fakeBackend();
     let aborted = false;
     b.hold = (signal) => new Promise((r) => signal.addEventListener('abort', () => ((aborted = true), r())));

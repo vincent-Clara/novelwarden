@@ -1,67 +1,67 @@
 /**
- * 定稿过的细纲里的「连续性事实」：后面各章必须保持一致的事实，每条挂一句正文里的证据原文（D18）。
+ * 定稿過的細綱裡的「連續性事實」：後面各章必須保持一致的事實，每條掛一句正文裡的證據原文（D18）。
  *
  * ```markdown
- * ## 连续性事实
- * - 林昭左臂被青鳞划伤，未愈 〔证据：「血顺着左臂往下淌，他把袖子扎紧了」〕
+ * ## 連續性事實
+ * - 林昭左臂被青鱗劃傷，未愈 〔證據：「血順著左臂往下淌，他把袖子紮緊了」〕
  * ```
  *
- * 两头都是**确定性**的，不调模型：
+ * 兩頭都是**確定性**的，不調模型：
  *
- * - 定稿时（{@link attachEvidence}）：模型只给事实陈述，证据句用 bigram 在正文里找。
+ * - 定稿時（{@link attachEvidence}）：模型只給事實陳述，證據句用 bigram 在正文裡找。
  *   移植自 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）`finalize-chapter.command.ts`
  *   的 `textBigrams` / `evidenceExcerpt` / `buildFinalizedContinuityFacts`（FC:161-230）。
- * - 写正文时（{@link locateEvidence}）：拿证据原句回到那一章的正文里逐字定位，取所在段落
- *   与前后各一段。移植自 `chapter-materials.ts` 的 `adjacentEvidencePassages`（CM:47-86）。
+ * - 寫正文時（{@link locateEvidence}）：拿證據原句回到那一章的正文裡逐字定位，取所在段落
+ *   與前後各一段。移植自 `chapter-materials.ts` 的 `adjacentEvidencePassages`（CM:47-86）。
  *
- * 为什么绕这一圈而不是直接把事实塞给模型：事实是模型对正文的**转述**，转述会走样；
- * 原文段落才是作者认可过的那一版（上游 CM:225：「索引、摘要和 currentState 都不是作者事实」）。
+ * 為什麼繞這一圈而不是直接把事實塞給模型：事實是模型對正文的**轉述**，轉述會走樣；
+ * 原文段落才是作者認可過的那一版（上游 CM:225：「索引、摘要和 currentState 都不是作者事實」）。
  */
 
-/** 一条连续性事实。`evidence` 是正文里的一句原文；手改的细纲里可能没有。 */
+/** 一條連續性事實。`evidence` 是正文裡的一句原文；手改的細綱裡可能沒有。 */
 export interface ContinuityFact {
   statement: string;
   evidence?: string;
 }
 
-/** 定稿过的一章留下的连续性事实（`NovelProject.finalizedFacts`）。 */
+/** 定稿過的一章留下的連續性事實（`NovelProject.finalizedFacts`）。 */
 export interface FinalizedFacts {
   no: number;
   title: string;
-  /** 细纲文件的相对路径。 */
+  /** 細綱檔案的相對路徑。 */
   relPath: string;
   facts: ContinuityFact[];
 }
 
-/** 一章最多留几条（上游 `CONTINUITY_FACT_LIMIT`）。 */
+/** 一章最多留幾條（上游 `CONTINUITY_FACT_LIMIT`）。 */
 export const CONTINUITY_FACT_LIMIT = 12;
-/** 一条事实最长多少字（上游 `CONTINUITY_STATEMENT_LIMIT`）。 */
+/** 一條事實最長多少字（上游 `CONTINUITY_STATEMENT_LIMIT`）。 */
 const STATEMENT_LIMIT = 280;
-/** 证据句最长多少字（上游 `CONTINUITY_EVIDENCE_LIMIT`）。 */
+/** 證據句最長多少字（上游 `CONTINUITY_EVIDENCE_LIMIT`）。 */
 const EVIDENCE_LIMIT = 240;
 
-// ---------------------------------------------------------------- 渲染与解析
+// ---------------------------------------------------------------- 渲染與解析
 
-/** `- 陈述 〔证据：「原文」〕`，没有证据就只有陈述。 */
+/** `- 陳述 〔證據：「原文」〕`，沒有證據就只有陳述。 */
 export function renderContinuityFacts(facts: readonly ContinuityFact[]): string {
   return facts
-    .map((f) => `- ${f.statement.trim()}${f.evidence?.trim() ? ` 〔证据：「${f.evidence.trim()}」〕` : ''}`)
+    .map((f) => `- ${f.statement.trim()}${f.evidence?.trim() ? ` 〔證據：「${f.evidence.trim()}」〕` : ''}`)
     .join('\n');
 }
 
-const EVIDENCE_TAIL = /\s*[〔\[【(（]\s*证据\s*[:：]\s*(.*?)\s*[〕\]】)）]\s*$/u;
+const EVIDENCE_TAIL = /\s*[〔\[【(（]\s*(?:证|證)(?:据|據)\s*[:：]\s*(.*?)\s*[〕\]】)）]\s*$/u;
 const BULLET = /^\s*(?:[-*•·]|\d+[.)、])\s*/u;
 
 /**
- * 读回「连续性事实」这一节。作者会手改（第 1 条），这几种写法都认：`〔证据：…〕` 用了半角或
- * 别的括号、证据没带引号、整行没写 `- `。认不出证据的行照样是一条事实，只是没有证据——
- * 写正文时降级成事实原句。空行与占位文字（`（待补充）`）跳过。
+ * 讀回「連續性事實」這一節。作者會手改（第 1 條），這幾種寫法都認：`〔證據：…〕` 用了半形或
+ * 別的括號、證據沒帶引號、整行沒寫 `- `。認不出證據的行照樣是一條事實，只是沒有證據——
+ * 寫正文時降級成事實原句。空行與佔位文字（`（待補充）`）跳過。
  */
 export function parseContinuityFacts(text: string): ContinuityFact[] {
   const out: ContinuityFact[] = [];
   for (const raw of (text ?? '').split(/\r?\n/)) {
     const line = raw.replace(BULLET, '').trim();
-    if (!line || /^[（(]待补充[）)]$/.test(line)) {
+    if (!line || /^[（(]待(?:补|補)充[）)]$/.test(line)) {
       continue;
     }
     const m = EVIDENCE_TAIL.exec(line);
@@ -86,9 +86,9 @@ function unquote(s: string): string {
   return t;
 }
 
-// ---------------------------------------------------------------- 定稿：挂证据
+// ---------------------------------------------------------------- 定稿：掛證據
 
-/** 一段文字的 bigram 集合（只看字母与数字，标点与空白切开）。model/manuscriptCheck.ts 找钩子落在哪一段也用它。 */
+/** 一段文字的 bigram 集合（只看字母與數字，標點與空白切開）。model/manuscriptCheck.ts 找鉤子落在哪一段也用它。 */
 export function textBigrams(value: string): Set<string> {
   const groups = value.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
   return new Set(
@@ -107,15 +107,15 @@ function sentencesOf(content: string): string[] {
 }
 
 /**
- * 给一条事实在正文里找一句证据。找不到返回空串。
+ * 給一條事實在正文裡找一句證據。找不到返回空串。
  *
- * 事实里提到了出场人物时先只在含那个人名的句子里找，而且算 bigram 之前先把人名去掉——
- * 不然「林昭」两个字就能让任何一句提到林昭的话「命中」。命中还要**有独立支撑**：要么
- * 事实的 bigram 全中，要么命中的 bigram 在事实里不是挨着的（挨着的只是同一个词）。
+ * 事實裡提到了出場人物時先只在含那個人名的句子裡找，而且算 bigram 之前先把人名去掉——
+ * 不然「林昭」兩個字就能讓任何一句提到林昭的話「命中」。命中還要**有獨立支撐**：要麼
+ * 事實的 bigram 全中，要麼命中的 bigram 在事實裡不是挨著的（挨著的只是同一個詞）。
  *
- * **比上游多一步**：含人名的句子里找不到时，再在全部句子里按「没有人名」的门槛（至少两处
- * 命中）找一遍。中文正文里人名出现一次之后多半就换成「他」「她」了——上游只在含人名的句子
- * 里找，「血顺着左臂往下淌」这种最该当证据的句子反而永远找不到。
+ * **比上游多一步**：含人名的句子裡找不到時，再在全部句子裡按「沒有人名」的門檻（至少兩處
+ * 命中）找一遍。中文正文裡人名出現一次之後多半就換成「他」「她」了——上游只在含人名的句子
+ * 裡找，「血順著左臂往下淌」這種最該當證據的句子反而永遠找不到。
  */
 function evidenceExcerpt(content: string, statement: string, entities: readonly string[]): string {
   const sentences = sentencesOf(content);
@@ -146,10 +146,10 @@ function evidenceExcerpt(content: string, statement: string, entities: readonly 
 }
 
 /**
- * 定稿时给每条事实挂证据。**找不到证据的事实丢掉**（与上游同）：没有原文撑着的「事实」
- * 多半是模型编的，留在细纲里会被后面几章当真。丢了哪几条交给调用方写进日志（第 2 条）。
+ * 定稿時給每條事實掛證據。**找不到證據的事實丟掉**（與上游同）：沒有原文撐著的「事實」
+ * 多半是模型編的，留在細綱裡會被後面幾章當真。丟了哪幾條交給呼叫方寫進日誌（第 2 條）。
  *
- * `entities` 是本章出场人物的名字与别名（定稿时模型给的「出场人物」）。
+ * `entities` 是本章出場人物的名字與別名（定稿時模型給的「出場人物」）。
  */
 export function attachEvidence(
   statements: readonly string[],
@@ -178,18 +178,18 @@ export function attachEvidence(
   return { facts, dropped };
 }
 
-// ---------------------------------------------------------------- 引文逐字找不到时：找最接近的原句
+// ---------------------------------------------------------------- 引文逐字找不到時：找最接近的原句
 
 /**
- * 最接近的原句要多像才收（⚑ 复跑之后，叙事线定稿 a 的证据）：引文与那一句（或连着的两句）的两字词按 Dice 系数算，
- * `2 × 共有 ÷ (两边之和)`。复跑里逐字找不到的 7 条：代词换人名、删了几个字、两句拼成一句的在 0.71–0.94，意译、编的在 0.4
+ * 最接近的原句要多像才收（⚑ 復跑之後，敘事線定稿 a 的證據）：引文與那一句（或連著的兩句）的兩字詞按 Dice 係數算，
+ * `2 × 共有 ÷ (兩邊之和)`。復跑裡逐字找不到的 7 條：代詞換人名、刪了幾個字、兩句拼成一句的在 0.71–0.94，意譯、編的在 0.4
  * 以下，取 0.6。
  */
 export const NEAR_QUOTE_MIN = 0.6;
-/** 太短的引文不找近似的（归一之后不到这么多字）：几个字的近似句到处都有。 */
+/** 太短的引文不找近似的（歸一之後不到這麼多字）：幾個字的近似句到處都有。 */
 export const NEAR_QUOTE_MIN_CHARS = 10;
 
-/** 两字词，按出现次数（同 {@link textBigrams} 的切法，但不去重：Dice 要数次数）。 */
+/** 兩字詞，按出現次數（同 {@link textBigrams} 的切法，但不去重：Dice 要數次數）。 */
 function bigramCounts(value: string): { counts: Map<string, number>; total: number } {
   const counts = new Map<string, number>();
   let total = 0;
@@ -204,7 +204,7 @@ function bigramCounts(value: string): { counts: Map<string, number>; total: numb
   return { counts, total };
 }
 
-/** 句子：句末标点（连同紧跟着的右引号）与换行处切开。比 {@link sentencesOf} 多认一层引号：「“你怕火。”沈默说」切在引号后面。 */
+/** 句子：句末標點（連同緊跟著的右引號）與換行處切開。比 {@link sentencesOf} 多認一層引號：「“你怕火。”沈默說」切在引號後面。 */
 function quoteSentences(content: string): string[] {
   return content
     .split(/(?<=[。！？!?])(?![”」』"'’])|(?<=[。！？!?][”」』"'’])|\n+/u)
@@ -213,13 +213,13 @@ function quoteSentences(content: string): string[] {
 }
 
 /**
- * 引文逐字找不到时，正文里最接近的一句（或连着的两句，模型常把两句拼成一句）：两字词的 Dice 系数最高、而且到了
- * {@link NEAR_QUOTE_MIN} 的那一段原文；引文太短（{@link NEAR_QUOTE_MIN_CHARS}）、或者都不够像时 undefined。超过 `maxChars`
- * 的那一段不要（证据有长度上限，截了就不是一句完整的话）。
+ * 引文逐字找不到時，正文裡最接近的一句（或連著的兩句，模型常把兩句拼成一句）：兩字詞的 Dice 係數最高、而且到了
+ * {@link NEAR_QUOTE_MIN} 的那一段原文；引文太短（{@link NEAR_QUOTE_MIN_CHARS}）、或者都不夠像時 undefined。超過 `maxChars`
+ * 的那一段不要（證據有長度上限，截了就不是一句完整的話）。
  *
- * 照定稿挂连续性事实证据那一套（{@link attachEvidence}：模型的话 → 用 bigram 在正文里找原句）。叙事线定稿 a 的证据是模型
- * 「照抄」的原文，复跑里逐字找不到的 7 条多半只是把「他」换成了人名、删了几个字、两句拼成一句（model/threadFile.ts 的
- * `verifyFinds`）：找得到够像的原句就换成原句收下，不够像照旧丢。
+ * 照定稿掛連續性事實證據那一套（{@link attachEvidence}：模型的話 → 用 bigram 在正文裡找原句）。敘事線定稿 a 的證據是模型
+ * 「照抄」的原文，復跑裡逐字找不到的 7 條多半隻是把「他」換成了人名、刪了幾個字、兩句拼成一句（model/threadFile.ts 的
+ * `verifyFinds`）：找得到夠像的原句就換成原句收下，不夠像照舊丟。
  */
 export function nearestSentence(content: string, quote: string, maxChars = EVIDENCE_LIMIT): { sentence: string; score: number } | undefined {
   const q = bigramCounts(quote);
@@ -252,7 +252,7 @@ export function nearestSentence(content: string, quote: string, maxChars = EVIDE
   return best && best.score >= NEAR_QUOTE_MIN ? best : undefined;
 }
 
-// ---------------------------------------------------------------- 写正文：定位原文
+// ---------------------------------------------------------------- 寫正文：定位原文
 
 function paragraphsOf(content: string): string[] {
   return content
@@ -264,10 +264,10 @@ function paragraphsOf(content: string): string[] {
 const squash = (s: string): string => s.replace(/\s+/g, '');
 
 /**
- * 拿证据原句回到正文里逐字定位（空白不计），取命中那一段与前后各一段，相邻的窗口合并。
+ * 拿證據原句回到正文裡逐字定位（空白不計），取命中那一段與前後各一段，相鄰的視窗合併。
  *
- * `hits[i]` 说第 i 句找没找到——找不到多半是作者改过正文，调用方把那一条降级成事实原句
- * 并写进明细（D18、第 2 条）。
+ * `hits[i]` 說第 i 句找沒找到——找不到多半是作者改過正文，呼叫方把那一條降級成事實原句
+ * 並寫進明細（D18、第 2 條）。
  */
 export function locateEvidence(
   content: string,

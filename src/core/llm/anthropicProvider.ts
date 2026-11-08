@@ -23,21 +23,21 @@ import {
 const log = scoped('模型');
 
 /**
- * Anthropic Messages API 流式实现。system 走顶层字段，不混在 messages 里。
+ * Anthropic Messages API 流式實現。system 走頂層欄位，不混在 messages 裡。
  *
- * ## 思考深度：一个梯子，两种写法
+ * ## 思考深度：一個梯子，兩種寫法
  *
- * Anthropic 自己换过一次思考的开关方式，而**两代写法在对方的模型上都是 400**：
+ * Anthropic 自己換過一次思考的開關方式，而**兩代寫法在對方的模型上都是 400**：
  *
- * - **自适应**（4.7 / Opus 5 及以后，也是 4.6 上推荐的）：
+ * - **自適應**（4.7 / Opus 5 及以後，也是 4.6 上推薦的）：
  *   `thinking: {type:'adaptive', display:'summarized'}` + `output_config: {effort}`；
- * - **手动预算**（4.5 及更早唯一可用的）：`thinking: {type:'enabled', budget_tokens}`，
- *   4.6 上已弃用、4.7 以后直接拒。
+ * - **手動預算**（4.5 及更早唯一可用的）：`thinking: {type:'enabled', budget_tokens}`，
+ *   4.6 上已棄用、4.7 以後直接拒。
  *
- * 作者的设置页里只有一个模型名，指望他知道自家模型属于哪一代是不合理的，所以
- * 这里**问出来**：先按自适应发，被拒了就换手动，再被拒就不带思考字段，结论按
- * 「接口地址 + 模型」记在内存里（见 QUIRKS）。代价是每个模型一生一次 400，
- * 换来的是「换个模型名就不能思考了」这件事不会发生。
+ * 作者的設定頁裡只有一個模型名，指望他知道自家模型屬於哪一代是不合理的，所以
+ * 這裡**問出來**：先按自適應發，被拒了就換手動，再被拒就不帶思考欄位，結論按
+ * 「介面地址 + 模型」記在記憶體裡（見 QUIRKS）。代價是每個模型一生一次 400，
+ * 換來的是「換個模型名就不能思考了」這件事不會發生。
  */
 export class AnthropicProvider implements LlmProvider {
   readonly id = 'anthropic' as const;
@@ -67,8 +67,8 @@ export class AnthropicProvider implements LlmProvider {
       const quirk = quirksOf(this.baseUrl, this.model);
       let stream: ReadableStream<Uint8Array> | undefined;
 
-      // 上游拒了某个思考字段就换一种写法再发（见 negotiate）——**不是重试同一个
-      // 请求**：每一次的请求体都与上一次不同，最多三次就退到不带思考字段。
+      // 上游拒了某個思考欄位就換一種寫法再發（見 negotiate）——**不是重試同一個
+      // 請求**：每一次的請求體都與上一次不同，最多三次就退到不帶思考欄位。
       for (let attempt = 0; ; attempt += 1) {
         const plan = thinkingPlan(options, quirk, this.model);
         const response = await fetch(`${this.baseUrl}/v1/messages`, {
@@ -83,12 +83,12 @@ export class AnthropicProvider implements LlmProvider {
             system: system || undefined,
             messages: msgs,
             max_tokens: options.maxOutputTokens,
-            // 思考开着时不带 temperature：两代写法都要求它是默认值。
+            // 思考開著時不帶 temperature：兩代寫法都要求它是預設值。
             ...(plan ? {} : { temperature: options.temperature }),
             ...(plan?.mode === 'adaptive'
               ? {
-                  // display: 'summarized' 才有 thinking_delta——新模型默认是
-                  // 'omitted'（只给签名），那样界面上「正在思考」是一片空白。
+                  // display: 'summarized' 才有 thinking_delta——新模型預設是
+                  // 'omitted'（只給簽名），那樣介面上「正在思考」是一片空白。
                   thinking: { type: 'adaptive', display: 'summarized' },
                   output_config: { effort: plan.effort },
                 }
@@ -105,10 +105,10 @@ export class AnthropicProvider implements LlmProvider {
           stream = response.body;
           break;
         }
-        // 响应体只读一次：字段协商要看它，报错也要看它。
+        // 響應體只讀一次：欄位協商要看它，報錯也要看它。
         const detail = await readBody(response);
-        // 这一次压根没带思考字段的话，上游那句抱怨与我们无关——换写法再发
-        // 只是白等一次，而真正的错误会被推迟两个来回才报出来。
+        // 這一次壓根沒帶思考欄位的話，上游那句抱怨與我們無關——換寫法再發
+        // 只是白等一次，而真正的錯誤會被推遲兩個來回才報出來。
         if (plan && attempt < 2 && negotiate(response.status, detail, quirk, this.label)) {
           continue;
         }
@@ -124,10 +124,10 @@ export class AnthropicProvider implements LlmProvider {
           continue;
         }
         if (event.type === 'error') {
-          throw new LlmError(`${this.label} 返回错误：${event.error?.message ?? '未知错误'}`);
+          throw new LlmError(`${this.label} 返回錯誤：${event.error?.message ?? '未知錯誤'}`);
         }
-        // 用量分两处给：message_start 带输入，message_delta 带输出累计值。
-        // 两条都发出去，调用方按字段合并。
+        // 用量分兩處給：message_start 帶輸入，message_delta 帶輸出累計值。
+        // 兩條都發出去，呼叫方按欄位合併。
         const usage = event.type === 'message_start' ? event.message?.usage : event.usage;
         if (usage) {
           yield {
@@ -138,7 +138,7 @@ export class AnthropicProvider implements LlmProvider {
         if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta' && event.delta.text) {
           yield { type: 'text', text: event.delta.text };
         }
-        // 扩展思考（thinking blocks）同样不是正文，走单独的事件给界面展示。
+        // 擴充套件思考（thinking blocks）同樣不是正文，走單獨的事件給介面展示。
         if (
           event.type === 'content_block_delta' &&
           event.delta?.type === 'thinking_delta' &&
@@ -146,7 +146,7 @@ export class AnthropicProvider implements LlmProvider {
         ) {
           yield { type: 'reasoning', text: event.delta.thinking };
         }
-        // 收尾原因在 `message_delta` 上，**排在所有内容块之后**。
+        // 收尾原因在 `message_delta` 上，**排在所有內容塊之後**。
         if (event.type === 'message_delta' && event.delta?.stop_reason) {
           yield { type: 'stop', reason: stopSignalOf(event.delta.stop_reason) };
         }
@@ -160,10 +160,10 @@ export class AnthropicProvider implements LlmProvider {
 }
 
 /**
- * Anthropic 的 `stop_reason` → 归一的三档。
+ * Anthropic 的 `stop_reason` → 歸一的三檔。
  *
- * 认不出的一律 `other`：这个字段上游还在加值（`pause_turn`、`refusal`），
- * 报错会让续写链因为一个不认识的字符串就断掉。
+ * 認不出的一律 `other`：這個欄位上游還在加值（`pause_turn`、`refusal`），
+ * 報錯會讓續寫鏈因為一個不認識的字串就斷掉。
  */
 function stopSignalOf(reason: string): StopSignal {
   switch (reason) {
@@ -177,24 +177,24 @@ function stopSignalOf(reason: string): StopSignal {
   }
 }
 
-// ---------------------------------------------------------------- 思考写法协商
+// ---------------------------------------------------------------- 思考寫法協商
 
-/** 上游对这个模型接受哪一种思考写法。`none` = 它根本不支持思考控制。 */
+/** 上游對這個模型接受哪一種思考寫法。`none` = 它根本不支援思考控制。 */
 type ThinkingMode = 'adaptive' | 'manual' | 'none';
 
 interface Quirks {
   mode: ThinkingMode;
-  /** 认得的最高档。作者选了更高的档就按这个发。 */
+  /** 認得的最高檔。作者選了更高的檔就按這個發。 */
   maxDepth: ThinkingDepth;
-  /** 「输出上限太小」那句话已经说过了。同一个模型只说一次。 */
+  /** 「輸出上限太小」那句話已經說過了。同一個模型只說一次。 */
   warnedRoom: boolean;
 }
 
 /**
- * 每个「接口地址 + 模型」一份，记在内存里。
+ * 每個「介面地址 + 模型」一份，記在記憶體裡。
  *
- * 这是**上游的事实**（这个模型属于哪一代思考写法），不是作者的偏好，写进
- * 设置页只会多一个他答不上来的问题。进程重启后重新问一遍，代价是一次 400。
+ * 這是**上游的事實**（這個模型屬於哪一代思考寫法），不是作者的偏好，寫進
+ * 設定頁只會多一個他答不上來的問題。程序重啟後重新問一遍，代價是一次 400。
  */
 const QUIRKS = new Map<string, Quirks>();
 
@@ -208,7 +208,7 @@ function quirksOf(baseUrl: string, model: string): Quirks {
   return q;
 }
 
-/** 这一次请求要带的思考字段。`undefined` = 不带（作者关了，或上游不支持）。 */
+/** 這一次請求要帶的思考欄位。`undefined` = 不帶（作者關了，或上游不支援）。 */
 interface ThinkingPlan {
   mode: 'adaptive' | 'manual';
   effort?: string;
@@ -224,21 +224,21 @@ function thinkingPlan(
   if (depth === 'off' || quirk.mode === 'none') {
     return undefined;
   }
-  // 思考的 token 算在输出上限里：上限太小，模型想完就没额度说话了。
-  // 说一次就够——每轮都刷会把日志页淹掉，而作者能改的地方只有一个。
+  // 思考的 token 算在輸出上限裡：上限太小，模型想完就沒額度說話了。
+  // 說一次就夠——每輪都刷會把日誌頁淹掉，而作者能改的地方只有一個。
   if (!quirk.warnedRoom && outputRoomTooSmall(depth, options.maxOutputTokens)) {
     quirk.warnedRoom = true;
     log.warn(
-      `${model} 开着「${THINKING_LABEL[depth]}」，但输出上限只有 ${options.maxOutputTokens} token`,
-      '思考的 token 算在输出上限里，回答可能被挤短。可在设置页把这个模型的「输出上限」调大。'
+      `${model} 開著「${THINKING_LABEL[depth]}」，但輸出上限只有 ${options.maxOutputTokens} token`,
+      '思考的 token 算在輸出上限裡，回答可能被擠短。可在設定頁把這個模型的「輸出上限」調大。'
     );
   }
   if (quirk.mode === 'adaptive') {
     return { mode: 'adaptive', effort: anthropicEffort(depth) };
   }
   const budgetTokens = thinkingBudget(depth, options.maxOutputTokens);
-  // 输出上限太小，预算连 1024 都留不出来（API 的硬下限）——这种情况下
-  // 不带思考字段，而不是发一个必然 400 的请求。
+  // 輸出上限太小，預算連 1024 都留不出來（API 的硬下限）——這種情況下
+  // 不帶思考欄位，而不是發一個必然 400 的請求。
   return budgetTokens ? { mode: 'manual', budgetTokens } : undefined;
 }
 
@@ -252,23 +252,23 @@ function capDepth(depth: ThinkingDepth | undefined, max: ThinkingDepth): Thinkin
 }
 
 /**
- * 400 了：是这一代思考写法这个模型不认，还是真出错了？
+ * 400 了：是這一代思考寫法這個模型不認，還是真出錯了？
  *
- * 认出「与思考有关」就把写法退一步（自适应 → 手动预算 → 不带），记下来再发
- * 一次。其余情况返回 false，由调用方报 HTTP 错误。**只认 400**：401/404/429
- * 与请求体无关，换写法再发只是白等一次。
+ * 認出「與思考有關」就把寫法退一步（自適應 → 手動預算 → 不帶），記下來再發
+ * 一次。其餘情況返回 false，由呼叫方報 HTTP 錯誤。**只認 400**：401/404/429
+ * 與請求體無關，換寫法再發只是白等一次。
  */
 function negotiate(status: number, body: string, quirk: Quirks, label: string): boolean {
   if (status !== 400 || quirk.mode === 'none') {
     return false;
   }
   const detail = body.toLowerCase();
-  // 「这个 effort 值不认」：先降档，一路降到底才换写法——effort 的梯子上
-  // 老模型缺的是顶上那两档，不是整套。
+  // 「這個 effort 值不認」：先降檔，一路降到底才換寫法——effort 的梯子上
+  // 老模型缺的是頂上那兩檔，不是整套。
   if (detail.includes('effort') && quirk.maxDepth !== 'low') {
     quirk.maxDepth = downgradeDepth(quirk.maxDepth);
     log.warn(
-      `${label} 不认这一档思考深度，降到「${THINKING_LABEL[quirk.maxDepth]}」再发一次`,
+      `${label} 不認這一檔思考深度，降到「${THINKING_LABEL[quirk.maxDepth]}」再發一次`,
       detail.slice(0, 200)
     );
     return true;
@@ -279,8 +279,8 @@ function negotiate(status: number, body: string, quirk: Quirks, label: string): 
   quirk.mode = quirk.mode === 'adaptive' ? 'manual' : 'none';
   log.warn(
     quirk.mode === 'manual'
-      ? `${label} 不支持自适应思考，改用手动思考预算再发一次`
-      : `${label} 不支持思考控制，这一轮不带思考字段`,
+      ? `${label} 不支援自適應思考，改用手動思考預算再發一次`
+      : `${label} 不支援思考控制，這一輪不帶思考欄位`,
     detail.slice(0, 200)
   );
   return true;
@@ -315,8 +315,8 @@ interface AnthropicMessage {
 /**
  * `ChatMessage[]` → Anthropic 的 `messages[]`。
  *
- * Anthropic 要求 user/assistant 严格交替且首条是 user，相邻同角色并成一条；
- * system 由顶层字段带走，这里直接跳过。
+ * Anthropic 要求 user/assistant 嚴格交替且首條是 user，相鄰同角色併成一條；
+ * system 由頂層欄位帶走，這裡直接跳過。
  */
 export function toAnthropicMessages(messages: ChatMessage[]): unknown[] {
   const out: AnthropicMessage[] = [];
@@ -332,7 +332,7 @@ export function toAnthropicMessages(messages: ChatMessage[]): unknown[] {
     out.push({ role: m.role, content: m.content });
   }
   if (out.length > 0 && out[0].role !== 'user') {
-    out.unshift({ role: 'user', content: '（继续）' });
+    out.unshift({ role: 'user', content: '（繼續）' });
   }
   return out;
 }

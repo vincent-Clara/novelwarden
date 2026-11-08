@@ -1,33 +1,33 @@
 /**
- * 编辑区的公共接口：给编辑器里的功能模块（缩进、回车自动缩进、成对标点、一键排版、
- * 查找替换……）用。这些模块**只经这里与 `Pane` 上的方法**碰编辑区，不去读 `pane.ts` 的内部状态。
+ * 編輯區的公共介面：給編輯器裡的功能模組（縮排、回車自動縮排、成對標點、一鍵排版、
+ * 查詢替換……）用。這些模組**只經這裡與 `Pane` 上的方法**碰編輯區，不去讀 `pane.ts` 的內部狀態。
  *
- * ## 三条硬规矩（`media/README.md`「内置编辑器的行为约束」同一份）
+ * ## 三條硬規矩（`media/README.md`「內建編輯器的行為約束」同一份）
  *
- * 1. **程序改写只走 `Pane.applyEdit`**。不许直接写 `textarea.value`，也不要 `setRangeText` /
- *    `execCommand('insertText')`。绕过它的改动不进撤销记录（下一次 Ctrl+Z 核对不上，整份历史作废），
- *    脏标记、状态栏、标签圆点、草稿持久化也都不会跟着更新。
- * 2. **keydown 先过 `isImeComposing(e)`**：输入法组字时的 Tab、回车、Ctrl 组合键一律放行给输入法。
- *    用 `addKeyHandler` 挂的处理函数已经替你过了这一道。
- * 3. **正文与否看 `isProse(file)`**：后端给的 `kind`（`chapter` / `draft`），前端不拿路径或扩展名猜。
+ * 1. **程式改寫只走 `Pane.applyEdit`**。不許直接寫 `textarea.value`，也不要 `setRangeText` /
+ *    `execCommand('insertText')`。繞過它的改動不進撤銷記錄（下一次 Ctrl+Z 核對不上，整份歷史作廢），
+ *    髒標記、狀態列、標籤圓點、草稿持久化也都不會跟著更新。
+ * 2. **keydown 先過 `isImeComposing(e)`**：輸入法組字時的 Tab、回車、Ctrl 組合鍵一律放行給輸入法。
+ *    用 `addKeyHandler` 掛的處理函式已經替你過了這一道。
+ * 3. **正文與否看 `isProse(file)`**：後端給的 `kind`（`chapter` / `draft`），前端不拿路徑或副檔名猜。
  *
  * ## 用法
  *
  * ```ts
  * import { activeEditor, addKeyHandler, indentUnit, onEditorChange } from './api';
  *
- * // 回车自动缩进：返回 true 表示这一下归我处理（pane 替你 preventDefault，后面的处理函数不再收到）。
+ * // 回車自動縮排：返回 true 表示這一下歸我處理（pane 替你 preventDefault，後面的處理函式不再收到）。
  * addKeyHandler((e, { pane, file, area }) => {
  *   if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return false;
  *   pane.applyEdit(area.selectionStart, area.selectionEnd, '\n' + indentUnit(file));
  *   return true;
  * });
  *
- * // 菜单里的「一键排版」：整份换掉也只记一步撤销。
+ * // 選單裡的「一鍵排版」：整份換掉也只記一步撤銷。
  * const ed = activeEditor();
  * if (ed) ed.pane.applyEdit(0, ed.area.value.length, layout(ed.area.value));
  *
- * // 查找高亮：内容一变、换了文件就重画。
+ * // 查詢高亮：內容一變、換了檔案就重畫。
  * onEditorChange((ev) => redrawHighlights(ev.pane));
  * ```
  */
@@ -41,71 +41,71 @@ export type { TextChange, TextSelection } from './history';
 export type { OpenFile } from './paneElements';
 export type { ApplyEditOptions, Pane } from './store';
 
-/** 一块编辑区、它当前开着的文件、它的 textarea。 */
+/** 一塊編輯區、它當前開著的檔案、它的 textarea。 */
 export interface EditorContext {
   pane: Pane;
   file: OpenFile;
-  /** 只读它的 `value` / `selectionStart` / `selectionEnd`；要改内容走 `pane.applyEdit`。 */
+  /** 只讀它的 `value` / `selectionStart` / `selectionEnd`；要改內容走 `pane.applyEdit`。 */
   area: HTMLTextAreaElement;
 }
 
-/** 这一块编辑区当前的文件与 textarea。没开文件时 undefined。 */
+/** 這一塊編輯區當前的檔案與 textarea。沒開檔案時 undefined。 */
 export function editorOf(pane: Pane | undefined): EditorContext | undefined {
   const file = pane?.activeFile();
   return pane && file ? { pane, file, area: pane.area } : undefined;
 }
 
 /**
- * 当前激活的那块编辑区（最后被点 / 被聚焦的那一块，`Ctrl+S` 保存的就是它）+ 它当前的文件 +
- * 它的 textarea。没开文件时 undefined。预览模式下照样返回（`applyEdit` 在预览里也能用，
- * 预览会跟着重画），要区分就看 `pane.isPreviewing()`。
+ * 當前啟用的那塊編輯區（最後被點 / 被聚焦的那一塊，`Ctrl+S` 儲存的就是它）+ 它當前的檔案 +
+ * 它的 textarea。沒開檔案時 undefined。預覽模式下照樣返回（`applyEdit` 在預覽裡也能用，
+ * 預覽會跟著重畫），要區分就看 `pane.isPreviewing()`。
  */
 export function activeEditor(): EditorContext | undefined {
   return editorOf(activePane);
 }
 
 /**
- * 这份文件是不是正文（章节或它的草稿）。看后端给的 `kind`；没给（没打开工程、旧数据）当非正文。
+ * 這份檔案是不是正文（章節或它的草稿）。看後端給的 `kind`；沒給（沒開啟工程、舊資料）當非正文。
  */
 export function isProse(file: Pick<OpenFile, 'kind'> | undefined): boolean {
   return file?.kind === 'chapter' || file?.kind === 'draft';
 }
 
-/** 正文的一级缩进：两个全角空格。 */
+/** 正文的一級縮排：兩個全形空格。 */
 export const PROSE_INDENT = '　　';
-/** 其余文件（角色卡、细纲、设定等 Markdown，以及 json / yml）的一级缩进：两个半角空格。 */
+/** 其餘檔案（角色卡、細綱、設定等 Markdown，以及 json / yml）的一級縮排：兩個半形空格。 */
 export const PLAIN_INDENT = '  ';
 
-/** 这份文件的一级缩进。 */
+/** 這份檔案的一級縮排。 */
 export function indentUnit(file: Pick<OpenFile, 'kind'> | undefined): string {
   return isProse(file) ? PROSE_INDENT : PLAIN_INDENT;
 }
 
 /**
- * 这一下按键是不是输入法组字中途（拼音还没上屏）。是就什么都别做，原样放行给输入法——
- * 组字时的回车是「把拼音当英文上屏」、Tab / 方向键是在候选词之间挪，拦下来就把输入法弄坏了。
- * `keyCode === 229` 是老版 Chrome / Safari 在组字时给的值（那时还没有 `isComposing`）。
+ * 這一下按鍵是不是輸入法組字中途（拼音還沒上屏）。是就什麼都別做，原樣放行給輸入法——
+ * 組字時的回車是「把拼音當英文上屏」、Tab / 方向鍵是在候選詞之間挪，攔下來就把輸入法弄壞了。
+ * `keyCode === 229` 是老版 Chrome / Safari 在組字時給的值（那時還沒有 `isComposing`）。
  */
 export function isImeComposing(e: KeyboardEvent): boolean {
   return e.isComposing || e.keyCode === 229;
 }
 
-// ---------------------------------------------------------------- 按键
+// ---------------------------------------------------------------- 按鍵
 
 /**
- * 编辑区 keydown 的处理函数。返回 true 表示「这一下归我」：pane 替你 `preventDefault()`，
- * 之后的处理函数与内置的 Tab 缩进都不再收到。
+ * 編輯區 keydown 的處理函式。返回 true 表示「這一下歸我」：pane 替你 `preventDefault()`，
+ * 之後的處理函式與內建的 Tab 縮排都不再收到。
  */
 export type KeyHandler = (e: KeyboardEvent, ctx: EditorContext) => boolean;
 
 const keyHandlers: KeyHandler[] = [];
 
 /**
- * 挂一个编辑区 keydown 处理函数，两块编辑区共用。返回取消挂载的函数。
+ * 掛一個編輯區 keydown 處理函式，兩塊編輯區共用。返回取消掛載的函式。
  *
- * 顺序：输入法组字中途的按键根本不会送来（`isImeComposing`）→ 撤销 / 重做（`Ctrl+Z` / `Ctrl+Y` /
- * `Ctrl+Shift+Z`，不可覆盖）→ 这里挂的函数，按挂载顺序 → 内置的 Tab / Shift+Tab 缩进
- * （想改 Tab 的行为就在这里先接走）。预览模式下 textarea 是藏着的，收不到按键。
+ * 順序：輸入法組字中途的按鍵根本不會送來（`isImeComposing`）→ 撤銷 / 重做（`Ctrl+Z` / `Ctrl+Y` /
+ * `Ctrl+Shift+Z`，不可覆蓋）→ 這裡掛的函式，按掛載順序 → 內建的 Tab / Shift+Tab 縮排
+ * （想改 Tab 的行為就在這裡先接走）。預覽模式下 textarea 是藏著的，收不到按鍵。
  */
 export function addKeyHandler(handler: KeyHandler): () => void {
   keyHandlers.push(handler);
@@ -117,7 +117,7 @@ export function addKeyHandler(handler: KeyHandler): () => void {
   };
 }
 
-/** pane.ts 用：依次交给挂上来的处理函数，有一个接走就停。 */
+/** pane.ts 用：依次交給掛上來的處理函式，有一個接走就停。 */
 export function runKeyHandlers(e: KeyboardEvent, ctx: EditorContext): boolean {
   for (const handler of [...keyHandlers]) {
     if (handler(e, ctx)) {
@@ -128,8 +128,8 @@ export function runKeyHandlers(e: KeyboardEvent, ctx: EditorContext): boolean {
 }
 
 /**
- * 正文区右键（触屏上是长按）菜单里功能模块加的项：按在哪个字上给什么（名词高亮给「打开林昭的角色卡」）。
- * 排在剪切 / 复制 / 粘贴前面，中间隔一条线；没有就给空数组。返回取消挂载的函数。
+ * 正文區右鍵（觸屏上是長按）選單裡功能模組加的項：按在哪個字上給什麼（名詞高亮給「開啟林昭的角色卡」）。
+ * 排在剪下 / 複製 / 貼上前面，中間隔一條線；沒有就給空陣列。返回取消掛載的函式。
  */
 export type AreaMenuProvider = (pane: Pane, at: MenuContext) => MenuItem[];
 
@@ -145,12 +145,12 @@ export function addAreaMenu(provide: AreaMenuProvider): () => void {
   };
 }
 
-/** pane.ts 用：正文区那张菜单最前面的几项。 */
+/** pane.ts 用：正文區那張選單最前面的幾項。 */
 export function areaMenuItems(pane: Pane, at: MenuContext): MenuItem[] {
   return areaMenuProviders.flatMap((provide) => provide(pane, at));
 }
 
-/** 事件目标落在哪一块编辑区里（查找条、预览也算在那一块里）。 */
+/** 事件目標落在哪一塊編輯區裡（查詢條、預覽也算在那一塊裡）。 */
 export function paneContaining(target: EventTarget | null): Pane | undefined {
   if (!(target instanceof Node)) {
     return undefined;
@@ -158,7 +158,7 @@ export function paneContaining(target: EventTarget | null): Pane | undefined {
   return Object.values(panes).find((p) => p.root.contains(target));
 }
 
-/** 别的输入框（对话输入框、下拉框、可编辑区）——编辑区之外的快捷键在那里不该抢。 */
+/** 別的輸入框（對話輸入框、下拉框、可編輯區）——編輯區之外的快捷鍵在那裡不該搶。 */
 export function isTextField(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLInputElement ||
@@ -169,9 +169,9 @@ export function isTextField(target: EventTarget | null): boolean {
 }
 
 /**
- * 「编辑区里或页面上」那一档快捷键（`shortcuts.ts` 的 `workbench`：查找、F3、预览……）这一下该给哪块编辑区：
- * 焦点在某块里就是那一块；焦点在编辑区之外的输入框 / 文本框（左侧对话输入框之类）时谁都不给，留给浏览器；
- * 其余（焦点在页面上、按钮上）给当前那一块。那一块没开文件也不给。
+ * 「編輯區裡或頁面上」那一檔快捷鍵（`shortcuts.ts` 的 `workbench`：查詢、F3、預覽……）這一下該給哪塊編輯區：
+ * 焦點在某塊裡就是那一塊；焦點在編輯區之外的輸入框 / 文字框（左側對話輸入框之類）時誰都不給，留給瀏覽器；
+ * 其餘（焦點在頁面上、按鈕上）給當前那一塊。那一塊沒開檔案也不給。
  */
 export function paneForShortcut(e: KeyboardEvent): Pane | undefined {
   const inside = paneContaining(e.target);
@@ -179,36 +179,36 @@ export function paneForShortcut(e: KeyboardEvent): Pane | undefined {
   return pane?.activeFile() ? pane : undefined;
 }
 
-// ---------------------------------------------------------------- 变化通知
+// ---------------------------------------------------------------- 變化通知
 
 /**
- * 内容是怎么变的：`typing` 连续打字 / 删除，`input` 其余的原生输入（粘贴、拖放、剪切），
- * `composition` 输入法上屏，`program` 经 `applyEdit` 的程序改写（含「还原」「用磁盘版本覆盖」），
- * `completion` 作者在名词补全里挑了一个名字（也经 `applyEdit`，带 `opts.source`；码字统计当作者打的字算，
- * 见 `writingStats.ts`），`undo` / `redo` 撤销与重做。
+ * 內容是怎麼變的：`typing` 連續打字 / 刪除，`input` 其餘的原生輸入（貼上、拖放、剪下），
+ * `composition` 輸入法上屏，`program` 經 `applyEdit` 的程式改寫（含「還原」「用磁碟版本覆蓋」），
+ * `completion` 作者在名詞補全裡挑了一個名字（也經 `applyEdit`，帶 `opts.source`；碼字統計當作者打的字算，
+ * 見 `writingStats.ts`），`undo` / `redo` 撤銷與重做。
  */
 export type EditSource = 'typing' | 'input' | 'composition' | 'program' | 'completion' | 'undo' | 'redo';
 
 export type EditorEvent =
   /**
-   * 某块编辑区里某份文件的内容变了（已经写进 `file.draft`，若是当前文件也已写进 textarea）。
-   * `change` 是这一处改动（位置按改动之前的文字算）；撤销 / 重做可能一次退好几处，不给。
-   * 输入法组字中途（拼音还没上屏）也会发 `source: 'composition'` 好让显示跟上，但**不带 `change`**；
-   * 上屏的那一下才带——要对「用户刚输入了什么」做反应（例如成对标点）的，只认带 `change` 的。
+   * 某塊編輯區裡某份檔案的內容變了（已經寫進 `file.draft`，若是當前檔案也已寫進 textarea）。
+   * `change` 是這一處改動（位置按改動之前的文字算）；撤銷 / 重做可能一次退好幾處，不給。
+   * 輸入法組字中途（拼音還沒上屏）也會發 `source: 'composition'` 好讓顯示跟上，但**不帶 `change`**；
+   * 上屏的那一下才帶——要對「使用者剛輸入了什麼」做反應（例如成對標點）的，只認帶 `change` 的。
    */
   | { type: 'edit'; pane: Pane; file: OpenFile; source: EditSource; change?: TextChange }
-  /** 这块编辑区重画了：换了文件、开 / 关了标签、切了预览、保存回执到了……当前文件取 `editorOf(pane)`。 */
+  /** 這塊編輯區重畫了：換了檔案、開 / 關了標籤、切了預覽、儲存回執到了……當前檔案取 `editorOf(pane)`。 */
   | { type: 'render'; pane: Pane };
 
 const listeners = new Set<(ev: EditorEvent) => void>();
 
-/** 订阅编辑区的变化。返回取消订阅的函数。 */
+/** 訂閱編輯區的變化。返回取消訂閱的函式。 */
 export function onEditorChange(fn: (ev: EditorEvent) => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 
-/** pane.ts 用。某个订阅者炸了不连累编辑器本身与其他订阅者。 */
+/** pane.ts 用。某個訂閱者炸了不連累編輯器本身與其他訂閱者。 */
 export function emitEditorChange(ev: EditorEvent): void {
   for (const fn of [...listeners]) {
     try {
@@ -219,7 +219,7 @@ export function emitEditorChange(ev: EditorEvent): void {
   }
 }
 
-/** 选区夹进 `[0, length]`，并保证 `start ≤ end`。 */
+/** 選區夾進 `[0, length]`，並保證 `start ≤ end`。 */
 export function clampSelection(sel: TextSelection, length: number): TextSelection {
   const a = Math.max(0, Math.min(length, Math.floor(sel.start)));
   const b = Math.max(0, Math.min(length, Math.floor(sel.end)));

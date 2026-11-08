@@ -1,66 +1,66 @@
 /**
- * 独立版的访问控制：监听地址要不要令牌、请求带的凭据认不认、Origin 认不认、登录页。
+ * 獨立版的訪問控制：監聽地址要不要令牌、請求帶的憑據認不認、Origin 認不認、登入頁。
  *
- * 缺省形态没变：只绑 127.0.0.1、无鉴权，安全全靠「别的机器连不进来」。部署到服务器
- * （Docker 镜像就是这样）得绑 0.0.0.0，这道墙就没了，所以**绑非回环地址必须配令牌**，
- * 没配就拒绝启动（`exposureError`）——宁可起不来，也不要裸奔。令牌只认环境变量
- * `NOVELWARDEN_TOKEN`（旧名 `NOVELFORGE_TOKEN` 继续兼容）：命令行参数会出现在 `ps` 里。
+ * 預設形態沒變：只綁 127.0.0.1、無鑑權，安全全靠「別的機器連不進來」。部署到伺服器
+ * （Docker 映象就是這樣）得綁 0.0.0.0，這道牆就沒了，所以**綁非迴環地址必須配令牌**，
+ * 沒配就拒絕啟動（`exposureError`）——寧可起不來，也不要裸奔。令牌只認環境變數
+ * `NOVELWARDEN_TOKEN`（舊名 `NOVELFORGE_TOKEN` 繼續相容）：命令列引數會出現在 `ps` 裡。
  *
- * 配了令牌之后，不管绑在哪都要鉴权：
- * - 网页：登录页交一次令牌，换一个 cookie。cookie 里是由令牌派生的值、不是令牌原文；
- *   换令牌重启后旧 cookie 自然作废。`SameSite=Lax`：跨站页面发起的 WebSocket 握手与
- *   `fetch` 带不上它，顶层导航（从书签、别的页面点进来）带得上。
- * - MCP 客户端：`Authorization: Bearer <令牌>`（`claude mcp add … --header`）。
+ * 配了令牌之後，不管綁在哪都要鑑權：
+ * - 網頁：登入頁交一次令牌，換一個 cookie。cookie 裡是由令牌派生的值、不是令牌原文；
+ *   換令牌重啟後舊 cookie 自然作廢。`SameSite=Lax`：跨站頁面發起的 WebSocket 握手與
+ *   `fetch` 帶不上它，頂層導航（從書籤、別的頁面點進來）帶得上。
+ * - MCP 客戶端：`Authorization: Bearer <令牌>`（`claude mcp add … --header`）。
  *
- * 纯函数，只用标准 `Request` / `Response`，单测在 Node 下直接跑。
+ * 純函式，只用標準 `Request` / `Response`，單測在 Node 下直接跑。
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 export const TOKEN_ENV = 'NOVELWARDEN_TOKEN';
-/** 改名前的变量名。老部署的 compose / 脚本还在用它，继续认。 */
+/** 改名前的變數名。老部署的 compose / 指令碼還在用它，繼續認。 */
 export const LEGACY_TOKEN_ENV = 'NOVELFORGE_TOKEN';
-/** 令牌下限。登录页能被人反复试，短令牌经不起猜。 */
+/** 令牌下限。登入頁能被人反覆試，短令牌經不起猜。 */
 export const MIN_TOKEN_LENGTH = 16;
 export const LOGIN_PATH = '/login';
 
-/** 从环境变量取令牌：新名优先，旧名兜底。空白当没给。 */
+/** 從環境變數取令牌：新名優先，舊名兜底。空白當沒給。 */
 export function tokenFromEnv(env: NodeJS.ProcessEnv = process.env): string | undefined {
   return env[TOKEN_ENV]?.trim() || env[LEGACY_TOKEN_ENV]?.trim() || undefined;
 }
 
 const COOKIE_NAME = 'nf_session';
 const COOKIE_MAX_AGE_S = 30 * 24 * 3600;
-/** 令牌错了先等一会儿再回：拖慢逐个猜的速度，对正常输错的人只是一眨眼。 */
+/** 令牌錯了先等一會兒再回：拖慢逐個猜的速度，對正常輸錯的人只是一眨眼。 */
 const LOGIN_FAIL_DELAY_MS = 1000;
 
-/** 回环地址：只有本机连得进来，这时才允许不设令牌。 */
+/** 迴環地址：只有本機連得進來，這時才允許不設令牌。 */
 export function isLoopbackHost(host: string): boolean {
   const h = host.trim().toLowerCase().replace(/^\[(.*)\]$/, '$1');
   return h === 'localhost' || h === '::1' || /^127\.\d+\.\d+\.\d+$/.test(h);
 }
 
 /**
- * 这样起服务安不安全。返回要打印给作者的那句话；没问题返回 undefined。
- * `token` 由调用方先把空串归一成 undefined。
+ * 這樣起服務安不安全。返回要列印給作者的那句話；沒問題返回 undefined。
+ * `token` 由呼叫方先把空串歸一成 undefined。
  */
 export function exposureError(host: string, token: string | undefined): string | undefined {
-  const hint = `可用 \`openssl rand -hex 24\` 生成一个，放进环境变量 ${TOKEN_ENV}。`;
+  const hint = `可用 \`openssl rand -hex 24\` 生成一個，放進環境變數 ${TOKEN_ENV}。`;
   if (token !== undefined && token.length < MIN_TOKEN_LENGTH) {
-    return `访问令牌太短（${token.length} 位，至少 ${MIN_TOKEN_LENGTH} 位）。${hint}`;
+    return `訪問令牌太短（${token.length} 位，至少 ${MIN_TOKEN_LENGTH} 位）。${hint}`;
   }
   if (token === undefined && !isLoopbackHost(host)) {
-    return `监听 ${host} 会让别的机器连进来，必须先设访问令牌。${hint}`;
+    return `監聽 ${host} 會讓別的機器連進來，必須先設訪問令牌。${hint}`;
   }
   return undefined;
 }
 
-/** 两边先摘要成等长再比，`timingSafeEqual` 才不会因长度不同直接抛、也不泄露长度。 */
+/** 兩邊先摘要成等長再比，`timingSafeEqual` 才不會因長度不同直接拋、也不洩露長度。 */
 function sameSecret(a: string, b: string): boolean {
   const digest = (s: string) => createHash('sha256').update(s).digest();
   return timingSafeEqual(digest(a), digest(b));
 }
 
-/** cookie 里放的值。 */
+/** cookie 裡放的值。 */
 export function sessionValue(token: string): string {
   return createHash('sha256').update(`novelwarden-session:${token}`).digest('hex');
 }
@@ -79,7 +79,7 @@ function cookieOf(req: Request, name: string): string | undefined {
   return undefined;
 }
 
-/** 请求带的凭据认不认：Bearer 令牌或登录换来的 cookie，有一样对就行。 */
+/** 請求帶的憑據認不認：Bearer 令牌或登入換來的 cookie，有一樣對就行。 */
 export function isAuthorized(req: Request, token: string): boolean {
   const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.get('authorization') ?? '');
   if (bearer && sameSecret(bearer[1].trim(), token)) {
@@ -90,15 +90,15 @@ export function isAuthorized(req: Request, token: string): boolean {
 }
 
 /**
- * WS 与 MCP 的 Origin 白名单。
+ * WS 與 MCP 的 Origin 白名單。
  *
- * 没有 Origin 头的一律放过——命令行工具（冒烟测试里的 Bun WebSocket、wscat、MCP 客户端）
- * 不发这个头，浏览器一定发，所以缺失说明不是网页发起的请求。
+ * 沒有 Origin 頭的一律放過——命令列工具（冒煙測試裡的 Bun WebSocket、wscat、MCP 客戶端）
+ * 不發這個頭，瀏覽器一定發，所以缺失說明不是網頁發起的請求。
  *
- * 本机同端口始终认。**配了令牌时**再认同源（Origin 与 `Host` / `X-Forwarded-Host` 一致）：
- * 经服务器地址或反代访问时，Origin 本来就不是 127.0.0.1。没配令牌时绝不能认这条——
- * DNS rebinding 的页面开在 `evil.com:3680`，解析到 127.0.0.1 后 Origin 与 Host 恰好一致，
- * 那时挡住它的只有「只认本机」这一条；配了令牌则它拿不到绑在真实地址上的 cookie。
+ * 本機同埠始終認。**配了令牌時**再認同源（Origin 與 `Host` / `X-Forwarded-Host` 一致）：
+ * 經伺服器地址或反代訪問時，Origin 本來就不是 127.0.0.1。沒配令牌時絕不能認這條——
+ * DNS rebinding 的頁面開在 `evil.com:3680`，解析到 127.0.0.1 後 Origin 與 Host 恰好一致，
+ * 那時擋住它的只有「只認本機」這一條；配了令牌則它拿不到綁在真實地址上的 cookie。
  */
 export function isAllowedOrigin(origin: string | null, req: Request, port: number, withToken: boolean): boolean {
   if (!origin) {
@@ -120,7 +120,7 @@ export function isAllowedOrigin(origin: string | null, req: Request, port: numbe
   return [req.headers.get('host'), forwarded].some((h) => !!h && h.trim().toLowerCase() === u.host.toLowerCase());
 }
 
-/** 登录后跳回哪：只认站内路径，`//evil.com` 与绝对地址一律回首页，免得登录页成了跳板。 */
+/** 登入後跳回哪：只認站內路徑，`//evil.com` 與絕對地址一律回首頁，免得登入頁成了跳板。 */
 export function safeNext(next: string | null | undefined): string {
   if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) {
     return '/';
@@ -132,14 +132,14 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-/** 登录页。自带样式：`/media/view.css` 依赖主页面的主题变量，单独拿来用不成样子。 */
+/** 登入頁。自帶樣式：`/media/view.css` 依賴主頁面的主題變數，單獨拿來用不成樣子。 */
 export function loginPage(next: string, failed: boolean): string {
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="zh-TW">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Novelwarden · 登录</title>
+<title>Novelwarden · 登入</title>
 <link rel="icon" href="/favicon.ico" type="image/svg+xml">
 <style>
   :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
@@ -156,18 +156,18 @@ export function loginPage(next: string, failed: boolean): string {
 <body>
 <form method="post" action="${LOGIN_PATH}">
   <h1>Novelwarden</h1>
-  <p>这台服务设了访问令牌，输入后进入。</p>
-  ${failed ? '<p class="error">令牌不对。</p>' : ''}
+  <p>這臺服務設了訪問令牌，輸入後進入。</p>
+  ${failed ? '<p class="error">令牌不對。</p>' : ''}
   <input type="hidden" name="next" value="${escapeHtml(safeNext(next))}">
-  <input type="password" name="token" placeholder="访问令牌" autocomplete="current-password" autofocus required>
-  <button type="submit">进入</button>
+  <input type="password" name="token" placeholder="訪問令牌" autocomplete="current-password" autofocus required>
+  <button type="submit">進入</button>
 </form>
 </body>
 </html>
 `;
 }
 
-/** 未登录访问页面时回的那一页：401，内容是登录页，交完跳回原地址。 */
+/** 未登入訪問頁面時回的那一頁：401，內容是登入頁，交完跳回原地址。 */
 export function loginRequired(url: URL): Response {
   return new Response(loginPage(url.pathname + url.search, false), {
     status: 401,
@@ -175,7 +175,7 @@ export function loginRequired(url: URL): Response {
   });
 }
 
-/** `/login`：GET 出登录页，POST 核对令牌、种 cookie、303 跳回。 */
+/** `/login`：GET 出登入頁，POST 核對令牌、種 cookie、303 跳回。 */
 export async function handleLogin(req: Request, token: string): Promise<Response> {
   const html = (body: string, status: number) =>
     new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8' } });
@@ -193,13 +193,13 @@ export async function handleLogin(req: Request, token: string): Promise<Response
     given = String(form.get('token') ?? '');
     next = safeNext(String(form.get('next') ?? '/'));
   } catch {
-    // 表单解析不了就当令牌是空的
+    // 表單解析不了就當令牌是空的
   }
   if (!sameSecret(given, token)) {
     await new Promise((r) => setTimeout(r, LOGIN_FAIL_DELAY_MS));
     return html(loginPage(next, true), 401);
   }
-  // 经 HTTPS 反代访问时加 Secure；直连 http 的局域网访问加了反而存不下。
+  // 經 HTTPS 反代訪問時加 Secure；直連 http 的區域網訪問加了反而存不下。
   const https =
     url.protocol === 'https:' || req.headers.get('x-forwarded-proto')?.split(',')[0].trim() === 'https';
   const cookie = [

@@ -1,8 +1,8 @@
 /**
- * 种类 → handler 注册表。
+ * 種類 → handler 登錄檔。
  *
- * 认不出的种类落到 `plain`（纯文本进出、无记账）——**绝不抛**：网关不该
- * 因为一个没登记的种类就拒绝写一个普通文本文件。
+ * 認不出的種類落到 `plain`（純文字進出、無記賬）——**絕不拋**：閘道器不該
+ * 因為一個沒登記的種類就拒絕寫一個普通文字檔案。
  */
 import { ArtifactKind } from '../kind';
 import { Handler } from './types';
@@ -12,7 +12,7 @@ import { settingHandler } from './setting';
 import { plotHandler } from './plot';
 import { chapterHandler } from './chapter';
 
-// 情节大纲（`outline`）不在表里：它没有文件，读写由网关自己接住（`Workspace.writeOutline`）。
+// 情節大綱（`outline`）不在表裡：它沒有檔案，讀寫由閘道器自己接住（`Workspace.writeOutline`）。
 const REGISTRY: Partial<Record<ArtifactKind, Handler>> = {
   setting: settingHandler,
   style: docHandler,

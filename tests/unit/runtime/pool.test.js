@@ -1,11 +1,11 @@
 /**
- * 模型池：构造与剔除、并发轮转、串行恒用首选、随机 fallback，以及模型分档在池上的落法。
- * 迁自 scripts/smoke-pool.js 的 `== 模型池：… ==` 与 `== 模型分档：… ==` 各节。
+ * 模型池：構造與剔除、併發輪轉、序列恆用首選、隨機 fallback，以及模型分檔在池上的落法。
+ * 遷自 scripts/smoke-pool.js 的 `== 模型池：… ==` 與 `== 模型分檔：… ==` 各節。
  *
- * 出错的后果很隐蔽：fallback 挑错模型会把用户没配 Key 的模型也算进去；取消后还接着
- * 起新任务，用户点了「停止」却停不下来。这些手测都看不出来，所以用假 provider 全部钉住。
+ * 出錯的後果很隱蔽：fallback 挑錯模型會把使用者沒配 Key 的模型也算進去；取消後還接著
+ * 起新任務，使用者點了「停止」卻停不下來。這些手測都看不出來，所以用假 provider 全部釘住。
  *
- * host / registry / config 都有模块级状态，所以这几个模块必须打进同一个 bundle。
+ * host / registry / config 都有模組級狀態，所以這幾個模組必須打進同一個 bundle。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,9 +13,9 @@ const { loadBundle } = require('../../helpers/load');
 const { makeFakeHost } = require('../../helpers/fakeHost');
 const { installFakeProvider } = require('../../helpers/fakeProvider');
 
-/** 当前这一轮测试的配置。每个用例自己改。 */
+/** 當前這一輪測試的配置。每個用例自己改。 */
 let settings = {};
-/** ref -> 这一轮该怎么表现。注意：必须**就地改**，假工厂是按引用闭包捕获它的。 */
+/** ref -> 這一輪該怎麼表現。注意：必須**就地改**，假工廠是按引用閉包捕獲它的。 */
 const behavior = {};
 const warns = [];
 
@@ -47,23 +47,23 @@ before(() => {
     }
   });
 
-  // 假模型走 vscode-lm 这个 kind：它是唯一一条走 registerProviderFactory 的路径，
-  // 于是不必碰 SecretStore 就能塞进假模型（其余 kind 会去要 API Key）。
+  // 假模型走 vscode-lm 這個 kind：它是唯一一條走 registerProviderFactory 的路徑，
+  // 於是不必碰 SecretStore 就能塞進假模型（其餘 kind 會去要 API Key）。
   fake = installFakeProvider(bundle.registry, {
     behavior,
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
-    // helper 在记下 calls 之后会给该条打上 .ref，所以这里拿得到当前模型引用。
+    // helper 在記下 calls 之後會給該條打上 .ref，所以這裡拿得到當前模型引用。
     reply: (messages) => `ok:${messages.ref}`,
   });
 });
 
-/** 代替迁移前的 `behavior = {...}`：helper 闭包捕获了这个对象，只能就地改。 */
+/** 代替遷移前的 `behavior = {...}`：helper 閉包捕獲了這個物件，只能就地改。 */
 function setBehavior(next) {
   for (const key of Object.keys(behavior)) delete behavior[key];
   Object.assign(behavior, next);
 }
 
-/** 配 N 个模型（都在 vscode-lm 服务商 `p` 下）。 */
+/** 配 N 個模型（都在 vscode-lm 服務商 `p` 下）。 */
 function configure(refs, extra = {}) {
   settings = {
     providers: [{ id: 'p', kind: 'vscode-lm', models: refs.map((r) => ({ name: r.slice(2) })) }],
@@ -76,8 +76,8 @@ function configure(refs, extra = {}) {
 }
 
 /**
- * 分档用的配置：providers 从「所有被提到的引用」推出来，
- * 于是档位里的模型也解析得出。`windows` 可给单个模型指定窗口。
+ * 分檔用的配置：providers 從「所有被提到的引用」推出來，
+ * 於是檔位裡的模型也解析得出。`windows` 可給單個模型指定視窗。
  */
 function configureTiers({ models = [], tierModels = {}, taskTiers = {}, windows = {}, ...extra }) {
   const all = [...models, ...Object.values(tierModels).flat()];
@@ -100,13 +100,13 @@ function configureTiers({ models = [], tierModels = {}, taskTiers = {}, windows 
   warns.length = 0;
 }
 
-/** 让 pool.run 的回调「调一次模型」。 */
+/** 讓 pool.run 的回呼「調一次模型」。 */
 const useModel = (llm) => collectText(llm.stream([], {}));
-/** 这一轮实际调过的模型引用。 */
+/** 這一輪實際調過的模型引用。 */
 const usedRefs = () => fake.calls.map((c) => c.ref);
 
-describe('模型池：构造', () => {
-  describe('三个模型都可用', () => {
+describe('模型池：構造', () => {
+  describe('三個模型都可用', () => {
     let pool;
 
     before(async () => {
@@ -115,20 +115,20 @@ describe('模型池：构造', () => {
       pool = await createModelPool({ task: 'plotSummary', concurrent: true });
     });
 
-    test('三个模型都进了池', () => {
+    test('三個模型都進了池', () => {
       assert.ok(pool && pool.size === 3, pool && pool.refs.join('、'));
     });
 
-    test('label 报得出数量', () => {
-      assert.ok(pool.label.includes('3 个模型'), pool.label);
+    test('label 報得出數量', () => {
+      assert.ok(pool.label.includes('3 個模型'), pool.label);
     });
 
-    test('primary 是第一个', () => {
+    test('primary 是第一個', () => {
       assert.equal(pool.primary.label, 'p/a', pool.primary.label);
     });
   });
 
-  describe('构造不出来的被剔除', () => {
+  describe('構造不出來的被剔除', () => {
     let pool;
     let warnText;
     let inputCount;
@@ -141,16 +141,16 @@ describe('模型池：构造', () => {
       inputCount = host.inputs.length;
     });
 
-    test('构造不出来的模型被剔除', () => {
+    test('構造不出來的模型被剔除', () => {
       assert.equal(pool.refs.join(','), 'p/a,p/c', pool.refs.join(','));
     });
 
-    test('剔除时说清是谁、为什么', () => {
+    test('剔除時說清是誰、為什麼', () => {
       assert.ok(warnText.includes('p/b'), warnText);
     });
 
-    test('剔除备选模型时不弹输入框', () => {
-      assert.equal(inputCount, 0, `弹了 ${inputCount} 次`);
+    test('剔除備選模型時不彈輸入框', () => {
+      assert.equal(inputCount, 0, `彈了 ${inputCount} 次`);
     });
   });
 
@@ -169,12 +169,12 @@ describe('模型池：构造', () => {
       assert.equal(pool.refs.join(','), 'p/a,p/c', pool.refs.join(','));
     });
 
-    test('解析失败的原因写进日志', () => {
+    test('解析失敗的原因寫進日誌', () => {
       assert.ok(warnText.includes('nosuch/x'), warnText);
     });
   });
 
-  describe('一个都不可用', () => {
+  describe('一個都不可用', () => {
     let pool;
 
     before(async () => {
@@ -183,13 +183,13 @@ describe('模型池：构造', () => {
       pool = await createModelPool({ task: 'plotSummary' });
     });
 
-    test('一个可用模型都没有时返回 undefined', () => {
+    test('一個可用模型都沒有時返回 undefined', () => {
       assert.equal(pool, undefined);
     });
   });
 });
 
-describe('模型池：并发轮转（负载均衡）', () => {
+describe('模型池：併發輪轉（負載均衡）', () => {
   let counts;
 
   before(async () => {
@@ -197,7 +197,7 @@ describe('模型池：并发轮转（负载均衡）', () => {
     configure(['p/a', 'p/b', 'p/c']);
     const pool = await createModelPool({ task: 'plotSummary', concurrent: true });
     for (let i = 0; i < 6; i++) {
-      await pool.run(`第 ${i} 项`, useModel);
+      await pool.run(`第 ${i} 項`, useModel);
     }
     counts = {};
     for (const ref of usedRefs()) {
@@ -205,18 +205,18 @@ describe('模型池：并发轮转（负载均衡）', () => {
     }
   });
 
-  test('6 次调用均摊到 3 个模型', () => {
+  test('6 次呼叫均攤到 3 個模型', () => {
     assert.equal(counts['p/a'], 2, JSON.stringify(counts));
     assert.equal(counts['p/b'], 2, JSON.stringify(counts));
     assert.equal(counts['p/c'], 2, JSON.stringify(counts));
   });
 
-  test('轮转是按配置顺序起步的', () => {
+  test('輪轉是按配置順序起步的', () => {
     assert.equal(usedRefs().slice(0, 3).join(','), 'p/a,p/b,p/c', usedRefs().join(','));
   });
 });
 
-describe('模型池：串行恒用首选', () => {
+describe('模型池：序列恆用首選', () => {
   before(async () => {
     setBehavior({});
     configure(['p/a', 'p/b', 'p/c']);
@@ -226,13 +226,13 @@ describe('模型池：串行恒用首选', () => {
     }
   });
 
-  test('串行模式每次都用第一个', () => {
+  test('序列模式每次都用第一個', () => {
     assert.ok(usedRefs().every((ref) => ref === 'p/a'), usedRefs().join(','));
   });
 });
 
-describe('模型池：随机 fallback', () => {
-  describe('首选失败换人', () => {
+describe('模型池：隨機 fallback', () => {
+  describe('首選失敗換人', () => {
     let text;
     let warnText;
 
@@ -244,25 +244,25 @@ describe('模型池：随机 fallback', () => {
       warnText = warns.join(' | ');
     });
 
-    test('首选失败后换了别的模型', () => {
+    test('首選失敗後換了別的模型', () => {
       assert.notEqual(text, 'ok:p/a', text);
       assert.ok(text.startsWith('ok:p/'), text);
     });
 
-    test('换的是列表里的其余模型', () => {
+    test('換的是列表裡的其餘模型', () => {
       assert.ok(['ok:p/b', 'ok:p/c'].includes(text), text);
     });
 
-    test('第一次仍然先试首选', () => {
+    test('第一次仍然先試首選', () => {
       assert.equal(usedRefs()[0], 'p/a', usedRefs().join(','));
     });
 
-    test('换模型时留下 warn', () => {
+    test('換模型時留下 warn', () => {
       assert.ok(warnText.includes('改用'), warnText);
     });
   });
 
-  describe('全都失败', () => {
+  describe('全都失敗', () => {
     let err;
 
     before(async () => {
@@ -276,16 +276,16 @@ describe('模型池：随机 fallback', () => {
       }
     });
 
-    test('全失败时把错误抛出去', () => {
+    test('全失敗時把錯誤拋出去', () => {
       assert.ok(!!err, String(err));
     });
 
-    test('重试次数不超过 fallbackAttempts', () => {
-      assert.equal(fake.callCount(), 2, `调了 ${fake.callCount()} 次`);
+    test('重試次數不超過 fallbackAttempts', () => {
+      assert.equal(fake.callCount(), 2, `調了 ${fake.callCount()} 次`);
     });
   });
 
-  describe('重试上限大于池子', () => {
+  describe('重試上限大於池子', () => {
     before(async () => {
       setBehavior({ 'p/a': 'fail', 'p/b': 'fail', 'p/c': 'fail' });
       configure(['p/a', 'p/b', 'p/c'], { fallbackAttempts: 5 });
@@ -293,16 +293,16 @@ describe('模型池：随机 fallback', () => {
       await pool.run('第 1 章', useModel).catch(() => {});
     });
 
-    test('不会把同一个模型试两遍', () => {
+    test('不會把同一個模型試兩遍', () => {
       assert.equal(new Set(usedRefs()).size, usedRefs().length, usedRefs().join(','));
     });
 
-    test('最多把池里每个模型试一遍', () => {
-      assert.equal(fake.callCount(), 3, `调了 ${fake.callCount()} 次`);
+    test('最多把池裡每個模型試一遍', () => {
+      assert.equal(fake.callCount(), 3, `調了 ${fake.callCount()} 次`);
     });
   });
 
-  describe('池里只有一个模型', () => {
+  describe('池裡只有一個模型', () => {
     before(async () => {
       setBehavior({ 'p/a': 'fail' });
       configure(['p/a'], { fallbackAttempts: 3 });
@@ -310,12 +310,12 @@ describe('模型池：随机 fallback', () => {
       await pool.run('第 1 章', useModel).catch(() => {});
     });
 
-    test('池里只有一个模型时不重试（换谁都是它自己）', () => {
-      assert.equal(fake.callCount(), 1, `调了 ${fake.callCount()} 次`);
+    test('池裡只有一個模型時不重試（換誰都是它自己）', () => {
+      assert.equal(fake.callCount(), 1, `調了 ${fake.callCount()} 次`);
     });
   });
 
-  describe('用户取消', () => {
+  describe('使用者取消', () => {
     let err;
 
     before(async () => {
@@ -329,11 +329,11 @@ describe('模型池：随机 fallback', () => {
       }
     });
 
-    test('用户取消时不 fallback', () => {
-      assert.equal(fake.callCount(), 1, `调了 ${fake.callCount()} 次`);
+    test('使用者取消時不 fallback', () => {
+      assert.equal(fake.callCount(), 1, `調了 ${fake.callCount()} 次`);
     });
 
-    test('取消原样上抛', () => {
+    test('取消原樣上拋', () => {
       assert.ok(err && err.name === 'CancelledError', String(err));
     });
   });
@@ -343,23 +343,23 @@ describe('模型池：随机 fallback', () => {
       setBehavior({});
       configure(['p/a', 'p/b'], { fallbackAttempts: 0 });
       const pool = await createModelPool({ task: 'plotSummary', concurrent: false });
-      // 逐字迁自 smoke-pool.js:426-432，包括这一行的位置。
+      // 逐字遷自 smoke-pool.js:426-432，包括這一行的位置。
       setBehavior({ 'p/a': 'fail' });
       await pool.run('第 1 章', useModel).catch(() => {});
     });
 
-    // 注意：这条断言是空转的，迁移时原样保留。假工厂在 createModelPool **建池时**
-    // 就把 behavior[ref] 读进了 spec（同文件 `fallback 不跨档` 一节的注释说的就是这件事），
-    // 所以上面那次「建池之后」才设的 'p/a': 'fail' 根本不生效——p/a 压根没失败。
-    // 于是 callCount === 1 只说明「成功调用了一次」，
-    // **并不能证明 fallbackAttempts=0 关掉了重试**。要真测这件事，behavior 必须在建池前设好。
-    test('fallbackAttempts=0 时不重试', () => {
-      assert.equal(fake.callCount(), 1, `调了 ${fake.callCount()} 次`);
+    // 注意：這條斷言是空轉的，遷移時原樣保留。假工廠在 createModelPool **建池時**
+    // 就把 behavior[ref] 讀進了 spec（同檔案 `fallback 不跨檔` 一節的註釋說的就是這件事），
+    // 所以上面那次「建池之後」才設的 'p/a': 'fail' 根本不生效——p/a 壓根沒失敗。
+    // 於是 callCount === 1 只說明「成功呼叫了一次」，
+    // **並不能證明 fallbackAttempts=0 關掉了重試**。要真測這件事，behavior 必須在建池前設好。
+    test('fallbackAttempts=0 時不重試', () => {
+      assert.equal(fake.callCount(), 1, `調了 ${fake.callCount()} 次`);
     });
   });
 });
 
-describe('模型分档：档位生效', () => {
+describe('模型分檔：檔位生效', () => {
   let fast;
   let merge;
   let card;
@@ -375,78 +375,78 @@ describe('模型分档：档位生效', () => {
     card = await createModelPool({ task: 'characterCard' });
   });
 
-  test('单章摘要走快速档', () => {
+  test('單章摘要走快速檔', () => {
     assert.equal(fast.refs.join(','), 'p/cheap', fast.refs.join(','));
   });
 
-  test('全文大纲最终合并走精标档', () => {
+  test('全文大綱最終合併走精標檔', () => {
     assert.equal(merge.refs.join(','), 'p/smart', merge.refs.join(','));
   });
 
-  test('角色卡走均衡档', () => {
+  test('角色卡走均衡檔', () => {
     assert.equal(card.refs.join(','), 'p/mid', card.refs.join(','));
   });
 
-  test('label 里带档位名', () => {
-    assert.ok(fast.label.includes('快速档'), fast.label);
+  test('label 裡帶檔位名', () => {
+    assert.ok(fast.label.includes('快速檔'), fast.label);
   });
 
-  test('分档不动对话页的当前模型', () => {
+  test('分檔不動對話頁的當前模型', () => {
     assert.equal(settings.models.join(','), 'p/writer', settings.models.join(','));
   });
 });
 
-describe('模型分档：空档位继承默认模型', () => {
-  describe('三档全空', () => {
+describe('模型分檔：空檔位繼承預設模型', () => {
+  describe('三檔全空', () => {
     let pool;
 
     before(async () => {
       setBehavior({});
       configureTiers({ models: ['p/a', 'p/b'], tierModels: {} });
       pool = await createModelPool({ task: 'plotSummary', concurrent: true });
-      // 分档之前的行为：并发轮转、失败换人，一条都不能少。
+      // 分檔之前的行為：併發輪轉、失敗換人，一條都不能少。
       setBehavior({});
       for (let i = 0; i < 4; i++) {
-        await pool.run(`第 ${i} 项`, useModel);
+        await pool.run(`第 ${i} 項`, useModel);
       }
     });
 
-    test('三档全空时沿用 models', () => {
+    test('三檔全空時沿用 models', () => {
       assert.equal(pool.refs.join(','), 'p/a,p/b', pool.refs.join(','));
     });
 
-    test('label 说明是沿用来的', () => {
-      assert.ok(pool.label.includes('未配置，沿用默认模型'), pool.label);
+    test('label 說明是沿用來的', () => {
+      assert.ok(pool.label.includes('未配置，沿用預設模型'), pool.label);
     });
 
-    test('未配档时并发轮转与分档前一致', () => {
+    test('未配檔時併發輪轉與分檔前一致', () => {
       assert.equal(usedRefs().join(','), 'p/a,p/b,p/a,p/b', usedRefs().join(','));
     });
   });
 
-  describe('只配了快速档', () => {
+  describe('只配了快速檔', () => {
     let fast;
     let merge;
 
     before(async () => {
-      // 只配了快速档：其余两档的任务仍走默认模型，不该被快速档顺手接管。
+      // 只配了快速檔：其餘兩檔的任務仍走預設模型，不該被快速檔順手接管。
       setBehavior({});
       configureTiers({ models: ['p/writer'], tierModels: { fast: ['p/cheap'] } });
       fast = await createModelPool({ task: 'plotSummary' });
       merge = await createModelPool({ task: 'globalSummaryMerge' });
     });
 
-    test('配了的档用自己的模型', () => {
+    test('配了的檔用自己的模型', () => {
       assert.equal(fast.refs.join(','), 'p/cheap', fast.refs.join(','));
     });
 
-    test('没配的档仍继承 models', () => {
+    test('沒配的檔仍繼承 models', () => {
       assert.equal(merge.refs.join(','), 'p/writer', merge.refs.join(','));
     });
   });
 });
 
-describe('模型分档：任务归档的覆盖', () => {
+describe('模型分檔：任務歸檔的覆蓋', () => {
   let pool;
   let fallbackPool;
 
@@ -455,7 +455,7 @@ describe('模型分档：任务归档的覆盖', () => {
     configureTiers({
       models: ['p/writer'],
       tierModels: { fast: ['p/cheap'], quality: ['p/smart'] },
-      // 内置默认里单章摘要是快速档，这里改成精标。
+      // 內建預設裡單章摘要是快速檔，這裡改成精標。
       taskTiers: { plotSummary: 'quality' },
     });
     pool = await createModelPool({ task: 'plotSummary' });
@@ -463,26 +463,26 @@ describe('模型分档：任务归档的覆盖', () => {
     configureTiers({
       models: ['p/writer'],
       tierModels: { fast: ['p/cheap'], quality: ['p/smart'] },
-      taskTiers: { plotSummary: '超级档', nosuchTask: 'fast' },
+      taskTiers: { plotSummary: '超級檔', nosuchTask: 'fast' },
     });
     fallbackPool = await createModelPool({ task: 'plotSummary' });
   });
 
-  test('覆盖优先于内置默认', () => {
+  test('覆蓋優先於內建預設', () => {
     assert.equal(pool.refs.join(','), 'p/smart', pool.refs.join(','));
   });
 
-  test('非法档位名退回内置默认而不是崩', () => {
+  test('非法檔位名退回內建預設而不是崩', () => {
     assert.equal(fallbackPool.refs.join(','), 'p/cheap', fallbackPool.refs.join(','));
   });
 });
 
-describe('模型分档：fallback 不跨档', () => {
-  describe('档内还有人可换', () => {
+describe('模型分檔：fallback 不跨檔', () => {
+  describe('檔內還有人可換', () => {
     let used;
 
     before(async () => {
-      // behavior 要在建池**之前**定：假工厂在构造 provider 时就把它读走了。
+      // behavior 要在建池**之前**定：假工廠在構造 provider 時就把它讀走了。
       setBehavior({ 'p/cheap': 'fail' });
       configureTiers({
         models: ['p/writer'],
@@ -494,20 +494,20 @@ describe('模型分档：fallback 不跨档', () => {
       used = usedRefs();
     });
 
-    test('档内换人照旧生效', () => {
+    test('檔內換人照舊生效', () => {
       assert.ok(used.includes('p/cheap2'), used.join(','));
     });
 
-    test('绝不升级到精标档的模型', () => {
+    test('絕不升級到精標檔的模型', () => {
       assert.ok(!used.includes('p/smart'), used.join(','));
     });
   });
 
-  describe('档内无人可换', () => {
+  describe('檔內無人可換', () => {
     let err;
 
     before(async () => {
-      // 档内只有一个模型：无人可换，照旧上抛，不去别的档找。
+      // 檔內只有一個模型：無人可換，照舊上拋，不去別的檔找。
       setBehavior({ 'p/cheap': 'fail' });
       configureTiers({
         models: ['p/writer', 'p/spare'],
@@ -522,15 +522,15 @@ describe('模型分档：fallback 不跨档', () => {
       }
     });
 
-    test('档内无人可换时不重试', () => {
-      assert.equal(fake.callCount(), 1, `调了 ${fake.callCount()} 次`);
+    test('檔內無人可換時不重試', () => {
+      assert.equal(fake.callCount(), 1, `調了 ${fake.callCount()} 次`);
     });
 
-    test('错误照旧上抛', () => {
+    test('錯誤照舊上拋', () => {
       assert.ok(!!err, String(err));
     });
 
-    test('也不去 models 里捞人', () => {
+    test('也不去 models 裡撈人', () => {
       assert.ok(
         !usedRefs().some((ref) => ref === 'p/writer' || ref === 'p/spare'),
         usedRefs().join(',')
@@ -539,8 +539,8 @@ describe('模型分档：fallback 不跨档', () => {
   });
 });
 
-describe('模型分档：Key 输入框与预算', () => {
-  describe('档内备选缺 Key', () => {
+describe('模型分檔：Key 輸入框與預算', () => {
+  describe('檔內備選缺 Key', () => {
     let pool;
     let inputCount;
     let warnText;
@@ -556,20 +556,20 @@ describe('模型分档：Key 输入框与预算', () => {
       warnText = warns.join(' | ');
     });
 
-    test('档内备选缺 Key 被剔除', () => {
+    test('檔內備選缺 Key 被剔除', () => {
       assert.equal(pool.refs.join(','), 'p/cheap', pool.refs.join(','));
     });
 
-    test('剔除档内备选时不弹输入框', () => {
-      assert.equal(inputCount, 0, `弹了 ${inputCount} 次`);
+    test('剔除檔內備選時不彈輸入框', () => {
+      assert.equal(inputCount, 0, `彈了 ${inputCount} 次`);
     });
 
-    test('剔除原因写进日志', () => {
+    test('剔除原因寫進日誌', () => {
       assert.ok(warnText.includes('p/cheap2'), warnText);
     });
   });
 
-  describe('预算跟着档位走', () => {
+  describe('預算跟著檔位走', () => {
     let fast;
     let merge;
 
@@ -589,15 +589,15 @@ describe('模型分档：Key 输入框与预算', () => {
       merge = await createModelPool({ task: 'globalSummaryMerge' });
     });
 
-    test('primaryBudget 取该档首选的窗口，不是对话页模型的', () => {
+    test('primaryBudget 取該檔首選的視窗，不是對話頁模型的', () => {
       assert.equal(fast.primaryBudget.contextWindow, 32000, String(fast.primaryBudget.contextWindow));
     });
 
-    test('primaryBudget 的输出上限同样跟着该档走', () => {
+    test('primaryBudget 的輸出上限同樣跟著該檔走', () => {
       assert.equal(fast.primaryBudget.maxOutputTokens, 2000, String(fast.primaryBudget.maxOutputTokens));
     });
 
-    test('模型没自带窗口时退回兼容值', () => {
+    test('模型沒自帶視窗時退回相容值', () => {
       assert.equal(merge.primaryBudget.contextWindow, 128000, JSON.stringify(merge.primaryBudget));
       assert.equal(merge.primaryBudget.maxOutputTokens, 4096, JSON.stringify(merge.primaryBudget));
     });

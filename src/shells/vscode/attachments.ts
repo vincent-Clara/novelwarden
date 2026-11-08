@@ -3,10 +3,10 @@ import { NovelProject } from '../../core/model/project';
 import { Attachment } from '../../core/model/session';
 
 /**
- * 把当前编辑器的选区做成附件（插件专属能力，由 VsCodeHost 暴露给 core）。
+ * 把當前編輯器的選區做成附件（外掛專屬能力，由 VsCodeHost 暴露給 core）。
  *
- * 存快照而非路径+行号：用户选的时候是那个样子，之后文件改了
- * 不该让历史对话里的引用跟着变。
+ * 存快照而非路徑+行號：使用者選的時候是那個樣子，之後檔案改了
+ * 不該讓歷史對話裡的引用跟著變。
  */
 export function selectionAttachment(project: NovelProject): Attachment | undefined {
   const editor = vscode.window.activeTextEditor;
@@ -22,7 +22,7 @@ export function selectionAttachment(project: NovelProject): Attachment | undefin
   const rel = project.relPath(editor.document.uri.fsPath);
   const name = baseName(rel);
   return {
-    // 同一处选区重复添加时 id 相同，前端会去重。
+    // 同一處選區重複新增時 id 相同，前端會去重。
     id: `sel:${rel}:${start}-${end}`,
     kind: 'selection',
     label: `${name}:${start}-${end}`,

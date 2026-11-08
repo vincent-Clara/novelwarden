@@ -1,22 +1,22 @@
 /**
- * 状态简报：**外部 agent 与界面说同一套话**（第 20 条）。
+ * 狀態簡報：**外部 agent 與介面說同一套話**（第 20 條）。
  *
  * ```
- * # 当前工程
- * 《青云志》· 已写 99 章 · 31.2 万字（计划 300 章）
- * 当前目标：第 100 章（.novelwarden/summaries/100.md）
- * 状态：待写细纲
- * 下一步（由状态机算出，不要另做判断）：写第 100 章细纲
- *   先把这一章要发生什么定下来：梗概、出场人物、关键事件、看点。
- * 提醒：第 12、13 章的上游产物改过（⟳）
+ * # 當前工程
+ * 《青雲志》· 已寫 99 章 · 31.2 萬字（計劃 300 章）
+ * 當前目標：第 100 章（.novelwarden/summaries/100.md）
+ * 狀態：待寫細綱
+ * 下一步（由狀態機算出，不要另做判斷）：寫第 100 章細綱
+ *   先把這一章要發生什麼定下來：梗概、出場人物、關鍵事件、看點。
+ * 提醒：第 12、13 章的上游產物改過（⟳）
  * ```
  *
- * **判据一个都不在这里重新实现**：`buildPipelineIndex` 取数、`deriveStage` /
- * `deriveNextStep` / `deriveBookStage` 判断，与创作页主按钮吃的是同一份输出。
- * 两处各判各的，界面上就会出现「徽章说待写细纲，agent 让你写正文」——而那种分叉
- * 没有任何测试拦得住，只会让作者不再相信界面。
+ * **判據一個都不在這裡重新實現**：`buildPipelineIndex` 取數、`deriveStage` /
+ * `deriveNextStep` / `deriveBookStage` 判斷，與創作頁主按鈕吃的是同一份輸出。
+ * 兩處各判各的，介面上就會出現「徽章說待寫細綱，agent 讓你寫正文」——而那種分叉
+ * 沒有任何測試攔得住，只會讓作者不再相信介面。
  *
- * MCP server 把它贴在工具结果末尾，变了才贴（[mcp/server.ts](../mcp/server.ts)）。
+ * MCP server 把它貼在工具結果末尾，變了才貼（[mcp/server.ts](../mcp/server.ts)）。
  */
 import type { NovelProject } from '../model/project';
 import { basename } from 'node:path';
@@ -37,20 +37,20 @@ import { BookFacts } from '../model/pipeline';
 import { buildBookFacts, buildPipelineIndex, buildPlotPipeline, factsOf } from './pipeline';
 import type { PipelineIndex, PlotPipeline } from './pipeline';
 
-/** 「⟳ 上游改过」最多点名几章，超了写「等 N 章」。 */
+/** 「⟳ 上游改過」最多點名幾章，超了寫「等 N 章」。 */
 export const STALE_LIST_LIMIT = 5;
 
 /**
- * 拼一份「现在这本书走到哪了」。**只取数，判断全在 `model/pipeline.ts`。**
+ * 拼一份「現在這本書走到哪了」。**只取數，判斷全在 `model/pipeline.ts`。**
  *
- * `target` 没指向某一章（作者还在架构或大纲那一层）时报全书那一层的下一步——
- * 与创作页主按钮在那两层显示的是同一句话。选中的那一章做完了也转去问全书，
- * 主按钮与这里于是一起落到下一个该写的章上（controller/chat.ts 的 `pushPipeline`
- * 是同一条路）。
+ * `target` 沒指向某一章（作者還在架構或大綱那一層）時報全書那一層的下一步——
+ * 與創作頁主按鈕在那兩層顯示的是同一句話。選中的那一章做完了也轉去問全書，
+ * 主按鈕與這裡於是一起落到下一個該寫的章上（controller/chat.ts 的 `pushPipeline`
+ * 是同一條路）。
  *
- * 代价是一次 `buildPipelineIndex`，与工程页刷新同一趟活。MCP 每次工具调用之后
- * 都现算一份：作者可能正在另一个窗口里改文件——照着一份旧快照往下走，比多读一次
- * 盘糟得多。
+ * 代價是一次 `buildPipelineIndex`，與工程頁重新整理同一趟活。MCP 每次工具呼叫之後
+ * 都現算一份：作者可能正在另一個視窗裡改檔案——照著一份舊快照往下走，比多讀一次
+ * 盤糟得多。
  */
 export async function buildStateBrief(
   project: NovelProject,
@@ -62,56 +62,56 @@ export async function buildStateBrief(
 
   const written = chapters.filter((c) => c.wordCount > 0);
   const words = written.reduce((sum, c) => sum + c.wordCount, 0);
-  const lines: string[] = ['# 当前工程'];
+  const lines: string[] = ['# 當前工程'];
   lines.push(
-    `《${manifest.title || '未命名'}》· 已写 ${written.length} 章 · ${formatWords(words)}` +
-      (config.totalChapters ? `（计划 ${config.totalChapters} 章）` : '')
+    `《${manifest.title || '未命名'}》· 已寫 ${written.length} 章 · ${formatWords(words)}` +
+      (config.totalChapters ? `（計劃 ${config.totalChapters} 章）` : '')
   );
 
   const current = target ? await findPipeline(project, index, target) : undefined;
   if (current) {
     const where = current.plot.exists ? current.plot.relPath : current.chapter.relPath || current.plot.relPath;
-    lines.push(`当前目标：${chapterLabel(current.no, current.title)}（${where}）`);
-    lines.push(`状态：${PLOT_STAGE_LABEL[current.stage]}`);
+    lines.push(`當前目標：${chapterLabel(current.no, current.title)}（${where}）`);
+    lines.push(`狀態：${PLOT_STAGE_LABEL[current.stage]}`);
     const next = deriveNextStep(current.stage, factsOf(current));
     lines.push(
       ...(next
         ? describeNext(next, '')
-        : describeNext(bookStep(index, facts), '全书都写完了。需要改动的话作者会说。').map((l, i) =>
-            i === 0 ? `这一章都做完了。${l}` : l
+        : describeNext(bookStep(index, facts), '全書都寫完了。需要改動的話作者會說。').map((l, i) =>
+            i === 0 ? `這一章都做完了。${l}` : l
           ))
     );
   } else {
     lines.push(currentTargetLine(target));
-    lines.push(...describeNext(bookStep(index, facts), '全书都写完了。需要改动的话作者会说。'));
+    lines.push(...describeNext(bookStep(index, facts), '全書都寫完了。需要改動的話作者會說。'));
   }
 
   const stale = rows.filter((p) => p.plot.upstreamStale || p.chapter.upstreamStale);
   if (stale.length > 0) {
     const named = stale.slice(0, STALE_LIST_LIMIT).map((p) => `第 ${p.no} 章`).join('、');
     const rest = stale.length > STALE_LIST_LIMIT ? `等 ${stale.length} 章` : '';
-    lines.push(`提醒：${named}${rest}的上游产物改过，现有内容可能已经对不上（⟳）`);
+    lines.push(`提醒：${named}${rest}的上游產物改過，現有內容可能已經對不上（⟳）`);
   }
   return lines.join('\n');
 }
 
-/** 不在某一章上时「当前目标」那一行：架构、大纲，或者一条设定（展开，完善设定 2026-10-19，带上它的路径）。 */
+/** 不在某一章上時「當前目標」那一行：架構、大綱，或者一條設定（展開，完善設定 2026-10-19，帶上它的路徑）。 */
 function currentTargetLine(target?: CreationTarget): string {
   switch (target?.kind) {
     case 'setting':
-      return '当前目标：故事架构';
+      return '當前目標：故事架構';
     case 'outline':
-      return '当前目标：情节大纲';
+      return '當前目標：情節大綱';
     case 'lore':
-      return `当前目标：${describeTarget(target)}（${target.relPath}）`;
+      return `當前目標：${describeTarget(target)}（${target.relPath}）`;
     default:
-      return '当前目标：还没选定某一章';
+      return '當前目標：還沒選定某一章';
   }
 }
 
 /**
- * 全书级的下一步：架构 / 大纲 / 拆细纲三档由纯函数直接给；「在写」那一档转去问
- * 下一个该写的章。与 controller/chat.ts 的 `bookNextStep` 同一条判据。
+ * 全書級的下一步：架構 / 大綱 / 拆細綱三檔由純函式直接給；「在寫」那一檔轉去問
+ * 下一個該寫的章。與 controller/chat.ts 的 `bookNextStep` 同一條判據。
  */
 function bookStep(index: PipelineIndex, facts: BookFacts): NextStepPlan | undefined {
   const stage = deriveBookStage(facts);
@@ -124,28 +124,28 @@ function bookStep(index: PipelineIndex, facts: BookFacts): NextStepPlan | undefi
 }
 
 /**
- * 「下一步」那两行。**label 与 hint 逐字来自状态机**，不在这里改写措辞——
- * 界面上的主按钮写着「写第 12 章」，agent 却说「去扩写第 12 章」，作者会以为
- * 它们是两件事。
+ * 「下一步」那兩行。**label 與 hint 逐字來自狀態機**，不在這裡改寫措辭——
+ * 介面上的主按鈕寫著「寫第 12 章」，agent 卻說「去擴寫第 12 章」，作者會以為
+ * 它們是兩件事。
  *
- * 状态机不给下一步时**照实说**（第 20 条：做完了就不给下一步）。造一个假的
- * 出来，agent 会自作主张挑一章开始烧钱。
+ * 狀態機不給下一步時**照實說**（第 20 條：做完了就不給下一步）。造一個假的
+ * 出來，agent 會自作主張挑一章開始燒錢。
  */
 function describeNext(next: { label: string; hint: string } | undefined, done: string): string[] {
   if (!next) {
     return [`下一步：${done}`];
   }
-  return [`下一步（由状态机算出，不要另做判断）：${next.label}`, `  ${next.hint}`];
+  return [`下一步（由狀態機算出，不要另做判斷）：${next.label}`, `  ${next.hint}`];
 }
 
 /**
- * target → 那一章的流水线。**按章号认**（细纲号 = 章号），与 `selectPlot` 同一条判据：
- * target 里记的可能是一份还不存在的细纲（点了「拆细纲 / 写第 N 章细纲」之后会话里的
- * 就是这种），也可能是章节路径。
+ * target → 那一章的流水線。**按章號認**（細綱號 = 章號），與 `selectPlot` 同一條判據：
+ * target 裡記的可能是一份還不存在的細綱（點了「拆細綱 / 寫第 N 章細綱」之後會話裡的
+ * 就是這種），也可能是章節路徑。
  *
- * 索引里只有「有细纲或正文文件」的章号。**不在索引里的章也要给一份空壳**——与
- * `buildPlotPipelineView` 同一条路：否则作者刚点了主按钮、会话落在第 2 章那份还不存在的
- * 细纲上，界面说「写第 2 章细纲」，agent 这里却说「还没选定某一章」（第 20 条）。
+ * 索引裡只有「有細綱或正文檔案」的章號。**不在索引裡的章也要給一份空殼**——與
+ * `buildPlotPipelineView` 同一條路：否則作者剛點了主按鈕、會話落在第 2 章那份還不存在的
+ * 細綱上，介面說「寫第 2 章細綱」，agent 這裡卻說「還沒選定某一章」（第 20 條）。
  */
 async function findPipeline(
   project: NovelProject,
@@ -167,5 +167,5 @@ async function findPipeline(
 }
 
 function formatWords(words: number): string {
-  return words >= 10000 ? `${(words / 10000).toFixed(1)} 万字` : `${words} 字`;
+  return words >= 10000 ? `${(words / 10000).toFixed(1)} 萬字` : `${words} 字`;
 }

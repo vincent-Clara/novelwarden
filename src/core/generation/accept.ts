@@ -1,18 +1,18 @@
 /**
- * 采纳：把一份产物写进磁盘。按产物种类分派到八条落盘路径。
+ * 採納：把一份產物寫進磁碟。按產物種類分派到八條落盤路徑。
  *
- * ## 与生成分开的那一步
+ * ## 與生成分開的那一步
  *
- * `generate` 只把文本交回界面，一个字都不写磁盘；这里才写，且只在用户点了
- * 采纳之后（AGENTS 第 19 条）。中间那一步是用户看着产物决定要不要的机会——
- * 少了它，「不静默覆盖」无从谈起。
+ * `generate` 只把文字交回介面，一個字都不寫磁碟；這裡才寫，且只在使用者點了
+ * 採納之後（AGENTS 第 19 條）。中間那一步是使用者看著產物決定要不要的機會——
+ * 少了它，「不靜默覆蓋」無從談起。
  *
- * ## 守卫不在这里
+ * ## 守衛不在這裡
  *
- * 落盘一律经 `workspace/` 网关：越界、同名、大小、乐观锁、覆盖审阅、
- * `.trash`、`upstreamHash` 记账，全在那一层做一次。本模块只做**分派**与
- * **人话消息**——每条路径的「跳过了哪几个人」「新建了哪一章」必须说出来，
- * 默默少建三张角色卡，作者要到写到那里才发现。
+ * 落盤一律經 `workspace/` 閘道器：越界、同名、大小、樂觀鎖、覆蓋審閱、
+ * `.trash`、`upstreamHash` 記賬，全在那一層做一次。本模組只做**分派**與
+ * **人話訊息**——每條路徑的「跳過了哪幾個人」「新建了哪一章」必須說出來，
+ * 默默少建三張角色卡，作者要到寫到那裡才發現。
  */
 import { scoped } from '../runtime/logger';
 import { hash, sanitizeFileName, slugify, uniqueSlug } from '../model/fs';
@@ -43,35 +43,35 @@ import { integrationWatermark, loreEntryAt } from '../views/loreMaterial';
 import { Workspace, pathOfTarget } from '../workspace';
 import { acceptSettledLore, plannedLoreSettle } from './loreSettle';
 
-const log = scoped('创作');
+const log = scoped('創作');
 
-/** 采纳的结果。`relPath` 是落盘位置，`skipped` 表示用户在审阅时放弃了。 */
+/** 採納的結果。`relPath` 是落盤位置，`skipped` 表示使用者在審閱時放棄了。 */
 export interface AcceptResult {
   relPath?: string;
   skipped?: boolean;
-  /** 一句人话，直接进 toast。 */
+  /** 一句人話，直接進 toast。 */
   message: string;
-  /** 顺带新建的设定空条目在哪（一批细纲的「设定」一节 `isNew`）：批量拆细纲「拆完展开本批新设定」按它接着展开。 */
+  /** 順帶新建的設定空條目在哪（一批細綱的「設定」一節 `isNew`）：批次拆細綱「拆完展開本批新設定」按它接著展開。 */
   createdLore?: string[];
 }
 
 /**
- * `onlyBlank`：批量那条路（工程页「补齐架构」）。第 19 条的批量那一面——不问、不覆盖：
- * 作者写过的节一个字不动，只填空着的节，也就不必弹审阅。
+ * `onlyBlank`：批次那條路（工程頁「補齊架構」）。第 19 條的批次那一面——不問、不覆蓋：
+ * 作者寫過的節一個字不動，只填空著的節，也就不必彈審閱。
  */
 export interface AcceptOptions {
   onlyBlank?: boolean;
   /**
-   * 正文的写法（Draft 上记着的那一份）。`continue` 追加；其余在这一章已有正文时覆盖、
-   * 写入前审阅。缺席（老会话里的 Draft）按「有正文就覆盖审阅」——宁可多问一句，
-   * 也不把一整章叠到已有的后面。
+   * 正文的寫法（Draft 上記著的那一份）。`continue` 追加；其餘在這一章已有正文時覆蓋、
+   * 寫入前審閱。缺席（老會話裡的 Draft）按「有正文就覆蓋審閱」——寧可多問一句，
+   * 也不把一整章疊到已有的後面。
    */
   writeMode?: WriteMode;
 }
 
 /**
- * 落盘之前就能说清的事：会新建哪几张角色卡。写入卡片上要列出来（D19），
- * 不能等写完了才在 toast 里说「顺便建了三张卡」。
+ * 落盤之前就能說清的事：會新建哪幾張角色卡。寫入卡片上要列出來（D19），
+ * 不能等寫完了才在 toast 裡說「順便建了三張卡」。
  */
 export async function plannedCards(project: NovelProject, artifact: Artifact): Promise<string[]> {
   if (artifact.kind !== 'plotBatch' && artifact.kind !== 'characterRoster') {
@@ -90,14 +90,14 @@ function takenNames(cards: CharacterCard[]): Set<string> {
 }
 
 /**
- * 同 {@link plannedCards}：落盘时会新建哪几条设定条目，写入卡片上列出来（设定名录）。
+ * 同 {@link plannedCards}：落盤時會新建哪幾條設定條目，寫入卡片上列出來（設定名錄）。
  *
- * - 细纲（批次与单章，完善设定 §3）：「设定」一节里 `isNew` 的新设定建空条目。
- * - 展开一条设定：建议拆出来的子条目建空条目（完善设定 §1）。
- * - 设定清单：清单里还没有条目的那几条（已有的走覆盖审阅，不算新建）。
+ * - 細綱（批次與單章，完善設定 §3）：「設定」一節裡 `isNew` 的新設定建空條目。
+ * - 展開一條設定：建議拆出來的子條目建空條目（完善設定 §1）。
+ * - 設定清單：清單裡還沒有條目的那幾條（已有的走覆蓋審閱，不算新建）。
  *
- * 前两种是同一条规矩（{@link createPlannedLore}）：名字或关键词已被已有条目占了的、是角色卡上的人的，不建。
- * 落定设定（二期）另有一套认法（generation/loreSettle.ts），这里只取它「会新建」那一半。
+ * 前兩種是同一條規矩（{@link createPlannedLore}）：名字或關鍵詞已被已有條目佔了的、是角色卡上的人的，不建。
+ * 落定設定（二期）另有一套認法（generation/loreSettle.ts），這裡只取它「會新建」那一半。
  */
 export async function plannedLore(project: NovelProject, artifact: Artifact): Promise<string[]> {
   if (artifact.kind === 'loreEntries' && artifact.settle) {
@@ -117,8 +117,8 @@ export async function plannedLore(project: NovelProject, artifact: Artifact): Pr
 }
 
 /**
- * 产物里要建空条目的那几行：细纲批次与单章细纲是「设定」一节里 `isNew` 的，展开是建议拆出来的子条目（没有 `relPath`
- * 的那几项，一句话当说明）。别的产物没有。
+ * 產物裡要建空條目的那幾行：細綱批次與單章細綱是「設定」一節裡 `isNew` 的，展開是建議拆出來的子條目（沒有 `relPath`
+ * 的那幾項，一句話當說明）。別的產物沒有。
  */
 function newLoreLines(artifact: Artifact): LoreLine[] {
   switch (artifact.kind) {
@@ -133,7 +133,7 @@ function newLoreLines(artifact: Artifact): LoreLine[] {
   }
 }
 
-/** 真会建的那几行：同名（归一后）只留第一行；名字或关键词已被已有条目占了的、是角色卡上的人的不建。 */
+/** 真會建的那幾行：同名（歸一後）只留第一行；名字或關鍵詞已被已有條目佔了的、是角色卡上的人的不建。 */
 function plannableLore(lines: readonly LoreLine[], lookup: LoreLookup, people: ReadonlySet<string>): LoreLine[] {
   const seen = new Set<string>();
   return lines.filter((l) => {
@@ -146,16 +146,16 @@ function plannableLore(lines: readonly LoreLine[], lookup: LoreLookup, people: R
   });
 }
 
-/** 设定清单里的一条认不认得出已有条目：先按名字，再按它的关键词（与名录同一张表，`createLoreLookup`）。 */
+/** 設定清單裡的一條認不認得出已有條目：先按名字，再按它的關鍵詞（與名錄同一張表，`createLoreLookup`）。 */
 function existingLore(lookup: LoreLookup, entry: Pick<LoreListEntry, 'title' | 'keywords'>): LoreEntry | undefined {
   return lookup.find(entry.title) ?? entry.keywords.map((k) => lookup.find(k)).find((e) => !!e);
 }
 
 /**
- * 采纳产物，写进磁盘。
+ * 採納產物，寫進磁碟。
  *
- * **每一条覆盖已有内容的路径都走网关的覆盖审阅。** 例外都不覆盖任何东西：
- * 正文追加（往后加）与新建角色卡 / 设定条目（同名已存在的跳过或走各自的审阅）。
+ * **每一條覆蓋已有內容的路徑都走閘道器的覆蓋審閱。** 例外都不覆蓋任何東西：
+ * 正文追加（往後加）與新建角色卡 / 設定條目（同名已存在的跳過或走各自的審閱）。
  */
 export async function acceptArtifact(
   project: NovelProject,
@@ -172,7 +172,7 @@ export async function acceptArtifact(
     case 'loreList':
       return acceptLoreList(project, ws, artifact, opts);
     case 'loreEntries':
-      // 落定设定（二期）是一批、没有目标条目，走自己的那条路（generation/loreSettle.ts）。
+      // 落定設定（二期）是一批、沒有目標條目，走自己的那條路（generation/loreSettle.ts）。
       return artifact.settle ? acceptSettledLore(project, ws, artifact.entries) : acceptLoreEntries(project, ws, target, artifact.entries);
     case 'outlineDoc':
       return acceptOutline(project, ws, artifact.text, artifact.range);
@@ -186,11 +186,11 @@ export async function acceptArtifact(
 }
 
 /**
- * 小说配置 / 前提 / 世界观：整份替换，覆盖前审阅。配置的 frontmatter 由 handler 合并。
+ * 小說配置 / 前提 / 世界觀：整份替換，覆蓋前審閱。配置的 frontmatter 由 handler 合併。
  *
- * **磁盘上那份一节内容都没有时不审阅**：新工程里躺着的是初始化写的空模板（全是占位），
- * 拿它跟产物 diff 一遍只是让作者多点一次；而作者哪怕只填了一节，照旧先问。
- * 配置的 frontmatter（总章数、每章字数）不受影响——handler 没给就沿用磁盘那份。
+ * **磁碟上那份一節內容都沒有時不審閱**：新工程裡躺著的是初始化寫的空模板（全是佔位），
+ * 拿它跟產物 diff 一遍只是讓作者多點一次；而作者哪怕只填了一節，照舊先問。
+ * 配置的 frontmatter（總章數、每章字數）不受影響——handler 沒給就沿用磁碟那份。
  */
 async function acceptSettingDoc(
   project: NovelProject,
@@ -203,8 +203,8 @@ async function acceptSettingDoc(
   const current = await project.readSettingDoc(artifact.doc);
   const blank = !Object.values(current.sections).some((v) => v.trim());
   let art = artifact;
-  // 批量只补空白：作者写过的节原样留着。配置不在这里合——生成链已经按「保留原文，
-  // 追加生成」合过了（generation/structured.ts 的 completeConfig）。
+  // 批次只補空白：作者寫過的節原樣留著。配置不在這裡合——生成鏈已經按「保留原文，
+  // 追加生成」合過了（generation/structured.ts 的 completeConfig）。
   if (opts.onlyBlank && artifact.doc !== 'config') {
     const sections = { ...artifact.sections };
     for (const [key, value] of Object.entries(current.sections)) {
@@ -216,38 +216,38 @@ async function acceptSettingDoc(
   }
   const r = await ws.write(rel, { artifact: art }, { mode: 'overwrite', what, review: !blank && !opts.onlyBlank });
   if (r.skipped) {
-    return { skipped: true, message: `没有改动${what}。` };
+    return { skipped: true, message: `沒有改動${what}。` };
   }
-  log.info(`${what}已写入`, rel);
+  log.info(`${what}已寫入`, rel);
   const styleNote = artifact.style ? await acceptStyle(project, ws, artifact.style) : '';
-  return { relPath: rel, message: `已写入 ${rel}${styleNote}` };
+  return { relPath: rel, message: `已寫入 ${rel}${styleNote}` };
 }
 
 /**
- * 配置草稿里附带的文风：**只在 `style.md` 还没被动过时写进去**（D14：文风的唯一出处
- * 是 `style.md`；第 3 条：作者写过的一个字都不覆盖）。没写进去也要说一句——
- * 作者看着卡片上那段文风，会以为它已经生效了。
+ * 配置草稿裡附帶的文風：**只在 `style.md` 還沒被動過時寫進去**（D14：文風的唯一出處
+ * 是 `style.md`；第 3 條：作者寫過的一個字都不覆蓋）。沒寫進去也要說一句——
+ * 作者看著卡片上那段文風，會以為它已經生效了。
  */
 async function acceptStyle(project: NovelProject, ws: Workspace, style: string): Promise<string> {
   if (!(await project.styleGuideUntouched())) {
-    log.info('文风指南已有作者的内容，配置里附带的文风没有写进去');
-    return '；style.md 已有内容，附带的文风没有写进去';
+    log.info('文風指南已有作者的內容，配置裡附帶的文風沒有寫進去');
+    return '；style.md 已有內容，附帶的文風沒有寫進去';
   }
   const rel = await ws.writeStyleGuide(style);
-  log.info('配置附带的文风已写入文风指南', rel);
-  return `；文风写进了 ${rel}`;
+  log.info('配置附帶的文風已寫入文風指南', rel);
+  return `；文風寫進了 ${rel}`;
 }
 
 /**
- * 角色图谱：每人一张角色卡。
+ * 角色圖譜：每人一張角色卡。
  *
- * - **没有卡的人**直接建：新卡没有作者写过的内容可覆盖，不走审阅（与「给未建卡的
- *   人物新建角色卡」同一口径）。
- * - **同名（或别名撞上）已经有卡的**走覆盖审阅，一张一审：作者可能已经把那张卡改得
- *   很细，重新生成一次图谱不该静默抹掉它（第 3 条）。新图谱里空着的节沿用旧卡；
- *   出场统计、别名这些卡上的记账原样保留。
+ * - **沒有卡的人**直接建：新卡沒有作者寫過的內容可覆蓋，不走審閱（與「給未建卡的
+ *   人物新建角色卡」同一口徑）。
+ * - **同名（或別名撞上）已經有卡的**走覆蓋審閱，一張一審：作者可能已經把那張卡改得
+ *   很細，重新生成一次圖譜不該靜默抹掉它（第 3 條）。新圖譜裡空著的節沿用舊卡；
+ *   出場統計、別名這些卡上的記賬原樣保留。
  *
- * 建了几张、覆盖了几张、保留了哪几张，必须说出来。
+ * 建了幾張、覆蓋了幾張、保留了哪幾張，必須說出來。
  */
 async function acceptRoster(project: NovelProject, ws: Workspace, entries: RosterEntry[]): Promise<AcceptResult> {
   const cards = await project.listCharacters();
@@ -255,8 +255,8 @@ async function acceptRoster(project: NovelProject, ws: Workspace, entries: Roste
   const created: string[] = [];
   const replaced: string[] = [];
   const kept: string[] = [];
-  // 一张卡只处理一次：图谱里「林昭」与「阿昭」撞上的是同一张卡，第二次拿着写之前的
-  // 旧内容再合并一遍，会把第一次刚换上的那一版又改回去。
+  // 一張卡只處理一次：圖譜裡「林昭」與「阿昭」撞上的是同一張卡，第二次拿著寫之前的
+  // 舊內容再合併一遍，會把第一次剛換上的那一版又改回去。
   const handled = new Set<string>();
 
   for (const entry of entries) {
@@ -275,8 +275,8 @@ async function acceptRoster(project: NovelProject, ws: Workspace, entries: Roste
         gender: keepGender(existing.gender, entry.gender),
         sections,
       };
-      // 新图谱给了「当前状态」就是机器写的开篇状态（D15）：盖章，定稿时才认得出它归机器。
-      // 没给就沿用旧卡那一节，连同旧卡的章。
+      // 新圖譜給了「當前狀態」就是機器寫的開篇狀態（D15）：蓋章，定稿時才認得出它歸機器。
+      // 沒給就沿用舊卡那一節，連同舊卡的章。
       const text = renderCharacterCard(hasContent(entry.sections.当前状态) ? stampState(merged, 0) : merged);
       const r = await ws.write(existing.relPath, { text }, { mode: 'overwrite', what: `角色卡「${existing.name}」` });
       (r.skipped ? kept : replaced).push(existing.name);
@@ -288,7 +288,7 @@ async function acceptRoster(project: NovelProject, ws: Workspace, entries: Roste
     }
     taken.add(entry.name);
     taken.add(slug);
-    // 图谱写的「当前状态」是开篇状态（`stateThrough: 0`），盖章归机器（D15）。
+    // 圖譜寫的「當前狀態」是開篇狀態（`stateThrough: 0`），蓋章歸機器（D15）。
     await ws.writeCharacter(
       stampState(
         {
@@ -306,19 +306,19 @@ async function acceptRoster(project: NovelProject, ws: Workspace, entries: Roste
   }
 
   const parts = [
-    created.length > 0 ? `新建 ${created.length} 张角色卡` : '',
-    replaced.length > 0 ? `覆盖 ${replaced.join('、')}` : '',
-    kept.length > 0 ? `保留原样的 ${kept.join('、')}` : '',
+    created.length > 0 ? `新建 ${created.length} 張角色卡` : '',
+    replaced.length > 0 ? `覆蓋 ${replaced.join('、')}` : '',
+    kept.length > 0 ? `保留原樣的 ${kept.join('、')}` : '',
   ].filter(Boolean);
-  log.info('角色图谱已落盘', parts.join('；') || '（没有改动）');
+  log.info('角色圖譜已落盤', parts.join('；') || '（沒有改動）');
   const first = created[0] ?? replaced[0];
   const rel = first ? cards.find((c) => c.name === first)?.relPath ?? `${project.relPath(project.charactersDir)}/${sanitizeFileName(first)}.md` : undefined;
   return created.length + replaced.length === 0
-    ? { skipped: true, message: `没有改动角色卡${kept.length > 0 ? `（保留原样的 ${kept.join('、')}）` : ''}。` }
+    ? { skipped: true, message: `沒有改動角色卡${kept.length > 0 ? `（保留原樣的 ${kept.join('、')}）` : ''}。` }
     : { relPath: rel, message: `${parts.join('，')}。` };
 }
 
-/** 新的一版里有内容的节换新，空着的节沿用旧卡。 */
+/** 新的一版裡有內容的節換新，空著的節沿用舊卡。 */
 function mergeSections(old: CharacterSections, fresh: Partial<CharacterSections>): CharacterSections {
   const out = { ...old };
   for (const key of CHARACTER_SECTION_KEYS) {
@@ -330,16 +330,16 @@ function mergeSections(old: CharacterSections, fresh: Partial<CharacterSections>
 }
 
 /**
- * 设定清单：先建分类目录（空的也建——分类就是目录，作者看得到这本书的分类表），再一条一条落。
+ * 設定清單：先建分類目錄（空的也建——分類就是目錄，作者看得到這本書的分類表），再一條一條落。
  *
- * - **还没有条目的**直接建在 `lore/<分类>/`：新文件不覆盖任何东西，不走审阅（同 `acceptRoster` 建新卡）。
- *   正文是机器写的，记下 `bodyHash`；水位 `updatedThrough: 0`——这是动笔之前排的，一章都还没整合过。
- * - **名字（或关键词）撞上已有条目的**走覆盖审阅，一条一审（第 3 条）：关键词并起来、一句话新的优先、
- *   正文新的没写出来就沿用旧的。正文换了新的，水位回到 0（新正文没整合过任何一章，之前并进去的事实
- *   下次整合时再并一遍），指纹记新正文的。
- * - 批量补齐（`onlyBlank`）只建新的，撞上已有的一律不动、不问（第 19 条批量那一面）。
+ * - **還沒有條目的**直接建在 `lore/<分類>/`：新檔案不覆蓋任何東西，不走審閱（同 `acceptRoster` 建新卡）。
+ *   正文是機器寫的，記下 `bodyHash`；水位 `updatedThrough: 0`——這是動筆之前排的，一章都還沒整合過。
+ * - **名字（或關鍵詞）撞上已有條目的**走覆蓋審閱，一條一審（第 3 條）：關鍵詞並起來、一句話新的優先、
+ *   正文新的沒寫出來就沿用舊的。正文換了新的，水位回到 0（新正文沒整合過任何一章，之前並進去的事實
+ *   下次整合時再並一遍），指紋記新正文的。
+ * - 批次補齊（`onlyBlank`）只建新的，撞上已有的一律不動、不問（第 19 條批次那一面）。
  *
- * 建了几条、覆盖了几条、保留了哪几条、建了哪几个目录，必须说出来。
+ * 建了幾條、覆蓋了幾條、保留了哪幾條、建了哪幾個目錄，必須說出來。
  */
 async function acceptLoreList(
   project: NovelProject,
@@ -354,12 +354,12 @@ async function acceptLoreList(
   const created: string[] = [];
   const replaced: string[] = [];
   const kept: string[] = [];
-  // 一条只处理一次：清单里两条撞上同一个已有条目时，第二次会拿着写之前的旧内容再合并一遍。
+  // 一條只處理一次：清單裡兩條撞上同一個已有條目時，第二次會拿著寫之前的舊內容再合併一遍。
   const handled = new Set<string>();
   const fresh = new Set<string>();
   let first: string | undefined;
-  // 模型给的关键词过一遍：人名、别的条目（已有的、清单里同一批的）的标题、名录里另记着的名字都不要
-  // （model/loreFile.ts）。动笔之前名录是空的；写到一半再排清单时，定稿里记下的名字不能被一条吞掉。
+  // 模型給的關鍵詞過一遍：人名、別的條目（已有的、清單裡同一批的）的標題、名錄裡另記著的名字都不要
+  // （model/loreFile.ts）。動筆之前名錄是空的；寫到一半再排清單時，定稿裡記下的名字不能被一條吞掉。
   const others = {
     titles: [...entries.map((e) => e.title), ...artifact.entries.map((e) => e.title)],
     people: cards.flatMap((c) => [c.name, ...c.aliases]),
@@ -372,7 +372,7 @@ async function acceptLoreList(
       continue;
     }
     if (people.has(entry.title)) {
-      log.info(`设定清单里的「${entry.title}」是角色卡上的人，不建条目`);
+      log.info(`設定清單裡的「${entry.title}」是角色卡上的人，不建條目`);
       continue;
     }
     const existing = existingLore(lookup, entry);
@@ -395,7 +395,7 @@ async function acceptLoreList(
           ? { body, updatedThrough: 0, bodyHash: hash(body) }
           : { body: existing.body, updatedThrough: existing.updatedThrough, bodyHash: existing.bodyHash }),
       });
-      const r = await ws.write(existing.relPath, { text }, { mode: 'overwrite', what: `设定「${existing.title}」` });
+      const r = await ws.write(existing.relPath, { text }, { mode: 'overwrite', what: `設定「${existing.title}」` });
       (r.skipped ? kept : replaced).push(existing.title);
       first ??= r.skipped ? undefined : existing.relPath;
       continue;
@@ -417,26 +417,26 @@ async function acceptLoreList(
   project.invalidate();
 
   const parts = [
-    created.length > 0 ? `新建 ${created.length} 条设定条目` : '',
-    replaced.length > 0 ? `覆盖 ${replaced.join('、')}` : '',
-    kept.length > 0 ? `保留原样的 ${kept.join('、')}` : '',
-    folders.length > 0 ? `新建分类目录 ${folders.join('、')}` : '',
+    created.length > 0 ? `新建 ${created.length} 條設定條目` : '',
+    replaced.length > 0 ? `覆蓋 ${replaced.join('、')}` : '',
+    kept.length > 0 ? `保留原樣的 ${kept.join('、')}` : '',
+    folders.length > 0 ? `新建分類目錄 ${folders.join('、')}` : '',
   ].filter(Boolean);
-  log.info('设定清单已落盘', parts.join('；') || '（没有改动）');
+  log.info('設定清單已落盤', parts.join('；') || '（沒有改動）');
   return created.length + replaced.length + folders.length === 0
-    ? { skipped: true, message: `没有改动设定条目${kept.length > 0 ? `（保留原样的 ${kept.join('、')}）` : ''}。` }
+    ? { skipped: true, message: `沒有改動設定條目${kept.length > 0 ? `（保留原樣的 ${kept.join('、')}）` : ''}。` }
     : { relPath: first ?? project.relPath(project.loreDir), message: `${parts.join('，')}。` };
 }
 
 /**
- * 情节大纲：带区间（续写的那一段）时**只替换落在这一段里的那几条**，其余原样保留
- * （model/outlineFile.ts 的 `mergeOutline`）；不带区间整篇替换。
+ * 情節大綱：帶區間（續寫的那一段）時**只替換落在這一段裡的那幾條**，其餘原樣保留
+ * （model/outlineFile.ts 的 `mergeOutline`）；不帶區間整篇替換。
  *
- * 大纲是各章细纲「梗概」的汇总，没有文件：合并好的整份交给网关（`Workspace.writeOutline`），由它按章号拆回各章细纲——
- * 改梗概、新章建只有梗概的细纲、删掉的空壳进回收站（docs/design/plans/2026-10-22-outline-from-plots.md）。
+ * 大綱是各章細綱「梗概」的彙總，沒有檔案：合併好的整份交給閘道器（`Workspace.writeOutline`），由它按章號拆回各章細綱——
+ * 改梗概、新章建只有梗概的細綱、刪掉的空殼進回收站（docs/design/plans/2026-10-22-outline-from-plots.md）。
  *
- * 审阅只在真的要换掉东西时弹：整篇替换一份有内容的大纲，或者续写的这一段与已有的条目重叠。
- * 纯续写（第 21–40 章接在第 20 章后面）一个字都不吞，不必让作者对比一遍。
+ * 審閱只在真的要換掉東西時彈：整篇替換一份有內容的大綱，或者續寫的這一段與已有的條目重疊。
+ * 純續寫（第 21–40 章接在第 20 章後面）一個字都不吞，不必讓作者對比一遍。
  */
 async function acceptOutline(
   project: NovelProject,
@@ -450,24 +450,24 @@ async function acceptOutline(
   const replacing = range && isOutlineFilled(existing) ? outlineOverlaps(existing, range) : hasOutlineContent(existing);
   const r = await ws.write(rel, { artifact: { kind: 'outlineDoc', text: next } }, {
     mode: 'overwrite',
-    what: '情节大纲',
+    what: '情節大綱',
     review: replacing,
   });
   if (r.skipped) {
-    return { skipped: true, message: '没有改动大纲。' };
+    return { skipped: true, message: '沒有改動大綱。' };
   }
-  log.info('情节大纲已更新', `${next.length} 字${range ? `｜并入第 ${range.from}–${range.to} 章那一段` : ''}`);
+  log.info('情節大綱已更新', `${next.length} 字${range ? `｜併入第 ${range.from}–${range.to} 章那一段` : ''}`);
   return { relPath: rel, message: r.message };
 }
 
 /**
- * 一章的细纲。
+ * 一章的細綱。
  *
- * - **已有这份文件**：整份替换、覆盖前审阅。渲染与记 `upstreamHash` 都在网关的
- *   plot handler 里——三个小节换新，标题 / 目标字数 / done 沿用磁盘那份。
- * - **还没有**（拆细纲给下一章找的落点、或老工程里只有正文的章）：按章号与产物
- *   带的标题新建。文件名里的标题要等这一刻才定得下来，所以落点可能不是 target 上
- *   那个纯序号的占位路径。
+ * - **已有這份檔案**：整份替換、覆蓋前審閱。渲染與記 `upstreamHash` 都在閘道器的
+ *   plot handler 裡——三個小節換新，標題 / 目標字數 / done 沿用磁碟那份。
+ * - **還沒有**（拆細綱給下一章找的落點、或老工程裡只有正文的章）：按章號與產物
+ *   帶的標題新建。檔名裡的標題要等這一刻才定得下來，所以落點可能不是 target 上
+ *   那個純序號的佔位路徑。
  */
 async function acceptPlot(
   project: NovelProject,
@@ -477,35 +477,35 @@ async function acceptPlot(
 ): Promise<AcceptResult> {
   const relPath = plotOfTarget(target);
   if (!relPath) {
-    throw new Error('这份细纲不属于任何章。');
+    throw new Error('這份細綱不屬於任何章。');
   }
-  // 按章号认：占位路径（`summaries/003.md`）上采纳过一次之后，文件已经落成
-  // `003-雪夜.md`，再采纳要覆盖它并先审阅，而不是当成新的再写一份。
+  // 按章號認：佔位路徑（`summaries/003.md`）上採納過一次之後，檔案已經落成
+  // `003-雪夜.md`，再採納要覆蓋它並先審閱，而不是當成新的再寫一份。
   const existing = await project.resolvePlot(relPath);
   if (existing) {
     const r = await ws.write(existing.relPath, { artifact: fields }, {
       mode: 'overwrite',
-      what: `第 ${existing.no} 章的细纲`,
+      what: `第 ${existing.no} 章的細綱`,
     });
     if (r.skipped) {
-      return { skipped: true, message: '没有改动这一章。' };
+      return { skipped: true, message: '沒有改動這一章。' };
     }
     const lore = await createPlannedLore(project, ws, fields.newLore ?? []);
     const plan = await planThreads(project, existing.no, fields);
-    log.info(`第 ${existing.no} 章的细纲已写入`, existing.relPath);
-    return { relPath: existing.relPath, message: `已写入 ${existing.relPath}${loreNote(lore)}${plan}` };
+    log.info(`第 ${existing.no} 章的細綱已寫入`, existing.relPath);
+    return { relPath: existing.relPath, message: `已寫入 ${existing.relPath}${loreNote(lore)}${plan}` };
   }
 
   const no = parsePlotFileName(relPath.split('/').pop() ?? '')?.no;
   if (!no) {
-    throw new Error(`认不出这份细纲的章号：${relPath}`);
+    throw new Error(`認不出這份細綱的章號：${relPath}`);
   }
-  // 落点由网关定（有正文就是正文的镜像）；target 上的占位路径只拿来定子目录。
+  // 落點由閘道器定（有正文就是正文的映象）；target 上的佔位路徑只拿來定子目錄。
   const rel = await ws.writePlot(
     {
       no,
       title: fields.title ?? '',
-      // D3：目标字数必填。蓝图合同里没有它，缺省取配置的每章字数。
+      // D3：目標字數必填。藍圖合同裡沒有它，預設取配置的每章字數。
       targetWords: fields.targetWords ?? (await project.readBookConfig()).wordsPerChapter,
       upstreamHash: plotSynopsisHash(fields.sections.梗概),
       done: false,
@@ -517,18 +517,18 @@ async function acceptPlot(
   );
   const lore = await createPlannedLore(project, ws, fields.newLore ?? []);
   const plan = await planThreads(project, no, fields);
-  log.info(`第 ${no} 章的细纲已新建`, rel);
+  log.info(`第 ${no} 章的細綱已新建`, rel);
   return { relPath: rel, message: `已新建 ${rel}${loreNote(lore)}${plan}` };
 }
 
-/** 单章细纲顺带建了空条目时，toast 里那半句。 */
+/** 單章細綱順帶建了空條目時，toast 裡那半句。 */
 function loreNote(created: readonly string[]): string {
-  return created.length > 0 ? `，新建设定条目：${created.join('、')}` : '';
+  return created.length > 0 ? `，新建設定條目：${created.join('、')}` : '';
 }
 
 /**
- * 单章细纲（生成、落定）写进去之后：把它在叙事线上的计划写进各条线，整组换掉这一章原来的计划（叙事线二期，
- * features/threadPlan.ts）。合同里没写 `threads` 的不动。返回 toast 里那半句。
+ * 單章細綱（生成、落定）寫進去之後：把它在敘事線上的計劃寫進各條線，整組換掉這一章原來的計劃（敘事線二期，
+ * features/threadPlan.ts）。合同裡沒寫 `threads` 的不動。返回 toast 裡那半句。
  */
 async function planThreads(project: NovelProject, no: number, fields: PlotFields): Promise<string> {
   if (!fields.threads) {
@@ -538,18 +538,18 @@ async function planThreads(project: NovelProject, no: number, fields: PlotFields
 }
 
 /**
- * 一批细纲：一章一份，逐章落。
+ * 一批細綱：一章一份，逐章落。
  *
- * - **已经排过的章**（关键事件有内容）走覆盖审阅，一章一审：主按钮那一批永远是空白的章
- *   （model/pipeline.ts 的拆细纲区间），走到这里说明作者在这之间自己排了——不静默盖掉。
- * - **空壳**（有文件、关键事件空着，多半是续写大纲时建的只有梗概的那一份）直接填，并按产物的标题改名
- *   （`004.md` → `004-雪夜.md`）。**梗概沿用空壳的**：它是情节大纲里这一章那一条，是这一批的上游，不让模型顺手改写
- *   （docs/design/plans/2026-10-22-outline-from-plots.md）；空壳没写梗概才用产物的。
- * - **没有文件**的新建。目标字数缺省取配置的每章字数（D3）。
+ * - **已經排過的章**（關鍵事件有內容）走覆蓋審閱，一章一審：主按鈕那一批永遠是空白的章
+ *   （model/pipeline.ts 的拆細綱區間），走到這裡說明作者在這之間自己排了——不靜默蓋掉。
+ * - **空殼**（有檔案、關鍵事件空著，多半是續寫大綱時建的只有梗概的那一份）直接填，並按產物的標題改名
+ *   （`004.md` → `004-雪夜.md`）。**梗概沿用空殼的**：它是情節大綱裡這一章那一條，是這一批的上游，不讓模型順手改寫
+ *   （docs/design/plans/2026-10-22-outline-from-plots.md）；空殼沒寫梗概才用產物的。
+ * - **沒有檔案**的新建。目標字數預設取配置的每章字數（D3）。
  *
- * 然后给蓝图里的新角色建卡（D19，同名已有的不动），再把**真写进去的那几章**在叙事线上的计划写进各条线（叙事线二期，
- * 整组换掉那几章原来的计划；作者在审阅里放弃的、批量跳过的章不动）。批量那条路（features/pipelineBatch.ts）
- * 也走这里——它只给空白的章，于是一张审阅都不会弹。
+ * 然後給藍圖裡的新角色建卡（D19，同名已有的不動），再把**真寫進去的那幾章**在敘事線上的計劃寫進各條線（敘事線二期，
+ * 整組換掉那幾章原來的計劃；作者在審閱裡放棄的、批次跳過的章不動）。批次那條路（features/pipelineBatch.ts）
+ * 也走這裡——它只給空白的章，於是一張審閱都不會彈。
  */
 export async function acceptPlotBatch(
   project: NovelProject,
@@ -561,12 +561,12 @@ export async function acceptPlotBatch(
   const book = await project.readBookConfig();
   const written: string[] = [];
   const kept: number[] = [];
-  /** 真写进去的那几章：叙事线的计划只换它们的。 */
+  /** 真寫進去的那幾章：敘事線的計劃只換它們的。 */
   const done = new Set<number>();
   for (const item of items) {
     const fields = blueprintToPlot(item);
     const existing = await project.getPlot(item.no);
-    // 批量那条路只补空白（第 19 条）：跑的这几十秒里作者自己排了这一章，就不动它，也不问。
+    // 批次那條路只補空白（第 19 條）：跑的這幾十秒裡作者自己排了這一章，就不動它，也不問。
     if (existing && isPlotFilled(existing.sections) && opts.onlyBlank) {
       kept.push(item.no);
       continue;
@@ -574,7 +574,7 @@ export async function acceptPlotBatch(
     if (existing && isPlotFilled(existing.sections)) {
       const r = await ws.write(existing.relPath, { artifact: { kind: 'plot', ...fields } }, {
         mode: 'overwrite',
-        what: `第 ${item.no} 章的细纲`,
+        what: `第 ${item.no} 章的細綱`,
       });
       if (r.skipped) {
         kept.push(item.no);
@@ -618,24 +618,24 @@ export async function acceptPlotBatch(
 
   const where = range.from === range.to ? `第 ${range.from} 章` : `第 ${range.from}–${range.to} 章`;
   const parts = [
-    `已写入${where}的细纲 ${written.length} 份`,
-    kept.length > 0 ? `保留原样的第 ${kept.join('、')} 章` : '',
+    `已寫入${where}的細綱 ${written.length} 份`,
+    kept.length > 0 ? `保留原樣的第 ${kept.join('、')} 章` : '',
     cards.length > 0 ? `新建角色卡：${cards.join('、')}` : '',
-    lore.length > 0 ? `新建设定条目：${lore.join('、')}` : '',
+    lore.length > 0 ? `新建設定條目：${lore.join('、')}` : '',
     plan,
   ].filter(Boolean);
-  log.info(`${where}的细纲已落盘`, parts.join('；'));
+  log.info(`${where}的細綱已落盤`, parts.join('；'));
   const createdLore = created.length > 0 ? { createdLore: created.map((c) => c.relPath) } : {};
   return written.length === 0 && cards.length === 0 && lore.length === 0
-    ? { skipped: true, message: `没有改动${where}的细纲。` }
+    ? { skipped: true, message: `沒有改動${where}的細綱。` }
     : { relPath: written[0], message: `${parts.join('，')}。`, ...createdLore };
 }
 
 /**
- * 蓝图里新登场、后面还会出场的人：直接建卡（D19）。同名（或别名撞上）已有的不动。
+ * 藍圖裡新登場、後面還會出場的人：直接建卡（D19）。同名（或別名撞上）已有的不動。
  *
- * 卡上只写得出这么多：定位、在哪一章登场、那一章的梗概。其余等写到了、定稿过，
- * 再从正文里更新——细纲里的「计划出场」不进出场统计（D13），这里也不写 `firstAppear`。
+ * 卡上只寫得出這麼多：定位、在哪一章登場、那一章的梗概。其餘等寫到了、定稿過，
+ * 再從正文裡更新——細綱裡的「計劃出場」不進出場統計（D13），這裡也不寫 `firstAppear`。
  */
 async function createPlannedCards(project: NovelProject, ws: Workspace, items: BlueprintItem[]): Promise<string[]> {
   const taken = takenNames(await project.listCharacters());
@@ -656,33 +656,33 @@ async function createPlannedCards(project: NovelProject, ws: Workspace, items: B
         gender: c.gender,
         sections: {
           ...emptyCharacterSections(),
-          身份: `第 ${item.no} 章《${item.title}》登场${c.role ? `的${c.role}` : ''}。那一章：${item.synopsis}`,
+          身份: `第 ${item.no} 章《${item.title}》登場${c.role ? `的${c.role}` : ''}。那一章：${item.synopsis}`,
         },
       });
       created.push(c.name);
     }
   }
   if (created.length > 0) {
-    log.info(`细纲里的新角色已建卡：${created.join('、')}`);
+    log.info(`細綱裡的新角色已建卡：${created.join('、')}`);
   }
   return created;
 }
 
 /**
- * 细纲里本章首次引入、后面还会用到的设定（批次与单章都是「设定」一节里 `isNew` 的那几行），以及展开一条设定时建议
- * 拆出来的子条目：直接建一条空条目（设定名录，同 D19 新角色建卡；第 19 条的例外）。名字或关键词已被已有条目
- * 占了的不动，是角色卡上的人的不建（{@link plannableLore}，卡片上列的是同一份）。
+ * 細綱裡本章首次引入、後面還會用到的設定（批次與單章都是「設定」一節裡 `isNew` 的那幾行），以及展開一條設定時建議
+ * 拆出來的子條目：直接建一條空條目（設定名錄，同 D19 新角色建卡；第 19 條的例外）。名字或關鍵詞已被已有條目
+ * 佔了的不動，是角色卡上的人的不建（{@link plannableLore}，卡片上列的是同一份）。
  *
- * 条目上只写得出这么多：标题、所在目录（就是分类，不存在就建）、一句话（「设定」一节的说明 / 子条目的一句话）。
- * 正文留空，等写到了、定稿过，再从名录里「整合」——或者在工程页右键「展开」。
+ * 條目上只寫得出這麼多：標題、所在目錄（就是分類，不存在就建）、一句話（「設定」一節的說明 / 子條目的一句話）。
+ * 正文留空，等寫到了、定稿過，再從名錄裡「整合」——或者在工程頁右鍵「展開」。
  */
 async function createPlannedLore(project: NovelProject, ws: Workspace, lines: readonly LoreLine[]): Promise<string[]> {
   return (await createPlannedLoreAt(project, ws, lines)).map((c) => c.name);
 }
 
 /**
- * 同 {@link createPlannedLore}，交回建在哪：批量拆细纲「拆完展开本批新设定」与批量展开拆出来的子条目要按路径接着认
- * （完善设定三期）。
+ * 同 {@link createPlannedLore}，交回建在哪：批次拆細綱「拆完展開本批新設定」與批次展開拆出來的子條目要按路徑接著認
+ * （完善設定三期）。
  */
 export async function createPlannedLoreAt(
   project: NovelProject,
@@ -702,27 +702,27 @@ export async function createPlannedLoreAt(
   }
   if (created.length > 0) {
     project.invalidate();
-    log.info(`新设定已建空条目：${created.map((c) => c.name).join('、')}`);
+    log.info(`新設定已建空條目：${created.map((c) => c.name).join('、')}`);
   }
   return created;
 }
 
 /**
- * 展开一条设定（完善设定，2026-10-19）。`entries` 里按 `relPath` 认出目标条目（展开不改名），其余是建议拆出来的
- * 子条目。还没定的问题（`questions`）不在这里——它只上卡片，不写进任何文件。
+ * 展開一條設定（完善設定，2026-10-19）。`entries` 裡按 `relPath` 認出目標條目（展開不改名），其餘是建議拆出來的
+ * 子條目。還沒定的問題（`questions`）不在這裡——它只上卡片，不寫進任何檔案。
  *
- * 目标条目：
- * - 正文整份换成展开后的（暗设是第四节 `## 暗设`）；关键词只增不减（新给的过一遍人名、别的条目的标题——含这一次
- *   拆出去的子条目——与名录里另记着的名字）；一句话新的优先。
- * - 记作机器写的：`bodyHash` = 新正文的指纹（作者定案 4：正文写偏了以正文为准，整合可以直接改）；水位同整合
- *   （`integrationWatermark`）——展开喂的定稿记录就是整合会喂的那一份，写完 `＋N` 也就收了。
- * - **明面正文是空的、是占位，又没有暗设**才直接写（没有东西可吞）；其余走覆盖审阅（第 3 条）。三节都写着
- *   「（未交代）」的也先对比：那可能是作者手写的。
- * - 文件还不在（MCP 给了一条新路径、展开期间被删了）：按这个路径新建，标题取文件名；名字已被别的条目占了、
+ * 目標條目：
+ * - 正文整份換成展開後的（暗設是第四節 `## 暗設`）；關鍵詞只增不減（新給的過一遍人名、別的條目的標題——含這一次
+ *   拆出去的子條目——與名錄裡另記著的名字）；一句話新的優先。
+ * - 記作機器寫的：`bodyHash` = 新正文的指紋（作者定案 4：正文寫偏了以正文為準，整合可以直接改）；水位同整合
+ *   （`integrationWatermark`）——展開喂的定稿記錄就是整合會喂的那一份，寫完 `＋N` 也就收了。
+ * - **明面正文是空的、是佔位，又沒有暗設**才直接寫（沒有東西可吞）；其餘走覆蓋審閱（第 3 條）。三節都寫著
+ *   「（未交代）」的也先對比：那可能是作者手寫的。
+ * - 檔案還不在（MCP 給了一條新路徑、展開期間被刪了）：按這個路徑新建，標題取檔名；名字已被別的條目佔了、
  *   是角色卡上的人的不建。
  *
- * 子条目：建空条目（{@link createPlannedLore}，与细纲带出新设定同一条规矩）。作者在覆盖审阅里放弃了这一条的
- * 展开时，拆出来的子条目也不建——它们是这一次展开的一部分。
+ * 子條目：建空條目（{@link createPlannedLore}，與細綱帶出新設定同一條規矩）。作者在覆蓋審閱裡放棄了這一條的
+ * 展開時，拆出來的子條目也不建——它們是這一次展開的一部分。
  */
 async function acceptLoreEntries(
   project: NovelProject,
@@ -733,7 +733,7 @@ async function acceptLoreEntries(
   const relPath = loreOfTarget(target);
   const main = relPath ? drafts.find((d) => d.relPath === relPath) : undefined;
   if (!relPath || !main) {
-    return { skipped: true, message: '这份产物里没有要展开的那一条设定，没有写入任何文件。' };
+    return { skipped: true, message: '這份產物裡沒有要展開的那一條設定，沒有寫入任何檔案。' };
   }
   const children = drafts.filter((d) => d !== main && !d.relPath);
   const [entries, cards] = await Promise.all([project.listLore(), project.listCharacters()]);
@@ -742,9 +742,9 @@ async function acceptLoreEntries(
   if (!exists) {
     const owner = createLoreLookup(entries).find(entry.title);
     if (owner || takenNames(cards).has(entry.title)) {
-      const why = owner ? `已经有条目了（${owner.relPath}）` : '是角色卡上的人';
-      log.warn(`展开的设定「${entry.title}」没有新建：${why}`, relPath);
-      return { skipped: true, message: `「${entry.title}」${why}，没有新建 ${relPath}。` };
+      const why = owner ? `已經有條目了（${owner.relPath}）` : '是角色卡上的人';
+      log.warn(`展開的設定「${entry.title}」沒有新建：${why}`, relPath);
+      return { skipped: true, message: `「${entry.title}」${why}，沒有新建 ${relPath}。` };
     }
   }
 
@@ -760,22 +760,22 @@ async function acceptLoreEntries(
     keywords: unique([...(exists ? entry.keywords : [entry.title]), ...fresh]),
     brief: main.brief || entry.brief,
     body,
-    // 只往前推不往回退：条目早就整合到了更后面（之后前面某章正文又改过、水位停在了那里），不能把它拉回去，
-    // 不然已经并进条目的那些章又挂上 ＋N。
+    // 只往前推不往回退：條目早就整合到了更後面（之後前面某章正文又改過、水位停在了那裡），不能把它拉回去，
+    // 不然已經並進條目的那些章又掛上 ＋N。
     updatedThrough: Math.max(exists ? entry.updatedThrough ?? 0 : 0, await integrationWatermark(project)),
     bodyHash: hash(body),
   });
   const thin = exists ? loreThin(entry) : 'empty';
   const direct = (thin === 'empty' || thin === 'placeholder') && !splitLoreHidden(entry.body).hidden;
-  const what = `设定「${entry.title}」`;
+  const what = `設定「${entry.title}」`;
   const r = exists
     ? await ws.write(relPath, { text }, { mode: 'overwrite', what, review: !direct })
     : await ws.write(relPath, { text }, { mode: 'create', what });
   if (r.skipped) {
-    log.info(`没有采纳${what}的展开`, children.length > 0 ? `拆出来的 ${children.length} 条也没建` : relPath);
+    log.info(`沒有採納${what}的展開`, children.length > 0 ? `拆出來的 ${children.length} 條也沒建` : relPath);
     return {
       skipped: true,
-      message: `没有改动${what}${children.length > 0 ? `（拆出来的 ${children.map((c) => c.title).join('、')} 也没建）` : ''}。`,
+      message: `沒有改動${what}${children.length > 0 ? `（拆出來的 ${children.map((c) => c.title).join('、')} 也沒建）` : ''}。`,
     };
   }
   const created = await createPlannedLore(
@@ -785,30 +785,30 @@ async function acceptLoreEntries(
   );
   project.invalidate();
   log.info(
-    `已展开${what}`,
-    `${relPath}｜正文 ${body.length} 字｜${direct ? '原来只有一句话，直接写' : '对比后采纳'}` +
-      `${created.length > 0 ? `｜新建子条目 ${created.join('、')}` : ''}`
+    `已展開${what}`,
+    `${relPath}｜正文 ${body.length} 字｜${direct ? '原來只有一句話，直接寫' : '對比後採納'}` +
+      `${created.length > 0 ? `｜新建子條目 ${created.join('、')}` : ''}`
   );
   return {
     relPath,
-    message: `已展开${what}${created.length > 0 ? `，新建设定条目：${created.join('、')}` : ''}。`,
+    message: `已展開${what}${created.length > 0 ? `，新建設定條目：${created.join('、')}` : ''}。`,
   };
 }
 
 /**
- * 正文：落在**同号的章节**上。三种写法（model/pipeline.ts 的 `WriteMode`）：
+ * 正文：落在**同號的章節**上。三種寫法（model/pipeline.ts 的 `WriteMode`）：
  *
- * - 章节还没有：在细纲所在的子目录新建（`chapterTargetOf`；同名一律报错，见网关），细纲文件名与
- *   新正文对不上时跟着改名，保证细纲仍是正文的镜像。
- * - 章节在、但一个字正文都没有（只有标题行）：直接填，不审阅——没有东西可吞。
- * - `continue`：**追加**在末尾，不审阅（不覆盖任何东西）。
- * - 其余（`write` / `rewrite`，以及老会话里没记写法的）：**覆盖**，写入前审阅 diff
- *   （第 3 条）。标题行沿用原文件——那是作者起的名字，模型写的正文里没有它。
+ * - 章節還沒有：在細綱所在的子目錄新建（`chapterTargetOf`；同名一律報錯，見閘道器），細綱檔名與
+ *   新正文對不上時跟著改名，保證細綱仍是正文的映象。
+ * - 章節在、但一個字正文都沒有（只有標題行）：直接填，不審閱——沒有東西可吞。
+ * - `continue`：**追加**在末尾，不審閱（不覆蓋任何東西）。
+ * - 其餘（`write` / `rewrite`，以及老會話裡沒記寫法的）：**覆蓋**，寫入前審閱 diff
+ *   （第 3 條）。標題行沿用原檔案——那是作者起的名字，模型寫的正文裡沒有它。
  *
- * 落盘之后在细纲上记 `writtenFrom`（正文据以写成的细纲指纹）。少了这一步，
- * 这一章会永远显示「正文与细纲对不上」或永远不显示，两种都是错的。
- * 作者在审阅时放弃了就什么都不记。**修稿（`revise`）也不记**：它没有照细纲重写，只改了
- * 审稿指出的那几处——细纲改过的 ⟳ 不能因为修了一次稿就消掉。
+ * 落盤之後在細綱上記 `writtenFrom`（正文據以寫成的細綱指紋）。少了這一步，
+ * 這一章會永遠顯示「正文與細綱對不上」或永遠不顯示，兩種都是錯的。
+ * 作者在審閱時放棄了就什麼都不記。**修稿（`revise`）也不記**：它沒有照細綱重寫，只改了
+ * 審稿指出的那幾處——細綱改過的 ⟳ 不能因為修了一次稿就消掉。
  */
 async function acceptManuscript(
   project: NovelProject,
@@ -819,7 +819,7 @@ async function acceptManuscript(
 ): Promise<AcceptResult> {
   const plotRelPath = plotOfTarget(target);
   if (!plotRelPath) {
-    throw new Error('这段正文不属于任何章。');
+    throw new Error('這段正文不屬於任何章。');
   }
   const dest = await chapterTargetOf(project, plotRelPath);
   let rel: string;
@@ -841,10 +841,10 @@ async function acceptManuscript(
         review: !!body.trim(),
       });
       if (r.skipped) {
-        return { skipped: true, message: `没有改动第 ${dest.no} 章。` };
+        return { skipped: true, message: `沒有改動第 ${dest.no} 章。` };
       }
       rel = r.rel;
-      how = body.trim() ? '覆盖' : '写入';
+      how = body.trim() ? '覆蓋' : '寫入';
     }
   }
 
@@ -854,15 +854,15 @@ async function acceptManuscript(
   }
   await project.syncManifest();
 
-  log.info(`已${how}第 ${dest.no} 章：${text.length} 字`, `${rel}｜同步过的话要重新同步`);
-  return { relPath: rel, message: how === '追加' ? `已追加到 ${rel}` : `已写入 ${rel}` };
+  log.info(`已${how}第 ${dest.no} 章：${text.length} 字`, `${rel}｜同步過的話要重新同步`);
+  return { relPath: rel, message: how === '追加' ? `已追加到 ${rel}` : `已寫入 ${rel}` };
 }
 
 /**
- * 覆盖一章时保留原文件的标题行（`# 标题`）。
+ * 覆蓋一章時保留原檔案的標題行（`# 標題`）。
  *
- * `raw` 是整个文件、`body` 是去掉标题行之后的正文：两者一样就说明原文件没有标题行
- * （`.txt`、或作者删了），那就原样只写正文，不凭空补一行。
+ * `raw` 是整個檔案、`body` 是去掉標題行之後的正文：兩者一樣就說明原檔案沒有標題行
+ * （`.txt`、或作者刪了），那就原樣只寫正文，不憑空補一行。
  */
 function withHeading(raw: string, body: string, text: string): string {
   const head = raw.trim() !== body.trim() ? /^[^\n]*\n?/.exec(raw.trimStart())?.[0].trim() : undefined;

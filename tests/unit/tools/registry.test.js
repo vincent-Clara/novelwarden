@@ -1,15 +1,15 @@
 /**
- * `tools/registry.ts` + `tools/schema.ts`：注册表怎么把 `ToolDef[]` 变成能发出去
- * 的 `ToolSpec[]`，以及它拒收什么。
+ * `tools/registry.ts` + `tools/schema.ts`：登錄檔怎麼把 `ToolDef[]` 變成能發出去
+ * 的 `ToolSpec[]`，以及它拒收什麼。
  *
- * 模型只看得见 `description` 与 `parameters`，所以这里钉的是**写法**而不是
- * 转换本身（那是十行）。四件事各有一批断言：
+ * 模型只看得見 `description` 與 `parameters`，所以這裡釘的是**寫法**而不是
+ * 轉換本身（那是十行）。四件事各有一批斷言：
  *
- * 1. **schema 合法**——名字合规、不重、必填字段在 properties 里；
- * 2. **参数扁平**——嵌套对象直接拒，那是模型最容易填错的地方；
- * 3. **描述不空**——没有描述的工具/参数模型只能瞎猜；
- * 4. **`invoke` 绝不抛**——认不出的名字、工具自己炸掉，都变成一条模型读得懂的
- *    结果。一个工具炸掉不该带走整轮对话。
+ * 1. **schema 合法**——名字合規、不重、必填欄位在 properties 裡；
+ * 2. **引數扁平**——巢狀物件直接拒，那是模型最容易填錯的地方；
+ * 3. **描述不空**——沒有描述的工具/引數模型只能瞎猜；
+ * 4. **`invoke` 絕不拋**——認不出的名字、工具自己炸掉，都變成一條模型讀得懂的
+ *    結果。一個工具炸掉不該帶走整輪對話。
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -18,15 +18,15 @@ const { loadModule } = require('../../helpers/load');
 const reg = loadModule('src/core/tools/registry.ts');
 const schema = loadModule('src/core/tools/schema.ts');
 
-/** 注册表要一份环境，但这一组用例一个工具都不真跑，给个空壳就够。 */
+/** 登錄檔要一份環境，但這一組用例一個工具都不真跑，給個空殼就夠。 */
 const ENV = { project: undefined, workspace: undefined, drafts: undefined, sessionId: 's1' };
 
-/** 一条最小可用的定义。各用例改其中一处。 */
+/** 一條最小可用的定義。各用例改其中一處。 */
 function def(extra = {}) {
   return {
     name: 'read',
-    description: '读一份文件',
-    parameters: schema.objectSchema({ path: schema.str('工程内相对路径') }, ['path']),
+    description: '讀一份檔案',
+    parameters: schema.objectSchema({ path: schema.str('工程內相對路徑') }, ['path']),
     run: async () => ({ text: '' }),
     ...extra,
   };
@@ -34,7 +34,7 @@ function def(extra = {}) {
 
 const specsOf = (defs) => new reg.ToolRegistry(defs, ENV).specs();
 
-/** 一次调用那一面：工具体拿到的 signal / report / usage。 */
+/** 一次呼叫那一面：工具體拿到的 signal / report / usage。 */
 function run() {
   const calls = [];
   return {
@@ -45,51 +45,51 @@ function run() {
   };
 }
 
-describe('specs 产出的 schema', () => {
+describe('specs 產出的 schema', () => {
   const specs = specsOf([
     def(),
     def({
       name: 'search',
-      description: '全文检索',
+      description: '全文檢索',
       parameters: schema.objectSchema(
         {
           pattern: schema.str('要找的字面量'),
-          kinds: schema.strArray('限定种类'),
-          regex: schema.bool('按正则搜'),
-          limit: schema.int('最多返回几条'),
+          kinds: schema.strArray('限定種類'),
+          regex: schema.bool('按正則搜'),
+          limit: schema.int('最多返回幾條'),
         },
         ['pattern']
       ),
     }),
   ]);
 
-  test('每条只带 name / description / parameters 三个字段', () => {
+  test('每條只帶 name / description / parameters 三個欄位', () => {
     assert.deepEqual(Object.keys(specs[0]).sort(), ['description', 'name', 'parameters']);
   });
 
-  test('run 不会漏进 spec（它是本地函数，透传给 API 会炸）', () => {
+  test('run 不會漏進 spec（它是本地函式，透傳給 API 會炸）', () => {
     assert.equal('run' in specs[0], false, JSON.stringify(specs[0]));
   });
 
-  test('intent 也不会漏进 spec', () => {
+  test('intent 也不會漏進 spec', () => {
     const s = specsOf([def({ intent: () => ({ gate: 'auto', title: 'x' }) })])[0];
     assert.equal('intent' in s, false, JSON.stringify(s));
   });
 
-  test('parameters 原样透传', () => {
+  test('parameters 原樣透傳', () => {
     assert.equal(specs[0].parameters.type, 'object');
     assert.deepEqual(specs[0].parameters.required, ['path']);
   });
 
-  test('数组参数带 items 类型', () => {
+  test('陣列引數帶 items 型別', () => {
     assert.equal(specs[1].parameters.properties.kinds.items.type, 'string');
   });
 
-  test('additionalProperties 关掉——模型多塞字段要当场看得出来', () => {
+  test('additionalProperties 關掉——模型多塞欄位要當場看得出來', () => {
     assert.equal(specs[0].parameters.additionalProperties, false);
   });
 
-  test('names 是注册顺序，也就是模型看到的顺序', () => {
+  test('names 是註冊順序，也就是模型看到的順序', () => {
     assert.deepEqual(new reg.ToolRegistry([def(), def({ name: 'search' })], ENV).names(), [
       'read',
       'search',
@@ -97,124 +97,124 @@ describe('specs 产出的 schema', () => {
   });
 });
 
-describe('校验：名字', () => {
-  test('名字重复要报出来', () => {
-    assert.throws(() => specsOf([def(), def()]), /重复/);
+describe('校驗：名字', () => {
+  test('名字重複要報出來', () => {
+    assert.throws(() => specsOf([def(), def()]), /重複/);
   });
 
-  test('大写字母不收（各家 API 的字符集取交集）', () => {
-    assert.throws(() => specsOf([def({ name: 'readFile' })]), /小写/);
+  test('大寫字母不收（各家 API 的字符集取交集）', () => {
+    assert.throws(() => specsOf([def({ name: 'readFile' })]), /小寫/);
   });
 
   test('空名字不收', () => {
-    assert.throws(() => specsOf([def({ name: '' })]), /小写|无名/);
+    assert.throws(() => specsOf([def({ name: '' })]), /小寫|無名/);
   });
 
-  test('下划线合法', () => {
+  test('下劃線合法', () => {
     assert.equal(specsOf([def({ name: 'read_file' })])[0].name, 'read_file');
   });
 });
 
-describe('校验：描述', () => {
-  test('工具没有描述要报出来', () => {
+describe('校驗：描述', () => {
+  test('工具沒有描述要報出來', () => {
     assert.throws(() => specsOf([def({ description: '  ' })]), /描述/);
   });
 
-  test('参数没有描述要报出来', () => {
+  test('引數沒有描述要報出來', () => {
     const parameters = { type: 'object', properties: { path: { type: 'string' } }, required: [] };
     assert.throws(() => specsOf([def({ parameters })]), /description/);
   });
 });
 
-describe('校验：参数必须扁平', () => {
-  test('嵌套对象参数被拒', () => {
+describe('校驗：引數必須扁平', () => {
+  test('巢狀物件引數被拒', () => {
     const parameters = {
       type: 'object',
       properties: {
-        target: { type: 'object', description: '目标', properties: { kind: { type: 'string' } } },
+        target: { type: 'object', description: '目標', properties: { kind: { type: 'string' } } },
       },
       required: [],
     };
-    assert.throws(() => specsOf([def({ parameters })]), /嵌套|摊平/);
+    assert.throws(() => specsOf([def({ parameters })]), /巢狀|攤平/);
   });
 
-  test('对象数组被拒', () => {
+  test('物件陣列被拒', () => {
     const parameters = {
       type: 'object',
-      properties: { edits: { type: 'array', description: '若干编辑', items: { type: 'object' } } },
+      properties: { edits: { type: 'array', description: '若干編輯', items: { type: 'object' } } },
       required: [],
     };
-    assert.throws(() => specsOf([def({ parameters })]), /摊平/);
+    assert.throws(() => specsOf([def({ parameters })]), /攤平/);
   });
 
-  test('没说元素类型的数组被拒', () => {
+  test('沒說元素型別的陣列被拒', () => {
     const parameters = {
       type: 'object',
-      properties: { kinds: { type: 'array', description: '种类' } },
+      properties: { kinds: { type: 'array', description: '種類' } },
       required: [],
     };
-    assert.throws(() => specsOf([def({ parameters })]), /元素类型/);
+    assert.throws(() => specsOf([def({ parameters })]), /元素型別/);
   });
 });
 
-describe('校验：必填字段', () => {
-  test('required 里出现 properties 没有的键要报出来', () => {
+describe('校驗：必填欄位', () => {
+  test('required 裡出現 properties 沒有的鍵要報出來', () => {
     const parameters = {
       type: 'object',
-      properties: { path: { type: 'string', description: '路径' } },
+      properties: { path: { type: 'string', description: '路徑' } },
       required: ['path', 'offset'],
     };
     assert.throws(() => specsOf([def({ parameters })]), /offset/);
   });
 
-  test('parameters 不是 object schema 时报出来', () => {
+  test('parameters 不是 object schema 時報出來', () => {
     assert.throws(() => specsOf([def({ parameters: { type: 'string' } })]), /object/);
   });
 });
 
 describe('objectSchema 助手', () => {
-  test('没给 required 时是空数组，不是 undefined', () => {
+  test('沒給 required 時是空陣列，不是 undefined', () => {
     assert.deepEqual(schema.objectSchema({ a: schema.str('a') }).required, []);
   });
 
-  test('str 带候选值时产出 enum', () => {
+  test('str 帶候選值時產出 enum', () => {
     assert.deepEqual(schema.str('能力', ['discuss', 'generate']).enum, ['discuss', 'generate']);
   });
 });
 
-// ★ 这一组是「换个调用方也不会漏掉」的那一半：从前它们散在 agent 的循环里。
-describe('invoke 绝不抛', () => {
-  test('认不出的名字回一条结果，而不是异常', async () => {
-    const r = await new reg.ToolRegistry([def()], ENV).invoke('并不存在的工具', {}, run());
+// ★ 這一組是「換個呼叫方也不會漏掉」的那一半：從前它們散在 agent 的迴圈裡。
+describe('invoke 絕不拋', () => {
+  test('認不出的名字回一條結果，而不是異常', async () => {
+    const r = await new reg.ToolRegistry([def()], ENV).invoke('並不存在的工具', {}, run());
     assert.equal(r.ok, false);
-    assert.ok(r.error.includes('没有叫'), r.error);
+    assert.ok(r.error.includes('沒有叫'), r.error);
   });
 
-  // 名单从实际注册的那一份来：写死一串名字，加了工具之后这句话就在撒谎。
-  test('顺带告诉模型有哪些可用', async () => {
+  // 名單從實際註冊的那一份來：寫死一串名字，加了工具之後這句話就在撒謊。
+  test('順帶告訴模型有哪些可用', async () => {
     const r = await new reg.ToolRegistry([def(), def({ name: 'search' })], ENV).invoke('x', {}, run());
     assert.ok(r.error.includes('read / search'), r.error);
   });
 
-  test('工具抛异常变成 error 结果', async () => {
+  test('工具拋異常變成 error 結果', async () => {
     const boom = def({
       name: 'boom',
       run: async () => {
-        throw new Error('磁盘着火了');
+        throw new Error('磁碟著火了');
       },
     });
     const r = await new reg.ToolRegistry([boom], ENV).invoke('boom', { path: 'a.md' }, run());
     assert.equal(r.ok, false);
-    assert.ok(r.text.includes('磁盘着火了'), r.text);
+    assert.ok(r.text.includes('磁碟著火了'), r.text);
   });
 
-  test('出错时 text 就是那句错误（模型只读 text）', async () => {
-    const bad = def({ name: 'bad', run: async () => ({ text: '', error: '路径超出工程目录' }) });
+  test('出錯時 text 就是那句錯誤（模型只讀 text）', async () => {
+    const bad = def({ name: 'bad', run: async () => ({ text: '', error: '路徑超出工程目錄' }) });
     const r = await new reg.ToolRegistry([bad], ENV).invoke('bad', { path: 'a.md' }, run());
-    assert.equal(r.text, '路径超出工程目录');
+    assert.equal(r.text, '路徑超出工程目錄');
   });
 
-  test('成功时带出 draftIds 与耗时', async () => {
+  test('成功時帶出 draftIds 與耗時', async () => {
     const ok = def({ name: 'gen', run: async () => ({ text: '好了', draftIds: ['d1'] }) });
     const r = await new reg.ToolRegistry([ok], ENV).invoke('gen', { path: 'a.md' }, run());
     assert.equal(r.ok, true);
@@ -222,22 +222,22 @@ describe('invoke 绝不抛', () => {
     assert.equal(typeof r.elapsedMs, 'number');
   });
 
-  test('没产出草稿时 draftIds 是空数组而不是 undefined', async () => {
+  test('沒產出草稿時 draftIds 是空陣列而不是 undefined', async () => {
     const r = await new reg.ToolRegistry([def()], ENV).invoke('read', { path: 'a.md' }, run());
     assert.deepEqual(r.draftIds, []);
   });
 });
 
-describe('入参校验：run 之前先过一遍', () => {
+describe('入參校驗：run 之前先過一遍', () => {
   const search = def({
     name: 'search',
     parameters: schema.objectSchema(
       {
         pattern: schema.str('要找的字面量'),
-        kinds: schema.strArray('限定种类'),
-        regex: schema.bool('按正则搜'),
-        limit: schema.int('最多返回几条'),
-        mode: schema.str('怎么搜', ['fast', 'full']),
+        kinds: schema.strArray('限定種類'),
+        regex: schema.bool('按正則搜'),
+        limit: schema.int('最多返回幾條'),
+        mode: schema.str('怎麼搜', ['fast', 'full']),
       },
       ['pattern']
     ),
@@ -245,57 +245,57 @@ describe('入参校验：run 之前先过一遍', () => {
   });
   const check = (args) => new reg.ToolRegistry([search], ENV).check('search', args);
 
-  test('合法的入参放过', () => {
+  test('合法的入參放過', () => {
     assert.equal(check({ pattern: '林', kinds: ['chapter'], regex: true, limit: 5, mode: 'fast' }), undefined);
   });
 
-  test('空串不算缺（「不能为空」由工具自己说）', () => {
+  test('空串不算缺（「不能為空」由工具自己說）', () => {
     assert.equal(check({ pattern: '' }), undefined);
   });
 
-  test('缺必填时说出缺哪个、那个参数是干什么的', () => {
-    assert.equal(check({}), '缺少参数：pattern（要找的字面量）');
+  test('缺必填時說出缺哪個、那個引數是幹什麼的', () => {
+    assert.equal(check({}), '缺少引數：pattern（要找的字面量）');
   });
 
-  test('类型不对', () => {
-    assert.ok(check({ pattern: 1 }).includes('pattern 应该是字符串'));
-    assert.ok(check({ pattern: 'a', limit: 1.5 }).includes('limit 应该是整数'));
-    assert.ok(check({ pattern: 'a', regex: 'yes' }).includes('regex 应该是'));
-    assert.ok(check({ pattern: 'a', kinds: 'chapter' }).includes('kinds 应该是数组'));
-    assert.ok(check({ pattern: 'a', kinds: [1] }).includes('元素是字符串'));
+  test('型別不對', () => {
+    assert.ok(check({ pattern: 1 }).includes('pattern 應該是字串'));
+    assert.ok(check({ pattern: 'a', limit: 1.5 }).includes('limit 應該是整數'));
+    assert.ok(check({ pattern: 'a', regex: 'yes' }).includes('regex 應該是'));
+    assert.ok(check({ pattern: 'a', kinds: 'chapter' }).includes('kinds 應該是陣列'));
+    assert.ok(check({ pattern: 'a', kinds: [1] }).includes('元素是字串'));
   });
 
-  test('不在枚举里', () => {
+  test('不在列舉裡', () => {
     assert.equal(check({ pattern: 'a', mode: 'slow' }), 'mode 只能是：fast / full。');
   });
 
-  test('多塞了 schema 里没有的键', () => {
-    assert.ok(check({ pattern: 'a', path: 'x' }).startsWith('没有 path 这个参数'));
+  test('多塞了 schema 裡沒有的鍵', () => {
+    assert.ok(check({ pattern: 'a', path: 'x' }).startsWith('沒有 path 這個引數'));
   });
 
-  test('工具自己的 check 先说，它放过了再走通用校验', () => {
-    const own = def({ check: (args) => (args.path === 'bad' ? '工具自己的话' : undefined) });
+  test('工具自己的 check 先說，它放過了再走通用校驗', () => {
+    const own = def({ check: (args) => (args.path === 'bad' ? '工具自己的話' : undefined) });
     const reg1 = new reg.ToolRegistry([own], ENV);
-    assert.equal(reg1.check('read', { path: 'bad' }), '工具自己的话');
-    assert.ok(reg1.check('read', { path: 'ok', extra: 1 }).startsWith('没有 extra'));
+    assert.equal(reg1.check('read', { path: 'bad' }), '工具自己的話');
+    assert.ok(reg1.check('read', { path: 'ok', extra: 1 }).startsWith('沒有 extra'));
   });
 
-  test('名字不认识时不归它管（invoke 会说「没有叫 X 的工具」）', () => {
+  test('名字不認識時不歸它管（invoke 會說「沒有叫 X 的工具」）', () => {
     assert.equal(new reg.ToolRegistry([search], ENV).check('nope', {}), undefined);
   });
 
-  test('invoke 校验不过就不跑工具体', async () => {
+  test('invoke 校驗不過就不跑工具體', async () => {
     let ran = false;
     const spy = def({ run: async () => ((ran = true), { text: '' }) });
     const r = await new reg.ToolRegistry([spy], ENV).invoke('read', { path: 3 }, run());
     assert.equal(r.ok, false);
     assert.equal(ran, false);
-    assert.ok(r.text.includes('path 应该是字符串'), r.text);
+    assert.ok(r.text.includes('path 應該是字串'), r.text);
   });
 });
 
-describe('工具体拿到环境 + 这一次调用', () => {
-  test('两边合成一份 ctx 递进去', async () => {
+describe('工具體拿到環境 + 這一次呼叫', () => {
+  test('兩邊合成一份 ctx 遞進去', async () => {
     let seen;
     const spy = def({ name: 'spy', run: async (ctx) => ((seen = ctx), { text: '' }) });
     const r = run();
@@ -306,25 +306,25 @@ describe('工具体拿到环境 + 这一次调用', () => {
   });
 });
 
-describe('意图：工具不报时兜一个通用的', () => {
+describe('意圖：工具不報時兜一個通用的', () => {
   const intentOf = (d, args = {}) => new reg.ToolRegistry([d], ENV).intent(d.name, args);
 
-  test('读类工具归 auto', () => {
+  test('讀類工具歸 auto', () => {
     assert.equal(intentOf(def()).gate, 'auto');
   });
 
-  // 宁可多问，也不要有一条没人想过的路。
-  test('写盘或花钱的归 mutating', () => {
+  // 寧可多問，也不要有一條沒人想過的路。
+  test('寫盤或花錢的歸 mutating', () => {
     assert.equal(intentOf(def({ mutating: true })).gate, 'mutating');
     assert.equal(intentOf(def({ costly: true })).gate, 'mutating');
   });
 
-  test('工具自己报了就用它那一份', () => {
+  test('工具自己報了就用它那一份', () => {
     const d = def({ intent: () => ({ gate: 'always', title: '改一段文字', detail: '原文：甲 → 乙' }) });
     assert.deepEqual(intentOf(d), { gate: 'always', title: '改一段文字', detail: '原文：甲 → 乙' });
   });
 
-  test('认不出的名字没有意图', () => {
-    assert.equal(new reg.ToolRegistry([def()], ENV).intent('没这个', {}), undefined);
+  test('認不出的名字沒有意圖', () => {
+    assert.equal(new reg.ToolRegistry([def()], ENV).intent('沒這個', {}), undefined);
   });
 });

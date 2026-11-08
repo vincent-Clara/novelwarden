@@ -1,9 +1,9 @@
 /*
- * 专注（editor/focus.ts、typewriter.ts、paragraphFocus.ts）。
+ * 專注（editor/focus.ts、typewriter.ts、paragraphFocus.ts）。
  *
- * 专注模式：<body> 挂 .nf-focus，当前那一块编辑区挂 .ed-focused。藏起活动栏、侧栏、标题栏里菜单以外的杂项、
- * 另一块编辑区、标签条、工具栏、章节条，状态栏淡成一行；冲突条、查找条、「版本」的对比标签照常（一个是「不丢稿」的提醒，
- * 两个是作者自己打开的）。菜单栏留着：退出不靠记快捷键（视图 → 专注模式）。
+ * 專注模式：<body> 掛 .nf-focus，當前那一塊編輯區掛 .ed-focused。藏起活動欄、側欄、標題欄裡選單以外的雜項、
+ * 另一塊編輯區、標籤條、工具欄、章節條，狀態列淡成一行；衝突條、查詢條、「版本」的對比標籤照常（一個是「不丟稿」的提醒，
+ * 兩個是作者自己開啟的）。選單欄留著：退出不靠記快捷鍵（檢視 → 專注模式）。
  */
 
 body.nf-focus .tabbar,
@@ -22,7 +22,7 @@ body.nf-focus .wb-title {
   border-bottom-color: transparent;
 }
 
-/* 只专注当前那一块：另一块藏起来，这一块占满（草稿区平时是固定宽度）。 */
+/* 只專注當前那一塊：另一塊藏起來，這一塊佔滿（草稿區平時是固定寬度）。 */
 body.nf-focus .wb-editor:not(.ed-focused) {
   display: none !important;
 }
@@ -40,8 +40,8 @@ body.nf-focus .ed-focused .ed-chapter-bar {
   display: none !important;
 }
 
-/* 淡归淡，照样能点：字数那一格点开码字统计面板（挂在 body 上，不跟着淡）。鼠标移上去、键盘焦点进来、面板开着时
-   都恢复清楚。 */
+/* 淡歸淡，照樣能點：字數那一格點開碼字統計面板（掛在 body 上，不跟著淡）。滑鼠移上去、鍵盤焦點進來、面板開著時
+   都恢復清楚。 */
 body.nf-focus .ed-focused .ed-status {
   border-top-color: transparent;
   background: transparent;
@@ -54,22 +54,22 @@ body.nf-focus .ed-focused .ed-status:focus-within {
   opacity: 1;
 }
 
-/* 单独一条：不认 :has 的浏览器只丢这一条，不连累上面那条。 */
+/* 單獨一條：不認 :has 的瀏覽器只丟這一條，不連累上面那條。 */
 body.nf-focus .ed-focused .ed-status:has([aria-expanded='true']) {
   opacity: 1;
 }
 
 /*
- * 打字机滚动：编辑区底下垫半屏，最后一行也滚得到中间。textarea 与镜像层读的是同一个变量（look.css），
- * 镜像层每次重画也照抄计算样式，两边一样高。
+ * 打字機滾動：編輯區底下墊半屏，最後一行也滾得到中間。textarea 與映象層讀的是同一個變數（look.css），
+ * 映象層每次重畫也照抄計算樣式，兩邊一樣高。
  */
 body.nf-typewriter {
   --nf-ed-pad-bottom: 50vh;
 }
 
 /*
- * 段落聚焦：textarea 的字整体调淡（前景色 × 30% 的半透明色），光标颜色不变；当前那一段由高亮镜像层
- * 的 focus 图层用实色画在底下（highlight.css 的 .ed-hl-focus），半透明的淡字叠在同一个字形上看起来就是实色。
+ * 段落聚焦：textarea 的字整體調淡（前景色 × 30% 的半透明色），游標顏色不變；當前那一段由高亮映象層
+ * 的 focus 圖層用實色畫在底下（highlight.css 的 .ed-hl-focus），半透明的淡字疊在同一個字形上看起來就是實色。
  */
 .ed-area.ed-para-dim {
   color: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);

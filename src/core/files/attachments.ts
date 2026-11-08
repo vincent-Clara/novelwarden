@@ -5,8 +5,8 @@ import { Attachment, AttachmentKind } from '../model/session';
 import { normalizeRel } from '../workspace/kind';
 
 /**
- * 构建 @ 引用的候选列表；展示与选择交给 Host.pick。
- * 「浏览工作区」入口只存在于插件的 QuickPick 实现里（Host.browseFile）。
+ * 構建 @ 引用的候選列表；展示與選擇交給 Host.pick。
+ * 「瀏覽工作區」入口只存在於外掛的 QuickPick 實現裡（Host.browseFile）。
  */
 export async function listAttachmentChoices(project: NovelProject): Promise<PickChoice<Attachment>[]> {
   const choices: PickChoice<Attachment>[] = [];
@@ -17,13 +17,13 @@ export async function listAttachmentChoices(project: NovelProject): Promise<Pick
       label: `${String(c.order).padStart(3, '0')} ${c.title}`,
       description: `${c.wordCount} 字`,
       detail: c.relPath,
-      group: '章节',
+      group: '章節',
       value: fileAttachment('chapter', `第${c.order}章 ${c.title}`, c.relPath),
     });
   }
 
-  // 草稿单列一组。**只列磁盘上已存在的**——没建过草稿的章节列出来只会是
-  // 一堆点了报错的空条目。草稿永远不自动进上下文，想用就在这里手动挑。
+  // 草稿單列一組。**只列磁碟上已存在的**——沒建過草稿的章節列出來只會是
+  // 一堆點了報錯的空條目。草稿永遠不自動進上下文，想用就在這裡手動挑。
   const draftPaths = await project.listDraftPaths();
   for (const c of [...chapters].reverse()) {
     const draft = project.draftRelPathFor(c.relPath);
@@ -51,27 +51,27 @@ export async function listAttachmentChoices(project: NovelProject): Promise<Pick
   for (const entry of await project.listLore()) {
     choices.push({
       label: entry.title,
-      // 一句话简介比关键词更说得清这是什么；都没有才退回关键词。
+      // 一句話簡介比關鍵詞更說得清這是什麼；都沒有才退回關鍵詞。
       description: loreBrief(entry) || entry.keywords.join('/'),
       detail: entry.relPath,
       group: '设定',
-      value: fileAttachment('lore', `设定 ${entry.title}`, entry.relPath),
+      value: fileAttachment('lore', `設定 ${entry.title}`, entry.relPath),
     });
   }
 
   const outlineRel = project.relPath(project.outlinePath);
   choices.push({
-    label: '情节大纲',
+    label: '情節大綱',
     detail: outlineRel,
     group: '其他',
-    value: fileAttachment('file', '情节大纲', outlineRel),
+    value: fileAttachment('file', '情節大綱', outlineRel),
   });
   const styleRel = project.relPath(project.stylePath);
   choices.push({
-    label: '文风指南',
+    label: '文風指南',
     detail: styleRel,
     group: '其他',
-    value: fileAttachment('file', '文风指南', styleRel),
+    value: fileAttachment('file', '文風指南', styleRel),
   });
 
   return choices;
@@ -82,14 +82,14 @@ function fileAttachment(kind: AttachmentKind, label: string, relPath: string): A
 }
 
 /**
- * 对话页从内置编辑器（独立版）带上来的一处选区 → 附件。存快照：选的时候是那个样子，之后文件改了
- * 不该让历史对话跟着变。id 与名字和插件壳读 VS Code 选区的那一份（shells/vscode/attachments.ts）一个样：
- * 同一处选区重复添加时 id 相同，前端去重。路径越界（绝对路径、`..`）就只留文字，不留一个点不开的路径。
+ * 對話頁從內建編輯器（獨立版）帶上來的一處選區 → 附件。存快照：選的時候是那個樣子，之後檔案改了
+ * 不該讓歷史對話跟著變。id 與名字和外掛殼讀 VS Code 選區的那一份（shells/vscode/attachments.ts）一個樣：
+ * 同一處選區重複新增時 id 相同，前端去重。路徑越界（絕對路徑、`..`）就只留文字，不留一個點不開的路徑。
  */
 export function selectionAttachmentOf(relPath: string, text: string, range: { start: number; end: number }): Attachment {
   const rel = normalizeRel(relPath);
   if (!rel) {
-    return { id: `sel:${Date.now().toString(36)}`, kind: 'selection', label: '选区', text };
+    return { id: `sel:${Date.now().toString(36)}`, kind: 'selection', label: '選區', text };
   }
   const name = rel.slice(rel.lastIndexOf('/') + 1);
   return {

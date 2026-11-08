@@ -1,37 +1,37 @@
 /**
- * 工具层的契约。**这一份是 tools 与调用方之间唯一的约定**，两边都只认它。
+ * 工具層的契約。**這一份是 tools 與呼叫方之間唯一的約定**，兩邊都只認它。
  *
- * ## 工具不认识调用方
+ * ## 工具不認識呼叫方
  *
- * 调用方是 MCP 那一头（[controller/mcp.ts](../controller/mcp.ts)）。分工：
+ * 呼叫方是 MCP 那一頭（[controller/mcp.ts](../controller/mcp.ts)）。分工：
  *
- * | 谁 | 管什么 |
+ * | 誰 | 管什麼 |
  * |---|---|
- * | 工具 | 做那件事，回一段模型读得动的文本；**报出自己花了几次模型调用** |
- * | 调用方 | 上限、账、闸门、循环。工具花了钱它记账，工具要动磁盘它决定问不问 |
+ * | 工具 | 做那件事，回一段模型讀得動的文字；**報出自己花了幾次模型呼叫** |
+ * | 呼叫方 | 上限、賬、閘門、迴圈。工具花了錢它記賬，工具要動磁碟它決定問不問 |
  *
- * 于是工具不认识「上限」这回事——它只会说「我调了 2 次模型」。谁在乎这个数字，
- * 谁自己去比对上限。
+ * 於是工具不認識「上限」這回事——它只會說「我調了 2 次模型」。誰在乎這個數字，
+ * 誰自己去比對上限。
  *
- * ## 与 MCP 的对应
+ * ## 與 MCP 的對應
  *
- * 这套形状是照着 MCP 的 `tools/list` + `tools/call` 摆的，端出去不必改工具体：
+ * 這套形狀是照著 MCP 的 `tools/list` + `tools/call` 擺的，端出去不必改工具體：
  *
- * | 这里 | MCP |
+ * | 這裡 | MCP |
  * |---|---|
- * | {@link ToolDef.name} / `description` / `parameters` | `tools/list` 的一条 |
- * | {@link ToolInvoker.invoke} → {@link ToolInvocation} | `tools/call` 的请求与结果 |
+ * | {@link ToolDef.name} / `description` / `parameters` | `tools/list` 的一條 |
+ * | {@link ToolInvoker.invoke} → {@link ToolInvocation} | `tools/call` 的請求與結果 |
  * | {@link ToolDef.mutating} / `costly` | `destructiveHint` / `readOnlyHint` |
- * | {@link ToolIntent} | MCP 没有对应物——**确认是宿主的事**，所以工具只描述意图，不自己弹框 |
+ * | {@link ToolIntent} | MCP 沒有對應物——**確認是宿主的事**，所以工具只描述意圖，不自己彈框 |
  *
- * 协议、传输、会话在 [mcp/](../mcp/README.md)。
+ * 協議、傳輸、會話在 [mcp/](../mcp/README.md)。
  */
 import type { NovelProject } from '../model/project';
 import type { Workspace } from '../workspace';
 import type { DraftStore } from '../generation/drafts';
 
 /**
- * 对外的一条工具声明：MCP `tools/list` 的一条就从它来（[mcp/server.ts](../mcp/server.ts)）。
+ * 對外的一條工具宣告：MCP `tools/list` 的一條就從它來（[mcp/server.ts](../mcp/server.ts)）。
  * `costly` / `mutating` 落成 MCP 的 `readOnlyHint` / `destructiveHint`。
  */
 export interface ToolSpec {
@@ -43,50 +43,50 @@ export interface ToolSpec {
   mutating?: boolean;
 }
 
-// ---------------------------------------------------------------- 执行环境
+// ---------------------------------------------------------------- 執行環境
 
 /**
- * 工具够得着的工程那一面。**由调用方绑定**（MCP 的每一次调用现绑当前工程与会话）。
+ * 工具夠得著的工程那一面。**由呼叫方繫結**（MCP 的每一次呼叫現綁當前工程與會話）。
  *
- * **没有 `history`**：工具调用不是作者的讨论，混进装配器会被当成创作要求
- * （见 [novel/generate.ts](novel/generate.ts)）。
+ * **沒有 `history`**：工具呼叫不是作者的討論，混進裝配器會被當成創作要求
+ * （見 [novel/generate.ts](novel/generate.ts)）。
  */
 export interface ToolEnv {
   project: NovelProject;
   workspace: Workspace;
   drafts: DraftStore;
-  /** 草稿按会话分桶存：`write draftId=…` 与产出后那一问都靠它找回来。 */
+  /** 草稿按會話分桶存：`write draftId=…` 與產出後那一問都靠它找回來。 */
   sessionId: string;
 }
 
 /**
- * 花钱记账口。**工具只报数，不判断触没触顶**——上限是调用方的事。
+ * 花錢記賬口。**工具只報數，不判斷觸沒觸頂**——上限是呼叫方的事。
  *
- * 为什么是回调而不是返回值：`generate` 在**发请求之前**就该记上这一笔，
- * 请求发出去钱就花了，中途抛异常也一样。等函数返回再记，异常那条路上的钱
- * 就丢账了。
+ * 為什麼是回呼而不是返回值：`generate` 在**發請求之前**就該記上這一筆，
+ * 請求發出去錢就花了，中途拋異常也一樣。等函式返回再記，異常那條路上的錢
+ * 就丟賬了。
  */
 export interface UsageMeter {
-  /** 记 n 次模型调用。 */
+  /** 記 n 次模型呼叫。 */
   record(calls: number): void;
 }
 
-/** 一次调用那一面：能不能停、说给谁听、账记到哪。 */
+/** 一次呼叫那一面：能不能停、說給誰聽、賬記到哪。 */
 export interface ToolRun {
   signal: AbortSignal;
-  /** 工具想说点什么给用户看（进气泡，**不进模型上下文**）。 */
+  /** 工具想說點什麼給使用者看（進氣泡，**不進模型上下文**）。 */
   report(message: string): void;
-  /** 正文增量推给前端。同样不进模型上下文。 */
+  /** 正文增量推給前端。同樣不進模型上下文。 */
   onDelta?(delta: string): void;
   usage: UsageMeter;
 }
 
-/** 工具体拿到的一切 = 环境 + 这一次调用。 */
+/** 工具體拿到的一切 = 環境 + 這一次呼叫。 */
 export type ToolContext = ToolEnv & ToolRun;
 
-// ---------------------------------------------------------------- 工具定义
+// ---------------------------------------------------------------- 工具定義
 
-/** 界面画的那一行摘要，**不进模型上下文**。 */
+/** 介面畫的那一行摘要，**不進模型上下文**。 */
 export interface ToolDisplay {
   title: string;
   detail?: string;
@@ -94,97 +94,97 @@ export interface ToolDisplay {
 
 export interface ToolResult {
   /**
-   * 回给模型看的文本。**必须简短**——它会留在调用方的上下文里，每走一步
-   * 重烧一遍。三千字正文塞回这里，十步之后就是三万字的重复账单。
+   * 回給模型看的文字。**必須簡短**——它會留在呼叫方的上下文裡，每走一步
+   * 重燒一遍。三千字正文塞回這裡，十步之後就是三萬字的重複賬單。
    */
   text: string;
   display?: ToolDisplay;
-  /** 出错了。**模型看得到**，据此重试或换路——所以要写成它能照着改的话。 */
+  /** 出錯了。**模型看得到**，據此重試或換路——所以要寫成它能照著改的話。 */
   error?: string;
-  /** 这一次产出的草稿 id。调用方据此当场问一句「写不写」，不必去翻 store。 */
+  /** 這一次產出的草稿 id。呼叫方據此當場問一句「寫不寫」，不必去翻 store。 */
   draftIds?: string[];
 }
 
 /**
- * 动手之前的意图：**这一步是什么性质、要问的话该怎么说**。
+ * 動手之前的意圖：**這一步是什麼性質、要問的話該怎麼說**。
  *
- * 工具自己报，而不是让调用方按名字猜——猜的那一版长这样：
+ * 工具自己報，而不是讓呼叫方按名字猜——猜的那一版長這樣：
  *
  * ```ts
  * switch (tool.name) { case 'write': …; case 'edit': … }
  * ```
  *
- * 加一个工具就要回来改一次，而且忘了改不会红，只会在某一天静默地少问一句。
+ * 加一個工具就要回來改一次，而且忘了改不會紅，只會在某一天靜默地少問一句。
  */
 export interface ToolIntent {
   gate: GateKind;
   /**
-   * **动词短语**，调用方在前面加主语（「Agent 要」/「远端要」）：
-   * `为「第 12 章的细纲」调一次创作模型`。
+   * **動詞短語**，呼叫方在前面加主語（「Agent 要」/「遠端要」）：
+   * `為「第 12 章的細綱」調一次創作模型`。
    *
-   * 不写成「调用 write」——作者答不上来，他不知道 write 会写到哪。
+   * 不寫成「呼叫 write」——作者答不上來，他不知道 write 會寫到哪。
    */
   title: string;
-  /** 展开说这一步会发生什么。`edit` 的 old → new 两段原文就写在这里。 */
+  /** 展開說這一步會發生什麼。`edit` 的 old → new 兩段原文就寫在這裡。 */
   detail?: string;
 }
 
 /**
- * 这一步的性质。**五个值，怎么处理在调用方**（[controller/mcp.ts](../controller/mcp.ts)：
- * `auto` 直接跑；`always` 动手前在对话页问；其余问不问交给宿主的权限设置）。
+ * 這一步的性質。**五個值，怎麼處理在呼叫方**（[controller/mcp.ts](../controller/mcp.ts)：
+ * `auto` 直接跑；`always` 動手前在對話頁問；其餘問不問交給宿主的許可權設定）。
  *
- * | 值 | 什么样的动作 | 为什么单独一档 |
+ * | 值 | 什麼樣的動作 | 為什麼單獨一檔 |
  * |---|---|---|
- * | `auto` | 查询 | 不花钱不改东西，问一句只是让人麻木 |
- * | `costly` | 花钱但不写盘 | 谨慎模式下值得问，平时不必 |
- * | `mutating` | 写盘 | 常规的「动手前问一句」 |
- * | `reviewed` | 写盘，但**下游自己会请人过目** | 再问一句是纯噪声：diff 本身就是答案 |
- * | `always` | 写盘，且**下游不过目** | 那一句确认就是它的 diff，任何模式都不能免 |
+ * | `auto` | 查詢 | 不花錢不改東西，問一句只是讓人麻木 |
+ * | `costly` | 花錢但不寫盤 | 謹慎模式下值得問，平時不必 |
+ * | `mutating` | 寫盤 | 常規的「動手前問一句」 |
+ * | `reviewed` | 寫盤，但**下游自己會請人過目** | 再問一句是純噪聲：diff 本身就是答案 |
+ * | `always` | 寫盤，且**下游不過目** | 那一句確認就是它的 diff，任何模式都不能免 |
  *
- * `reviewed` 与 `always` 是**产品承诺**（AGENTS 第 3 / 19 / 25 条）落在类型上的
- * 形状：覆盖已有内容一律过一遍人，区别只在过的是 diff 还是确认框。
+ * `reviewed` 與 `always` 是**產品承諾**（AGENTS 第 3 / 19 / 25 條）落在型別上的
+ * 形狀：覆蓋已有內容一律過一遍人，區別只在過的是 diff 還是確認框。
  */
 export type GateKind = 'auto' | 'costly' | 'mutating' | 'reviewed' | 'always';
 
 export interface ToolDef {
   name: string;
   description: string;
-  /** JSON Schema，原样透传给各家 API。 */
+  /** JSON Schema，原樣透傳給各家 API。 */
   parameters: Record<string, unknown>;
   /**
-   * 会花钱。**只是一条事实**（对应 MCP 的注解），闸门怎么判在 {@link intent}。
+   * 會花錢。**只是一條事實**（對應 MCP 的註解），閘門怎麼判在 {@link intent}。
    */
   costly?: boolean;
   /**
-   * 会写盘。同上，只是事实。
+   * 會寫盤。同上，只是事實。
    *
-   * **它不是保护**：八条守卫与覆盖前审阅在 `workspace/` 那一层，和这个标记无关。
+   * **它不是保護**：八條守衛與覆蓋前審閱在 `workspace/` 那一層，和這個標記無關。
    */
   mutating?: boolean;
   /**
-   * 这一次调用的意图。**零 I/O 纯函数**——它算出来的名字要与随后 diff 上的
-   * 名字逐字一致，所以两边都走 `kindOfPath` 那条纯路径。
+   * 這一次呼叫的意圖。**零 I/O 純函式**——它算出來的名字要與隨後 diff 上的
+   * 名字逐字一致，所以兩邊都走 `kindOfPath` 那條純路徑。
    *
-   * 不实现时由 {@link ToolRegistry} 按 `costly` / `mutating` 兜一个通用的。
+   * 不實現時由 {@link ToolRegistry} 按 `costly` / `mutating` 兜一個通用的。
    */
   intent?(args: Record<string, unknown>, project?: NovelProject): ToolIntent;
   /**
-   * 参数本身对不对（缺哪个、动作认不认），**零 I/O**，不对时回一句给模型的话。
+   * 引數本身對不對（缺哪個、動作認不認），**零 I/O**，不對時回一句給模型的話。
    *
-   * 由 {@link ToolRegistry} 在 `run` 之前调，MCP 执行端在拿锁、问作者之前也调——
-   * 参数本来就不对的调用，不该先在对话页弹一张「改「」里的一段文字」再报错。
-   * 不实现也照样过一遍按 `parameters` 的通用校验（`schema.ts` 的 `checkArgs`）。
+   * 由 {@link ToolRegistry} 在 `run` 之前調，MCP 執行端在拿鎖、問作者之前也調——
+   * 引數本來就不對的呼叫，不該先在對話頁彈一張「改「」裡的一段文字」再報錯。
+   * 不實現也照樣過一遍按 `parameters` 的通用校驗（`schema.ts` 的 `checkArgs`）。
    */
   check?(args: Record<string, unknown>): string | undefined;
   run(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult>;
 }
 
-// ---------------------------------------------------------------- 调用口
+// ---------------------------------------------------------------- 呼叫口
 
-/** 一次调用的结果。**绝不抛**：出错也是一条正常返回。 */
+/** 一次呼叫的結果。**絕不拋**：出錯也是一條正常返回。 */
 export interface ToolInvocation {
   ok: boolean;
-  /** 回给模型的文本（出错时就是那句错误说明）。 */
+  /** 回給模型的文字（出錯時就是那句錯誤說明）。 */
   text: string;
   error?: string;
   display?: ToolDisplay;
@@ -193,18 +193,18 @@ export interface ToolInvocation {
 }
 
 /**
- * 调用方眼里的工具集：清单、意图、执行。
+ * 呼叫方眼裡的工具集：清單、意圖、執行。
  */
 export interface ToolInvoker {
-  /** 发给模型的工具清单。顺序即模型看到的顺序。 */
+  /** 發給模型的工具清單。順序即模型看到的順序。 */
   specs(): ToolSpec[];
-  /** 已注册的名字。用来跟模型说「可用的是：…」。 */
+  /** 已註冊的名字。用來跟模型說「可用的是：…」。 */
   names(): string[];
-  /** 这一步的意图。名字不认识时返回 undefined。 */
+  /** 這一步的意圖。名字不認識時返回 undefined。 */
   intent(name: string, args: Record<string, unknown>): ToolIntent | undefined;
-  /** 参数对不对：不对时回那句报错，名字不认识或没问题时 undefined。`invoke` 自己也会先过它。 */
+  /** 引數對不對：不對時回那句報錯，名字不認識或沒問題時 undefined。`invoke` 自己也會先過它。 */
   check(name: string, args: Record<string, unknown>): string | undefined;
-  /** 执行。**绝不抛**，认不出名字也回一条能让模型换路的结果。 */
+  /** 執行。**絕不拋**，認不出名字也回一條能讓模型換路的結果。 */
   invoke(
     name: string,
     args: Record<string, unknown>,

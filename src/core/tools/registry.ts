@@ -1,23 +1,23 @@
 /**
- * 工具注册表：**一组 `ToolDef` + 一份环境 = 一个能被调用的工具集**。
+ * 工具登錄檔：**一組 `ToolDef` + 一份環境 = 一個能被呼叫的工具集**。
  *
- * 它是 {@link ToolInvoker} 的实现，也是这一层唯一的执行入口。四件事：
+ * 它是 {@link ToolInvoker} 的實現，也是這一層唯一的執行入口。四件事：
  *
- * 1. **注册时校验**（[schema.ts](schema.ts)）——描述写歪了当场抛，不留到线上；
- * 2. **`ToolDef[]` → `ToolSpec[]`**，透传给各家 API；
- * 3. **执行时兜住一切**——认不出的名字、工具抛的异常，都变成一条模型读得懂的
- *    结果。**`invoke` 绝不抛**：一个工具炸掉不该带走整轮对话；
- * 4. **记一条日志**——工具名与**参数的键名**，不记值（第 11 条：值里可能有
+ * 1. **註冊時校驗**（[schema.ts](schema.ts)）——描述寫歪了當場拋，不留到線上；
+ * 2. **`ToolDef[]` → `ToolSpec[]`**，透傳給各家 API；
+ * 3. **執行時兜住一切**——認不出的名字、工具拋的異常，都變成一條模型讀得懂的
+ *    結果。**`invoke` 絕不拋**：一個工具炸掉不該帶走整輪對話；
+ * 4. **記一條日誌**——工具名與**引數的鍵名**，不記值（第 11 條：值裡可能有
  *    整段正文）。
  *
- * ## 为什么执行也在这一层
+ * ## 為什麼執行也在這一層
  *
- * 从前「跑一个工具」那三十行住在 agent 的循环里：计时、兜异常、翻 draft store
- * 认新草稿、拼「没有叫 X 的工具」那句话。它们没有一件是**调度**——换一个调用
- * 方（另一个循环、将来的 MCP server）就得原样再抄一遍，而抄漏一条（比如没兜住
- * 异常）不会红，只会在某天让一整轮对话炸掉。
+ * 從前「跑一個工具」那三十行住在 agent 的迴圈裡：計時、兜異常、翻 draft store
+ * 認新草稿、拼「沒有叫 X 的工具」那句話。它們沒有一件是**排程**——換一個呼叫
+ * 方（另一個迴圈、將來的 MCP server）就得原樣再抄一遍，而抄漏一條（比如沒兜住
+ * 異常）不會紅，只會在某天讓一整輪對話炸掉。
  *
- * 所以调用方那边只剩一行 `await tools.invoke(...)`。
+ * 所以呼叫方那邊只剩一行 `await tools.invoke(...)`。
  */
 import { describeError, scoped } from '../runtime/logger';
 import { checkArgs, validateToolDef } from './schema';
@@ -32,7 +32,7 @@ import type {
   ToolSpec,
 } from './types';
 
-// 日志来源按作者看到的入口叫：工具现在只经 MCP 端给外部 agent，同一次调用在日志页上归在一处。
+// 日誌來源按作者看到的入口叫：工具現在只經 MCP 端給外部 agent，同一次呼叫在日誌頁上歸在一處。
 const log = scoped('MCP');
 
 export class ToolRegistry implements ToolInvoker {
@@ -40,15 +40,15 @@ export class ToolRegistry implements ToolInvoker {
   private readonly byName: Map<string, ToolDef>;
 
   /**
-   * @param defs 顺序即模型看到的顺序。
-   * @param env 工程那一面，绑定一次此后不变。
+   * @param defs 順序即模型看到的順序。
+   * @param env 工程那一面，繫結一次此後不變。
    */
   constructor(defs: ToolDef[], private readonly env: ToolEnv) {
     const seen = new Set<string>();
     for (const def of defs) {
       const issue = validateToolDef(def, seen);
       if (issue) {
-        throw new Error(`工具「${def.name || '(无名)'}」定义有问题：${issue}`);
+        throw new Error(`工具「${def.name || '(無名)'}」定義有問題：${issue}`);
       }
       seen.add(def.name);
     }
@@ -57,7 +57,7 @@ export class ToolRegistry implements ToolInvoker {
   }
 
   specs(): ToolSpec[] {
-    // run / intent 是本地函数，序列化出去会炸，所以逐字段挑而不是整个塞过去。
+    // run / intent 是本地函式，序列化出去會炸，所以逐欄位挑而不是整個塞過去。
     return this.defs.map(specOf);
   }
 
@@ -66,8 +66,8 @@ export class ToolRegistry implements ToolInvoker {
   }
 
   /**
-   * 这一步的意图。工具没实现 `intent` 时兜一个通用的：**花钱或写盘就归
-   * `mutating`**（宁可多问，也不要有一条没人想过的路）。
+   * 這一步的意圖。工具沒實現 `intent` 時兜一個通用的：**花錢或寫盤就歸
+   * `mutating`**（寧可多問，也不要有一條沒人想過的路）。
    */
   intent(name: string, args: Record<string, unknown>): ToolIntent | undefined {
     const def = this.byName.get(name);
@@ -79,11 +79,11 @@ export class ToolRegistry implements ToolInvoker {
     }
     return {
       gate: def.mutating || def.costly ? 'mutating' : 'auto',
-      title: `执行 ${def.name}`,
+      title: `執行 ${def.name}`,
     };
   }
 
-  /** 工具自己的 `check` 先说（话更贴切），它放过了再按 `parameters` 过一遍通用校验。 */
+  /** 工具自己的 `check` 先說（話更貼切），它放過了再按 `parameters` 過一遍通用校驗。 */
   check(name: string, args: Record<string, unknown>): string | undefined {
     const def = this.byName.get(name);
     if (!def) {
@@ -98,13 +98,13 @@ export class ToolRegistry implements ToolInvoker {
     run: ToolRun
   ): Promise<ToolInvocation> {
     const startedAt = Date.now();
-    // 第 11 条：**只记工具名与参数的键名**，不记值——值里可能有正文片段。
-    log.debug(`调用工具 ${name}`, `参数键：${Object.keys(args ?? {}).join(', ') || '（无）'}`);
+    // 第 11 條：**只記工具名與引數的鍵名**，不記值——值裡可能有正文片段。
+    log.debug(`呼叫工具 ${name}`, `引數鍵：${Object.keys(args ?? {}).join(', ') || '（無）'}`);
 
     const def = this.byName.get(name);
     if (!def) {
-      // 名单从**实际注册的那一份**来。写死一串名字，加了工具之后这句话就在撒谎。
-      const error = `没有叫 ${name} 的工具。可用的是：${this.names().join(' / ')}。`;
+      // 名單從**實際註冊的那一份**來。寫死一串名字，加了工具之後這句話就在撒謊。
+      const error = `沒有叫 ${name} 的工具。可用的是：${this.names().join(' / ')}。`;
       return { ok: false, text: error, error, draftIds: [], elapsedMs: 0 };
     }
 
@@ -117,10 +117,10 @@ export class ToolRegistry implements ToolInvoker {
     try {
       result = await def.run({ ...this.env, ...run }, args ?? {});
     } catch (err) {
-      // 工具抛异常时变成 error 回给模型：它看到说明会换条路，而抛出去的话
-      // 调用方只得到一句「处理消息时出错」，之前几步的成果全丢。
-      result = { text: '', error: `工具执行失败：${describeError(err)}` };
-      log.warn(`工具 ${name} 抛异常`, describeError(err));
+      // 工具拋異常時變成 error 回給模型：它看到說明會換條路，而拋出去的話
+      // 呼叫方只得到一句「處理訊息時出錯」，之前幾步的成果全丟。
+      result = { text: '', error: `工具執行失敗：${describeError(err)}` };
+      log.warn(`工具 ${name} 拋異常`, describeError(err));
     }
 
     return {
@@ -134,7 +134,7 @@ export class ToolRegistry implements ToolInvoker {
   }
 }
 
-/** `ToolDef` → 对外的那一条声明。不绑环境也算得出来：MCP 没打开工程时 `tools/list` 照样要回。 */
+/** `ToolDef` → 對外的那一條宣告。不綁環境也算得出來：MCP 沒開啟工程時 `tools/list` 照樣要回。 */
 export function specOf(d: ToolDef): ToolSpec {
   return {
     name: d.name,

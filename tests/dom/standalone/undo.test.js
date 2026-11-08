@@ -1,33 +1,33 @@
 /**
- * 内置编辑器自己管的撤销 / 重做（每个打开的文件一份）。
+ * 內建編輯器自己管的撤銷 / 重做（每個開啟的檔案一份）。
  *
- * 一块编辑区的所有标签共用一个 textarea，切标签时整份换 value，浏览器原生的撤销记录随之作废；
- * 所以编辑器自己记差异（`media/src/editor/history.ts`）。jsdom 里没有原生撤销，也没有
- * `execCommand`——这里测的全是编辑器自己的那一份。
+ * 一塊編輯區的所有標籤共用一個 textarea，切標籤時整份換 value，瀏覽器原生的撤銷記錄隨之作廢；
+ * 所以編輯器自己記差異（`media/src/editor/history.ts`）。jsdom 裡沒有原生撤銷，也沒有
+ * `execCommand`——這裡測的全是編輯器自己的那一份。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 切到别的标签再切回来 | Ctrl+Z 仍退得回去（各管各的历史） |
- * | 连续打字 | 并成一步；回车单独一步，回车之后另起一步 |
+ * | 切到別的標籤再切回來 | Ctrl+Z 仍退得回去（各管各的歷史） |
+ * | 連續打字 | 併成一步；回車單獨一步，回車之後另起一步 |
  * | Ctrl+Y / Ctrl+Shift+Z | 重做 |
- * | 撤销回原样 | 脏标记、标签圆点、保存按钮跟着变 |
- * | 输入法组字 | 组字中途不记，上屏那一整段一步 |
- * | `beforeinput` 的 historyUndo | 拦下来走编辑器的 |
- * | 「还原」「用磁盘版本覆盖」 | 也记一步，撤销回去又是脏的 |
- * | 右键「粘贴」 | 经唯一的程序改写入口，一步可撤销 |
- * | 搬到另一块编辑区 | 撤销历史跟着搬 |
- * | 标题栏「编辑 → 撤销」 | 焦点在编辑区时走编辑器，在别的输入框时照旧交给浏览器 |
+ * | 撤銷回原樣 | 髒標記、標籤圓點、儲存按鈕跟著變 |
+ * | 輸入法組字 | 組字中途不記，上屏那一整段一步 |
+ * | `beforeinput` 的 historyUndo | 攔下來走編輯器的 |
+ * | 「還原」「用磁碟版本覆蓋」 | 也記一步，撤銷回去又是髒的 |
+ * | 右鍵「貼上」 | 經唯一的程式改寫入口，一步可撤銷 |
+ * | 搬到另一塊編輯區 | 撤銷歷史跟著搬 |
+ * | 標題欄「編輯 → 撤銷」 | 焦點在編輯區時走編輯器，在別的輸入框時照舊交給瀏覽器 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, JSDOM_SKIP, file } = require('../../helpers/dom');
 
-/** 在 jsdom 里模拟真实输入：改 value、挪光标、发一条带 inputType 的 input。 */
+/** 在 jsdom 裡模擬真實輸入：改 value、挪游標、發一條帶 inputType 的 input。 */
 function typer(ui, area) {
   const fire = (inputType, extra) =>
     area().dispatchEvent(new ui.window.InputEvent('input', { bubbles: true, inputType, ...extra }));
   return {
-    /** 在光标 / 选区处打出 text（一下一个事件）。 */
+    /** 在游標 / 選區處打出 text（一下一個事件）。 */
     type(text) {
       for (const ch of text) {
         const a = area();
@@ -66,7 +66,7 @@ function keys(ui, area) {
   };
 }
 
-describe('撤销 / 重做：每个文件一份', { skip: JSDOM_SKIP }, () => {
+describe('撤銷 / 重做：每個檔案一份', { skip: JSDOM_SKIP }, () => {
   let ui;
   const area = () => ui.doc.getElementById('edArea');
   const tab = (name) =>
@@ -82,99 +82,99 @@ describe('撤销 / 重做：每个文件一份', { skip: JSDOM_SKIP }, () => {
     k = keys(ui, area);
   });
 
-  test('切到别的标签再切回来，Ctrl+Z 仍能撤销之前的修改', () => {
+  test('切到別的標籤再切回來，Ctrl+Z 仍能撤銷之前的修改', () => {
     ui.clickEl(tab('001-雨夜.md'));
     t.caret(3);
-    t.type('林昭来了');
-    assert.equal(area().value, '雨夜。林昭来了');
+    t.type('林昭來了');
+    assert.equal(area().value, '雨夜。林昭來了');
 
     ui.clickEl(tab('林昭.md'));
     assert.equal(area().value, '# 林昭');
     t.caret(4);
     t.type('，主角');
     ui.clickEl(tab('001-雨夜.md'));
-    assert.equal(area().value, '雨夜。林昭来了');
+    assert.equal(area().value, '雨夜。林昭來了');
 
     const ev = k.undo();
-    assert.equal(ev.defaultPrevented, true, 'Ctrl+Z 要拦下来，不交给浏览器');
+    assert.equal(ev.defaultPrevented, true, 'Ctrl+Z 要攔下來，不交給瀏覽器');
     assert.equal(area().value, '雨夜。');
-    assert.equal(area().selectionStart, 3, '光标回到打字之前的位置');
+    assert.equal(area().selectionStart, 3, '游標回到打字之前的位置');
 
-    // 另一份的历史没被碰。
+    // 另一份的歷史沒被碰。
     ui.clickEl(tab('林昭.md'));
     k.undo();
     assert.equal(area().value, '# 林昭');
   });
 
-  test('撤销回原样：脏标记、标签圆点、保存按钮跟着变', () => {
+  test('撤銷回原樣：髒標記、標籤圓點、儲存按鈕跟著變', () => {
     ui.clickEl(tab('001-雨夜.md'));
     assert.equal(area().value, '雨夜。');
     assert.equal(tab('001-雨夜.md').classList.contains('dirty'), false);
     assert.equal(ui.doc.getElementById('edSaveBtn').disabled, true);
-    assert.equal(ui.doc.getElementById('edStatusSave').textContent, '已保存');
+    assert.equal(ui.doc.getElementById('edStatusSave').textContent, '已儲存');
   });
 
   test('Ctrl+Y 重做', () => {
     k.redoY();
-    assert.equal(area().value, '雨夜。林昭来了');
-    assert.equal(area().selectionStart, 7, '光标落在重做之后的位置');
+    assert.equal(area().value, '雨夜。林昭來了');
+    assert.equal(area().selectionStart, 7, '游標落在重做之後的位置');
     assert.equal(tab('001-雨夜.md').classList.contains('dirty'), true);
-    assert.match(ui.doc.getElementById('edStatusSave').textContent, /未保存/);
+    assert.match(ui.doc.getElementById('edStatusSave').textContent, /未儲存/);
   });
 
   test('Ctrl+Shift+Z 也是重做', () => {
     k.undo();
     assert.equal(area().value, '雨夜。');
     k.redoShiftZ();
-    assert.equal(area().value, '雨夜。林昭来了');
+    assert.equal(area().value, '雨夜。林昭來了');
   });
 
-  test('连续打字并成一步，回车单独一步、回车之后另起一步', () => {
+  test('連續打字併成一步，回車單獨一步、回車之後另起一步', () => {
     t.caret(area().value.length);
     t.type('。\n第二段');
-    assert.equal(area().value, '雨夜。林昭来了。\n第二段');
+    assert.equal(area().value, '雨夜。林昭來了。\n第二段');
     k.undo();
-    assert.equal(area().value, '雨夜。林昭来了。\n', '先退回车之后打的字');
+    assert.equal(area().value, '雨夜。林昭來了。\n', '先退回車之後打的字');
     k.undo();
-    assert.equal(area().value, '雨夜。林昭来了。', '再退回车');
+    assert.equal(area().value, '雨夜。林昭來了。', '再退回車');
     k.undo();
-    assert.equal(area().value, '雨夜。林昭来了', '回车之前那几下是一步');
+    assert.equal(area().value, '雨夜。林昭來了', '回車之前那幾下是一步');
   });
 
-  test('连续退格并成一步', () => {
+  test('連續退格併成一步', () => {
     t.caret(area().value.length);
     t.backspace(2);
     assert.equal(area().value, '雨夜。林昭');
     k.undo();
-    assert.equal(area().value, '雨夜。林昭来了');
+    assert.equal(area().value, '雨夜。林昭來了');
   });
 
-  test('beforeinput 的 historyUndo / historyRedo 也走编辑器的记录', () => {
+  test('beforeinput 的 historyUndo / historyRedo 也走編輯器的記錄', () => {
     t.type('！');
     const ev = new ui.window.InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'historyUndo' });
     area().dispatchEvent(ev);
     assert.equal(ev.defaultPrevented, true);
-    assert.equal(area().value, '雨夜。林昭来了');
+    assert.equal(area().value, '雨夜。林昭來了');
     area().dispatchEvent(
       new ui.window.InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'historyRedo' })
     );
-    assert.equal(area().value, '雨夜。林昭来了！');
+    assert.equal(area().value, '雨夜。林昭來了！');
   });
 
-  test('关掉标签，历史随之丢弃：再打开从头记', async () => {
+  test('關掉標籤，歷史隨之丟棄：再開啟從頭記', async () => {
     ui.clickEl(tab('林昭.md'));
     t.caret(4);
     t.type('甲');
     ui.clickEl(tab('林昭.md').querySelector('.ed-tab-close'));
-    await ui.answer('不保存');
+    await ui.answer('不儲存');
     ui.post({ type: 'editorOpen', file: file('.novelwarden/characters/林昭.md', '# 林昭', { kind: 'character' }) });
     assert.equal(area().value, '# 林昭');
     k.undo();
-    assert.equal(area().value, '# 林昭', '新打开的文件没有可撤销的');
+    assert.equal(area().value, '# 林昭', '新開啟的檔案沒有可撤銷的');
   });
 });
 
-describe('撤销 / 重做：输入法组字', { skip: JSDOM_SKIP }, () => {
+describe('撤銷 / 重做：輸入法組字', { skip: JSDOM_SKIP }, () => {
   let ui;
   const area = () => ui.doc.getElementById('edArea');
 
@@ -183,7 +183,7 @@ describe('撤销 / 重做：输入法组字', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'editorOpen', file: file('chapters/001-雨夜.md', '雨夜。', { kind: 'chapter' }) });
   });
 
-  test('组字中途不记，上屏的那一整段算一步', () => {
+  test('組字中途不記，上屏的那一整段算一步', () => {
     const a = area();
     a.setSelectionRange(3, 3);
     a.dispatchEvent(new ui.window.CompositionEvent('compositionstart', { bubbles: true }));
@@ -195,7 +195,7 @@ describe('撤销 / 重做：输入法组字', { skip: JSDOM_SKIP }, () => {
         new ui.window.InputEvent('input', { bubbles: true, inputType: 'insertCompositionText', isComposing: true })
       );
       if (step === '林') {
-        // 组字中途字数照样跟着刷新（只是不记撤销）。
+        // 組字中途字數照樣跟著重新整理（只是不記撤銷）。
         assert.match(words(), /全文 3 字/);
       }
     }
@@ -204,10 +204,10 @@ describe('撤销 / 重做：输入法组字', { skip: JSDOM_SKIP }, () => {
     assert.match(words(), /全文 4 字/);
 
     a.dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true }));
-    assert.equal(a.value, '雨夜。', '一下就退掉整段，不会退出半截拼音');
+    assert.equal(a.value, '雨夜。', '一下就退掉整段，不會退出半截拼音');
   });
 
-  test('组字中途按 Ctrl+Z 放行给输入法，不动编辑器的历史', () => {
+  test('組字中途按 Ctrl+Z 放行給輸入法，不動編輯器的歷史', () => {
     const a = area();
     a.value = '雨夜。林昭';
     a.dispatchEvent(new ui.window.InputEvent('input', { bubbles: true, inputType: 'insertText' }));
@@ -220,7 +220,7 @@ describe('撤销 / 重做：输入法组字', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('撤销 / 重做：整份换内容也记一步', { skip: JSDOM_SKIP }, () => {
+describe('撤銷 / 重做：整份換內容也記一步', { skip: JSDOM_SKIP }, () => {
   let ui;
   const area = () => ui.doc.getElementById('edArea');
   const tabEl = () => ui.doc.querySelector('#edTabs .ed-tab');
@@ -238,12 +238,12 @@ describe('撤销 / 重做：整份换内容也记一步', { skip: JSDOM_SKIP }, 
     t = typer(ui, area);
   });
 
-  test('「还原」之后可以撤销回刚才没保存的那份，那时它又是脏的', async () => {
+  test('「還原」之後可以撤銷回剛才沒儲存的那份，那時它又是髒的', async () => {
     area().setSelectionRange(2, 2);
     t.type('，改了一半');
     ui.clickEl(ui.doc.getElementById('edRevertBtn'));
-    await ui.answer('放弃修改');
-    assert.ok(ui.last('reloadFile'), '没发出 reloadFile');
+    await ui.answer('放棄修改');
+    assert.ok(ui.last('reloadFile'), '沒發出 reloadFile');
     ui.post({ type: 'editorOpen', file: file('chapters/001-雨夜.md', '原文', { kind: 'chapter' }) });
     assert.equal(area().value, '原文');
     assert.equal(tabEl().classList.contains('dirty'), false);
@@ -253,31 +253,31 @@ describe('撤销 / 重做：整份换内容也记一步', { skip: JSDOM_SKIP }, 
     assert.equal(tabEl().classList.contains('dirty'), true);
   });
 
-  test('「用磁盘版本覆盖编辑器」之后也可以撤销', () => {
-    // 保存撞上冲突：磁盘上是别人写的新版。
+  test('「用磁碟版本覆蓋編輯器」之後也可以撤銷', () => {
+    // 儲存撞上衝突：磁碟上是別人寫的新版。
     area().dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true }));
     assert.equal(ui.last('saveFile')?.text, '原文，改了一半');
-    ui.post({ type: 'editorConflict', path: 'chapters/001-雨夜.md', diskText: '磁盘新版', diskHash: 'h-disk' });
+    ui.post({ type: 'editorConflict', path: 'chapters/001-雨夜.md', diskText: '磁碟新版', diskHash: 'h-disk' });
     ui.clickEl(ui.doc.getElementById('edConflictTake'));
-    assert.equal(area().value, '磁盘新版');
+    assert.equal(area().value, '磁碟新版');
     undo();
     assert.equal(area().value, '原文，改了一半');
   });
 
-  test('右键「粘贴」经程序改写入口，一步可撤销', async () => {
-    ui.window.navigator.clipboard.readText = () => Promise.resolve('贴进来\r\n两行');
+  test('右鍵「貼上」經程式改寫入口，一步可撤銷', async () => {
+    ui.window.navigator.clipboard.readText = () => Promise.resolve('貼進來\r\n兩行');
     area().setSelectionRange(2, 2);
     const menu = ui.rightClick(area());
-    ui.pick(menu, '粘贴');
+    ui.pick(menu, '貼上');
     await new Promise((r) => setTimeout(r, 0));
-    assert.equal(area().value, '原文贴进来\n两行，改了一半', '\\r\\n 归一成 \\n');
-    assert.equal(area().selectionStart, 8, '光标落在贴进来的文字末尾');
+    assert.equal(area().value, '原文貼進來\n兩行，改了一半', '\\r\\n 歸一成 \\n');
+    assert.equal(area().selectionStart, 8, '游標落在貼進來的文字末尾');
     undo();
     assert.equal(area().value, '原文，改了一半');
   });
 });
 
-describe('撤销 / 重做：搬到另一块编辑区历史跟着走', { skip: JSDOM_SKIP }, () => {
+describe('撤銷 / 重做：搬到另一塊編輯區歷史跟著走', { skip: JSDOM_SKIP }, () => {
   let ui;
   const areaOf = (i) => ui.panes()[i].querySelector('textarea');
 
@@ -286,19 +286,19 @@ describe('撤销 / 重做：搬到另一块编辑区历史跟着走', { skip: JS
     ui.post({ type: 'editorOpen', file: file('.novelwarden/summaries/001-雨夜.md', '# 梗概', { kind: 'plot' }) });
   });
 
-  test('主区打的字，搬到草稿区之后 Ctrl+Z 照样退得回去', () => {
+  test('主區打的字，搬到草稿區之後 Ctrl+Z 照樣退得回去', () => {
     const t = typer(ui, () => areaOf(0));
     areaOf(0).setSelectionRange(4, 4);
     t.type('：林昭');
     ui.post({ type: 'editorOpen', pane: 'draft', file: file('.novelwarden/summaries/001-雨夜.md', '# 梗概', { kind: 'plot' }) });
     const a = areaOf(1);
-    assert.equal(a.value, '# 梗概：林昭', '未保存的内容跟着搬');
+    assert.equal(a.value, '# 梗概：林昭', '未儲存的內容跟著搬');
     a.dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true }));
     assert.equal(a.value, '# 梗概');
   });
 });
 
-describe('标题栏「编辑 → 撤销 / 重做」', { skip: JSDOM_SKIP }, () => {
+describe('標題欄「編輯 → 撤銷 / 重做」', { skip: JSDOM_SKIP }, () => {
   let ui;
   let execCalls;
   const area = () => ui.doc.getElementById('edArea');
@@ -316,7 +316,7 @@ describe('标题栏「编辑 → 撤销 / 重做」', { skip: JSDOM_SKIP }, () =
       shims: ['clipboard', 'scrollIntoView', 'pointerCapture', 'confirm'],
     });
     execCalls = [];
-    // jsdom 没有 execCommand：记下调用，好看出菜单把活交给了谁。
+    // jsdom 沒有 execCommand：記下呼叫，好看出選單把活交給了誰。
     ui.doc.execCommand = (name) => {
       execCalls.push(name);
       return true;
@@ -324,19 +324,19 @@ describe('标题栏「编辑 → 撤销 / 重做」', { skip: JSDOM_SKIP }, () =
     ui.post({ type: 'editorOpen', file: file('chapters/001-雨夜.md', '雨夜。', { kind: 'chapter' }) });
   });
 
-  test('焦点在编辑区：「撤销」「重做」走编辑器自己的历史', () => {
+  test('焦點在編輯區：「撤銷」「重做」走編輯器自己的歷史', () => {
     const t = typer(ui, area);
     area().focus();
     area().setSelectionRange(3, 3);
     t.type('林昭');
-    ui.clickEl(menuItem('撤销'));
+    ui.clickEl(menuItem('撤銷'));
     assert.equal(area().value, '雨夜。');
     ui.clickEl(menuItem('重做'));
     assert.equal(area().value, '雨夜。林昭');
-    assert.deepEqual(execCalls, [], '没交给浏览器原生的 execCommand');
+    assert.deepEqual(execCalls, [], '沒交給瀏覽器原生的 execCommand');
   });
 
-  test('按下菜单按钮不夺走焦点', () => {
+  test('按下選單按鈕不奪走焦點', () => {
     area().focus();
     const btn = ui.doc.querySelector('[data-menu="edit"]');
     const ev = new ui.window.MouseEvent('mousedown', { bubbles: true, cancelable: true });
@@ -345,11 +345,11 @@ describe('标题栏「编辑 → 撤销 / 重做」', { skip: JSDOM_SKIP }, () =
     ui.closeMenu();
   });
 
-  test('焦点在别的输入框：照旧交给浏览器', () => {
+  test('焦點在別的輸入框：照舊交給瀏覽器', () => {
     const input = ui.doc.getElementById('input');
     input.focus();
-    ui.clickEl(menuItem('撤销'));
+    ui.clickEl(menuItem('撤銷'));
     assert.deepEqual(execCalls, ['undo']);
-    assert.equal(area().value, '雨夜。林昭', '编辑区没被动');
+    assert.equal(area().value, '雨夜。林昭', '編輯區沒被動');
   });
 });

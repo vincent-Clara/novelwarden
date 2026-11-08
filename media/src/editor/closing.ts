@@ -1,28 +1,28 @@
 /**
- * 关标签：有未保存的修改时问「保存 / 不保存 / 取消」（页内对话框，`dialog.ts`）。
+ * 關標籤：有未儲存的修改時問「儲存 / 不儲存 / 取消」（頁內對話方塊，`dialog.ts`）。
  *
- * - 一份：「保存」（主按钮）/「不保存」/「取消」。
- * - 几份一起关（关闭其它 / 左侧 / 右侧）而其中好几份没保存：**合成一个对话框问一次**，列出是哪几份——
- *   「全部保存」/「全部不保存」/「取消」。没改过的那几份不问，跟着一起关。
- * - 「保存」**等这一份的回执**（`editorSaved`）回来才关；撞上冲突、磁盘上没了、出错就**不关**，冲突条留着。
- *   等回执的这段时间里又改了的也不关（关了那几笔就没了）。
- * - 磁盘上已经没有了的那一份（`OpenFile.gone`）在对话框里注明「保存会在原路径重建」：在这里点了保存就算答应过，
- *   不再另问。
+ * - 一份：「儲存」（主按鈕）/「不儲存」/「取消」。
+ * - 幾份一起關（關閉其它 / 左側 / 右側）而其中好幾份沒儲存：**合成一個對話方塊問一次**，列出是哪幾份——
+ *   「全部儲存」/「全部不儲存」/「取消」。沒改過的那幾份不問，跟著一起關。
+ * - 「儲存」**等這一份的回執**（`editorSaved`）回來才關；撞上衝突、磁碟上沒了、出錯就**不關**，衝突條留著。
+ *   等回執的這段時間裡又改了的也不關（關了那幾筆就沒了）。
+ * - 磁碟上已經沒有了的那一份（`OpenFile.gone`）在對話方塊裡註明「儲存會在原路徑重建」：在這裡點了儲存就算答應過，
+ *   不再另問。
  *
- * 只经 `Pane` 的公开方法碰编辑区（`files` / `discard`），保存经 `saving.ts`。
+ * 只經 `Pane` 的公開方法碰編輯區（`files` / `discard`），儲存經 `saving.ts`。
  */
 import { askDialog } from './dialog';
 import type { OpenFile } from './paneElements';
 import { requestSave } from './saving';
 import type { Pane } from './store';
 
-/** 同一块编辑区同一时刻只问一次：连按两下 Ctrl+W 不叠两个对话框。 */
+/** 同一塊編輯區同一時刻只問一次：連按兩下 Ctrl+W 不疊兩個對話方塊。 */
 const asking = new WeakSet<Pane>();
 
 const isDirty = (file: OpenFile): boolean => file.draft !== file.text;
 
 /**
- * 关这几份（`paths` 里不在这块的跳过）。全都关掉了回 true；作者点了取消、或有几份没存成留着，回 false。
+ * 關這幾份（`paths` 裡不在這塊的跳過）。全都關掉了回 true；作者點了取消、或有幾份沒存成留著，回 false。
  */
 export async function requestClose(pane: Pane, paths: string[]): Promise<boolean> {
   if (asking.has(pane)) {
@@ -52,7 +52,7 @@ export async function requestClose(pane: Pane, paths: string[]): Promise<boolean
     return true;
   }
 
-  // 对话框开着的时候情况可能变了（核对磁盘把一份换成了新版、另一块把它搬走了）：按现在的样子再看一遍。
+  // 對話方塊開著的時候情況可能變了（核對磁碟把一份換成了新版、另一塊把它搬走了）：按現在的樣子再看一遍。
   const toSave = paths.filter((p) => {
     const file = pane.files.get(p);
     return !!file && isDirty(file);
@@ -63,7 +63,7 @@ export async function requestClose(pane: Pane, paths: string[]): Promise<boolean
   const keep = new Set(
     toSave.filter((p, i) => {
       const file = pane.files.get(p);
-      // 没存成（冲突、磁盘上没了、出错、取消），或者等回执的工夫里又改了：留着。
+      // 沒存成（衝突、磁碟上沒了、出錯、取消），或者等回執的工夫裡又改了：留著。
       return (outcomes[i] !== 'saved' && outcomes[i] !== 'skipped') || (!!file && isDirty(file));
     })
   );
@@ -72,29 +72,29 @@ export async function requestClose(pane: Pane, paths: string[]): Promise<boolean
 }
 
 function closeDialog(files: OpenFile[]) {
-  const goneNote = '磁盘上已经没有这个文件，保存会在原路径重新建一份';
+  const goneNote = '磁碟上已經沒有這個檔案，儲存會在原路徑重新建一份';
   if (files.length === 1) {
     const [file] = files;
     return {
-      title: '关闭之前要保存吗？',
-      message: `「${file.name}」有未保存的修改。`,
+      title: '關閉之前要儲存嗎？',
+      message: `「${file.name}」有未儲存的修改。`,
       detail: file.gone ? `${goneNote}。` : undefined,
       buttons: [
         { value: 'cancel' as const, label: '取消' },
-        { value: 'discard' as const, label: '不保存' },
-        { value: 'save' as const, label: '保存', primary: true },
+        { value: 'discard' as const, label: '不儲存' },
+        { value: 'save' as const, label: '儲存', primary: true },
       ],
       cancel: 'cancel' as const,
     };
   }
   return {
-    title: '关闭之前要保存吗？',
-    message: `这 ${files.length} 份有未保存的修改：`,
+    title: '關閉之前要儲存嗎？',
+    message: `這 ${files.length} 份有未儲存的修改：`,
     items: files.map((f) => ({ label: f.name, title: f.path, note: f.gone ? `（${goneNote}）` : undefined })),
     buttons: [
       { value: 'cancel' as const, label: '取消' },
-      { value: 'discard' as const, label: '全部不保存' },
-      { value: 'save' as const, label: '全部保存', primary: true },
+      { value: 'discard' as const, label: '全部不儲存' },
+      { value: 'save' as const, label: '全部儲存', primary: true },
     ],
     cancel: 'cancel' as const,
   };

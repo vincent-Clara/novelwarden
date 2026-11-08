@@ -1,9 +1,9 @@
 /*
- * 工程页「存档点…」弹窗（view/checkpoints.ts）。借 providerModal 那一层遮罩，两种形态都有，所以样式在 view 这边。
+ * 工程頁「存檔點…」彈窗（view/checkpoints.ts）。借 providerModal 那一層遮罩，兩種形態都有，所以樣式在 view 這邊。
  *
- * 比服务商弹窗宽一些：「跟现在比」那一页一行要放下路径、种类、字数与两颗按钮，560px 里路径会被挤成省略号。
- * 宽度挂在 `:has()` 上而不是开弹窗时往 `.modal` 上加类——这一层遮罩还有别人用，类加了得记着摘，中途被后端的
- * prompt 占了这一层时就摘不掉了。
+ * 比服務商彈窗寬一些：「跟現在比」那一頁一行要放下路徑、種類、字數與兩顆按鈕，560px 里路徑會被擠成省略號。
+ * 寬度掛在 `:has()` 上而不是開彈窗時往 `.modal` 上加類——這一層遮罩還有別人用，類加了得記著摘，中途被後端的
+ * prompt 佔了這一層時就摘不掉了。
  */
 
 .modal:has(> .modal-body > .cp-panel) {
@@ -53,7 +53,7 @@
   gap: 6px;
 }
 
-/* 一个存档点一行：左边时刻、手动 / 自动、备注与一行小字，右边按钮；「留住」那一格摊开时占满下面一整行。 */
+/* 一個存檔點一行：左邊時刻、手動 / 自動、備註與一行小字，右邊按鈕；「留住」那一格攤開時佔滿下面一整行。 */
 .cp-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -89,7 +89,7 @@
   color: var(--vscode-badge-foreground);
 }
 
-/* 自动的淡一些：手动的是作者自己点的，多半更要紧。 */
+/* 自動的淡一些：手動的是作者自己點的，多半更要緊。 */
 .cp-badge.is-auto {
   background: transparent;
   color: var(--vscode-descriptionForeground);
@@ -122,7 +122,7 @@
   justify-content: flex-end;
 }
 
-/* ---- 跟现在比 */
+/* ---- 跟現在比 */
 
 .cp-diff-head {
   display: flex;
@@ -209,7 +209,7 @@
   margin: 0;
 }
 
-/* 两段式按钮的第二段：换了字，也换个颜色（同表单的「写完即定稿」），看得出再点一下就动磁盘。 */
+/* 兩段式按鈕的第二段：換了字，也換個顏色（同表單的「寫完即定稿」），看得出再點一下就動磁碟。 */
 .cp-panel button.is-armed {
   background: var(--vscode-inputValidation-warningBorder, #b89500);
   border-color: var(--vscode-inputValidation-warningBorder, #b89500);

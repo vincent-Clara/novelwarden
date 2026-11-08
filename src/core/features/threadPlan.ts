@@ -1,21 +1,22 @@
+import { traditionalLabel } from '../model/labels';
 /**
- * 叙事线的计划事件随细纲走（叙事线二期，设计见 docs/design/plans/2026-10-20-narrative-threads.md「二」与「谁能写什么」）：
- * 第 N 章的细纲写入时，各条线里第 N 章的计划事件**整组换掉**；埋了一条没见过的伏笔，在它挂的那条线（挂不上就是
- * 「未归属的伏笔」）的「伏笔」末尾加一行。细纲里不再有任何关于线的小节——计划只记在线里。
+ * 敘事線的計劃事件隨細綱走（敘事線二期，設計見 docs/design/plans/2026-10-20-narrative-threads.md「二」與「誰能寫什麼」）：
+ * 第 N 章的細綱寫入時，各條線裡第 N 章的計劃事件**整組換掉**；埋了一條沒見過的伏筆，在它掛的那條線（掛不上就是
+ * 「未歸屬的伏筆」）的「伏筆」末尾加一行。細綱裡不再有任何關於線的小節——計劃只記線上裡。
  *
- * - **写入卡片上先列出来**（{@link describeThreadPlan}，第 19 条的例外清单：与「细纲带出的新角色随细纲一起建卡」同一类）；
- *   批量拆细纲没有卡片，确认框就是那一问（同新角色建卡）。
- * - **只在细纲真的写进去之后才换**：作者在覆盖审阅里放弃了的、批量里跳过已有的，那一章的计划一条不动
- *   （generation/accept.ts 只把写进去的那几章交过来）。合同里没写 `threads`（老会话里的草稿、手写的 Markdown）也不动。
- * - **外科式**：都在写之前那一刻重读（`Workspace.updateThread`），只换那几章的计划事件、只在「伏笔」末尾加行
- *   （model/threadFile.ts 的 `replacePlannedEvents` / `appendForeshadowing`）；别的章、实际事件、作者写的行一个字不动，
- *   旧版由网关存历史。
- * - 认线、认伏笔在 model/threadFile.ts 的 `resolvePlanEvents`：线的事件认不出是哪条线就丢掉，伏笔的事件跟着伏笔走，没见过的
- *   伏笔被埋了就登记成新伏笔，没埋就「收」的丢掉。没写进去的在卡片与日志里说出来（第 2 条）。
- * - **到期却没安排的伏笔**（复跑之后，`unplannedDue`）：这几章里该埋、该收的伏笔，计划里既没安排、也没写推迟的，列在卡片
- *   与日志里（批量拆细纲没有卡片，完成提示说一句「见日志」）。不调模型，也不拦人。
+ * - **寫入卡片上先列出來**（{@link describeThreadPlan}，第 19 條的例外清單：與「細綱帶出的新角色隨細綱一起建卡」同一類）；
+ *   批次拆細綱沒有卡片，確認框就是那一問（同新角色建卡）。
+ * - **只在細綱真的寫進去之後才換**：作者在覆蓋審閱裡放棄了的、批次裡跳過已有的，那一章的計劃一條不動
+ *   （generation/accept.ts 只把寫進去的那幾章交過來）。合同裡沒寫 `threads`（老會話裡的草稿、手寫的 Markdown）也不動。
+ * - **外科式**：都在寫之前那一刻重讀（`Workspace.updateThread`），只換那幾章的計劃事件、只在「伏筆」末尾加行
+ *   （model/threadFile.ts 的 `replacePlannedEvents` / `appendForeshadowing`）；別的章、實際事件、作者寫的行一個字不動，
+ *   舊版由閘道器存歷史。
+ * - 認線、認伏筆在 model/threadFile.ts 的 `resolvePlanEvents`：線的事件認不出是哪條線就丟掉，伏筆的事件跟著伏筆走，沒見過的
+ *   伏筆被埋了就登記成新伏筆，沒埋就「收」的丟掉。沒寫進去的在卡片與日誌裡說出來（第 2 條）。
+ * - **到期卻沒安排的伏筆**（復跑之後，`unplannedDue`）：這幾章裡該埋、該收的伏筆，計劃裡既沒安排、也沒寫推遲的，列在卡片
+ *   與日誌裡（批次拆細綱沒有卡片，完成提示說一句「見日誌」）。不調模型，也不攔人。
  *
- * 零调用：计划是细纲合同里顺带的一个字段（设计稿「调用次数」：+0）。
+ * 零呼叫：計劃是細綱合同裡順帶的一個欄位（設計稿「呼叫次數」：+0）。
  */
 import { scoped } from '../runtime/logger';
 import { NovelProject } from '../model/project';
@@ -41,32 +42,32 @@ import type { Artifact } from './artifact';
 
 const log = scoped('叙事线');
 
-/** 一章要写进去的计划（细纲合同里那一章的 `threads`）。 */
+/** 一章要寫進去的計劃（細綱合同裡那一章的 `threads`）。 */
 export interface ChapterPlan {
   no: number;
   entries: readonly PlanEntry[];
 }
 
-/** {@link writePlannedThreads} 的结果。 */
+/** {@link writePlannedThreads} 的結果。 */
 export interface PlanWriteOutcome {
-  /** 写进去的计划事件。 */
+  /** 寫進去的計劃事件。 */
   written: number;
-  /** 换掉的旧计划事件。 */
+  /** 換掉的舊計劃事件。 */
   removed: number;
-  /** 新登记的伏笔。 */
+  /** 新登記的伏筆。 */
   newForeshadowing: string[];
-  /** 没写进去的（解码时就没收的、认不出是哪条线的、线的文件这几秒里没了的）。 */
+  /** 沒寫進去的（解碼時就沒收的、認不出是哪條線的、線的檔案這幾秒裡沒了的）。 */
   dropped: string[];
-  /** 这几章里到期、却没安排的伏笔（复跑之后的程序检查，`unplannedDue`；不拦，只说出来）。 */
+  /** 這幾章裡到期、卻沒安排的伏筆（復跑之後的程式檢查，`unplannedDue`；不攔，只說出來）。 */
   unplanned: string[];
 }
 
-/** 落在哪条线上的键（缺席是「未归属的伏笔」，键是空串）。 */
+/** 落在哪條線上的鍵（缺席是「未歸屬的伏筆」，鍵是空串）。 */
 const lineKey = (line: string | undefined): string => (line ? threadKey(line) : '');
 
 /**
- * 把这几章的计划写进各条线：每一章整组换掉、新伏笔登记在线下。`notes` 是解码时就没收的那几条（一并记进结果与日志）。
- * 不弹框、不抛（写盘失败照常抛给调用方——细纲已经写进去了，由调用方说一句）。
+ * 把這幾章的計劃寫進各條線：每一章整組換掉、新伏筆登記線上下。`notes` 是解碼時就沒收的那幾條（一併記進結果與日誌）。
+ * 不彈框、不拋（寫盤失敗照常拋給呼叫方——細綱已經寫進去了，由呼叫方說一句）。
  */
 export async function writePlannedThreads(
   project: NovelProject,
@@ -98,11 +99,11 @@ export async function writePlannedThreads(
       await ws.updateThread(f.rel, (raw) => {
         const exists = !!raw.trim();
         if (!exists && (f.line || (fresh === 0 && fores.length === 0))) {
-          // 线的文件这几秒里没了；「未归属的伏笔」没有、也没有要写的，就不建。
+          // 線的檔案這幾秒裡沒了；「未歸屬的伏筆」沒有、也沒有要寫的，就不建。
           gone = !!f.line && fresh + fores.length > 0;
           return undefined;
         }
-        // 先登记伏笔再写事件：事件里出现过的名字会被当成已经有了（appendForeshadowing 的去重口径）。
+        // 先登記伏筆再寫事件：事件裡出現過的名字會被當成已經有了（appendForeshadowing 的去重口徑）。
         const withFore = appendForeshadowing(exists ? raw : UNFILED_TEMPLATE, fores);
         added = withFore.added;
         let text = withFore.text;
@@ -116,7 +117,7 @@ export async function writePlannedThreads(
         return text;
       });
       if (gone) {
-        out.dropped.push(`${f.line} 上的 ${fresh + fores.length} 条（这条线的文件找不到了，改了名或删了）`);
+        out.dropped.push(`${f.line} 上的 ${fresh + fores.length} 條（這條線的檔案找不到了，改了名或刪了）`);
       }
       out.written += written;
       out.removed += removed;
@@ -126,38 +127,38 @@ export async function writePlannedThreads(
   const where = chapters.length === 1 ? `第 ${chapters[0].no} 章` : `${chapters.length} 章`;
   if (out.written + out.removed + out.newForeshadowing.length > 0) {
     log.info(
-      `${where}的叙事线计划已写进各条线`,
-      `写进 ${out.written} 条，换掉原来的 ${out.removed} 条${out.newForeshadowing.length > 0 ? `，新伏笔 ${out.newForeshadowing.join('、')}` : ''}`
+      `${where}的敘事線計劃已寫進各條線`,
+      `寫進 ${out.written} 條，換掉原來的 ${out.removed} 條${out.newForeshadowing.length > 0 ? `，新伏筆 ${out.newForeshadowing.join('、')}` : ''}`
     );
   }
   if (out.dropped.length > 0) {
-    log.warn(`${where}的叙事线计划有 ${out.dropped.length} 条没写进去`, out.dropped.join('\n'));
+    log.warn(`${where}的敘事線計劃有 ${out.dropped.length} 條沒寫進去`, out.dropped.join('\n'));
   }
   if (out.unplanned.length > 0) {
-    log.warn(`${where}里到期的伏笔有 ${out.unplanned.length} 条没安排（既没埋 / 收，也没写推迟）`, out.unplanned.join('\n'));
+    log.warn(`${where}裡到期的伏筆有 ${out.unplanned.length} 條沒安排（既沒埋 / 收，也沒寫推遲）`, out.unplanned.join('\n'));
   }
   return out;
 }
 
-/** 写入之后 toast 里那半句：「，叙事线记下 5 条计划（换掉原来的 2 条），新伏笔：玉佩的来历；1 条没写进叙事线（见日志）」。 */
+/** 寫入之後 toast 裡那半句：「，敘事線記下 5 條計劃（換掉原來的 2 條），新伏筆：玉佩的來歷；1 條沒寫進敘事線（見日誌）」。 */
 export function describePlanWrite(o: PlanWriteOutcome): string {
   const parts = [
-    o.written > 0 || o.removed > 0 ? `叙事线记下 ${o.written} 条计划${o.removed > 0 ? `（换掉原来的 ${o.removed} 条）` : ''}` : '',
-    o.newForeshadowing.length > 0 ? `新伏笔：${o.newForeshadowing.join('、')}` : '',
-    o.dropped.length > 0 ? `${o.dropped.length} 条计划没写进叙事线（见日志）` : '',
-    o.unplanned.length > 0 ? `${o.unplanned.length} 条到期的伏笔没安排（见日志）` : '',
+    o.written > 0 || o.removed > 0 ? `敘事線記下 ${o.written} 條計劃${o.removed > 0 ? `（換掉原來的 ${o.removed} 條）` : ''}` : '',
+    o.newForeshadowing.length > 0 ? `新伏筆：${o.newForeshadowing.join('、')}` : '',
+    o.dropped.length > 0 ? `${o.dropped.length} 條計劃沒寫進敘事線（見日誌）` : '',
+    o.unplanned.length > 0 ? `${o.unplanned.length} 條到期的伏筆沒安排（見日誌）` : '',
   ].filter(Boolean);
   return parts.length > 0 ? `，${parts.join('，')}` : '';
 }
 
-/** 没写进去的那几条：`第 13 章 某线 推进（认不出是哪一条线）`。 */
+/** 沒寫進去的那幾條：`第 13 章 某線 推進（認不出是哪一條線）`。 */
 function droppedOf(planned: readonly PlannedChapter[]): string[] {
   return planned.flatMap((c) => c.dropped.map((d) => `第 ${c.no} 章 ${d.what}（${d.why}）`));
 }
 
 /**
- * 产物里要写进叙事线的计划：细纲批次是各章的 `threads`，单章细纲（生成、落定）是它那一份（章号按落点认，同
- * generation/accept.ts 的 `acceptPlot`）。合同里没写 `threads` 的章不算。别的产物没有。
+ * 產物裡要寫進敘事線的計劃：細綱批次是各章的 `threads`，單章細綱（生成、落定）是它那一份（章號按落點認，同
+ * generation/accept.ts 的 `acceptPlot`）。合同裡沒寫 `threads` 的章不算。別的產物沒有。
  */
 export async function planOfArtifact(
   project: NovelProject,
@@ -177,16 +178,16 @@ export async function planOfArtifact(
 }
 
 /**
- * 写入卡片上的那几行（第 19 条的例外：先列出来）。照此刻磁盘上的叙事线认一遍（与写入时同一个 `resolvePlanEvents`）：
+ * 寫入卡片上的那幾行（第 19 條的例外：先列出來）。照此刻磁碟上的敘事線認一遍（與寫入時同一個 `resolvePlanEvents`）：
  *
  * ```
- * 叙事线计划：林昭与沈青 推进；埋〈玉佩的来历〉（新伏笔，挂在「林昭与沈青」）（原来的 2 条整组换掉）
- * 没写进叙事线的：第 3 章 某线 推进（认不出是哪一条线）
- * 到期却没安排的伏笔：〈旧伤〉（第 5 章前收）——这一批既没安排、也没写推迟（照写不拦，写前检查还会提醒）
+ * 敘事線計劃：林昭與沈青 推進；埋〈玉佩的來歷〉（新伏筆，掛在「林昭與沈青」）（原來的 2 條整組換掉）
+ * 沒寫進敘事線的：第 3 章 某線 推進（認不出是哪一條線）
+ * 到期卻沒安排的伏筆：〈舊傷〉（第 5 章前收）——這一批既沒安排、也沒寫推遲（照寫不攔，寫前檢查還會提醒）
  * ```
  *
- * 一批几章时一章一行。合同里没写 `threads` 的产物没有这几行。最后一行是复跑之后加的程序检查（`unplannedDue`，不调模型、
- * 不拦人）：模型只排「推进」、到期该埋该收的伏笔没安排，作者在卡片上看得见，可以先改细纲再写入。
+ * 一批幾章時一章一行。合同裡沒寫 `threads` 的產物沒有這幾行。最後一行是復跑之後加的程式檢查（`unplannedDue`，不調模型、
+ * 不攔人）：模型只排「推進」、到期該埋該收的伏筆沒安排，作者在卡片上看得見，可以先改細綱再寫入。
  */
 export async function describeThreadPlan(project: NovelProject, target: CreationTarget, artifact: Artifact): Promise<string[]> {
   const plan = await planOfArtifact(project, target, artifact);
@@ -201,22 +202,22 @@ export async function describeThreadPlan(project: NovelProject, target: Creation
     .map((c) => {
       const body =
         c.events.length > 0
-          ? `${chapterPlanText(c)}${c.replaced > 0 ? `（原来的 ${c.replaced} 条整组换掉）` : ''}`
-          : `没有计划（原来的 ${c.replaced} 条删掉）`;
+          ? `${chapterPlanText(c)}${c.replaced > 0 ? `（原來的 ${c.replaced} 條整組換掉）` : ''}`
+          : `沒有計劃（原來的 ${c.replaced} 條刪掉）`;
       return single ? body : `第 ${c.no} 章：${body}`;
     });
   const dropped = [...plan.notes, ...droppedOf(planned)];
   const unplanned = unplannedDue(book, plan.chapters).map(describeUnplannedDue);
   return [
-    ...(rows.length > 0 ? [single ? `叙事线计划：${rows[0]}` : `叙事线计划：\n${rows.join('\n')}`] : []),
-    ...(dropped.length > 0 ? [`没写进叙事线的：${dropped.join('；')}`] : []),
+    ...(rows.length > 0 ? [single ? `敘事線計劃：${rows[0]}` : `敘事線計劃：\n${rows.join('\n')}`] : []),
+    ...(dropped.length > 0 ? [`沒寫進敘事線的：${dropped.join('；')}`] : []),
     ...(unplanned.length > 0
-      ? [`到期却没安排的伏笔：${unplanned.join('、')}——${single ? '本章' : '这一批'}既没安排、也没写推迟（照写不拦，写前检查还会提醒）`]
+      ? [`到期卻沒安排的伏筆：${unplanned.join('、')}——${single ? '本章' : '這一批'}既沒安排、也沒寫推遲（照寫不攔，寫前檢查還會提醒）`]
       : []),
   ];
 }
 
-/** 一章的计划：`林昭与沈青 推进、关系；埋〈玉佩的来历〉（新伏笔，挂在「林昭与沈青」）；收〈旧伤〉`。 */
+/** 一章的計劃：`林昭與沈青 推進、關係；埋〈玉佩的來歷〉（新伏筆，掛在「林昭與沈青」）；收〈舊傷〉`。 */
 function chapterPlanText(c: PlannedChapter): string {
   const byLine = new Map<string, { line: string; types: string[] }>();
   const fores: string[] = [];
@@ -224,8 +225,8 @@ function chapterPlanText(c: PlannedChapter): string {
   for (const { line, event } of c.events) {
     if (isForeshadowEvent(event.type)) {
       const key = threadKey(event.foreshadowing ?? '');
-      const note = fresh.has(key) ? `（新伏笔，${fresh.get(key) ? `挂在「${fresh.get(key)}」` : `进「${UNFILED_NAME}」`}）` : '';
-      fores.push(`${event.type}〈${event.foreshadowing}〉${note}`);
+      const note = fresh.has(key) ? `（新伏筆，${fresh.get(key) ? `掛在「${fresh.get(key)}」` : `進「${UNFILED_NAME}」`}）` : '';
+      fores.push(`${traditionalLabel(event.type)}〈${event.foreshadowing}〉${note}`);
       continue;
     }
     const entry = byLine.get(lineKey(line)) ?? { line: line ?? UNFILED_NAME, types: [] };
@@ -234,5 +235,5 @@ function chapterPlanText(c: PlannedChapter): string {
     }
     byLine.set(lineKey(line), entry);
   }
-  return [...[...byLine.values()].map((x) => `${x.line} ${x.types.join('、')}`), ...fores].join('；');
+  return [...[...byLine.values()].map((x) => `${x.line} ${x.types.map(traditionalLabel).join('、')}`), ...fores].join('；');
 }

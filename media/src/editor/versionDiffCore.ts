@@ -1,34 +1,34 @@
 /**
- * 「版本」对比标签的纯函数（`versionDiff.ts` 用，**零 DOM、零 import**，单测直接跑）：两版按行比、一处改动里逐字标出
- * 删了什么加了什么、「用回这一处」该把现在这份的哪一截换成什么。
+ * 「版本」對比標籤的純函式（`versionDiff.ts` 用，**零 DOM、零 import**，單測直接跑）：兩版按行比、一處改動裡逐字標出
+ * 刪了什麼加了什麼、「用回這一處」該把現在這份的哪一截換成什麼。
  *
  * ## 按行比，不按空行切段
  *
- * 合并视图（`model/paragraphDiff.ts`）按空行切段：「段首缩进」格式的书段与段之间没有空行，整章会切成一段。这里按行
- * 比——三种分段格式里一行都是一段。**空行不算行，行首行尾的空白不算不同**（VS Code 的 diff 缺省也忽略首尾空白）：
- * 一键排版补上的缩进、多一个空行不是作者要找的改动；两版只差这些时界面上照实说「只有空白不同」（{@link onlyWhitespace}）。
+ * 合併檢視（`model/paragraphDiff.ts`）按空行切段：「段首縮排」格式的書段與段之間沒有空行，整章會切成一段。這裡按行
+ * 比——三種分段格式裡一行都是一段。**空行不算行，行首行尾的空白不算不同**（VS Code 的 diff 預設也忽略首尾空白）：
+ * 一鍵排版補上的縮排、多一個空行不是作者要找的改動；兩版只差這些時介面上照實說「只有空白不同」（{@link onlyWhitespace}）。
  *
  * ## Myers
  *
- * 最短编辑脚本（Myers 1986），先去掉两头相同的行。编辑步数超过上限（{@link MAX_LINE_EDITS}）就不再找，中间那一截整个
- * 当一处改动——整章重写时找最短脚本既慢又没意义。一处改动里逐字比也是它（按码点，上限 {@link MAX_CHAR_EDITS}，
- * 超了就只标整行），比完把夹在两处改动中间的一两个字并进改动：中文没有词界，「的」「了」这种碰巧相同的单字会把
- * 一句改写切成碎片。
+ * 最短編輯指令碼（Myers 1986），先去掉兩頭相同的行。編輯步數超過上限（{@link MAX_LINE_EDITS}）就不再找，中間那一截整個
+ * 當一處改動——整章重寫時找最短指令碼既慢又沒意義。一處改動裡逐字比也是它（按碼點，上限 {@link MAX_CHAR_EDITS}，
+ * 超了就只標整行），比完把夾在兩處改動中間的一兩個字並進改動：中文沒有詞界，「的」「了」這種碰巧相同的單字會把
+ * 一句改寫切成碎片。
  *
  * ## 位置
  *
- * 两边先把 `\r\n` / `\r` 归一成 `\n`（textarea 的 `value` 就是这样），所有下标按归一后的文字算——与编辑区
- * `area.value` 同一套，{@link revertEdit} 给的范围可以直接交给 `Pane.applyEdit`。
+ * 兩邊先把 `\r\n` / `\r` 歸一成 `\n`（textarea 的 `value` 就是這樣），所有下標按歸一後的文字算——與編輯區
+ * `area.value` 同一套，{@link revertEdit} 給的範圍可以直接交給 `Pane.applyEdit`。
  */
 
-/** 一行（不算空行）：在全文里的 `[start, end)`（不含换行）。 */
+/** 一行（不算空行）：在全文裡的 `[start, end)`（不含換行）。 */
 export interface DiffLine {
   start: number;
   end: number;
   text: string;
 }
 
-/** 连着的一截：两边一样的几行，或一处改动（左边删掉的几行、右边加上的几行，可以一边是空的）。行号是 `[from, to)`。 */
+/** 連著的一截：兩邊一樣的幾行，或一處改動（左邊刪掉的幾行、右邊加上的幾行，可以一邊是空的）。行號是 `[from, to)`。 */
 export interface DiffBlock {
   kind: 'same' | 'change';
   left: [number, number];
@@ -36,28 +36,28 @@ export interface DiffBlock {
 }
 
 export interface LineDiff {
-  /** 归一换行之后的两份全文。 */
+  /** 歸一換行之後的兩份全文。 */
   before: string;
   after: string;
   left: DiffLine[];
   right: DiffLine[];
   blocks: DiffBlock[];
-  /** 几处改动。 */
+  /** 幾處改動。 */
   changes: number;
 }
 
-/** 行级编辑步数的上限：超了中间整个当一处。 */
+/** 行級編輯步數的上限：超了中間整個當一處。 */
 export const MAX_LINE_EDITS = 2000;
-/** 一处改动里逐字比的编辑步数上限：超了只标整行。 */
+/** 一處改動裡逐字比的編輯步數上限：超了只標整行。 */
 export const MAX_CHAR_EDITS = 1200;
-/** 夹在两处改动中间、并进改动的相同文字最多几个字。 */
+/** 夾在兩處改動中間、並進改動的相同文字最多幾個字。 */
 const NOISE_CHARS = 2;
 
 export function normalizeEol(text: string): string {
   return text.includes('\r') ? text.replace(/\r\n?/g, '\n') : text;
 }
 
-/** 全文里的非空行（只有空白的行也不算）。 */
+/** 全文裡的非空行（只有空白的行也不算）。 */
 export function textLines(text: string): DiffLine[] {
   const out: DiffLine[] = [];
   let start = 0;
@@ -77,10 +77,10 @@ export function textLines(text: string): DiffLine[] {
 
 // ---------------------------------------------------------------- Myers
 
-/** 0 两边一样（各进一步），1 删掉左边一个，2 加上右边一个。 */
+/** 0 兩邊一樣（各進一步），1 刪掉左邊一個，2 加上右邊一個。 */
 type Op = 0 | 1 | 2;
 
-/** `a` → `b` 的最短编辑脚本；步数超过 `maxD` 给 undefined。 */
+/** `a` → `b` 的最短編輯指令碼；步數超過 `maxD` 給 undefined。 */
 function editScript<T>(a: readonly T[], b: readonly T[], maxD: number): Op[] | undefined {
   const n = a.length;
   const m = b.length;
@@ -90,7 +90,7 @@ function editScript<T>(a: readonly T[], b: readonly T[], maxD: number): Op[] | u
   }
   const off = max + 1;
   const v = new Int32Array(2 * max + 3);
-  // 第 d 步开始时存下第 d-1 步的结果（只存这一步用得到的 [-d-1, d+1] 那一截），倒推时认它。
+  // 第 d 步開始時存下第 d-1 步的結果（只存這一步用得到的 [-d-1, d+1] 那一截），倒推時認它。
   const trace: Int32Array[] = [];
   for (let d = 0; d <= max; d++) {
     if (d > maxD) {
@@ -148,7 +148,7 @@ function backtrack(trace: Int32Array[], last: number, n: number, m: number): Op[
 
 // ---------------------------------------------------------------- 按行
 
-/** 两版按行比。空行不算，行首行尾的空白不算不同。 */
+/** 兩版按行比。空行不算，行首行尾的空白不算不同。 */
 export function diffLines(beforeText: string, afterText: string): LineDiff {
   const before = normalizeEol(beforeText);
   const after = normalizeEol(afterText);
@@ -157,7 +157,7 @@ export function diffLines(beforeText: string, afterText: string): LineDiff {
   const ka = left.map((l) => l.text.trim());
   const kb = right.map((l) => l.text.trim());
 
-  // 两头一样的先去掉，只在中间那一截上找。
+  // 兩頭一樣的先去掉，只在中間那一截上找。
   let head = 0;
   while (head < ka.length && head < kb.length && ka[head] === kb[head]) {
     head++;
@@ -193,12 +193,12 @@ export function diffLines(beforeText: string, afterText: string): LineDiff {
   return { before, after, left, right, blocks, changes: blocks.filter((b) => b.kind === 'change').length };
 }
 
-/** 两版文字不一样，但按行比没有一处改动：只差空行、行首行尾的空白（缩进）。 */
+/** 兩版文字不一樣，但按行比沒有一處改動：只差空行、行首行尾的空白（縮排）。 */
 export function onlyWhitespace(diff: LineDiff): boolean {
   return diff.changes === 0 && diff.before !== diff.after;
 }
 
-/** 一处改动两边各自的文字：那几行原样（行首空白也在），行与行之间一个换行。 */
+/** 一處改動兩邊各自的文字：那幾行原樣（行首空白也在），行與行之間一個換行。 */
 export function blockText(diff: LineDiff, block: DiffBlock, side: 'left' | 'right'): string {
   const lines = side === 'left' ? diff.left : diff.right;
   const [from, to] = block[side];
@@ -210,17 +210,17 @@ export function blockText(diff: LineDiff, block: DiffBlock, side: 'left' | 'righ
 
 // ---------------------------------------------------------------- 逐字
 
-/** 一处改动里两边逐字比：左边删掉的、右边加上的各是哪几截（下标按 {@link blockText} 那段文字，UTF-16）。 */
+/** 一處改動裡兩邊逐字比：左邊刪掉的、右邊加上的各是哪幾截（下標按 {@link blockText} 那段文字，UTF-16）。 */
 export interface CharMarks {
   left: [number, number][];
   right: [number, number][];
 }
 
-/** 逐字比。太长、改得太多（超过上限）给 undefined：只标整行。 */
+/** 逐字比。太長、改得太多（超過上限）給 undefined：只標整行。 */
 export function charDiff(a: string, b: string): CharMarks | undefined {
   const ca = Array.from(a);
   const cb = Array.from(b);
-  // 两头一样的先去掉。
+  // 兩頭一樣的先去掉。
   let head = 0;
   while (head < ca.length && head < cb.length && ca[head] === cb[head]) {
     head++;
@@ -235,7 +235,7 @@ export function charDiff(a: string, b: string): CharMarks | undefined {
   }
   const ops = absorbNoise([...Array<Op>(head).fill(0), ...script, ...Array<Op>(tail).fill(0)]);
 
-  // 码点 → UTF-16 下标。
+  // 碼點 → UTF-16 下標。
   const units = (chars: string[]) => {
     const at = [0];
     for (const c of chars) {
@@ -271,7 +271,7 @@ export function charDiff(a: string, b: string): CharMarks | undefined {
   return marks;
 }
 
-/** 夹在两处改动中间、不超过 {@link NOISE_CHARS} 个字的相同文字：两边都当改了（先删后加）。 */
+/** 夾在兩處改動中間、不超過 {@link NOISE_CHARS} 個字的相同文字：兩邊都當改了（先刪後加）。 */
 function absorbNoise(ops: Op[]): Op[] {
   const runs: { op: Op; len: number }[] = [];
   for (const op of ops) {
@@ -294,9 +294,9 @@ function absorbNoise(ops: Op[]): Op[] {
   return out;
 }
 
-// ---------------------------------------------------------------- 用回这一处
+// ---------------------------------------------------------------- 用回這一處
 
-/** 对右边（现在这份）全文的一次替换：把 `[start, end)` 换成 `text`。 */
+/** 對右邊（現在這份）全文的一次替換：把 `[start, end)` 換成 `text`。 */
 export interface TextEdit {
   start: number;
   end: number;
@@ -304,10 +304,10 @@ export interface TextEdit {
 }
 
 /**
- * 「用回这一处」：把右边这一处换回左边那样。换的是右边那几行连同它们之间的分隔；左边那几行连同它们之间原来的分隔原样搬过来。
- * - 两边都有：右边第一行行首到最后一行行尾，换成左边第一行行首到最后一行行尾。
- * - 只有右边（现在多出来的）：连同它前面那道分隔一起删（在开头就连同后面那道）。
- * - 只有左边（现在少了的）：插在右边前一行之后，前面补上左边原来的那道分隔（在开头就插在右边第一行之前，后面补分隔）。
+ * 「用回這一處」：把右邊這一處換回左邊那樣。換的是右邊那幾行連同它們之間的分隔；左邊那幾行連同它們之間原來的分隔原樣搬過來。
+ * - 兩邊都有：右邊第一行行首到最後一行行尾，換成左邊第一行行首到最後一行行尾。
+ * - 只有右邊（現在多出來的）：連同它前面那道分隔一起刪（在開頭就連同後面那道）。
+ * - 只有左邊（現在少了的）：插在右邊前一行之後，前面補上左邊原來的那道分隔（在開頭就插在右邊第一行之前，後面補分隔）。
  */
 export function revertEdit(diff: LineDiff, block: DiffBlock): TextEdit {
   const { left, right, before, after } = diff;
@@ -323,7 +323,7 @@ export function revertEdit(diff: LineDiff, block: DiffBlock): TextEdit {
     }
     return { start: right[j1].start, end: j2 < right.length ? right[j2].start : right[j2 - 1].end, text: '' };
   }
-  // 只有左边：现在少了这几行，插回去。
+  // 只有左邊：現在少了這幾行，插回去。
   const sepBefore = i1 > 0 ? before.slice(left[i1 - 1].end, left[i1].start) : '\n';
   const sepAfter = i2 < left.length ? before.slice(left[i2 - 1].end, left[i2].start) : '\n';
   if (j1 > 0) {

@@ -1,20 +1,20 @@
 /**
- * 跟着文字实时重算的高亮图层共用的那一套：写作体检的 `check`（`check.ts`）与名词高亮的 `names`（`nameMarks.ts`）。
- * 各层只说两件事——这份文件归不归它管（看后端给的 `kind`）、这份文字现在该画哪几段；什么时候重算、改了字之后
- * 画着的那几段怎么跟上、输入法组字中途怎么办、长文字怎么节流，都在这里，两层一个口径。
+ * 跟著文字實時重算的高亮圖層共用的那一套：寫作體檢的 `check`（`check.ts`）與名詞高亮的 `names`（`nameMarks.ts`）。
+ * 各層只說兩件事——這份檔案歸不歸它管（看後端給的 `kind`）、這份文字現在該畫哪幾段；什麼時候重算、改了字之後
+ * 畫著的那幾段怎麼跟上、輸入法組字中途怎麼辦、長文字怎麼節流，都在這裡，兩層一個口徑。
  *
- * ## 几万字的章节每敲一下也不卡
+ * ## 幾萬字的章節每敲一下也不卡
  *
- * 1. 找词由各层自己做（`locateTerms` 是一趟扫描，不是「词数 × 全文」），各层按「查过的是哪一份文字」缓存。
- * 2. 两万字以内（{@link LIVE_SYNC_LIMIT}）：改了字之后在**微任务**里重算（`highlight.ts` 的同步订阅先把各层平移完、
- *    压在改动上的丢掉，之后才轮到这里落新的一份；浏览器两次绘制之间只画一次）。更长的：至多每 300ms
- *    （{@link LIVE_RECHECK_MS}）重算一次（尾随），其间已经画着的那几段跟着改动平移（`highlight.ts` 自己做），
- *    只是新冒出来的词晚一点标出来。
- * 3. 重算的结果与镜像层上此刻画着的一模一样（多数按键都是这样）就不再画一遍。
- * 4. **输入法组字中途不重算**：拼音字母不该被当成英文词，计数也不该跟着拼音跳；已经画着的那几段按组字前后的文字差
- *    挪到新位置（`diffChange`），不乱跳。上屏（`compositionend`）之后再算。撤销 / 重做同样先挪、再算。
+ * 1. 找詞由各層自己做（`locateTerms` 是一趟掃描，不是「詞數 × 全文」），各層按「查過的是哪一份文字」快取。
+ * 2. 兩萬字以內（{@link LIVE_SYNC_LIMIT}）：改了字之後在**微任務**裡重算（`highlight.ts` 的同步訂閱先把各層平移完、
+ *    壓在改動上的丟掉，之後才輪到這裡落新的一份；瀏覽器兩次繪製之間只畫一次）。更長的：至多每 300ms
+ *    （{@link LIVE_RECHECK_MS}）重算一次（尾隨），其間已經畫著的那幾段跟著改動平移（`highlight.ts` 自己做），
+ *    只是新冒出來的詞晚一點標出來。
+ * 3. 重算的結果與映象層上此刻畫著的一模一樣（多數按鍵都是這樣）就不再畫一遍。
+ * 4. **輸入法組字中途不重算**：拼音字母不該被當成英文詞，計數也不該跟著拼音跳；已經畫著的那幾段按組字前後的文字差
+ *    挪到新位置（`diffChange`），不亂跳。上屏（`compositionend`）之後再算。撤銷 / 重做同樣先挪、再算。
  *
- * 镜像层本身是各图层共用的（`highlight.ts`，按行分块、改一行只重排一行）；超过 30 万字不画，各层自己决定说不说。
+ * 映象層本身是各圖層共用的（`highlight.ts`，按行分塊、改一行只重排一行）；超過 30 萬字不畫，各層自己決定說不說。
  */
 import { onEditorChange } from './api';
 import type { OpenFile, Pane } from './api';
@@ -24,52 +24,52 @@ import type { HighlightRange } from './highlight';
 import type { TextChange } from './history';
 import { panes } from './store';
 
-/** 这么长以内的文字改了字就当场（微任务里）重算；更长的节流。与码字统计的 `SYNC_COUNT_LIMIT` 同一条线。 */
+/** 這麼長以內的文字改了字就當場（微任務裡）重算；更長的節流。與碼字統計的 `SYNC_COUNT_LIMIT` 同一條線。 */
 export const LIVE_SYNC_LIMIT = 20_000;
-/** 长文字至多这么久重算一次。 */
+/** 長文字至多這麼久重算一次。 */
 export const LIVE_RECHECK_MS = 300;
 
-/** 编辑区里显示的那一份（textarea 把 `\r\n` 归一成 `\n`，位置都按它算）。 */
+/** 編輯區裡顯示的那一份（textarea 把 `\r\n` 歸一成 `\n`，位置都按它算）。 */
 export function shownText(file: OpenFile): string {
   return file.draft.includes('\r') ? file.draft.replace(/\r\n?/g, '\n') : file.draft;
 }
 
 export interface LiveLayerSpec {
-  /** 高亮镜像层上的图层名。 */
+  /** 高亮映象層上的圖層名。 */
   layer: string;
-  /** 这份文件归不归这一层管。不归的不算、画着的清掉。看后端给的 `kind`，前端不拿路径猜。 */
+  /** 這份檔案歸不歸這一層管。不歸的不算、畫著的清掉。看後端給的 `kind`，前端不拿路徑猜。 */
   applies(file: OpenFile): boolean;
-  /** 这份文字现在该画的那几段（只对归它管的文件调；不画就给空数组）。 */
+  /** 這份文字現在該畫的那幾段（只對歸它管的檔案調；不畫就給空陣列）。 */
   ranges(file: OpenFile, text: string): HighlightRange[];
-  /** 每算完一次（含当前文件不归它管、什么都不画的时候）。 */
+  /** 每算完一次（含當前檔案不歸它管、什麼都不畫的時候）。 */
   checked?(pane: Pane): void;
-  /** `render` 时文件、种类、文字都没变（保存回执、切标签条之类）。 */
+  /** `render` 時檔案、種類、文字都沒變（儲存回執、切標籤條之類）。 */
   rendered?(pane: Pane): void;
 }
 
 export interface LiveLayer {
-  /** 现在就按当前文字重算、重画（不节流）。 */
+  /** 現在就按當前文字重算、重畫（不節流）。 */
   checkNow(pane: Pane): void;
-  /** 两块编辑区都当场重算（词表、偏好变了）。`force`：与画着的一样也重画一遍。 */
+  /** 兩塊編輯區都當場重算（詞表、偏好變了）。`force`：與畫著的一樣也重畫一遍。 */
   recheckAll(force?: boolean): void;
-  /** 这块编辑区正在输入法组字。 */
+  /** 這塊編輯區正在輸入法組字。 */
   composing(pane: Pane): boolean;
 }
 
 interface PaneState {
-  /** 下面几样是给哪个文件记的。当前路径变了就作废（`highlight.ts` 换文件时清掉所有图层）。 */
+  /** 下面幾樣是給哪個檔案記的。當前路徑變了就作廢（`highlight.ts` 換檔案時清掉所有圖層）。 */
   path: string | null;
-  /** 镜像层这一层上此刻画着的那几段（照 `highlight.ts` 的规则跟着改动平移）。 */
+  /** 映象層這一層上此刻畫著的那幾段（照 `highlight.ts` 的規則跟著改動平移）。 */
   painted: HighlightRange[];
-  /** `painted` 对应的是哪一份文字。 */
+  /** `painted` 對應的是哪一份文字。 */
   text: string;
-  /** 镜像层上那一份与 `painted` 对不上了（撤销、组字中途、上屏：`highlight.ts` 没平移或平移的不是这一份），下次必须重画。 */
+  /** 映象層上那一份與 `painted` 對不上了（撤銷、組字中途、上屏：`highlight.ts` 沒平移或平移的不是這一份），下次必須重畫。 */
   dirty: boolean;
-  /** 输入法组字中。 */
+  /** 輸入法組字中。 */
   composing: boolean;
-  /** 上一次算的时候当前文件归不归这一层（保存回执换了 `kind` 时据此重算）。 */
+  /** 上一次算的時候當前檔案歸不歸這一層（儲存回執換了 `kind` 時據此重算）。 */
   applies: boolean;
-  /** 长文字的节流。 */
+  /** 長文字的節流。 */
   timer?: ReturnType<typeof setTimeout>;
   checkedAt: number;
 }
@@ -93,7 +93,7 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
     }
   }
 
-  /** 把 `want` 画到这一层上（与此刻画着的一样、又没弄脏就不画）。 */
+  /** 把 `want` 畫到這一層上（與此刻畫著的一樣、又沒弄髒就不畫）。 */
   function paint(pane: Pane, st: PaneState, want: HighlightRange[], text: string): void {
     st.text = text;
     if (!st.dirty && sameRanges(st.painted, want)) {
@@ -122,7 +122,7 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
     spec.checked?.(pane);
   }
 
-  /** 只把已经挪过位置的那几段画上去（组字中途、长文字节流的空档里），不重算。 */
+  /** 只把已經挪過位置的那幾段畫上去（組字中途、長文位元組流的空檔裡），不重算。 */
   function displayNow(pane: Pane): void {
     const st = stateOf(pane);
     if (st.dirty && st.path === pane.activePath) {
@@ -130,7 +130,7 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
     }
   }
 
-  /** 换了文件：镜像层那边已经（或马上就会）清掉所有图层。 */
+  /** 換了檔案：映象層那邊已經（或馬上就會）清掉所有圖層。 */
   function resetFor(pane: Pane, st: PaneState): void {
     clearTimer(st);
     st.path = pane.activePath;
@@ -140,7 +140,7 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
     st.dirty = false;
   }
 
-  /** 同一轮里攒着要做的：`check` 重算（盖过 `display`）、`display` 只画挪过位置的那几段。 */
+  /** 同一輪裡攢著要做的：`check` 重算（蓋過 `display`）、`display` 只畫挪過位置的那幾段。 */
   const pending = new Map<Pane, 'check' | 'display'>();
 
   function soon(pane: Pane, kind: 'check' | 'display'): void {
@@ -162,7 +162,7 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
     }
   }
 
-  /** 改了字之后什么时候重算（见文件头「几万字的章节每敲一下也不卡」）。 */
+  /** 改了字之後什麼時候重算（見檔案頭「幾萬字的章節每敲一下也不卡」）。 */
   function schedule(pane: Pane, st: PaneState, length: number): void {
     if (st.composing) {
       if (st.dirty) {
@@ -188,11 +188,11 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
     }
   }
 
-  /** 一处改动之后：先让「此刻画着的」跟上，再安排重算。 */
+  /** 一處改動之後：先讓「此刻畫著的」跟上，再安排重算。 */
   function onEdit(pane: Pane, file: OpenFile, change: TextChange | undefined): void {
     const st = stateOf(pane);
     if (!spec.applies(file) && !st.applies && st.painted.length === 0) {
-      // 不归这一层管：什么都没画，也不用算（几 MB 的 json 每敲一下不必过这一趟）。
+      // 不歸這一層管：什麼都沒畫，也不用算（幾 MB 的 json 每敲一下不必過這一趟）。
       return;
     }
     if (st.path !== pane.activePath) {
@@ -207,10 +207,10 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
       st.text.length - change.removed.length + change.inserted.length === after.length &&
       st.text.slice(change.at, change.at + change.removed.length) === change.removed
     ) {
-      // 与 highlight.ts 平移图层同一条规则：它那一份与这里记的仍然一样，不必重画。
+      // 與 highlight.ts 平移圖層同一條規則：它那一份與這裡記的仍然一樣，不必重畫。
       st.painted = shiftRanges(st.painted, change);
     } else {
-      // 撤销 / 重做、组字中途、上屏（改动是对着组字之前那一份算的）：按前后文字差挪，镜像层那一份必须重画。
+      // 撤銷 / 重做、組字中途、上屏（改動是對著組字之前那一份算的）：按前後文字差挪，映象層那一份必須重畫。
       const d = diffChange(st.text, after);
       if (d) {
         st.painted = shiftRanges(st.painted, d);
@@ -231,7 +231,7 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
     pane.area.addEventListener('compositionstart', () => {
       stateOf(pane).composing = true;
     });
-    // pane.ts 自己的 compositionend 先跑（它先挂），上屏那一下的 `edit` 已经发过了；这里收尾、安排重算。
+    // pane.ts 自己的 compositionend 先跑（它先掛），上屏那一下的 `edit` 已經發過了；這裡收尾、安排重算。
     pane.area.addEventListener('compositionend', () => {
       const st = stateOf(pane);
       st.composing = false;
@@ -249,14 +249,14 @@ export function createLiveLayer(spec: LiveLayerSpec): LiveLayer {
       const st = stateOf(pane);
       const file = pane.activeFile();
       if (st.path !== pane.activePath) {
-        // 换了文件、关了标签：当场按新文件画（各层有缓存的不重找）。
+        // 換了檔案、關了標籤：當場按新檔案畫（各層有快取的不重找）。
         resetFor(pane, st);
         checkNow(pane);
       } else if ((!!file && spec.applies(file)) !== st.applies) {
-        // 同一个文件换了 `kind`（保存回执带来的）：归不归这一层变了，重算。
+        // 同一個檔案換了 `kind`（儲存回執帶來的）：歸不歸這一層變了，重算。
         checkNow(pane);
       } else if (file && st.text !== shownText(file)) {
-        // 同一个文件、文字却换了（没改过的标签被磁盘上的新版换掉）：先挪、再算。
+        // 同一個檔案、文字卻換了（沒改過的標籤被磁碟上的新版換掉）：先挪、再算。
         onEdit(pane, file, undefined);
       } else {
         spec.rendered?.(pane);

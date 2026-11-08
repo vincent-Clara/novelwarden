@@ -13,24 +13,24 @@ import type {
 } from '../protocol';
 
 /**
- * 「转到…」（独立版 Ctrl+P）的索引：章节、角色卡、设定条目、架构几件与大纲 / 文风 / 叙事线 / 全文大纲、草稿。
+ * 「轉到…」（獨立版 Ctrl+P）的索引：章節、角色卡、設定條目、架構幾件與大綱 / 文風 / 敘事線 / 全文大綱、草稿。
  *
- * **按需要**：面板打开时前端要一次（`requestQuickOpen`），不进每次文件变动都重推的工程树。匹配与排序在前端
- * （`media/src/editor/quickOpenCore.ts`），这里只给一份平铺的清单。
+ * **按需要**：面板開啟時前端要一次（`requestQuickOpen`），不進每次檔案變動都重推的工程樹。匹配與排序在前端
+ * （`media/src/editor/quickOpenCore.ts`），這裡只給一份平鋪的清單。
  *
- * ## 读了哪些盘
+ * ## 讀了哪些盤
  *
- * 几百章的工程也要快，所以**不为索引多读任何一章**，能借的缓存都借：
+ * 幾百章的工程也要快，所以**不為索引多讀任何一章**，能借的快取都借：
  *
- * - **章节与细纲**：`NovelProject.listChapters()` / `listPlots()`。这两份列表在工程上缓存着（每次 `pushState`
- *   重算 `ViewState` 时就填上了，作者按 Ctrl+P 时几乎总是热的）——热的时候这一步**零读盘**；冷的时候各递归
- *   扫一遍 `chapters/` 与 `.novelwarden/summaries/`、每个文件读一次（与工程页同一趟，之后的人搭这一班车）。
- * - **角色卡**：递归列 `.novelwarden/characters/`，每张卡读一次（要 frontmatter 里的名字与别名）。
- * - **设定条目**：递归列 `.novelwarden/lore/`，每条读一次（要标题）。
- * - **草稿**：递归列 `drafts/`，**只列不读**。
- * - **架构几件与大纲 / 文风 / 叙事线 / 全文大纲**：七个固定路径各 `stat` 一次，有文件的才列。
+ * - **章節與細綱**：`NovelProject.listChapters()` / `listPlots()`。這兩份列表在工程上快取著（每次 `pushState`
+ *   重算 `ViewState` 時就填上了，作者按 Ctrl+P 時幾乎總是熱的）——熱的時候這一步**零讀盤**；冷的時候各遞迴
+ *   掃一遍 `chapters/` 與 `.novelwarden/summaries/`、每個檔案讀一次（與工程頁同一趟，之後的人搭這一班車）。
+ * - **角色卡**：遞迴列 `.novelwarden/characters/`，每張卡讀一次（要 frontmatter 裡的名字與別名）。
+ * - **設定條目**：遞迴列 `.novelwarden/lore/`，每條讀一次（要標題）。
+ * - **草稿**：遞迴列 `drafts/`，**只列不讀**。
+ * - **架構幾件與大綱 / 文風 / 敘事線 / 全文大綱**：七個固定路徑各 `stat` 一次，有檔案的才列。
  *
- * 不读大纲、配置、manifest 的内容，也不算流水线状态——「转到」只要认得出是哪一章、在哪个文件。
+ * 不讀大綱、配置、manifest 的內容，也不算流水線狀態——「轉到」只要認得出是哪一章、在哪個檔案。
  */
 export async function buildQuickOpenIndex(project: NovelProject): Promise<QuickOpenIndex> {
   if (!(await project.isInitialized())) {
@@ -47,7 +47,7 @@ export async function buildQuickOpenIndex(project: NovelProject): Promise<QuickO
 
   const chaptersRoot = project.relPath(project.chaptersDir);
   const plotsRoot = project.relPath(project.plotsDir);
-  // 第一份正文按章号认（同号两份取路径排序第一份，与流水线同一个口径）。按号建一张表，几百章也不必每章扫一遍。
+  // 第一份正文按章號認（同號兩份取路徑排序第一份，與流水線同一個口徑）。按號建一張表，幾百章也不必每章掃一遍。
   const chapterOf = new Map<number, (typeof chapters)[number]>();
   for (const chapter of chapters) {
     if (!chapterOf.has(chapter.order)) {
@@ -57,7 +57,7 @@ export async function buildQuickOpenIndex(project: NovelProject): Promise<QuickO
   const nos = [...new Set([...chapterOf.keys(), ...plots.map((p) => p.no)])].sort((a, b) => a - b);
   const chapterRows: QuickOpenChapter[] = nos.map((no) => {
     const chapter = chapterOf.get(no);
-    // 细纲按路径配对（`NovelProject.plotFor`）：有正文只认它镜像的那一份，没有正文按号认计划。
+    // 細綱按路徑配對（`NovelProject.plotFor`）：有正文只認它映象的那一份，沒有正文按號認計劃。
     const plot = project.plotFor(no, plots, chapters);
     const title = plot?.title || (chapter && !isFallbackChapterTitle(no, chapter.title) ? chapter.title : '');
     return {
@@ -87,17 +87,17 @@ export async function buildQuickOpenIndex(project: NovelProject): Promise<QuickO
 }
 
 /**
- * 架构三件、情节大纲、文风、叙事线、全文大纲：有文件的才列，按这个顺序（「故事架构」组在前）。情节大纲没有文件
- * （各章细纲梗概的汇总），总是列。叙事线一条线一个文件
- * （`threads/<线名>.md`），一条一项，名字是线名（与编辑器标签同一个叫法），类型标记由前端按 `key` 写「叙事线」；
- * 「未归属的伏笔」排在各条线后面。
+ * 架構三件、情節大綱、文風、敘事線、全文大綱：有檔案的才列，按這個順序（「故事架構」組在前）。情節大綱沒有檔案
+ * （各章細綱梗概的彙總），總是列。敘事線一條線一個檔案
+ * （`threads/<線名>.md`），一條一項，名字是線名（與編輯器標籤同一個叫法），型別標記由前端按 `key` 寫「敘事線」；
+ * 「未歸屬的伏筆」排在各條線後面。
  */
 async function listDocs(project: NovelProject): Promise<QuickOpenDoc[]> {
   const candidates: { key: QuickOpenDocKey; label: string; abs: string }[] = [
     { key: 'config', label: SETTING_DOC_LABEL.config, abs: project.configPath },
     { key: 'premise', label: SETTING_DOC_LABEL.premise, abs: project.premisePath },
     { key: 'world', label: SETTING_DOC_LABEL.world, abs: project.worldPath },
-    // 称呼与内置编辑器的标签、面包屑共用一张表（`views/editorLabel.ts`），同一份文件不叫两个名字。
+    // 稱呼與內建編輯器的標籤、麵包屑共用一張表（`views/editorLabel.ts`），同一份檔案不叫兩個名字。
     { key: 'outline', label: FIXED_DOC_LABEL.outline, abs: project.outlinePath },
     { key: 'style', label: FIXED_DOC_LABEL.style, abs: project.stylePath },
   ];
@@ -116,8 +116,8 @@ async function listDocs(project: NovelProject): Promise<QuickOpenDoc[]> {
 }
 
 /**
- * 卷目录：文件在 `root` 下那段相对路径的目录部分（`第一卷`、`第一卷/上`），根下是空串。
- * `root` 是空串（章节根配成了工程根）时整个相对路径都算。叙事线总览的列头（`threads.ts`）也用它标卷名。
+ * 卷目錄：檔案在 `root` 下那段相對路徑的目錄部分（`第一卷`、`第一卷/上`），根下是空串。
+ * `root` 是空串（章節根配成了工程根）時整個相對路徑都算。敘事線總覽的列頭（`threads.ts`）也用它標卷名。
  */
 export function volumeOf(relPath: string, root: string): string {
   const under = root === '' ? relPath : relPath.startsWith(`${root}/`) ? relPath.slice(root.length + 1) : undefined;

@@ -1,4 +1,4 @@
-/* 主题变量：补齐 view.css 依赖的全部 --vscode-*（深/浅两套），取值对齐 VS Code 的 Dark Modern / Light Modern。 */
+/* 主題變數：補齊 view.css 依賴的全部 --vscode-*（深/淺兩套），取值對齊 VS Code 的 Dark Modern / Light Modern。 */
 
 :root,
 :root[data-theme='dark'] {
@@ -9,7 +9,7 @@
   --vscode-font-size: 13px;
   --vscode-editor-font-family: 'Cascadia Code', Consolas, 'SF Mono', Menlo, 'DejaVu Sans Mono',
     'Microsoft YaHei Mono', monospace;
-  /* 正文阅读用的衬线族，只在独立版的编辑器与模型回复里使用。 */
+  /* 正文閱讀用的襯線族，只在獨立版的編輯器與模型回覆裡使用。 */
   --nf-prose-font-family: 'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', 'SimSun',
     Georgia, serif;
 
@@ -54,7 +54,7 @@
   --vscode-notifications-background: #262626;
   --vscode-notifications-border: #3c3c3c;
 
-  /* 工作台自有变量 */
+  /* 工作臺自有變數 */
   --nf-titlebar-background: #181818;
   --nf-activitybar-background: #181818;
   --nf-tab-active-background: #1f1f1f;
@@ -63,7 +63,7 @@
   --nf-scrollbar-hover: rgba(100, 100, 100, 0.7);
   --nf-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
   --nf-side-width: 460px;
-  /* 编辑区里查找的高亮（highlight.css）：全部匹配 / 当前那一处。取 Dark Modern 的 findMatch 两色。 */
+  /* 編輯區裡查詢的高亮（highlight.css）：全部匹配 / 當前那一處。取 Dark Modern 的 findMatch 兩色。 */
   --nf-find-match: rgba(234, 92, 0, 0.33);
   --nf-find-current: #9e6a03;
 }
@@ -124,8 +124,8 @@
 }
 
 /*
- * 护眼（米黄）：浅色的一套，底色换成暖的米黄、字换成深棕，对比度照样够（正文约 9:1、次要文字约 4.5:1）。
- * 管整个界面（⚑）：只换编辑区的话，旁边深色的侧栏与米黄的正文交界处反而更刺眼。切换与深 / 浅同一个机制
+ * 護眼（米黃）：淺色的一套，底色換成暖的米黃、字換成深棕，對比度照樣夠（正文約 9:1、次要文字約 4.5:1）。
+ * 管整個介面（⚑）：只換編輯區的話，旁邊深色的側欄與米黃的正文交界處反而更刺眼。切換與深 / 淺同一個機制
  * （`<html data-theme>`，editor/shell.ts）。
  */
 :root[data-theme='sepia'] {

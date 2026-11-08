@@ -1,12 +1,12 @@
 /**
- * 删修饰（generation/trim.ts）：写正文链的最后一步，经 `generate` 跑，设置里开着才跑。
+ * 刪修飾（generation/trim.ts）：寫正文鏈的最後一步，經 `generate` 跑，設定裡開著才跑。
  *
- * | 情形 | 断言 |
+ * | 情形 | 斷言 |
  * |---|---|
- * | 删得合格 | 多 1 次调用；Draft 是删后的、带删之前那版；气泡退回删后的；带编号的输出不流进气泡；消息不带装配内容 |
- * | 模型加了字 | 整段退回，Draft 原样、不带删之前那版，说明里写退回原因 |
- * | 删到八成以下 | 从删得最多的段退回，够八成为止 |
- * | 调用失败 | 正文保持原样，照样出 Draft |
+ * | 刪得合格 | 多 1 次呼叫；Draft 是刪後的、帶刪之前那版；氣泡退回刪後的；帶編號的輸出不流進氣泡；訊息不帶裝配內容 |
+ * | 模型加了字 | 整段退回，Draft 原樣、不帶刪之前那版，說明裡寫退回原因 |
+ * | 刪到八成以下 | 從刪得最多的段退回，夠八成為止 |
+ * | 呼叫失敗 | 正文保持原樣，照樣出 Draft |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -21,15 +21,15 @@ let fake;
 let t;
 let script = [];
 
-const P1 = '.novelwarden/summaries/001-夜入青云.md';
+const P1 = '.novelwarden/summaries/001-夜入青雲.md';
 
-/** 两段正文，每段中间夹一个可删的程度副词；第三段是对白。目标 1000 字。 */
+/** 兩段正文，每段中間夾一個可刪的程度副詞；第三段是對白。目標 1000 字。 */
 const A = `${filler(520, 1).slice(0, -1)}格外${filler(30, 2)}`;
 const B = `${filler(520, 3).slice(0, -1)}狠狠${filler(30, 4)}`;
-const C = '“这一句是对白，不许动。”';
+const C = '“這一句是對白，不許動。”';
 const CHAPTER = [A, B, C].join('\n\n');
 const strip = (s, w) => s.replace(w, '');
-/** 模型交回来的：两段各删一个词。 */
+/** 模型交回來的：兩段各刪一個詞。 */
 const GOOD = `[1] ${strip(A, '格外')}\n\n[2] ${strip(B, '狠狠')}\n\n[3] ${C}`;
 
 function recorder() {
@@ -88,16 +88,16 @@ before(async () => {
     },
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
-  t = await makeTempProject(bundle.project, { prefix: 'trim', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'trim', title: '青雲劍錄' });
   const ws = new bundle.ws.Workspace(t.project);
   await ws.writePlot({
     no: 1,
-    title: '夜入青云',
+    title: '夜入青雲',
     targetWords: 1000,
     upstreamHash: '',
     done: false,
-    // 关键事件那一句是记号：写正文那一次的执行卡里有它，删修饰那一次不该有。
-    sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '梗概', 出场人物: '林昭', 关键事件: '林昭夜闯青云山门' },
+    // 關鍵事件那一句是記號：寫正文那一次的執行卡裡有它，刪修飾那一次不該有。
+    sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '梗概', 出场人物: '林昭', 关键事件: '林昭夜闖青雲山門' },
   });
   await t.project.syncManifest();
 });
@@ -106,101 +106,101 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-describe('删得合格', () => {
+describe('刪得合格', () => {
   let r;
   before(async () => {
     r = await write([{ text: CHAPTER, stop: 'end' }, { text: GOOD, stop: 'end' }]);
   });
 
-  test('多调 1 次；Draft 是删后的，带删之前那版', () => {
+  test('多調 1 次；Draft 是刪後的，帶刪之前那版', () => {
     assert.equal(r.calls, 2);
     assert.equal(r.draft.calls, 2);
     assert.equal(r.draft.raw, [strip(A, '格外'), strip(B, '狠狠'), C].join('\n\n'));
     assert.equal(r.draft.untrimmed, CHAPTER);
   });
 
-  test('开着删修饰往多写两成：目标 1000，给模型的是约 1200 字', () => {
-    assert.match(fake.calls[0].at(-1).content, /约 1200 字，不必精确/);
+  test('開著刪修飾往多寫兩成：目標 1000，給模型的是約 1200 字', () => {
+    assert.match(fake.calls[0].at(-1).content, /約 1200 字，不必精確/);
     assert.equal(r.draft.length.target, 1000);
   });
 
-  test('说明里写删了几段、多少字', () => {
-    const note = r.draft.notes.find((n) => n.startsWith('删修饰：'));
-    assert.match(note, /3 段里删了 2 段/);
+  test('說明裡寫刪了幾段、多少字', () => {
+    const note = r.draft.notes.find((n) => n.startsWith('刪修飾：'));
+    assert.match(note, /3 段裡刪了 2 段/);
   });
 
-  test('气泡：带编号的输出不流进去，最后退回删后的正文', () => {
+  test('氣泡：帶編號的輸出不流進去，最後退回刪後的正文', () => {
     assert.ok(!r.rec.deltas.join('').includes('[1]'));
-    assert.ok(r.rec.deltas.join('').includes('——删修饰——'));
+    assert.ok(r.rec.deltas.join('').includes('——刪修飾——'));
     assert.equal(r.rec.resets.at(-1), r.draft.raw);
   });
 
-  test('删修饰那一次只有两条消息：规矩与编号的正文', () => {
+  test('刪修飾那一次只有兩條訊息：規矩與編號的正文', () => {
     assert.equal(r.last.length, 2);
   });
 
-  test('正文按段编号交给它，对白段也在', () => {
-    assert.match(r.last[1].content, /\[3\] “这一句是对白，不许动。”/);
+  test('正文按段編號交給它，對白段也在', () => {
+    assert.match(r.last[1].content, /\[3\] “這一句是對白，不許動。”/);
   });
 
-  // 对照：记号确实在装配里，下一条「不在」才说明得了问题。
-  test('写正文那一次的装配带着本章细纲的关键事件', () => {
-    assert.ok(fake.calls[0].at(-1).content.includes('林昭夜闯青云山门'));
+  // 對照：記號確實在裝配裡，下一條「不在」才說明得了問題。
+  test('寫正文那一次的裝配帶著本章細綱的關鍵事件', () => {
+    assert.ok(fake.calls[0].at(-1).content.includes('林昭夜闖青雲山門'));
   });
 
-  test('删修饰那一次不带装配内容：本章细纲的关键事件不在', () => {
-    assert.ok(!r.last[1].content.includes('林昭夜闯青云山门'));
+  test('刪修飾那一次不帶裝配內容：本章細綱的關鍵事件不在', () => {
+    assert.ok(!r.last[1].content.includes('林昭夜闖青雲山門'));
   });
 });
 
 describe('模型加了字', () => {
   let r;
   before(async () => {
-    const bad = `[1] ${A}又加了一些原文没有的字\n\n[2] ${B}\n\n[3] ${C}`;
+    const bad = `[1] ${A}又加了一些原文沒有的字\n\n[2] ${B}\n\n[3] ${C}`;
     r = await write([{ text: CHAPTER, stop: 'end' }, { text: bad, stop: 'end' }]);
   });
 
-  test('整段退回：Draft 原样，不带删之前那版', () => {
+  test('整段退回：Draft 原樣，不帶刪之前那版', () => {
     assert.equal(r.draft.raw, CHAPTER);
     assert.equal(r.draft.untrimmed, undefined);
   });
 
-  test('说明里写退回原因', () => {
-    assert.ok(r.draft.notes.some((n) => n.includes('删修饰没有删掉什么') && n.includes('加了原文没有的字 1 段')), JSON.stringify(r.draft.notes));
+  test('說明裡寫退回原因', () => {
+    assert.ok(r.draft.notes.some((n) => n.includes('刪修飾沒有刪掉什麼') && n.includes('加了原文沒有的字 1 段')), JSON.stringify(r.draft.notes));
   });
 });
 
-describe('删到八成以下', () => {
+describe('刪到八成以下', () => {
   let r;
   before(async () => {
-    // 第 1 段删到只剩四成多（合格），第 2 段只删一个词：整章掉到八成以下。
+    // 第 1 段刪到只剩四成多（合格），第 2 段只刪一個詞：整章掉到八成以下。
     const cut = (s) => `${s.slice(0, Math.round(s.length * 0.42))}。`;
     const deep = `[1] ${cut(A)}\n\n[2] ${strip(B, '狠狠')}\n\n[3] ${C}`;
     r = await write([{ text: CHAPTER, stop: 'end' }, { text: deep, stop: 'end' }]);
   });
 
-  test('退回删得最多的段，够八成为止', () => {
+  test('退回刪得最多的段，夠八成為止', () => {
     assert.ok(r.draft.length.reached, JSON.stringify(r.draft.length));
     assert.equal(r.draft.raw, [A, strip(B, '狠狠'), C].join('\n\n'));
-    assert.ok(r.draft.notes.some((n) => /又退回删得最多的 1 段/.test(n)), JSON.stringify(r.draft.notes));
+    assert.ok(r.draft.notes.some((n) => /又退回刪得最多的 1 段/.test(n)), JSON.stringify(r.draft.notes));
   });
 });
 
-describe('调用失败', () => {
+describe('呼叫失敗', () => {
   let r;
   before(async () => {
     r = await write([
       { text: CHAPTER, stop: 'end' },
       () => {
-        throw new bundle.provider.LlmError('假装 503');
+        throw new bundle.provider.LlmError('假裝 503');
       },
     ]);
   });
 
-  test('正文保持原样，照样出 Draft', () => {
+  test('正文保持原樣，照樣出 Draft', () => {
     assert.equal(r.rec.error, undefined);
     assert.equal(r.draft.raw, CHAPTER);
-    assert.ok(r.draft.notes.some((n) => n.startsWith('删修饰调用失败')), JSON.stringify(r.draft.notes));
+    assert.ok(r.draft.notes.some((n) => n.startsWith('刪修飾呼叫失敗')), JSON.stringify(r.draft.notes));
     assert.equal(r.rec.resets.at(-1), CHAPTER);
   });
 });

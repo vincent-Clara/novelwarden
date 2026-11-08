@@ -1,11 +1,11 @@
 /**
- * 内置编辑器的章节索引（`chapterIndex` 消息）：章节条与上一章 / 下一章要的那几个字段。
+ * 內建編輯器的章節索引（`chapterIndex` 訊息）：章節條與上一章 / 下一章要的那幾個欄位。
  *
- * 与工程树里章节那一行（`ProjectPlotNode`）**由同一个函数算**——`projectView.ts` 在它上面再加定稿、
- * 草稿、⟳ 那几项。两处各写一份的话，章节条上说的「待定稿 · 2980 / 3000 字」迟早会与工程页对不上。
+ * 與工程樹裡章節那一行（`ProjectPlotNode`）**由同一個函式算**——`projectView.ts` 在它上面再加定稿、
+ * 草稿、⟳ 那幾項。兩處各寫一份的話，章節條上說的「待定稿 · 2980 / 3000 字」遲早會與工程頁對不上。
  *
- * 数据来自流水线索引（`buildPipelineIndex`）：controller 每次 `pushState` 构建 `ViewState` 时本来就要
- * 跑这一趟（目标下拉框），章节索引只是从同一份 rows 里多投影几个字段，不多读一次盘。
+ * 資料來自流水線索引（`buildPipelineIndex`）：controller 每次 `pushState` 構建 `ViewState` 時本來就要
+ * 跑這一趟（目標下拉框），章節索引只是從同一份 rows 裡多投影幾個欄位，不多讀一次盤。
  */
 import { chapterLabel } from '../model/pipeline';
 import type { ChapterIndexEntry } from '../protocol';
@@ -28,7 +28,7 @@ export function chapterIndexEntryOf(p: PlotPipeline): ChapterIndexEntry {
   };
 }
 
-/** 全书的章节索引，按章号升序（流水线索引本来就是升序）。 */
+/** 全書的章節索引，按章號升序（流水線索引本來就是升序）。 */
 export function chapterIndexOf(rows: readonly PlotPipeline[]): ChapterIndexEntry[] {
   return rows.map(chapterIndexEntryOf);
 }

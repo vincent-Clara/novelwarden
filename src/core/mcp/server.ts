@@ -1,61 +1,61 @@
 /**
- * MCP server：**把 `tools/` 那套工具端给外部 agent**（Claude Code、Codex……）。
+ * MCP server：**把 `tools/` 那套工具端給外部 agent**（Claude Code、Codex……）。
  *
- * 这一层只懂协议：JSON-RPC 的那几个方法、会话、取消。它不认识 `Workspace`、
- * `DraftStore`、任何一个具体工具——工具清单是一份 `ToolSpec[]`，执行交给
- * {@link McpBackend}（[controller/mcp.ts](../controller/mcp.ts) 绑在当前工程上的那一份）。
- * 传输在 [http.ts](http.ts)。
+ * 這一層只懂協議：JSON-RPC 的那幾個方法、會話、取消。它不認識 `Workspace`、
+ * `DraftStore`、任何一個具體工具——工具清單是一份 `ToolSpec[]`，執行交給
+ * {@link McpBackend}（[controller/mcp.ts](../controller/mcp.ts) 綁在當前工程上的那一份）。
+ * 傳輸在 [http.ts](http.ts)。
  *
- * ## 支持的方法
+ * ## 支援的方法
  *
- * | 方法 | 做什么 |
+ * | 方法 | 做什麼 |
  * |---|---|
- * | `initialize` | 协商版本，回 `instructions`（怎么用这几个工具） |
+ * | `initialize` | 協商版本，回 `instructions`（怎麼用這幾個工具） |
  * | `ping` | 回 `{}` |
- * | `tools/list` | 全部工具，带 `readOnlyHint` / `destructiveHint` |
- * | `tools/call` | 执行；出错照 MCP 的约定回 `isError`，不回 JSON-RPC 错误 |
- * | `notifications/cancelled` | 中断那一次调用（生成会停在半路） |
+ * | `tools/list` | 全部工具，帶 `readOnlyHint` / `destructiveHint` |
+ * | `tools/call` | 執行；出錯照 MCP 的約定回 `isError`，不回 JSON-RPC 錯誤 |
+ * | `notifications/cancelled` | 中斷那一次呼叫（生成會停在半路） |
  *
- * 没有 resources / prompts / sampling：用不上，多声明一项能力就多一处宿主会来问的东西。
+ * 沒有 resources / prompts / sampling：用不上，多宣告一項能力就多一處宿主會來問的東西。
  *
- * ## 状态简报跟着工具结果走（第 20 条）
+ * ## 狀態簡報跟著工具結果走（第 20 條）
  *
- * MCP 没有「每回合往 system 里注入」这个口子，于是状态机给出的那份简报贴在工具结果
- * 末尾——**只在它变了的时候贴**：会话的第一次调用必贴，之后与上一次贴出去的那份逐字比，
- * 一样就不贴。连读十份文件不会被同一段简报刷十遍，
- * 而写完一章之后下一次调用一定看得到新的「下一步」。没有 `status` 工具的理由照旧：
- * 状态白送，不给模型「要不要查一下」的选择。
+ * MCP 沒有「每回合往 system 裡注入」這個口子，於是狀態機給出的那份簡報貼在工具結果
+ * 末尾——**只在它變了的時候貼**：會話的第一次呼叫必貼，之後與上一次貼出去的那份逐字比，
+ * 一樣就不貼。連讀十份檔案不會被同一段簡報刷十遍，
+ * 而寫完一章之後下一次呼叫一定看得到新的「下一步」。沒有 `status` 工具的理由照舊：
+ * 狀態白送，不給模型「要不要查一下」的選擇。
  */
 import type { ToolSpec } from '../tools/types';
 import { describeError, scoped } from '../runtime/logger';
 
 const log = scoped('MCP');
 
-/** 认得的协议版本，新的在前。客户端要的不在表里时回第一个（规范的协商方式）。 */
+/** 認得的協議版本，新的在前。客戶端要的不在表裡時回第一個（規範的協商方式）。 */
 export const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
-/** 一次 `tools/call` 的结果。 */
+/** 一次 `tools/call` 的結果。 */
 export interface McpCallResult {
   text: string;
   isError: boolean;
 }
 
 /**
- * 绑在某一个工程上的执行端。**每次调用现取**（{@link McpServerOptions.backend}）：
- * 作者可能在网页上换了工程，MCP 会话不跟着重连。
+ * 綁在某一個工程上的執行端。**每次呼叫現取**（{@link McpServerOptions.backend}）：
+ * 作者可能在網頁上換了工程，MCP 會話不跟著重連。
  */
 export interface McpBackend {
   call(name: string, args: Record<string, unknown>, signal: AbortSignal): Promise<McpCallResult>;
-  /** 现在这本书走到哪了（第 20 条的那份简报）。 */
+  /** 現在這本書走到哪了（第 20 條的那份簡報）。 */
   brief(): Promise<string>;
 }
 
 export interface McpServerOptions {
-  /** 工具清单。与工程无关，没打开工程时 `tools/list` 照样回得出来。 */
+  /** 工具清單。與工程無關，沒開啟工程時 `tools/list` 照樣回得出來。 */
   tools: ToolSpec[];
   /**
-   * 工程的执行端。`project` 是客户端在 MCP 地址上写的 `?project=<工程目录>`：给了就落到那个工程，
-   * 没给由壳决定（独立版：作者最近操作的那个窗口）。那个工程没打开时回 undefined。
+   * 工程的執行端。`project` 是客戶端在 MCP 地址上寫的 `?project=<工程目錄>`：給了就落到那個工程，
+   * 沒給由殼決定（獨立版：作者最近操作的那個視窗）。那個工程沒開啟時回 undefined。
    */
   backend(project?: string): McpBackend | undefined;
   version: string;
@@ -93,26 +93,26 @@ export function rpcError(id: JsonRpcId | null, code: number, message: string): J
   return { jsonrpc: '2.0', id, error: { code, message } };
 }
 
-/** 带 `id` 和 `method` 的是请求；只有 `method` 的是通知；只有 `id` 的是客户端回的响应。 */
+/** 帶 `id` 和 `method` 的是請求；只有 `method` 的是通知；只有 `id` 的是客戶端回的響應。 */
 export function isRequest(msg: JsonRpcMessage): boolean {
   return typeof msg.method === 'string' && msg.id !== undefined && msg.id !== null;
 }
 
-// ---------------------------------------------------------------- 会话
+// ---------------------------------------------------------------- 會話
 
-/** 一条 MCP 会话。`initialize` 时建，DELETE 或服务停掉时没。 */
+/** 一條 MCP 會話。`initialize` 時建，DELETE 或服務停掉時沒。 */
 export class McpSession {
-  /** 上一次贴出去的简报。逐字比，一样就不再贴。 */
+  /** 上一次貼出去的簡報。逐字比，一樣就不再貼。 */
   lastBrief?: string;
-  /** 还在跑的调用，`notifications/cancelled` 按请求 id 找到它。 */
+  /** 還在跑的呼叫，`notifications/cancelled` 按請求 id 找到它。 */
   readonly inflight = new Map<JsonRpcId, AbortController>();
   clientName = '';
-  /** 客户端在地址上指定的工程（`?project=`），每次请求按地址刷新。 */
+  /** 客戶端在地址上指定的工程（`?project=`），每次請求按地址重新整理。 */
   project?: string;
 
   constructor(readonly id: string) {}
 
-  /** 会话没了：还在跑的一并中断，不留一个没人收结果的生成。 */
+  /** 會話沒了：還在跑的一併中斷，不留一個沒人收結果的生成。 */
   close(): void {
     for (const ctrl of this.inflight.values()) {
       ctrl.abort();
@@ -121,14 +121,14 @@ export class McpSession {
   }
 }
 
-// ---------------------------------------------------------------- 服务
+// ---------------------------------------------------------------- 服務
 
 export class McpServer {
   constructor(private readonly opts: McpServerOptions) {}
 
   /**
-   * 处理一条消息。通知与客户端回的响应返回 undefined（HTTP 那一层据此回 202）。
-   * **绝不抛**：任何异常都变成一条 JSON-RPC 错误。
+   * 處理一條訊息。通知與客戶端回的響應返回 undefined（HTTP 那一層據此回 202）。
+   * **絕不拋**：任何異常都變成一條 JSON-RPC 錯誤。
    */
   async dispatch(
     msg: JsonRpcMessage,
@@ -136,10 +136,10 @@ export class McpServer {
     signal?: AbortSignal
   ): Promise<JsonRpcResponse | undefined> {
     if (!msg || typeof msg !== 'object' || (msg.jsonrpc !== undefined && msg.jsonrpc !== '2.0')) {
-      return rpcError(null, RPC.invalidRequest, '不是一条 JSON-RPC 2.0 消息。');
+      return rpcError(null, RPC.invalidRequest, '不是一條 JSON-RPC 2.0 訊息。');
     }
     if (typeof msg.method !== 'string') {
-      // 客户端回给我们的响应。我们从不发请求，收到了也无事可做。
+      // 客戶端回給我們的響應。我們從不發請求，收到了也無事可做。
       return undefined;
     }
     if (!isRequest(msg)) {
@@ -153,7 +153,7 @@ export class McpServer {
       if (err instanceof RpcFailure) {
         return rpcError(id, err.code, err.message);
       }
-      log.error(`处理 ${msg.method} 失败：${describeError(err)}`, err);
+      log.error(`處理 ${msg.method} 失敗：${describeError(err)}`, err);
       return rpcError(id, -32603, describeError(err));
     }
   }
@@ -163,11 +163,11 @@ export class McpServer {
       const requestId = params.requestId as JsonRpcId | undefined;
       const ctrl = requestId === undefined ? undefined : session.inflight.get(requestId);
       if (ctrl) {
-        log.info('客户端取消了一次调用', `请求 ${String(requestId)}`);
+        log.info('客戶端取消了一次呼叫', `請求 ${String(requestId)}`);
         ctrl.abort();
       }
     }
-    // notifications/initialized 之类：没有要做的事。
+    // notifications/initialized 之類：沒有要做的事。
   }
 
   private async request(
@@ -187,7 +187,7 @@ export class McpServer {
       case 'tools/call':
         return this.callTool(id, params, session, signal);
       default:
-        throw new RpcFailure(RPC.methodNotFound, `不支持 ${method}。`);
+        throw new RpcFailure(RPC.methodNotFound, `不支援 ${method}。`);
     }
   }
 
@@ -195,7 +195,7 @@ export class McpServer {
     const asked = typeof params.protocolVersion === 'string' ? params.protocolVersion : '';
     const client = params.clientInfo as { name?: unknown; version?: unknown } | undefined;
     session.clientName = typeof client?.name === 'string' ? client.name : '';
-    log.info(`MCP 客户端已连接${session.clientName ? `：${session.clientName}` : ''}`, `协议 ${asked || '（未声明）'}`);
+    log.info(`MCP 客戶端已連線${session.clientName ? `：${session.clientName}` : ''}`, `協議 ${asked || '（未宣告）'}`);
     return {
       protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
       capabilities: { tools: { listChanged: false } },
@@ -222,12 +222,12 @@ export class McpServer {
     const backend = this.opts.backend(session.project);
     if (!backend) {
       const text = session.project
-        ? `Novelwarden 里没有打开这个小说工程：${session.project}。请作者先在 Novelwarden 里打开它。`
-        : 'Novelwarden 现在没有打开任何小说工程。请作者先在 Novelwarden 里打开一个工程。';
+        ? `Novelwarden 裡沒有開啟這個小說工程：${session.project}。請作者先在 Novelwarden 裡開啟它。`
+        : 'Novelwarden 現在沒有開啟任何小說工程。請作者先在 Novelwarden 裡開啟一個工程。';
       return toCallResult({ text, isError: true });
     }
 
-    // 两条取消的路：客户端发 `notifications/cancelled`，或者 HTTP 连接断了。
+    // 兩條取消的路：客戶端發 `notifications/cancelled`，或者 HTTP 連線斷了。
     const ctrl = new AbortController();
     const relay = () => ctrl.abort();
     if (signal?.aborted) {
@@ -245,13 +245,13 @@ export class McpServer {
     }
   }
 
-  /** 简报变了才贴（见文件头）。取简报本身失败不连累这一次调用的结果。 */
+  /** 簡報變了才貼（見檔案頭）。取簡報本身失敗不連累這一次呼叫的結果。 */
   private async withBrief(text: string, backend: McpBackend, session: McpSession): Promise<string> {
     let brief: string;
     try {
       brief = await backend.brief();
     } catch (err) {
-      log.warn('MCP 状态简报生成失败', describeError(err));
+      log.warn('MCP 狀態簡報生成失敗', describeError(err));
       return text;
     }
     if (!brief || brief === session.lastBrief) {
@@ -273,8 +273,8 @@ function toCallResult(r: McpCallResult): unknown {
 }
 
 /**
- * `ToolSpec` → MCP 的一条工具声明。`costly` / `mutating` 只是事实（见 `tools/types.ts`），
- * 落成规范里的两条提示：宿主据此决定要不要先问用户。
+ * `ToolSpec` → MCP 的一條工具宣告。`costly` / `mutating` 只是事實（見 `tools/types.ts`），
+ * 落成規範裡的兩條提示：宿主據此決定要不要先問使用者。
  */
 export function toMcpTool(spec: ToolSpec): unknown {
   return {

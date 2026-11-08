@@ -1,18 +1,18 @@
-/* 章节摘要的悬停浮窗。 */
+/* 章節摘要的懸停浮窗。 */
 
-/* ---- 章节摘要的悬停浮窗
+/* ---- 章節摘要的懸停浮窗
 
-   挂在 body 上 position: fixed，与右键菜单同一个理由：工程页有内部滚动，
-   挂在行里会被容器裁掉。z-index 排在 toast（30）与 .ctx-menu（40）之下——
-   提示条和右键菜单都是用户主动要的，一个划过去就出现的浮窗不该盖住它们。
+   掛在 body 上 position: fixed，與右鍵選單同一個理由：工程頁有內部滾動，
+   掛在行裡會被容器裁掉。z-index 排在 toast（30）與 .ctx-menu（40）之下——
+   提示條和右鍵選單都是使用者主動要的，一個划過去就出現的浮窗不該蓋住它們。
 
-   摘要有六个小节、可能上千字，一瞥看不完，所以浮窗是**可以进去的**：
-   鼠标移上去就一直留着，能滚、能选中复制，移开才收（收起有宽限期，
-   见 view.js 的 CLOSE_DELAY_MS）。因此这里不能有 pointer-events: none。
+   摘要有六個小節、可能上千字，一瞥看不完，所以浮窗是**可以進去的**：
+   滑鼠移上去就一直留著，能滾、能選中複製，移開才收（收起有寬限期，
+   見 view.js 的 CLOSE_DELAY_MS）。因此這裡不能有 pointer-events: none。
 
-   两道高度限制各管一件事：max-height 是可读性上限（再长也不该占满屏），
-   view/tip.ts 的 placeTip 另外按上/下可用空间压一次行内 max-height，
-   保证浮窗整个落在视口内。overflow-y 让超出的部分滚起来。 */
+   兩道高度限制各管一件事：max-height 是可讀性上限（再長也不該佔滿屏），
+   view/tip.ts 的 placeTip 另外按上/下可用空間壓一次行內 max-height，
+   保證浮窗整個落在視口內。overflow-y 讓超出的部分滾起來。 */
 
 .summary-tip {
   position: fixed;
@@ -21,8 +21,8 @@
   max-width: calc(100vw - 16px);
   max-height: 60vh;
   overflow-y: auto;
-  /* 浮窗里滚到头时不要把滚动继续传给底下的工程页——
-     那会让整棵树跟着动，而浮窗是 fixed 的，位置立刻就脱节。 */
+  /* 浮窗裡滾到頭時不要把滾動繼續傳給底下的工程頁——
+     那會讓整棵樹跟著動，而浮窗是 fixed 的，位置立刻就脫節。 */
   overscroll-behavior: contain;
   padding: 8px 10px;
   background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background, #252526));
@@ -31,7 +31,7 @@
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
   font-size: 0.85em;
   line-height: 1.5;
-  /* 摘要是拿来读、拿来抄进正文的，别禁掉选中。 */
+  /* 摘要是拿來讀、拿來抄進正文的，別禁掉選中。 */
   user-select: text;
 }
 

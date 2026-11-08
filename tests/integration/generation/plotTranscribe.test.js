@@ -1,20 +1,20 @@
 /**
- * 细纲试点（2026-10-25）：写细纲的模型按小标题写自然语言，转写模型照抄成 JSON。
+ * 細綱試點（2026-10-25）：寫細綱的模型按小標題寫自然語言，轉寫模型照抄成 JSON。
  *
- * 作者实测同一份上下文，要模型直接出 JSON 写出来的细纲明显不如放开写。于是细纲（单章、批次、批量拆细纲）的提示词不再
- * 要 JSON，转写那一步由「转写」那一档的模型做：作者定的是**固定的转写模型**——不跟对话页选的、也不跟确认框上为这一次
- * 挑的模型。那一档没配就沿用默认模型。
+ * 作者實測同一份上下文，要模型直接出 JSON 寫出來的細綱明顯不如放開寫。於是細綱（單章、批次、批次拆細綱）的提示詞不再
+ * 要 JSON，轉寫那一步由「轉寫」那一檔的模型做：作者定的是**固定的轉寫模型**——不跟對話頁選的、也不跟確認框上為這一次
+ * 挑的模型。那一檔沒配就沿用預設模型。
  *
- * | 用例组 | 钉的是什么 |
+ * | 用例組 | 釘的是什麼 |
  * |---|---|
- * | 批次 · 照抄收下 | 写一次、转一次；写细纲的是对话页那个模型，转写的是转写那一档；转写只看原文，不带书的上下文；气泡换成规范化 JSON |
- * | 批次 · 改了字 | 转写改了原文的字不收，重转一次（说清哪几处）；全程只重转一次，还改就对半拆、各写各转 |
- * | 批次 · 原文没写那一章 | 偷懒：报漏写，不重转（转写搬不出原文没有的章） |
- * | 批次 · 不像细纲 | 连「梗概」「关键事件」都没有的输出不花转写那一次，按解不出来走拆半 / 重建 |
- * | 单章 | 写第 N 章细纲也转写；照抄的落进细纲七节与「设定」一节 |
- * | 单章 · 转写两次不合格 | 按小节读原文，叙事线计划与「设定」一节带不上，说明里写清 |
- * | 批量拆细纲 · 确认框钉了模型 | 写细纲用钉的那个，转写照样走转写那一档（第 12 条的例外） |
- * | 转写模型调用失败 | 写好的原文不丢：单章按小节读、说明里写清；批次报错，原文留在气泡里 |
+ * | 批次 · 照抄收下 | 寫一次、轉一次；寫細綱的是對話頁那個模型，轉寫的是轉寫那一檔；轉寫只看原文，不帶書的上下文；氣泡換成規範化 JSON |
+ * | 批次 · 改了字 | 轉寫改了原文的字不收，重轉一次（說清哪幾處）；全程只重轉一次，還改就對半拆、各寫各轉 |
+ * | 批次 · 原文沒寫那一章 | 偷懶：報漏寫，不重轉（轉寫搬不出原文沒有的章） |
+ * | 批次 · 不像細綱 | 連「梗概」「關鍵事件」都沒有的輸出不花轉寫那一次，按解不出來走拆半 / 重建 |
+ * | 單章 | 寫第 N 章細綱也轉寫；照抄的落進細綱七節與「設定」一節 |
+ * | 單章 · 轉寫兩次不合格 | 按小節讀原文，敘事線計劃與「設定」一節帶不上，說明裡寫清 |
+ * | 批次拆細綱 · 確認框釘了模型 | 寫細綱用釘的那個，轉寫照樣走轉寫那一檔（第 12 條的例外） |
+ * | 轉寫模型呼叫失敗 | 寫好的原文不丟：單章按小節讀、說明裡寫清；批次報錯，原文留在氣泡裡 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -34,7 +34,7 @@ let controller;
 let posted;
 let gates;
 let onGate = async () => 'skip';
-/** 按模型引用注入异常（fakeProvider 的 behavior）：建 provider 时现读，改它只影响之后建的。 */
+/** 按模型引用注入異常（fakeProvider 的 behavior）：建 provider 時現讀，改它隻影響之後建的。 */
 const behavior = {};
 
 const CONFIG = [
@@ -44,59 +44,59 @@ const CONFIG = [
   'totalChapters: 30',
   'wordsPerChapter: 400',
   '---',
-  '# 小说配置',
-  '## 一句话',
-  '少年入宗查旧案',
+  '# 小說配置',
+  '## 一句話',
+  '少年入宗查舊案',
   '## 核心梗概',
-  '林昭背着灭门旧案进青云宗。',
+  '林昭揹著滅門舊案進青雲宗。',
 ].join('\n');
 
-const OUTLINE = outlineOf(20, { titles: { 1: '入局' }, text: { 1: '林昭进青云宗，查出第一块令牌的来历。' } });
-const THREAD = '.novelwarden/threads/青云旧案.md';
+const OUTLINE = outlineOf(20, { titles: { 1: '入局' }, text: { 1: '林昭進青雲宗，查出第一塊令牌的來歷。' } });
+const THREAD = '.novelwarden/threads/青雲舊案.md';
 
-/** 写细纲的模型按格式写出来的一章。 */
+/** 寫細綱的模型按格式寫出來的一章。 */
 const prose = (no) =>
   [
-    `## 第${no}章：第${no}章题`,
+    `## 第${no}章：第${no}章題`,
     '### 梗概',
     `第 ${no} 章的梗概`,
-    '### 出场人物',
+    '### 出場人物',
     '林昭、沈青',
-    '### 时间地点',
-    '青云宗山门，入夜',
-    '### 关键事件',
-    `- 第 ${no} 章：林昭在山门外踩点。`,
-    '- 他翻墙进了后院，落在藏书阁门口。',
-    '### 看点',
-    `- 第 ${no} 章的钩子`,
-    '### 状态变更',
-    '无',
-    '### 叙事线',
-    '- 青云旧案·推进：林昭摸到藏书阁。',
+    '### 時間地點',
+    '青雲宗山門，入夜',
+    '### 關鍵事件',
+    `- 第 ${no} 章：林昭在山門外踩點。`,
+    '- 他翻牆進了後院，落在藏書閣門口。',
+    '### 看點',
+    `- 第 ${no} 章的鉤子`,
+    '### 狀態變更',
+    '無',
+    '### 敘事線',
+    '- 青雲舊案·推進：林昭摸到藏書閣。',
     '### 新角色',
-    '无',
-    '### 设定',
-    '- 藏经阁（地点，新）：宗门藏旧卷宗的地方。',
+    '無',
+    '### 設定',
+    '- 藏經閣（地點，新）：宗門藏舊卷宗的地方。',
   ].join('\n');
 
-/** 转写模型照抄出来的那一章。 */
+/** 轉寫模型照抄出來的那一章。 */
 const copied = (no, over = {}) => ({
   chapterNumber: no,
-  title: `第${no}章题`,
+  title: `第${no}章題`,
   synopsis: `第 ${no} 章的梗概`,
   characters: ['林昭', '沈青'],
-  timePlace: '青云宗山门，入夜',
-  keyEvents: [`第 ${no} 章：林昭在山门外踩点。`, '他翻墙进了后院，落在藏书阁门口。'],
-  highlights: [`第 ${no} 章的钩子`],
-  stateChange: '无',
-  threads: [{ line: '青云旧案', type: '推进', what: '林昭摸到藏书阁。' }],
+  timePlace: '青雲宗山門，入夜',
+  keyEvents: [`第 ${no} 章：林昭在山門外踩點。`, '他翻牆進了後院，落在藏書閣門口。'],
+  highlights: [`第 ${no} 章的鉤子`],
+  stateChange: '無',
+  threads: [{ line: '青雲舊案', type: '推进', what: '林昭摸到藏書閣。' }],
   newCharacters: [],
-  settings: [{ name: '藏经阁', category: '地点', isNew: true, note: '宗门藏旧卷宗的地方。' }],
+  settings: [{ name: '藏經閣', category: '地點', isNew: true, note: '宗門藏舊卷宗的地方。' }],
   ...over,
 });
 const json = (...items) => JSON.stringify({ blueprints: items });
 const PLOT_T = (no) => ({ kind: 'plot', plotRelPath: `.novelwarden/summaries/${String(no).padStart(3, '0')}.md` });
-const TRANSCRIBER = '格式转写员';
+const TRANSCRIBER = '格式轉寫員';
 
 function attach() {
   posted = [];
@@ -147,7 +147,7 @@ before(async () => {
     batch: './src/core/features/pipelineBatch.ts',
     db: './src/core/runtime/db.ts',
   });
-  // 对话页选的是 big；转写那一档（缺省快速档）配的是 small。
+  // 對話頁選的是 big；轉寫那一檔（預設快速檔）配的是 small。
   const settings = {
     providers: [{ id: 'p', kind: 'vscode-lm', models: [{ name: 'big', contextWindow: 100000 }, { name: 'small', contextWindow: 32000 }] }],
     models: ['p/big'],
@@ -160,12 +160,12 @@ before(async () => {
     behavior,
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
-  t = await makeTempProject(bundle.project, { prefix: 'transcribe', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'transcribe', title: '青雲劍錄' });
   project = t.project;
   t.write('.novelwarden/config.md', CONFIG);
   writeOutline(t, OUTLINE);
-  // 有一条线：批量拆细纲就不先排线。
-  t.write(THREAD, '---\nkind: 主线\n---\n\n# 青云旧案\n\n## 意图\n十年前那把火。\n');
+  // 有一條線：批次拆細綱就不先排線。
+  t.write(THREAD, '---\nkind: 主線\n---\n\n# 青雲舊案\n\n## 意圖\n十年前那把火。\n');
   project.invalidate();
   controller = new bundle.controller.ChatController(project);
   attach();
@@ -176,7 +176,7 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('细纲批次 · 按小标题写，转写模型照抄成 JSON', () => {
+describe('細綱批次 · 按小標題寫，轉寫模型照抄成 JSON', () => {
   let r;
 
   before(async () => {
@@ -188,40 +188,40 @@ describe('细纲批次 · 按小标题写，转写模型照抄成 JSON', () => {
     r = await send({ stage: 'plot', capability: 'generate', target: PLOT_T(6), range: { from: 6, to: 7 } });
   });
 
-  test('写一次、转一次', () => {
+  test('寫一次、轉一次', () => {
     assert.equal(fake.callCount(), 2);
-    assert.ok(r.gate && r.gate.detail.includes('调了 2 次'), JSON.stringify(r.gate ?? r.errors));
+    assert.ok(r.gate && r.gate.detail.includes('調了 2 次'), JSON.stringify(r.gate ?? r.errors));
   });
 
-  test('写细纲的提示词不要 JSON', () => {
-    assert.ok(userOf(0).includes('写第 6–7 章的细纲：一章一份') && userOf(0).includes('不写 JSON'), userOf(0).slice(-600));
+  test('寫細綱的提示詞不要 JSON', () => {
+    assert.ok(userOf(0).includes('寫第 6–7 章的細綱：一章一份') && userOf(0).includes('不寫 JSON'), userOf(0).slice(-600));
   });
 
-  test('写细纲的是对话页那个模型，转写的是转写那一档', () => {
+  test('寫細綱的是對話頁那個模型，轉寫的是轉寫那一檔', () => {
     assert.equal(refOf(0), 'p/big');
     assert.equal(refOf(1), 'p/small');
   });
 
-  // 转写只看原文：给多了它会顺手补内容。
-  test('转写只带合同与原文，不带书的上下文', () => {
+  // 轉寫只看原文：給多了它會順手補內容。
+  test('轉寫只帶合同與原文，不帶書的上下文', () => {
     assert.ok(systemOf(1).includes(TRANSCRIBER), systemOf(1));
-    assert.ok(userOf(1).includes('【原文】') && userOf(1).includes('第 6 章的梗概') && userOf(1).includes('原文写的是第 6–7 章'), userOf(1).slice(0, 600));
-    assert.ok(!userOf(1).includes('林昭背着灭门旧案进青云宗'), userOf(1).slice(0, 600));
+    assert.ok(userOf(1).includes('【原文】') && userOf(1).includes('第 6 章的梗概') && userOf(1).includes('原文寫的是第 6–7 章'), userOf(1).slice(0, 600));
+    assert.ok(!userOf(1).includes('林昭揹著滅門舊案進青雲宗'), userOf(1).slice(0, 600));
   });
 
-  test('气泡换成规范化 JSON，「无」换成空的', () => {
+  test('氣泡換成規範化 JSON，「無」換成空的', () => {
     const decoded = JSON.parse(r.assistant.content);
     assert.deepEqual(decoded.blueprints.map((b) => b.chapterNumber), [6, 7]);
     assert.equal(decoded.blueprints[0].stateChange, '');
-    assert.deepEqual(decoded.blueprints[0].threads, [{ line: '青云旧案', type: '推进', what: '林昭摸到藏书阁。' }]);
+    assert.deepEqual(decoded.blueprints[0].threads, [{ line: '青雲舊案', type: '推进', what: '林昭摸到藏書閣。' }]);
   });
 });
 
-describe('细纲批次 · 转写改了原文的字', () => {
+describe('細綱批次 · 轉寫改了原文的字', () => {
   let r;
 
   before(async () => {
-    const reworded = json(copied(6, { keyEvents: ['林昭夜探藏书阁，被人发现。'] }), copied(7));
+    const reworded = json(copied(6, { keyEvents: ['林昭夜探藏書閣，被人發現。'] }), copied(7));
     fake.reset([
       { text: `${prose(6)}\n\n${prose(7)}`, stop: 'end' },
       { text: reworded, stop: 'end' },
@@ -235,20 +235,20 @@ describe('细纲批次 · 转写改了原文的字', () => {
     r = await send({ stage: 'plot', capability: 'generate', target: PLOT_T(6), range: { from: 6, to: 7 } });
   });
 
-  test('重转那一次说清哪几处不是原文里的字', () => {
+  test('重轉那一次說清哪幾處不是原文裡的字', () => {
     assert.ok(systemOf(2).includes(TRANSCRIBER));
-    assert.ok(userOf(2).includes('【上次转写不合格】这几处不是原文里的字：「林昭夜探藏书阁，被人发现。」'), userOf(2).slice(0, 600));
+    assert.ok(userOf(2).includes('【上次轉寫不合格】這幾處不是原文裡的字：「林昭夜探藏書閣，被人發現。」'), userOf(2).slice(0, 600));
   });
 
-  test('全程只重转一次：还改就对半拆，各写各转', () => {
+  test('全程只重轉一次：還改就對半拆，各寫各轉', () => {
     assert.equal(fake.callCount(), 7);
-    assert.ok(userOf(3).includes('写第 6 章的细纲：') && userOf(5).includes('写第 7 章的细纲：'), `${userOf(3).slice(-300)}\n${userOf(5).slice(-300)}`);
+    assert.ok(userOf(3).includes('寫第 6 章的細綱：') && userOf(5).includes('寫第 7 章的細綱：'), `${userOf(3).slice(-300)}\n${userOf(5).slice(-300)}`);
     assert.ok(r.gate, JSON.stringify(r.errors));
-    assert.ok(r.gate.detail.includes('重转一次') && r.gate.detail.includes('拆成两半重试'), r.gate.detail);
+    assert.ok(r.gate.detail.includes('重轉一次') && r.gate.detail.includes('拆成兩半重試'), r.gate.detail);
   });
 });
 
-describe('细纲批次 · 原文就没写那一章', () => {
+describe('細綱批次 · 原文就沒寫那一章', () => {
   let r;
 
   before(async () => {
@@ -260,39 +260,39 @@ describe('细纲批次 · 原文就没写那一章', () => {
     r = await send({ stage: 'plot', capability: 'generate', target: PLOT_T(6), range: { from: 6, to: 7 } });
   });
 
-  test('报漏写、不出卡片、不重转', () => {
+  test('報漏寫、不出卡片、不重轉', () => {
     assert.equal(r.gate, undefined);
-    assert.ok(r.errors.some((m) => m.includes('漏写了第 7 章')), r.errors.join('|'));
+    assert.ok(r.errors.some((m) => m.includes('漏寫了第 7 章')), r.errors.join('|'));
     assert.equal(fake.callCount(), 2);
   });
 
-  test('写好的原文留在气泡里', () => {
+  test('寫好的原文留在氣泡裡', () => {
     assert.ok(r.assistant.content.includes('第 6 章的梗概'), r.assistant.content.slice(0, 200));
   });
 });
 
-describe('细纲批次 · 不像细纲的输出不转写', () => {
+describe('細綱批次 · 不像細綱的輸出不轉寫', () => {
   let r;
 
   before(async () => {
     fake.reset([
-      { text: '我不太确定这一章要写什么。', stop: 'end' },
-      { text: '还是不确定。', stop: 'end' },
+      { text: '我不太確定這一章要寫什麼。', stop: 'end' },
+      { text: '還是不確定。', stop: 'end' },
     ]);
     onGate = async () => 'skip';
     r = await send({ stage: 'plot', capability: 'generate', target: PLOT_T(6), range: { from: 6, to: 6 } });
   });
 
-  test('单章重建一次、还不行就停，一次转写都没花', () => {
+  test('單章重建一次、還不行就停，一次轉寫都沒花', () => {
     assert.equal(fake.callCount(), 2);
     assert.ok(!fake.calls.some((c) => c[0].content.includes(TRANSCRIBER)));
-    assert.ok(userOf(1).includes('【上次输出不合格】没有按格式写'), userOf(1).slice(-400));
+    assert.ok(userOf(1).includes('【上次輸出不合格】沒有按格式寫'), userOf(1).slice(-400));
     assert.equal(r.gate, undefined);
-    assert.ok(r.errors.some((m) => m.includes('细纲不合格')), r.errors.join('|'));
+    assert.ok(r.errors.some((m) => m.includes('細綱不合格')), r.errors.join('|'));
   });
 });
 
-describe('单章细纲 · 写第 N 章细纲也转写', () => {
+describe('單章細綱 · 寫第 N 章細綱也轉寫', () => {
   let r;
 
   before(async () => {
@@ -304,28 +304,28 @@ describe('单章细纲 · 写第 N 章细纲也转写', () => {
     r = await send({ stage: 'plot', capability: 'generate', target: { kind: 'plot', plotRelPath: await project.plotPathOfNo(8) } });
   });
 
-  test('写一次、转一次；转写的是转写那一档，合同里给了章号', () => {
+  test('寫一次、轉一次；轉寫的是轉寫那一檔，合同裡給了章號', () => {
     assert.equal(fake.callCount(), 2);
     assert.equal(refOf(1), 'p/small');
-    assert.ok(userOf(0).includes('写第 8 章的细纲：以「## 第8章：标题」开头'), userOf(0).slice(-800));
-    assert.ok(userOf(1).includes('原文写的是第 8 章，只有一项，chapterNumber 是 8'), userOf(1).slice(0, 600));
+    assert.ok(userOf(0).includes('寫第 8 章的細綱：以「## 第8章：標題」開頭'), userOf(0).slice(-800));
+    assert.ok(userOf(1).includes('原文寫的是第 8 章，只有一項，chapterNumber 是 8'), userOf(1).slice(0, 600));
   });
 
-  test('照抄的落进细纲七节与「设定」一节', async () => {
+  test('照抄的落進細綱七節與「設定」一節', async () => {
     assert.ok(r.gate, JSON.stringify(r.errors));
     project.invalidate();
     const plot = await project.getPlot(8);
-    assert.equal(plot.sections.关键事件, '- 第 8 章：林昭在山门外踩点。\n- 他翻墙进了后院，落在藏书阁门口。', JSON.stringify(plot.sections));
+    assert.equal(plot.sections.关键事件, '- 第 8 章：林昭在山門外踩點。\n- 他翻牆進了後院，落在藏書閣門口。', JSON.stringify(plot.sections));
     assert.equal(plot.sections.出场人物, '林昭、沈青');
-    assert.ok(plot.lore.some((l) => l.name === '藏经阁'), JSON.stringify(plot.lore));
+    assert.ok(plot.lore.some((l) => l.name === '藏經閣'), JSON.stringify(plot.lore));
   });
 });
 
-describe('单章细纲 · 转写两次都不合格', () => {
+describe('單章細綱 · 轉寫兩次都不合格', () => {
   let r;
 
   before(async () => {
-    const reworded = json(copied(9, { synopsis: '改写过的梗概' }));
+    const reworded = json(copied(9, { synopsis: '改寫過的梗概' }));
     fake.reset([
       { text: prose(9), stop: 'end' },
       { text: reworded, stop: 'end' },
@@ -335,17 +335,17 @@ describe('单章细纲 · 转写两次都不合格', () => {
     r = await send({ stage: 'plot', capability: 'generate', target: { kind: 'plot', plotRelPath: await project.plotPathOfNo(9) } });
   });
 
-  test('重转一次，还不行就按小节读原文，说明里写清', async () => {
+  test('重轉一次，還不行就按小節讀原文，說明裡寫清', async () => {
     assert.equal(fake.callCount(), 3);
-    assert.ok(r.gate && r.gate.detail.includes('转写没成，按小节读了原文'), JSON.stringify(r.gate ?? r.errors));
+    assert.ok(r.gate && r.gate.detail.includes('轉寫沒成，按小節讀了原文'), JSON.stringify(r.gate ?? r.errors));
     project.invalidate();
     const plot = await project.getPlot(9);
-    assert.ok(plot.sections.关键事件.includes('林昭在山门外踩点'), JSON.stringify(plot.sections));
+    assert.ok(plot.sections.关键事件.includes('林昭在山門外踩點'), JSON.stringify(plot.sections));
     assert.equal(plot.sections.出场人物, '林昭、沈青', JSON.stringify(plot.sections));
   });
 });
 
-describe('批量拆细纲 · 确认框上钉了模型，转写照样走转写那一档', () => {
+describe('批次拆細綱 · 確認框上釘了模型，轉寫照樣走轉寫那一檔', () => {
   let returned;
 
   before(async () => {
@@ -356,22 +356,22 @@ describe('批量拆细纲 · 确认框上钉了模型，转写照样走转写那
     returned = await bundle.batch.generatePlots(project, { range: { from: 10, to: 10 }, call: { model: 'p/big' } });
   });
 
-  test('写细纲用钉的那个，转写用 small', () => {
+  test('寫細綱用釘的那個，轉寫用 small', () => {
     assert.equal(returned, 2);
     assert.equal(refOf(0), 'p/big');
     assert.equal(refOf(1), 'p/small');
     assert.ok(systemOf(1).includes(TRANSCRIBER));
   });
 
-  // 梗概沿用空壳上的那一条（大纲里这一章那一条，是这一批的上游）。
-  test('细纲写进去了', async () => {
+  // 梗概沿用空殼上的那一條（大綱裡這一章那一條，是這一批的上游）。
+  test('細綱寫進去了', async () => {
     project.invalidate();
     const plot = await project.getPlot(10);
-    assert.ok(plot.sections.关键事件.includes('第 10 章：林昭在山门外踩点'), JSON.stringify(plot.sections));
+    assert.ok(plot.sections.关键事件.includes('第 10 章：林昭在山門外踩點'), JSON.stringify(plot.sections));
   });
 });
 
-describe('转写模型调用失败', () => {
+describe('轉寫模型呼叫失敗', () => {
   before(() => {
     behavior['p/small'] = 'fail';
   });
@@ -379,19 +379,19 @@ describe('转写模型调用失败', () => {
     delete behavior['p/small'];
   });
 
-  test('单章：按小节读原文，说明里写清', async () => {
+  test('單章：按小節讀原文，說明裡寫清', async () => {
     fake.reset([{ text: prose(11), stop: 'end' }]);
     onGate = async () => 'skip';
     const r = await send({ stage: 'plot', capability: 'generate', target: { kind: 'plot', plotRelPath: await project.plotPathOfNo(11) } });
-    assert.ok(r.gate && r.gate.detail.includes('转写调用失败') && r.gate.detail.includes('按小节读了原文'), JSON.stringify(r.gate ?? r.errors));
+    assert.ok(r.gate && r.gate.detail.includes('轉寫呼叫失敗') && r.gate.detail.includes('按小節讀了原文'), JSON.stringify(r.gate ?? r.errors));
   });
 
-  test('批次：报错、不出卡片，写好的原文留在气泡里', async () => {
+  test('批次：報錯、不出卡片，寫好的原文留在氣泡裡', async () => {
     fake.reset([{ text: `${prose(6)}\n\n${prose(7)}`, stop: 'end' }]);
     onGate = async () => 'skip';
     const r = await send({ stage: 'plot', capability: 'generate', target: PLOT_T(6), range: { from: 6, to: 7 } });
     assert.equal(r.gate, undefined);
-    assert.ok(r.errors.some((m) => m.includes('转写调用失败')), r.errors.join('|'));
+    assert.ok(r.errors.some((m) => m.includes('轉寫呼叫失敗')), r.errors.join('|'));
     assert.ok(r.assistant.content.includes('第 7 章的梗概'), r.assistant.content.slice(0, 300));
   });
 });

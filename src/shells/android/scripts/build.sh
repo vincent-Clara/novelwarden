@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 打 Android 包：独立版打成 node 单文件 → assets/server.cjs，Termux node → jniLibs（没有才取），再 gradle assemble。
-# 用法（任意目录）：src/shells/android/scripts/build.sh [debug|release]，产物在 src/shells/android/app/build/outputs/apk/
+# 打 Android 包：獨立版打成 node 單檔案 → assets/server.cjs，Termux node → jniLibs（沒有才取），再 gradle assemble。
+# 用法（任意目錄）：src/shells/android/scripts/build.sh [debug|release]，產物在 src/shells/android/app/build/outputs/apk/
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 repo="$(cd "$here/../../.." && pwd)"

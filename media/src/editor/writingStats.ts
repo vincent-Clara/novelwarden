@@ -1,45 +1,45 @@
 /**
- * 码字统计的纯逻辑（零 DOM、不碰 localStorage、时间由调用方给）：一处改动算多少字、哪些改动算作者码的字、
- * 撤销 / 重做退的是哪一步、停笔多久不算时长、速度、目标进度怎么说、「今日码字」那份记录怎么读怎么合。
- * 装配（监听编辑区、画状态栏、记 localStorage）在 `stats.ts`，口径在这里——`tests/unit/editor/writingStats.test.js`
- * 钉着。
+ * 碼字統計的純邏輯（零 DOM、不碰 localStorage、時間由呼叫方給）：一處改動算多少字、哪些改動算作者碼的字、
+ * 撤銷 / 重做退的是哪一步、停筆多久不算時長、速度、目標進度怎麼說、「今日碼字」那份記錄怎麼讀怎麼合。
+ * 裝配（監聽編輯區、畫狀態列、記 localStorage）在 `stats.ts`，口徑在這裡——`tests/unit/editor/writingStats.test.js`
+ * 釘著。
  *
- * ## 码字口径
+ * ## 碼字口徑
  *
- * 「码了多少字」是**作者在编辑区里亲手打进去的净字数**（字数口径同 `words.ts`：中文按字、英文按词，标点空白不算）：
+ * 「碼了多少字」是**作者在編輯區裡親手打進去的淨字數**（字數口徑同 `words.ts`：中文按字、英文按詞，標點空白不算）：
  *
- * - **算**：键盘打字（`typing`），输入法上屏的那一下（`composition` 带 `change`），在名词补全里挑了一个名字
- *   补上的那几个字（`completion`，⚑：和输入法在候选词里挑一个是同一回事——名字是作者自己要写的字，只是打得快些；
- *   不算的话常用补全的人码字数会偏少）。退格、Delete、打字盖掉选区删掉的字**倒扣**——所以是「净」增加，打了又删等于没打。
- * - **不算**：粘贴、剪切、拖放（`input`），一切程序改写（`program`：回车与 Tab 补的空白、成对符号补的半边、
- *   段落快捷键、一键排版、半角转全角、替换 / 全部替换、对比合并、历史版本恢复、还原、用磁盘版本覆盖、
- *   磁盘同步换进来的新版、右键粘贴），输入法组字中途（拼音还没上屏）。
- * - **撤销 / 重做跟着那一步走**（⚑）：撤销的是自己打的字，那几个字减回去；重做再加上；撤销的是一次粘贴、
- *   排版这类本来就没算的改动，码字数不动。靠 `EditHistory.topId` 认出是哪一步（{@link StepLedger}）。
+ * - **算**：鍵盤打字（`typing`），輸入法上屏的那一下（`composition` 帶 `change`），在名詞補全裡挑了一個名字
+ *   補上的那幾個字（`completion`，⚑：和輸入法在候選詞裡挑一個是同一回事——名字是作者自己要寫的字，只是打得快些；
+ *   不算的話常用補全的人碼字數會偏少）。退格、Delete、打字蓋掉選區刪掉的字**倒扣**——所以是「淨」增加，打了又刪等於沒打。
+ * - **不算**：貼上、剪下、拖放（`input`），一切程式改寫（`program`：回車與 Tab 補的空白、成對符號補的半邊、
+ *   段落快捷鍵、一鍵排版、半形轉全形、替換 / 全部替換、對比合併、歷史版本恢復、還原、用磁碟版本覆蓋、
+ *   磁碟同步換進來的新版、右鍵貼上），輸入法組字中途（拼音還沒上屏）。
+ * - **撤銷 / 重做跟著那一步走**（⚑）：撤銷的是自己打的字，那幾個字減回去；重做再加上；撤銷的是一次貼上、
+ *   排版這類本來就沒算的改動，碼字數不動。靠 `EditHistory.topId` 認出是哪一步（{@link StepLedger}）。
  *
- * ## 时长
+ * ## 時長
  *
- * 只算真正在写的时间：每一下落笔（打字、输入法，组字中途也算）离上一下不超过 {@link IDLE_MS}（2 分钟，⚑）的
- * 那一段记进时长，停笔更久那一段整个不算——挂着页面去吃饭，回来速度不会被拉低。两次落笔之间的那段记到后一下
- * 落笔的那份文件上，所以各文件的时长加起来就是总时长。
+ * 只算真正在寫的時間：每一下落筆（打字、輸入法，組字中途也算）離上一下不超過 {@link IDLE_MS}（2 分鐘，⚑）的
+ * 那一段記進時長，停筆更久那一段整個不算——掛著頁面去吃飯，回來速度不會被拉低。兩次落筆之間的那段記到後一下
+ * 落筆的那份檔案上，所以各檔案的時長加起來就是總時長。
  */
 import type { EditSource } from './api';
 import type { TextChange } from './history';
 import { countWords, groupDigits, isWordCode } from './words';
 
-/** 停笔超过这么久，那一段不算码字时长（⚑ 2 分钟）。 */
+/** 停筆超過這麼久，那一段不算碼字時長（⚑ 2 分鐘）。 */
 export const IDLE_MS = 2 * 60_000;
-/** 写够这么久才报速度：头几十秒的速度没有意义（⚑ 1 分钟）。 */
+/** 寫夠這麼久才報速度：頭幾十秒的速度沒有意義（⚑ 1 分鐘）。 */
 export const MIN_SPEED_MS = 60_000;
-/** 「今日码字」在 localStorage 里留最近几天（只显示今天；多留几天不占地方，跨午夜补记前一天也有处落）。 */
+/** 「今日碼字」在 localStorage 裡留最近幾天（只顯示今天；多留幾天不佔地方，跨午夜補記前一天也有處落）。 */
 export const DAILY_KEEP = 30;
 
-// ---------------------------------------------------------------- 一处改动算多少字
+// ---------------------------------------------------------------- 一處改動算多少字
 
 /**
- * 这一处改动让全文多了（或少了）几个字，与改动前后各数一遍全文再相减的结果一字不差，但只看改动那一段：
- * 中文一个字一个字数，跟前后文无关；英文按词，改动挨着的那个词可能被接长、劈开或并起来，所以两头各往外
- * 扩到词的边界再比。`after` 是改动之后的全文，`change` 的位置按改动之前的文字算（`history.ts` 的约定）。
+ * 這一處改動讓全文多了（或少了）幾個字，與改動前後各數一遍全文再相減的結果一字不差，但只看改動那一段：
+ * 中文一個字一個字數，跟前後文無關；英文按詞，改動挨著的那個詞可能被接長、劈開或並起來，所以兩頭各往外
+ * 擴到詞的邊界再比。`after` 是改動之後的全文，`change` 的位置按改動之前的文字算（`history.ts` 的約定）。
  */
 export function wordDelta(after: string, change: TextChange): number {
   const end = change.at + change.inserted.length;
@@ -56,39 +56,39 @@ export function wordDelta(after: string, change: TextChange): number {
   return countWords(head + change.inserted + tail) - countWords(head + change.removed + tail);
 }
 
-/** 这一下改动算不算作者码的字：键盘打字、输入法上屏（带 `change` 的那一下）、名词补全里挑的名字。 */
+/** 這一下改動算不算作者碼的字：鍵盤打字、輸入法上屏（帶 `change` 的那一下）、名詞補全裡挑的名字。 */
 export function countsAsWriting(source: EditSource, change: TextChange | undefined): boolean {
   return !!change && (source === 'typing' || source === 'composition' || source === 'completion');
 }
 
-/** 这一下算不算「在写」（时长的心跳）：打字与输入法（组字中途也算——拼音还没上屏，人确实在写）、挑了一个补全。 */
+/** 這一下算不算「在寫」（時長的心跳）：打字與輸入法（組字中途也算——拼音還沒上屏，人確實在寫）、挑了一個補全。 */
 export function isWritingActivity(source: EditSource): boolean {
   return source === 'typing' || source === 'composition' || source === 'completion';
 }
 
-// ---------------------------------------------------------------- Markdown 标题行
+// ---------------------------------------------------------------- Markdown 標題行
 
-/** 与 core `stripH1`（`model/markdown.ts`）同一条规则：去掉首尾空白之后开头的那个 `# 标题`。 */
+/** 與 core `stripH1`（`model/markdown.ts`）同一條規則：去掉首尾空白之後開頭的那個 `# 標題`。 */
 const H1_RE = /^#\s+.+?(\r?\n|$)/;
 
 /**
- * Markdown 正文开头那一行 `# 标题` 里有几个字。后端数一章写了多少字（工程页、章节条、写够了没有）时**不算**
- * 这一行（`countWords(stripH1(body))`），编辑器里数章节字数同样减掉它，两边才对得上。
+ * Markdown 正文開頭那一行 `# 標題` 裡有幾個字。後端數一章寫了多少字（工程頁、章節條、寫夠了沒有）時**不算**
+ * 這一行（`countWords(stripH1(body))`），編輯器裡數章節字數同樣減掉它，兩邊才對得上。
  */
 export function headingWords(text: string): number {
   const m = H1_RE.exec(text.trimStart());
   return m ? countWords(m[0]) : 0;
 }
 
-// ---------------------------------------------------------------- 撤销 / 重做退的是哪一步
+// ---------------------------------------------------------------- 撤銷 / 重做退的是哪一步
 
 /**
- * 一份文件的撤销历史（`EditHistory`）里，每一步计入了多少码字。撤销那一步就减回去、重做再加上；
- * 那一步本来没计入（粘贴、排版……）就什么都不动。
+ * 一份檔案的撤銷歷史（`EditHistory`）裡，每一步計入了多少碼字。撤銷那一步就減回去、重做再加上；
+ * 那一步本來沒計入（貼上、排版……）就什麼都不動。
  *
- * 用法：每一次 `edit` 事件之后调一次——打字 / 上屏 / 程序改写调 {@link afterEdit}（带这一下计入的字数，
- * 不计入的给 0），撤销调 {@link afterUndo}，重做调 {@link afterRedo}，参数都是事件发生之后的 `history.topId`。
- * 编辑区每改一次历史都紧跟一条 `edit` 事件（`pane.ts`），所以上一次见到的栈顶就是撤销之前的栈顶。
+ * 用法：每一次 `edit` 事件之後調一次——打字 / 上屏 / 程式改寫調 {@link afterEdit}（帶這一下計入的字數，
+ * 不計入的給 0），撤銷調 {@link afterUndo}，重做調 {@link afterRedo}，引數都是事件發生之後的 `history.topId`。
+ * 編輯區每改一次歷史都緊跟一條 `edit` 事件（`pane.ts`），所以上一次見到的棧頂就是撤銷之前的棧頂。
  */
 export class StepLedger {
   private readonly counted = new Map<number, number>();
@@ -101,7 +101,7 @@ export class StepLedger {
     this.top = topId;
   }
 
-  /** 撤销之后：返回码字数要跟着变多少（撤销自己打的字是负数）。 */
+  /** 撤銷之後：返回碼字數要跟著變多少（撤銷自己打的字是負數）。 */
   afterUndo(topId: number | undefined): number {
     const undone = this.top;
     this.top = topId;
@@ -109,7 +109,7 @@ export class StepLedger {
     return words === 0 ? 0 : -words;
   }
 
-  /** 重做之后：重做回来的那一步就是新的栈顶。 */
+  /** 重做之後：重做回來的那一步就是新的棧頂。 */
   afterRedo(topId: number | undefined): number {
     const before = this.top;
     this.top = topId;
@@ -117,20 +117,20 @@ export class StepLedger {
   }
 }
 
-// ---------------------------------------------------------------- 本次码字
+// ---------------------------------------------------------------- 本次碼字
 
-/** 一份文件在这次里码了多少。 */
+/** 一份檔案在這次裡碼了多少。 */
 export interface FileTally {
   path: string;
-  /** 记下来那一刻它叫什么（「第 3 章《夜访》」「细纲 · 第 3 章」……）。文件关掉了明细里照样写得出。 */
+  /** 記下來那一刻它叫什麼（「第 3 章《夜訪》」「細綱 · 第 3 章」……）。檔案關掉了明細裡照樣寫得出。 */
   title: string;
   words: number;
   ms: number;
 }
 
 /**
- * 「本次码字」：从打开页面（或「重新开始计时」）起。按文件分别记，汇总成总数。
- * 时长的规则见文件头：两下落笔之间不超过 {@link IDLE_MS} 的那段记进去，记在后一下落笔的那份文件上。
+ * 「本次碼字」：從開啟頁面（或「重新開始計時」）起。按檔案分別記，彙總成總數。
+ * 時長的規則見檔案頭：兩下落筆之間不超過 {@link IDLE_MS} 的那段記進去，記在後一下落筆的那份檔案上。
  */
 export class WritingSession {
   words = 0;
@@ -140,11 +140,11 @@ export class WritingSession {
 
   constructor(readonly startedAt: number) {}
 
-  /** 一下落笔。返回这一下记进时长的毫秒数（「今日」也要加上同样的数）。 */
+  /** 一下落筆。返回這一下記進時長的毫秒數（「今日」也要加上同樣的數）。 */
   touch(path: string, title: string, at: number): number {
     const gap = this.last === undefined ? 0 : at - this.last;
     const add = gap > 0 && gap <= IDLE_MS ? gap : 0;
-    // 时钟往回拨（改了系统时间）时不倒退，免得下一下算出一段很长的「在写」。
+    // 時鐘往回呼（改了系統時間）時不倒退，免得下一下算出一段很長的「在寫」。
     this.last = this.last === undefined ? at : Math.max(this.last, at);
     const tally = this.tally(path, title);
     tally.ms += add;
@@ -152,7 +152,7 @@ export class WritingSession {
     return add;
   }
 
-  /** 这份文件码了（或退了）几个字。 */
+  /** 這份檔案碼了（或退了）幾個字。 */
   add(path: string, title: string, words: number): void {
     if (words === 0) {
       return;
@@ -161,7 +161,7 @@ export class WritingSession {
     this.words += words;
   }
 
-  /** 文件改了名：明细跟着换路径。新路径已经有一份时并进去。 */
+  /** 檔案改了名：明細跟著換路徑。新路徑已經有一份時並進去。 */
   rename(from: string, to: string): void {
     const old = this.files.get(from);
     if (!old || from === to) {
@@ -177,7 +177,7 @@ export class WritingSession {
     }
   }
 
-  /** 按文件的明细，码字多的在前（一样多时写得久的在前）。 */
+  /** 按檔案的明細，碼字多的在前（一樣多時寫得久的在前）。 */
   breakdown(): FileTally[] {
     return [...this.files.values()].sort((a, b) => b.words - a.words || b.ms - a.ms);
   }
@@ -194,7 +194,7 @@ export class WritingSession {
   }
 }
 
-/** 每小时多少字。写了不到 {@link MIN_SPEED_MS}、或者净字数不是正的，不报（undefined）。 */
+/** 每小時多少字。寫了不到 {@link MIN_SPEED_MS}、或者淨字數不是正的，不報（undefined）。 */
 export function speedPerHour(words: number, ms: number): number | undefined {
   if (ms < MIN_SPEED_MS || words <= 0) {
     return undefined;
@@ -202,42 +202,42 @@ export function speedPerHour(words: number, ms: number): number | undefined {
   return Math.round((words * 3_600_000) / ms);
 }
 
-/** 「42 分钟」「2 小时 5 分」「不到 1 分钟」。 */
+/** 「42 分鐘」「2 小時 5 分」「不到 1 分鐘」。 */
 export function formatDuration(ms: number): string {
   const minutes = Math.floor(Math.max(0, ms) / 60_000);
   if (minutes < 1) {
-    return '不到 1 分钟';
+    return '不到 1 分鐘';
   }
   if (minutes < 60) {
-    return `${minutes} 分钟`;
+    return `${minutes} 分鐘`;
   }
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m ? `${h} 小时 ${m} 分` : `${h} 小时`;
+  return m ? `${h} 小時 ${m} 分` : `${h} 小時`;
 }
 
-/** 带符号的字数：「+356」「-12」「0」。 */
+/** 帶符號的字數：「+356」「-12」「0」。 */
 export function signedWords(n: number): string {
   return n > 0 ? `+${groupDigits(n)}` : groupDigits(n);
 }
 
-// ---------------------------------------------------------------- 距目标
+// ---------------------------------------------------------------- 距目標
 
 export interface GoalProgress {
   words: number;
   target: number;
-  /** 写了目标的几成（可以超过 1）。 */
+  /** 寫了目標的幾成（可以超過 1）。 */
   ratio: number;
   /** 「3,120 / 4,000 字」 */
   count: string;
-  /** 「还差 880」「超出 120」「正好写够」 */
+  /** 「還差 880」「超出 120」「正好寫夠」 */
   rest: string;
-  /** 到了八成（后端判「写够了」的线，第 21 条）。 */
+  /** 到了八成（後端判「寫夠了」的線，第 21 條）。 */
   enough: boolean;
   over: boolean;
 }
 
-/** 本章字数与目标的进度。没有目标（不是正数）时 undefined。 */
+/** 本章字數與目標的進度。沒有目標（不是正數）時 undefined。 */
 export function goalProgress(words: number, target: number | undefined): GoalProgress | undefined {
   if (!target || !(target > 0)) {
     return undefined;
@@ -248,34 +248,34 @@ export function goalProgress(words: number, target: number | undefined): GoalPro
     target,
     ratio: words / target,
     count: `${groupDigits(words)} / ${groupDigits(target)} 字`,
-    rest: diff > 0 ? `还差 ${groupDigits(diff)}` : diff < 0 ? `超出 ${groupDigits(-diff)}` : '正好写够',
+    rest: diff > 0 ? `還差 ${groupDigits(diff)}` : diff < 0 ? `超出 ${groupDigits(-diff)}` : '正好寫夠',
     enough: words >= target * 0.8,
     over: diff < 0,
   };
 }
 
-// ---------------------------------------------------------------- 今日码字
+// ---------------------------------------------------------------- 今日碼字
 
-/** 一天码了多少：净字数与时长（口径与「本次」相同）。 */
+/** 一天碼了多少：淨字數與時長（口徑與「本次」相同）。 */
 export interface DayTally {
   words: number;
   ms: number;
 }
 
-/** 本地日期 → 那一天的数。键是 `YYYY-MM-DD`（本地时区，过了午夜就是新的一天）。 */
+/** 本地日期 → 那一天的數。鍵是 `YYYY-MM-DD`（本地時區，過了午夜就是新的一天）。 */
 export type DailyRecord = Record<string, DayTally>;
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** 这一刻是本地的哪一天。 */
+/** 這一刻是本地的哪一天。 */
 export function dayKey(at: number): string {
   const d = new Date(at);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /**
- * 读 localStorage 里那一份。**坏值一律回落**：不是 JSON、形状不对、某一天的数不是有限数，就当那一天（或整份）
- * 没有——这只是码字习惯数据，读不懂就从零记，不报错、不崩。
+ * 讀 localStorage 裡那一份。**壞值一律回落**：不是 JSON、形狀不對、某一天的數不是有限數，就當那一天（或整份）
+ * 沒有——這只是碼字習慣資料，讀不懂就從零記，不報錯、不崩。
  */
 export function parseDaily(raw: string | null | undefined): DailyRecord {
   let data: unknown;
@@ -312,8 +312,8 @@ export function serializeDaily(record: DailyRecord): string {
 }
 
 /**
- * 把一个窗口攒下的增量加进存着的那一份（**加，不是覆盖**：几个窗口同开一个工程时各加各的增量，谁也不会
- * 把别人记的冲掉，也不会重复算）。只留最近 {@link DAILY_KEEP} 天。不改传进来的两份。
+ * 把一個視窗攢下的增量加進存著的那一份（**加，不是覆蓋**：幾個視窗同開一個工程時各加各的增量，誰也不會
+ * 把別人記的沖掉，也不會重複算）。只留最近 {@link DAILY_KEEP} 天。不改傳進來的兩份。
  */
 export function addDaily(stored: DailyRecord, increment: DailyRecord, keep = DAILY_KEEP): DailyRecord {
   const out: DailyRecord = {};
@@ -331,7 +331,7 @@ export function addDaily(stored: DailyRecord, increment: DailyRecord, keep = DAI
   return out;
 }
 
-/** 往一份增量里记一笔（就地改）。 */
+/** 往一份增量裡記一筆（就地改）。 */
 export function bumpDaily(record: DailyRecord, at: number, words: number, ms: number): void {
   if (words === 0 && ms === 0) {
     return;

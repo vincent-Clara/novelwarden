@@ -5,32 +5,32 @@ import { NovelConfig } from '../../model/types';
 import { BuildRequest, ContextItem, LayerSpec } from '../types';
 import type { Focus } from './focus';
 
-/** 各层共享的可变状态。预算是一条流水线上的余额，层按配方顺序扣。 */
+/** 各層共享的可變狀態。預算是一條流水線上的餘額，層按配方順序扣。 */
 export interface Assembly {
   readonly project: NovelProject;
   readonly request: BuildRequest;
   readonly config: NovelConfig;
-  /** 这一次按哪一级装（上下文详细度）。说明文字里点名用。 */
+  /** 這一次按哪一級裝（上下文詳細度）。說明文字裡點名用。 */
   readonly detail: ContextDetail;
-  /** 这一级的各项上限（`contextLimitsOf(config)`，已叠上测试的单项覆盖）。层只从这里取。 */
+  /** 這一級的各項上限（`contextLimitsOf(config)`，已疊上測試的單項覆蓋）。層只從這裡取。 */
   readonly limits: ContextLimits;
   readonly focus: Focus;
-  /** 磁盘上那份 `config.md`：规模、类型、结构。提示词与结构指导都要它，只读一次。 */
+  /** 磁碟上那份 `config.md`：規模、型別、結構。提示詞與結構指導都要它，只讀一次。 */
   readonly book: BookConfig;
   readonly budget: number;
-  /** 剩余预算。**层可以直接改它**——降级路径需要自己算完再扣。 */
+  /** 剩餘預算。**層可以直接改它**——降級路徑需要自己算完再扣。 */
   remaining: number;
   readonly items: ContextItem[];
   readonly excluded: ReadonlySet<string>;
-  /** 常规注入：算 token、判余额、登记。放不下就记为 dropped。 */
+  /** 常規注入：算 token、判餘額、登記。放不下就記為 dropped。 */
   admit(item: Omit<ContextItem, 'tokens' | 'status'>, opts?: { force?: boolean }): ContextItem;
-  /** 已自行算好 token 的条目（降级路径）：登记并扣余额。 */
+  /** 已自行算好 token 的條目（降級路徑）：登記並扣餘額。 */
   accept(item: Omit<ContextItem, 'tokens'>, tokens: number): void;
-  /** 装不下 / 被排除：登记原因，不扣余额。**绝不静默丢弃。** */
+  /** 裝不下 / 被排除：登記原因，不扣餘額。**絕不靜默丟棄。** */
   reject(item: Omit<ContextItem, 'tokens' | 'status'>, status: 'dropped' | 'excluded', note: string): void;
   /**
-   * 跨层协调的便签，只有三处用得上：上一章结尾与近章全文互斥、早前细纲跳过已经带了全文的章、
-   * 定稿原文片段与近章全文互斥（整章进来了，它的片段就多余了）。
+   * 跨層協調的便籤，只有三處用得上：上一章結尾與近章全文互斥、早前細綱跳過已經帶了全文的章、
+   * 定稿原文片段與近章全文互斥（整章進來了，它的片段就多餘了）。
    */
   scratch: { prevTail?: ContextItem; evidence: Map<number, ContextItem> };
 }

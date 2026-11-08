@@ -1,47 +1,47 @@
 import { CancelledError } from '../llm/provider';
 
 /**
- * 有界并发。
+ * 有界併發。
  *
- * 工程页上最费时的几个动作——同步几十章细纲、批量更新角色卡——里的条目
- * 彼此**没有先后依赖**：第 12 章照正文更新细纲不看第 11 章，A 的角色卡也不
- * 看 B 的。串行跑纯粹是在排队等网络往返，于是这里给它们一条有界并发的路。
+ * 工程頁上最費時的幾個動作——同步幾十章細綱、批次更新角色卡——裡的條目
+ * 彼此**沒有先後依賴**：第 12 章照正文更新細綱不看第 11 章，A 的角色卡也不
+ * 看 B 的。序列跑純粹是在排隊等網路往返，於是這裡給它們一條有界併發的路。
  *
- * 三条设计取舍：
+ * 三條設計取捨：
  *
- * 1. **不 reject**。逐项 settle 后整批返回，调用方自己汇总——沿用
- *    features 层「失败项打 error 并继续跑完剩下的」的既有约定：一章细纲
- *    失败不该让另外 75 章白跑。
- * 2. **结果按 index 对齐**。完成顺序是乱的，但返回数组与入参一一对应，
- *    调用方要拼接有序产物（如全文大纲的阶段小节）时不必自己归位。
- * 3. **`limit <= 1` 走严格串行**，与改造前逐字一致——并发默认开着，
- *    出问题时用户把并发调回 1 就能拿回旧行为，这条路必须没有惊喜。
+ * 1. **不 reject**。逐項 settle 後整批返回，呼叫方自己彙總——沿用
+ *    features 層「失敗項打 error 並繼續跑完剩下的」的既有約定：一章細綱
+ *    失敗不該讓另外 75 章白跑。
+ * 2. **結果按 index 對齊**。完成順序是亂的，但返回陣列與入參一一對應，
+ *    呼叫方要拼接有序產物（如全文大綱的階段小節）時不必自己歸位。
+ * 3. **`limit <= 1` 走嚴格序列**，與改造前逐字一致——併發預設開著，
+ *    出問題時使用者把併發調回 1 就能拿回舊行為，這條路必須沒有驚喜。
  */
 
-/** 一项的结果。与 `Promise.allSettled` 同形，但 reason 保证是 Error。 */
+/** 一項的結果。與 `Promise.allSettled` 同形，但 reason 保證是 Error。 */
 export type Settled<R> =
   | { status: 'fulfilled'; value: R }
   | { status: 'rejected'; reason: Error };
 
 export interface RunPoolOptions<T, R> {
-  /** 取消信号。已 aborted 后不再启动新任务（在飞的由各自的请求 signal 打断）。 */
+  /** 取消訊號。已 aborted 後不再啟動新任務（在飛的由各自的請求 signal 打斷）。 */
   signal?: AbortSignal;
   /**
-   * 每项结束时回调（成功或失败都回）。进度与日志唯一的钩子——
-   * `done` 是**已结束**的项数，进度条的 `current` 只该跟着它走。
+   * 每項結束時回呼（成功或失敗都回）。進度與日誌唯一的鉤子——
+   * `done` 是**已結束**的項數，進度條的 `current` 只該跟著它走。
    */
   onSettled?: (result: Settled<R>, item: T, index: number, done: number) => void;
-  /** 每项开始时回调。并发下用来报「现在在跑哪几项」。 */
+  /** 每項開始時回呼。併發下用來報「現在在跑哪幾項」。 */
   onStart?: (item: T, index: number) => void;
 }
 
 /**
- * 并发跑一批无序任务。
+ * 併發跑一批無序任務。
  *
- * @param limit 同时在飞的上限。<= 1 时严格串行。
- * @returns 与 `items` 一一对应的结果数组（顺序不乱）。取消后未启动的项
- *          以 `CancelledError` 计入 rejected——**留个位置**，调用方要报
- *          「取消时还剩几项没跑」才有依据。
+ * @param limit 同時在飛的上限。<= 1 時嚴格序列。
+ * @returns 與 `items` 一一對應的結果陣列（順序不亂）。取消後未啟動的項
+ *          以 `CancelledError` 計入 rejected——**留個位置**，呼叫方要報
+ *          「取消時還剩幾項沒跑」才有依據。
  */
 export async function runPool<T, R>(
   items: T[],
@@ -78,7 +78,7 @@ export async function runPool<T, R>(
   const workers = Math.max(1, Math.min(Math.floor(limit) || 1, items.length));
   await Promise.all(Array.from({ length: workers }, () => consume()));
 
-  // 取消时留下的空位补成 rejected，调用方不必区分「没跑」与「跑挂了」两种 undefined。
+  // 取消時留下的空位補成 rejected，呼叫方不必區分「沒跑」與「跑掛了」兩種 undefined。
   for (let i = 0; i < results.length; i++) {
     if (!results[i]) {
       results[i] = { status: 'rejected', reason: new CancelledError() };
@@ -88,20 +88,20 @@ export async function runPool<T, R>(
 }
 
 /**
- * 把若干次调用串成一条队列，同一时刻只有一个在跑。
+ * 把若干次呼叫串成一條佇列，同一時刻只有一個在跑。
  *
- * 批量更新角色卡时分析是并发的，但 diff 审阅不能并发——同时弹三个 diff
- * 编辑器，用户根本不知道自己在看谁。于是分析照跑，审阅在这里排队，
- * 按**完成顺序**一张一张弹。
+ * 批次更新角色卡時分析是併發的，但 diff 審閱不能併發——同時彈三個 diff
+ * 編輯器，使用者根本不知道自己在看誰。於是分析照跑，審閱在這裡排隊，
+ * 按**完成順序**一張一張彈。
  *
- * 队列是进程级的单条链：前一个 `fn` 无论成功失败都不会卡住后面的。
+ * 佇列是程序級的單條鏈：前一個 `fn` 無論成功失敗都不會卡住後面的。
  */
 let chain: Promise<unknown> = Promise.resolve();
 
 export function serialize<T>(fn: () => Promise<T>): Promise<T> {
   const run = chain.then(fn, fn);
-  // 链上只保留「跑完了」这个事实，不传播异常——否则一次审阅出错会让
-  // 后面所有排队的调用都收到同一个 rejection。
+  // 鏈上只保留「跑完了」這個事實，不傳播異常——否則一次審閱出錯會讓
+  // 後面所有排隊的呼叫都收到同一個 rejection。
   chain = run.then(
     () => undefined,
     () => undefined

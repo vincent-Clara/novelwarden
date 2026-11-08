@@ -1,24 +1,24 @@
 /**
- * 定稿时更新本章出场角色的「当前状态」（D15），以及作者改过、没被覆盖的那几张卡的对比入口。
+ * 定稿時更新本章出場角色的「當前狀態」（D15），以及作者改過、沒被覆蓋的那幾張卡的對比入口。
  *
- * ## 谁的卡、写不写
+ * ## 誰的卡、寫不寫
  *
- * 出场人物以本章定稿后的细纲为准（第 14 条：定稿过的细纲是出场人物的唯一真相），按 `views/cast.ts` 同一张表
- * 认卡。一次调用出所有人的新状态；归属看 model/characterState.ts：
+ * 出場人物以本章定稿後的細綱為準（第 14 條：定稿過的細綱是出場人物的唯一真相），按 `views/cast.ts` 同一張表
+ * 認卡。一次呼叫出所有人的新狀態；歸屬看 model/characterState.ts：
  *
  * | 情形 | 做法 |
  * |---|---|
- * | 这一节归机器 | 换成新的那一版、盖章（`stateThrough` / `stateHash`） |
- * | 作者改过 | 不写；挂黄 ❗，说明里带上机器给的那一版，右键「对比…」决定 |
- * | 卡上已经是更晚那一章的状态 | 不回退（重新定稿早前的章时） |
- * | 出场了、状态没变 | 机器的卡把「写到第几章」推到这一章；作者的卡不动 |
- * | 模型给了名单外的名字 | 忽略，记日志 |
+ * | 這一節歸機器 | 換成新的那一版、蓋章（`stateThrough` / `stateHash`） |
+ * | 作者改過 | 不寫；掛黃 ❗，說明裡帶上機器給的那一版，右鍵「對比…」決定 |
+ * | 卡上已經是更晚那一章的狀態 | 不回退（重新定稿早前的章時） |
+ * | 出場了、狀態沒變 | 機器的卡把「寫到第幾章」推到這一章；作者的卡不動 |
+ * | 模型給了名單外的名字 | 忽略，記日誌 |
  *
- * 写卡**只动那一节与两个 frontmatter 字段**（`patchCardState`）：整卡重渲染会抹掉作者自加的
- * 小节。这里不走覆盖审阅——归属判据就是那道闸（与批量路径「只补空白」同一个理由）。
+ * 寫卡**只動那一節與兩個 frontmatter 欄位**（`patchCardState`）：整卡重渲染會抹掉作者自加的
+ * 小節。這裡不走覆蓋審閱——歸屬判據就是那道閘（與批次路徑「只補空白」同一個理由）。
  *
- * 2026-10-25 起改成转写：模型一人一节「## 人物名」写自然语言，转写模型照抄成原来那份 `{"updates":[…]}`
- * （{@link parseStateUpdates} 照旧解码）。只写了「无」（或「本章没有人的状态变了」这种短短一句）的不转，没有人的状态变了。
+ * 2026-10-25 起改成轉寫：模型一人一節「## 人物名」寫自然語言，轉寫模型照抄成原來那份 `{"updates":[…]}`
+ * （{@link parseStateUpdates} 照舊解碼）。只寫了「無」（或「本章沒有人的狀態變了」這種短短一句）的不轉，沒有人的狀態變了。
  */
 import { getHost, plainVerdict } from '../host';
 import { collectText } from '../llm/collect';
@@ -42,11 +42,11 @@ import { poolTranscriber } from './poolIO';
 
 const log = scoped('角色卡');
 
-/** 失败记录的 op：作者改过的状态没被覆盖、以及这一步调用失败，都记在它名下。 */
+/** 失敗記錄的 op：作者改過的狀態沒被覆蓋、以及這一步呼叫失敗，都記在它名下。 */
 export const STATE_OP = 'cardState';
 
 /**
- * 角色状态没更新成（模型的回答读不出来、转写没成）。带着这一步已经调了几次（写 1 次，加上转写的），定稿照它记账。
+ * 角色狀態沒更新成（模型的回答讀不出來、轉寫沒成）。帶著這一步已經調了幾次（寫 1 次，加上轉寫的），定稿照它記賬。
  */
 export class StateUpdateError extends Error {
   constructor(
@@ -58,31 +58,31 @@ export class StateUpdateError extends Error {
   }
 }
 
-/** 角色状态那一步没成时调了几次：读不出来的带着实数，别的错（网络、超时）是写的那 1 次。 */
+/** 角色狀態那一步沒成時調了幾次：讀不出來的帶著實數，別的錯（網路、超時）是寫的那 1 次。 */
 export function stateCallsOf(err: unknown): number {
   return err instanceof StateUpdateError ? err.calls : 1;
 }
 
 export interface StateUpdateOutcome {
-  /** 调了几次模型：出场的人都没建卡时是 0。 */
+  /** 調了幾次模型：出場的人都沒建卡時是 0。 */
   calls: number;
-  /** 当前状态换成了这一章的那一版。 */
+  /** 當前狀態換成了這一章的那一版。 */
   updated: string[];
-  /** 出场了、状态没变：机器的卡把「写到第几章」推到了这一章。 */
+  /** 出場了、狀態沒變：機器的卡把「寫到第幾章」推到了這一章。 */
   carried: string[];
-  /** 作者改过，没有覆盖（挂了黄 ❗）。 */
+  /** 作者改過，沒有覆蓋（掛了黃 ❗）。 */
   guarded: string[];
-  /** 卡上已经是更晚那一章的状态，没有回退。 */
+  /** 卡上已經是更晚那一章的狀態，沒有回退。 */
   newer: string[];
-  /** 模型给了名单外的名字。 */
+  /** 模型給了名單外的名字。 */
   unknown: string[];
 }
 
 /**
- * 更新本章出场角色的当前状态。
+ * 更新本章出場角色的當前狀態。
  *
- * `run` 决定怎么调模型：单章入口直接用对话页选定的那个；批量入口传分档池（失败换同档其余，
- * 第 12 条）。调用失败或返回解析不出来（转写没成）时抛错——细纲已经更新好了，由调用方把失败挂在章节上。
+ * `run` 決定怎麼調模型：單章入口直接用對話頁選定的那個；批次入口傳分檔池（失敗換同檔其餘，
+ * 第 12 條）。呼叫失敗或返回解析不出來（轉寫沒成）時拋錯——細綱已經更新好了，由呼叫方把失敗掛在章節上。
  */
 export async function updateCharacterStates(
   project: NovelProject,
@@ -92,7 +92,7 @@ export async function updateCharacterStates(
     run: <T>(what: string, fn: (llm: LlmProvider) => Promise<T>) => Promise<T>;
     budget: { contextWindow: number; maxOutputTokens: number };
     signal?: AbortSignal;
-    /** 转写那一次怎么调（2026-10-25 起）。缺省走「转写」那一档，那一档没有可用的模型时用 `run` 那一个。 */
+    /** 轉寫那一次怎麼調（2026-10-25 起）。預設走「轉寫」那一檔，那一檔沒有可用的模型時用 `run` 那一個。 */
     transcribe?: TranscribeCall;
   }
 ): Promise<StateUpdateOutcome> {
@@ -107,7 +107,7 @@ export async function updateCharacterStates(
     }
   }
   if (present.length === 0) {
-    log.info(`第 ${chapter.order} 章出场的人都还没有角色卡，不更新角色状态`);
+    log.info(`第 ${chapter.order} 章出場的人都還沒有角色卡，不更新角色狀態`);
     return out;
   }
 
@@ -117,17 +117,17 @@ export async function updateCharacterStates(
     .map((c) => {
       const identity = hasContent(c.sections.身份) ? clipLine(c.sections.身份, 60) : '';
       const now = hasContent(c.sections.当前状态) ? c.sections.当前状态.trim() : '（空）';
-      return `- ${c.name}${identity ? `（${identity}）` : ''}\n  现在的当前状态：${now}`;
+      return `- ${c.name}${identity ? `（${identity}）` : ''}\n  現在的當前狀態：${now}`;
     })
     .join('\n');
   const inputBudget = Math.max(2000, opts.budget.contextWindow - opts.budget.maxOutputTokens - 1500 - estimateTokens(roster));
   const body = takeHead(text, inputBudget);
   if (body.length < text.length) {
-    log.warn(`第 ${chapter.order} 章正文超出输入预算，更新角色状态时已截断`, `${text.length} 字 → ${body.length} 字`);
+    log.warn(`第 ${chapter.order} 章正文超出輸入預算，更新角色狀態時已截斷`, `${text.length} 字 → ${body.length} 字`);
   }
   const user =
     `【第${chapter.order}章 ${chapter.title}】\n\n${body}\n\n` +
-    `【本章出场、已经建档的人物】\n${roster}\n\n请按要求写。`;
+    `【本章出場、已經建檔的人物】\n${roster}\n\n請按要求寫。`;
   const options: StreamOptions = {
     maxOutputTokens: opts.budget.maxOutputTokens,
     temperature: 0.3,
@@ -136,7 +136,7 @@ export async function updateCharacterStates(
   };
 
   out.calls = 1;
-  const raw = await opts.run(`第 ${chapter.order} 章 · 角色状态`, (llm) =>
+  const raw = await opts.run(`第 ${chapter.order} 章 · 角色狀態`, (llm) =>
     collectText(
       llm.stream(
         [
@@ -152,10 +152,10 @@ export async function updateCharacterStates(
   const read = await readStateUpdates(raw, present, transcribe, chapter.order);
   out.calls = 1 + read.calls;
   if (read.notes.length > 0) {
-    log.warn(`第 ${chapter.order} 章角色状态的转写不顺`, read.notes.join('\n'));
+    log.warn(`第 ${chapter.order} 章角色狀態的轉寫不順`, read.notes.join('\n'));
   }
   if (!read.updates) {
-    throw new StateUpdateError(`模型返回的角色状态解析不出来（${read.why}）`, out.calls);
+    throw new StateUpdateError(`模型返回的角色狀態解析不出來（${read.why}）`, out.calls);
   }
   const updates = read.updates;
 
@@ -184,8 +184,8 @@ export async function updateCharacterStates(
         targetKey: card.relPath,
         severity: 'warn',
         op: STATE_OP,
-        message: `第 ${chapter.order} 章同步时给出了新的「当前状态」，这一节你改过，没有覆盖`,
-        detail: `${proposalHead(chapter.order)}\n${u.state}\n\n右键这张卡「对比第 ${chapter.order} 章给出的状态…」可以对比后决定用不用。`,
+        message: `第 ${chapter.order} 章同步時給出了新的「當前狀態」，這一節你改過，沒有覆蓋`,
+        detail: `${proposalHead(chapter.order)}\n${u.state}\n\n右鍵這張卡「對比第 ${chapter.order} 章給出的狀態…」可以對比後決定用不用。`,
       });
       continue;
     }
@@ -195,7 +195,7 @@ export async function updateCharacterStates(
     out.updated.push(card.name);
   }
 
-  // 出场了、状态没变：状态仍然成立到这一章。只推机器的卡，作者的卡一个字不动。
+  // 出場了、狀態沒變：狀態仍然成立到這一章。只推機器的卡，作者的卡一個字不動。
   for (const card of present) {
     if (touched.has(card.relPath) || !hasContent(card.sections.当前状态) || !stateOwnedByMachine(card)) {
       continue;
@@ -209,41 +209,41 @@ export async function updateCharacterStates(
   }
 
   log.info(
-    `第 ${chapter.order} 章的角色状态已处理`,
+    `第 ${chapter.order} 章的角色狀態已處理`,
     [
       out.updated.length > 0 ? `更新 ${out.updated.join('、')}` : '',
       out.carried.length > 0 ? `沿用 ${out.carried.join('、')}` : '',
-      out.guarded.length > 0 ? `你改过、没覆盖 ${out.guarded.join('、')}` : '',
-      out.newer.length > 0 ? `已是更晚的状态 ${out.newer.join('、')}` : '',
-      out.unknown.length > 0 ? `名单外的名字 ${out.unknown.join('、')}` : '',
+      out.guarded.length > 0 ? `你改過、沒覆蓋 ${out.guarded.join('、')}` : '',
+      out.newer.length > 0 ? `已是更晚的狀態 ${out.newer.join('、')}` : '',
+      out.unknown.length > 0 ? `名單外的名字 ${out.unknown.join('、')}` : '',
     ]
       .filter(Boolean)
-      .join('｜') || '没有人的状态变了'
+      .join('｜') || '沒有人的狀態變了'
   );
   return out;
 }
 
-/** 黄 ❗ 说明里机器那一版的开头。对比入口按它把那一版取回来。 */
+/** 黃 ❗ 說明裡機器那一版的開頭。對比入口按它把那一版取回來。 */
 function proposalHead(no: number): string {
-  return `【第 ${no} 章给出的当前状态】`;
+  return `【第 ${no} 章給出的當前狀態】`;
 }
 
-const PROPOSAL = /【第 (\d+) 章给出的当前状态】\n([\s\S]*?)(?:\n\n右键这张卡|$)/;
+const PROPOSAL = /【第 (\d+) 章(?:给|給)出的(?:当|當)前(?:状|狀)(?:态|態)】\n([\s\S]*?)(?:\n\n右(?:键|鍵)(?:这|這)(?:张|張)卡|$)/;
 
-/** 从黄 ❗ 的说明里取回机器给的那一版。认不出返回 undefined。 */
+/** 從黃 ❗ 的說明裡取回機器給的那一版。認不出返回 undefined。 */
 export function proposalOf(detail: string | undefined): { no: number; state: string } | undefined {
   const m = PROPOSAL.exec(detail ?? '');
   return m ? { no: Number(m[1]), state: m[2].trim() } : undefined;
 }
 
-/** 「无」「本章没有人的状态变了」这种短短一句（名单上的名字一个都没提）：没有人的状态变了。 */
-const NOTHING = /无|没有/u;
+/** 「無」「本章沒有人的狀態變了」這種短短一句（名單上的名字一個都沒提）：沒有人的狀態變了。 */
+const NOTHING = /(?:无|無)|(?:没|沒)有/u;
 const NOTHING_MAX_CHARS = 40;
 
 /**
- * 模型的回答 → 各人的新状态（2026-10-25 起改成转写）：模型自己给了 JSON（老会话、测试里的假模型）照原来的解码、不转；只写了「无」
- * （或「本章没有人的状态变了」这种短短一句）的是没人变、不转；一个名单上的名字都没有的（答非所问）不花转写那一次；其余转写模型照抄成 `{"updates":[…]}`。
- * 读不出来、转写没成交回 `why`。
+ * 模型的回答 → 各人的新狀態（2026-10-25 起改成轉寫）：模型自己給了 JSON（老會話、測試裡的假模型）照原來的解碼、不轉；只寫了「無」
+ * （或「本章沒有人的狀態變了」這種短短一句）的是沒人變、不轉；一個名單上的名字都沒有的（答非所問）不花轉寫那一次；其餘轉寫模型照抄成 `{"updates":[…]}`。
+ * 讀不出來、轉寫沒成交回 `why`。
  */
 async function readStateUpdates(
   raw: string,
@@ -263,11 +263,11 @@ async function readStateUpdates(
   const r = await transcribeJson(
     raw,
     {
-      label: `第 ${no} 章角色状态`,
+      label: `第 ${no} 章角色狀態`,
       contract: STATE_JSON_CONTRACT,
       decode: (json) => {
         const updates = parseStateUpdates(json);
-        return updates ? { ok: true, value: updates } : { ok: false, message: '没有 updates 这一项' };
+        return updates ? { ok: true, value: updates } : { ok: false, message: '沒有 updates 這一項' };
       },
       looksLike: (source) => names.some((n) => source.includes(n)),
     },
@@ -275,13 +275,13 @@ async function readStateUpdates(
   );
   return r.ok
     ? { updates: r.value, why: '', calls: r.calls, notes: r.notes }
-    : { why: r.calls > 0 ? `转写没成：${r.message}` : r.message, calls: r.calls, notes: r.notes };
+    : { why: r.calls > 0 ? `轉寫沒成：${r.message}` : r.message, calls: r.calls, notes: r.notes };
 }
 
 /**
- * `{"updates":[{"name","当前状态"}]}`。字段名写成 `state` / `currentState`（上游的叫法，可能是
- * 对象）也收；`updates` 缺了、根本不是 JSON 时返回 undefined。当前状态是空的那一条丢掉——
- * 空字符串换掉一段有内容的状态，比不换更糟。
+ * `{"updates":[{"name","当前状态"}]}`。欄位名寫成 `state` / `currentState`（上游的叫法，可能是
+ * 物件）也收；`updates` 缺了、根本不是 JSON 時返回 undefined。當前狀態是空的那一條丟掉——
+ * 空字串換掉一段有內容的狀態，比不換更糟。
  */
 export function parseStateUpdates(raw: string): { name: string; state: string }[] | undefined {
   const json = extractJsonObject(stripCodeFence(raw));
@@ -322,21 +322,21 @@ export function parseStateUpdates(raw: string): { name: string; state: string }[
 }
 
 /**
- * 「对比第 N 章给出的状态…」：作者改过的那张卡，拿机器给的那一版做一次覆盖审阅。
+ * 「對比第 N 章給出的狀態…」：作者改過的那張卡，拿機器給的那一版做一次覆蓋審閱。
  *
- * 采用 → 按机器写入（盖章、清 ❗，这一节从此又归机器）；放弃 → 清 ❗、不写（这一节仍然归作者，
- * 下一次定稿照样不覆盖、照样挂 ❗）；关掉审阅框什么都不做。
+ * 採用 → 按機器寫入（蓋章、清 ❗，這一節從此又歸機器）；放棄 → 清 ❗、不寫（這一節仍然歸作者，
+ * 下一次定稿照樣不覆蓋、照樣掛 ❗）；關掉審閱框什麼都不做。
  */
 export async function reviewCharacterState(project: NovelProject, relPath: string): Promise<void> {
   const card = (await project.listCharacters()).find((c) => c.relPath === relPath);
   if (!card) {
-    getHost().toast('找不到这张角色卡，可能刚被改名或删除。', 'error');
+    getHost().toast('找不到這張角色卡，可能剛被改名或刪除。', 'error');
     return;
   }
   const failure = await activeFailure(project, 'character', relPath, STATE_OP);
   const proposal = proposalOf(failure?.detail);
   if (!proposal) {
-    getHost().toast(`「${card.name}」没有待对比的状态。`);
+    getHost().toast(`「${card.name}」沒有待對比的狀態。`);
     return;
   }
   const raw = await readText(project.pathOf(relPath));
@@ -345,24 +345,24 @@ export async function reviewCharacterState(project: NovelProject, relPath: strin
   let verdict: 'apply' | 'discard' | undefined;
   try {
     verdict = host.reviewReplace
-      ? plainVerdict(await host.reviewReplace(`角色卡「${card.name}」的当前状态`, raw, next, relPath))
-      : (await host.confirm(`用第 ${proposal.no} 章给出的状态换掉「${card.name}」现在的当前状态？`, ['换', '不换'], {
+      ? plainVerdict(await host.reviewReplace(`角色卡「${card.name}」的當前狀態`, raw, next, relPath))
+      : (await host.confirm(`用第 ${proposal.no} 章給出的狀態換掉「${card.name}」現在的當前狀態？`, ['換', '不換'], {
             modal: true,
             detail: proposal.state,
-          })) === '换'
+          })) === '換'
         ? 'apply'
         : 'discard';
   } catch (err) {
-    log.error(`对比「${card.name}」的状态失败：${describeError(err)}`, err);
+    log.error(`對比「${card.name}」的狀態失敗：${describeError(err)}`, err);
     return;
   }
   if (verdict === 'apply') {
     await new Workspace(project).write(relPath, { text: next }, { mode: 'overwrite', review: false });
     await clearFailures(project, 'character', relPath, STATE_OP);
-    log.info(`「${card.name}」换成了第 ${proposal.no} 章给出的状态`, relPath);
-    host.toast(`「${card.name}」的当前状态已更新到第 ${proposal.no} 章。`);
+    log.info(`「${card.name}」換成了第 ${proposal.no} 章給出的狀態`, relPath);
+    host.toast(`「${card.name}」的當前狀態已更新到第 ${proposal.no} 章。`);
   } else if (verdict === 'discard') {
     await clearFailures(project, 'character', relPath, STATE_OP);
-    log.info(`「${card.name}」保留作者写的状态`, `没有用第 ${proposal.no} 章给出的那一版`);
+    log.info(`「${card.name}」保留作者寫的狀態`, `沒有用第 ${proposal.no} 章給出的那一版`);
   }
 }

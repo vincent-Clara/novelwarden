@@ -1,5 +1,5 @@
 /**
- * ~/.novelwarden/window.json：测试一律写进临时目录，不碰真实主目录。
+ * ~/.novelwarden/window.json：測試一律寫進臨時目錄，不碰真實主目錄。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -26,16 +26,16 @@ after(() => {
 });
 
 describe('windowState', () => {
-  test('缺文件时 lastOpen 为空、recents 为空', () => {
+  test('缺檔案時 lastOpen 為空、recents 為空', () => {
     assert.deepEqual(readWindowState(dir), { lastOpen: null, recents: [] });
   });
 
-  test('坏 JSON 降级成空状态', () => {
+  test('壞 JSON 降級成空狀態', () => {
     fs.writeFileSync(path.join(dir, 'window.json'), '{not json', 'utf8');
     assert.deepEqual(readWindowState(dir), { lastOpen: null, recents: [] });
   });
 
-  test('rememberOpen 记下 lastOpen 并插入 recents 头部', () => {
+  test('rememberOpen 記下 lastOpen 並插入 recents 頭部', () => {
     const root = path.resolve(dir, 'book-a');
     const state = rememberOpen(root, dir);
     assert.equal(state.lastOpen, root);
@@ -45,7 +45,7 @@ describe('windowState', () => {
     assert.equal(typeof state.recents[0].openedAt, 'number');
   });
 
-  test('同一路径再次打开只留一条，并更新到最前', () => {
+  test('同一路徑再次開啟只留一條，並更新到最前', () => {
     const a = path.resolve(dir, 'book-a');
     const b = path.resolve(dir, 'book-b');
     rememberOpen(a, dir);
@@ -74,7 +74,7 @@ describe('windowState', () => {
     assert.equal(state.recents[0].root, root);
   });
 
-  test('writeWindowState 落盘为 JSON', () => {
+  test('writeWindowState 落盤為 JSON', () => {
     writeWindowState({ lastOpen: null, recents: [] }, dir);
     const raw = JSON.parse(fs.readFileSync(path.join(dir, 'window.json'), 'utf8'));
     assert.equal(raw.lastOpen, null);

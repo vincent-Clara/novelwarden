@@ -51,19 +51,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * WebView 壳。页面由服务端吐出来（独立版的同一个页面），壳只决定打开哪个地址：
- * - 本机模式（缺省）：起内置服务端（{@link LocalServer}），带令牌登录后打开 http://127.0.0.1:端口；
- * - 远程模式：打开设置里填的服务器地址（比如部署在 NAS 上的 Docker 版），有令牌就替作者登录
- *   （设置里填的，或在网页登录页上输对过一次的）。
- * 服务端设置是原生对话框：页面属于服务端，远程那台的版本不一定认识这个壳。入口是返回键弹出的菜单，
- * 连不上时的提示页上也有。
+ * WebView 殼。頁面由服務端吐出來（獨立版的同一個頁面），殼只決定開啟哪個地址：
+ * - 本機模式（預設）：起內建服務端（{@link LocalServer}），帶令牌登入後開啟 http://127.0.0.1:端口；
+ * - 遠端模式：開啟設定裡填的伺服器地址（比如部署在 NAS 上的 Docker 版），有令牌就替作者登入
+ *   （設定裡填的，或在網頁登入頁上輸對過一次的）。
+ * 服務端設定是原生對話方塊：頁面屬於服務端，遠端那臺的版本不一定認識這個殼。入口是返回鍵彈出的選單，
+ * 連不上時的提示頁上也有。
  */
 public class MainActivity extends Activity {
     private static final String TAG = "NovelForge";
     private static final int REQ_STORAGE = 1;
     private static final int REQ_NOTIFY = 2;
 
-    /** 进程级：Activity 重建不重启服务端 */
+    /** 程序級：Activity 重建不重啟服務端 */
     private static LocalServer server;
     private static final ExecutorService bg = Executors.newSingleThreadExecutor();
 
@@ -72,7 +72,7 @@ public class MainActivity extends Activity {
     private LinearLayout panel;
     private TextView panelText;
     private LinearLayout panelButtons;
-    /** 当前服务端的源（scheme://host:port）：同源的链接留在 WebView 里，别的交给浏览器 */
+    /** 當前服務端的源（scheme://host:port）：同源的連結留在 WebView 裡，別的交給瀏覽器 */
     private Uri base;
     private boolean starting;
     private boolean loadFailed;
@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
         root.addView(web);
         root.addView(buildPanel());
         setContentView(root);
-        // 页面没加载出来前先用上次的颜色，免得深色主题每次启动都先闪一下白条
+        // 頁面沒載入出來前先用上次的顏色，免得深色主題每次啟動都先閃一下白條
         if (prefs.contains("bar_color")) applyBarColor(prefs.getInt("bar_color", 0));
         setupWebView();
         boot();
@@ -111,10 +111,10 @@ public class MainActivity extends Activity {
         panelButtons.setGravity(Gravity.CENTER);
         panelButtons.setPadding(0, dp(16), 0, 0);
         Button retry = new Button(this);
-        retry.setText("重试");
+        retry.setText("重試");
         retry.setOnClickListener(v -> boot());
         Button settings = new Button(this);
-        settings.setText("服务端设置");
+        settings.setText("服務端設定");
         settings.setOnClickListener(v -> showServerSettings());
         panelButtons.addView(retry);
         panelButtons.addView(settings);
@@ -137,7 +137,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(false);
         s.setSupportMultipleWindows(true);
         s.setJavaScriptCanOpenWindowsAutomatically(true);
-        // 字号由页面自己的设置管，不跟系统字体缩放（放大了窄屏布局会挤坏）
+        // 字號由頁面自己的設定管，不跟系統字型縮放（放大了窄屏佈局會擠壞）
         s.setTextZoom(100);
         web.addJavascriptInterface(new ShellBridge(), "NovelForgeShell");
 
@@ -167,11 +167,11 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError err) {
                 if (!req.isForMainFrame()) return;
                 loadFailed = true;
-                showPanel("连不上 " + base + "\n" + err.getDescription(), true);
+                showPanel("連不上 " + base + "\n" + err.getDescription(), true);
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
-            /** window.open（外部链接）：交给系统浏览器 */
+            /** window.open（外部連結）：交給系統瀏覽器 */
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
                 WebView probe = new WebView(MainActivity.this);
@@ -196,12 +196,12 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** "local" / "remote"；缺省本机，远程要在服务端设置里切 */
+    /** "local" / "remote"；預設本機，遠端要在服務端設定裡切 */
     private String mode() {
         return prefs.getString("mode", "local");
     }
 
-    /** 按当前模式启停内置服务端，再打开对应的地址 */
+    /** 按當前模式啟停內建服務端，再開啟對應的地址 */
     private void boot() {
         if ("remote".equals(mode())) {
             starting = false;
@@ -215,8 +215,8 @@ public class MainActivity extends Activity {
             Uri u = Uri.parse(url);
             base = new Uri.Builder().scheme(u.getScheme()).encodedAuthority(u.getEncodedAuthority()).build();
             String token = prefs.getString("remote_token", "");
-            // 地址不通时 WebView 要等半分钟才报错，这期间也得能改地址
-            showPanel("正在连接 " + base + "…", true);
+            // 地址不通時 WebView 要等半分鐘才報錯，這期間也得能改地址
+            showPanel("正在連線 " + base + "…", true);
             if (token.isEmpty()) web.loadUrl(base + "/");
             else login(token);
             return;
@@ -227,7 +227,7 @@ public class MainActivity extends Activity {
         }
         askNotificationsOnce();
         starting = true;
-        showPanel("正在启动本机服务…", false);
+        showPanel("正在啟動本機服務…", false);
         ServerService.start(this);
         File books = booksDir();
         bg.execute(() -> {
@@ -237,7 +237,7 @@ public class MainActivity extends Activity {
                 starting = false;
                 if (!st.ok) {
                     ServerService.stop(this);
-                    showPanel("本机服务没有启动：" + st.error, true);
+                    showPanel("本機服務沒有啟動：" + st.error, true);
                     return;
                 }
                 base = Uri.parse(st.url);
@@ -246,7 +246,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** 走服务端自己的登录页：交令牌、种 cookie、跳回首页（首页再跳到最近打开的那本书） */
+    /** 走服務端自己的登入頁：交令牌、種 cookie、跳回首頁（首頁再跳到最近開啟的那本書） */
     private void login(String token) {
         String form = "token=" + Uri.encode(token) + "&next=%2F";
         web.postUrl(base + "/login", form.getBytes(StandardCharsets.UTF_8));
@@ -258,8 +258,8 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * 交登录表单时把令牌放进 sessionStorage；下一页不再是登录页（登录成了）就取出来交给壳，
-     * 还是登录页（令牌不对）就扔掉。返回值：取出来的令牌，没有就是 null
+     * 交登入表單時把令牌放進 sessionStorage；下一頁不再是登入頁（登入成了）就取出來交給殼，
+     * 還是登入頁（令牌不對）就扔掉。返回值：取出來的令牌，沒有就是 null
      */
     private static final String LOGIN_HOOK = "(function () {"
             + "var k = 'nfShellToken', f = document.querySelector('form[action=\"/login\"]');"
@@ -276,8 +276,8 @@ public class MainActivity extends Activity {
             + "})()";
 
     /**
-     * 远程模式下在网页登录页上输的令牌也记下来，之后与设置里填的一样每次替作者登录（cookie 只管 30 天）。
-     * 不用 addJavascriptInterface：那个对页面里的任何 iframe 都敞着；sessionStorage 只有服务端自己的源读写得到
+     * 遠端模式下在網頁登入頁上輸的令牌也記下來，之後與設定裡填的一樣每次替作者登入（cookie 只管 30 天）。
+     * 不用 addJavascriptInterface：那個對頁面裡的任何 iframe 都敞著；sessionStorage 只有服務端自己的源讀寫得到
      */
     private void rememberWebLogin() {
         web.evaluateJavascript(LOGIN_HOOK, v -> {
@@ -287,16 +287,16 @@ public class MainActivity extends Activity {
                     prefs.edit().putString("remote_token", (String) t).apply();
                 }
             } catch (JSONException ignored) {
-                // 页面没跑完脚本（比如已经跳走了）：这次不记
+                // 頁面沒跑完指令碼（比如已經跳走了）：這次不記
             }
         });
     }
 
-    // ── 系统栏跟页面主题 ───────────────────────────────────────────
+    // ── 系統欄跟頁面主題 ───────────────────────────────────────────
 
     /**
-     * 盯住页面的 `<meta name="theme-color">`（换主题时页面改它，见 media/src/editor/shell.ts 的 syncThemeColor），
-     * 一变就交给壳染系统栏。没有这个 meta 的旧版服务端：什么都不做，系统栏照旧跟系统深浅色
+     * 盯住頁面的 `<meta name="theme-color">`（換主題時頁面改它，見 media/src/editor/shell.ts 的 syncThemeColor），
+     * 一變就交給殼染系統欄。沒有這個 meta 的舊版服務端：什麼都不做，系統欄照舊跟系統深淺色
      */
     private static final String THEME_HOOK = "(function () {"
             + "var m = document.querySelector('meta[name=\"theme-color\"]');"
@@ -307,7 +307,7 @@ public class MainActivity extends Activity {
             + "send();"
             + "})()";
 
-    /** 给页面开的唯一一个口子。页面里谁调了都只是换个颜色，所以不必像记令牌那样躲开 addJavascriptInterface */
+    /** 給頁面開的唯一一個口子。頁面裡誰調了都只是換個顏色，所以不必像記令牌那樣躲開 addJavascriptInterface */
     private class ShellBridge {
         @JavascriptInterface
         public void setBarColor(String css) {
@@ -326,7 +326,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** 状态栏、导航栏染成页面标题栏 / 底栏的颜色（两者同色）；底色浅就换深色图标 */
+    /** 狀態列、導航欄染成頁面標題欄 / 底欄的顏色（兩者同色）；底色淺就換深色圖示 */
     @SuppressWarnings("deprecation")
     private void applyBarColor(int color) {
         Window w = getWindow();
@@ -336,7 +336,7 @@ public class MainActivity extends Activity {
         View decor = w.getDecorView();
         int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         decor.setSystemUiVisibility(light ? decor.getSystemUiVisibility() | flags : decor.getSystemUiVisibility() & ~flags);
-        // Android 11 起只设旧标志位不一定生效（主题里的 windowLightStatusBar 会盖回去），两样都设，与 androidx 的做法一致
+        // Android 11 起只設舊標誌位不一定生效（主題裡的 windowLightStatusBar 會蓋回去），兩樣都設，與 androidx 的做法一致
         if (Build.VERSION.SDK_INT >= 30) {
             WindowInsetsController c = w.getInsetsController();
             int appearance = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
@@ -345,14 +345,14 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ── 书放在哪 ──────────────────────────────────────────────────
+    // ── 書放在哪 ──────────────────────────────────────────────────
 
     private boolean publicStorageGranted() {
         if (Build.VERSION.SDK_INT >= 30) return Environment.isExternalStorageManager();
         return checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
     }
 
-    /** 有权限放 Documents/NovelForge，没有就放 app 自己的目录（卸载时一起删） */
+    /** 有許可權放 Documents/NovelForge，沒有就放 app 自己的目錄（解除安裝時一起刪） */
     private File booksDir() {
         if (publicStorageGranted()) {
             return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "NovelForge");
@@ -363,14 +363,14 @@ public class MainActivity extends Activity {
 
     private void askStorage() {
         new AlertDialog.Builder(this)
-                .setTitle("书放在哪")
-                .setMessage("建议放在「Documents/NovelForge」：文件管理器、同步盘都看得到，卸载 app 也不会删。"
-                        + "这需要「所有文件访问」权限。\n\n不授权就放在 app 自己的目录，卸载 app 时会一起删掉。之后可以在「服务端设置」里改。")
-                .setPositiveButton("去授权", (d, w) -> {
+                .setTitle("書放在哪")
+                .setMessage("建議放在「Documents/NovelForge」：檔案管理器、同步盤都看得到，解除安裝 app 也不會刪。"
+                        + "這需要「所有檔案訪問」許可權。\n\n不授權就放在 app 自己的目錄，解除安裝 app 時會一起刪掉。之後可以在「服務端設定」裡改。")
+                .setPositiveButton("去授權", (d, w) -> {
                     prefs.edit().putBoolean("storage_asked", true).apply();
                     requestStorage();
                 })
-                .setNegativeButton("放在 app 目录", (d, w) -> {
+                .setNegativeButton("放在 app 目錄", (d, w) -> {
                     prefs.edit().putBoolean("storage_asked", true).apply();
                     boot();
                 })
@@ -391,7 +391,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** 常驻通知要通知权限（Android 13+）；不给服务照样跑，只是看不到那条通知，所以只问一次 */
+    /** 常駐通知要通知許可權（Android 13+）；不給服務照樣跑，只是看不到那條通知，所以只問一次 */
     private void askNotificationsOnce() {
         if (Build.VERSION.SDK_INT < 33 || prefs.getBoolean("notify_asked", false)) return;
         prefs.edit().putBoolean("notify_asked", true).apply();
@@ -411,7 +411,7 @@ public class MainActivity extends Activity {
         if (requestCode == REQ_STORAGE) boot();
     }
 
-    // ── 服务端设置 ─────────────────────────────────────────────────
+    // ── 服務端設定 ─────────────────────────────────────────────────
 
     private void showServerSettings() {
         LinearLayout form = new LinearLayout(this);
@@ -422,10 +422,10 @@ public class MainActivity extends Activity {
         RadioGroup modes = new RadioGroup(this);
         RadioButton local = new RadioButton(this);
         local.setId(View.generateViewId());
-        local.setText("本机：在手机上跑内置服务");
+        local.setText("本機：在手機上跑內建服務");
         RadioButton remote = new RadioButton(this);
         remote.setId(View.generateViewId());
-        remote.setText("远程：连接已经部署好的服务器");
+        remote.setText("遠端：連線已經部署好的伺服器");
         modes.addView(local);
         modes.addView(remote);
         form.addView(modes);
@@ -434,7 +434,7 @@ public class MainActivity extends Activity {
         where.setPadding(dp(32), 0, 0, dp(8));
         form.addView(where);
         Button grant = new Button(this);
-        grant.setText("改放 Documents/NovelForge（授权）");
+        grant.setText("改放 Documents/NovelForge（授權）");
         grant.setAllCaps(false);
         grant.setOnClickListener(v -> requestStorage());
         form.addView(grant, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -446,8 +446,8 @@ public class MainActivity extends Activity {
         url.setText(prefs.getString("remote_url", ""));
         form.addView(url);
         EditText token = new EditText(this);
-        token.setHint("访问令牌（空着就在网页上输，输对一次就记住）");
-        // setSingleLine 会换掉遮挡字符的 TransformationMethod，必须排在设密码类型之前，不然令牌明文显示
+        token.setHint("訪問令牌（空著就在網頁上輸，輸對一次就記住）");
+        // setSingleLine 會換掉遮擋字元的 TransformationMethod，必須排在設密碼型別之前，不然令牌明文顯示
         token.setSingleLine(true);
         token.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         token.setText(prefs.getString("remote_token", ""));
@@ -456,7 +456,7 @@ public class MainActivity extends Activity {
         Runnable sync = () -> {
             boolean isLocal = modes.getCheckedRadioButtonId() == local.getId();
             where.setVisibility(isLocal ? View.VISIBLE : View.GONE);
-            where.setText("书放在：" + booksDir());
+            where.setText("書放在：" + booksDir());
             grant.setVisibility(isLocal && !publicStorageGranted() ? View.VISIBLE : View.GONE);
             url.setVisibility(isLocal ? View.GONE : View.VISIBLE);
             token.setVisibility(isLocal ? View.GONE : View.VISIBLE);
@@ -466,19 +466,19 @@ public class MainActivity extends Activity {
         sync.run();
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("服务端")
+                .setTitle("服務端")
                 .setView(form)
-                .setPositiveButton("确定", null)
+                .setPositiveButton("確定", null)
                 .setNegativeButton("取消", null)
                 .show();
-        // 自己接「确定」：地址不对时不关对话框
+        // 自己接「確定」：地址不對時不關對話方塊
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             boolean isLocal = modes.getCheckedRadioButtonId() == local.getId();
             SharedPreferences.Editor e = prefs.edit().putString("mode", isLocal ? "local" : "remote");
             if (!isLocal) {
                 String normalized = normalizeUrl(url.getText().toString());
                 if (normalized == null) {
-                    url.setError("填服务器的地址，如 http://192.168.1.10:3680");
+                    url.setError("填伺服器的地址，如 http://192.168.1.10:3680");
                     return;
                 }
                 e.putString("remote_url", normalized).putString("remote_token", token.getText().toString().trim());
@@ -489,7 +489,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** 补上 http://、去掉路径：服务端的页面、/ws、/login 都挂在根上 */
+    /** 補上 http://、去掉路径：服务端的页面、/ws、/login 都掛在根上 */
     static String normalizeUrl(String raw) {
         String s = raw.trim();
         if (s.isEmpty()) return null;
@@ -500,15 +500,15 @@ public class MainActivity extends Activity {
         return scheme + "://" + u.getEncodedAuthority();
     }
 
-    // ── 返回键与生命周期 ───────────────────────────────────────────
+    // ── 返回鍵與生命週期 ───────────────────────────────────────────
 
     /**
-     * 返回键先交给页面一层层收（菜单、弹窗、盖在侧栏上的编辑区，见 media/src/view/mobileNav.ts 的 nfBack）；
-     * 页面说没什么可收了（或者页面还没加载、开着的是连不上的提示），才弹壳的菜单
+     * 返回鍵先交給頁面一層層收（選單、彈窗、蓋在側欄上的編輯區，見 media/src/view/mobileNav.ts 的 nfBack）；
+     * 頁面說沒什麼可收了（或者頁面還沒載入、開著的是連不上的提示），才彈殼的選單
      */
     @Override
     public void onBackPressed() {
-        // 提示页盖着网页（启动中、连不上）：底下那一页不是作者看得见的，不去收它的层
+        // 提示頁蓋著網頁（啟動中、連不上）：底下那一頁不是作者看得見的，不去收它的層
         if (panel.getVisibility() == View.VISIBLE) {
             showShellMenu();
             return;
@@ -520,7 +520,7 @@ public class MainActivity extends Activity {
 
     private void showShellMenu() {
         new AlertDialog.Builder(this)
-                .setItems(new CharSequence[]{"服务端设置…", "退出 Novelwarden"}, (d, which) -> {
+                .setItems(new CharSequence[]{"服務端設定…", "退出 Novelwarden"}, (d, which) -> {
                     if (which == 0) showServerSettings();
                     else quit();
                 })
@@ -533,7 +533,7 @@ public class MainActivity extends Activity {
         finishAndRemoveTask();
     }
 
-    /** 本机服务进程意外退出了（或书的位置变了）：回到前台时重新起 */
+    /** 本機服務程序意外退出了（或書的位置變了）：回到前臺時重新起 */
     @Override
     protected void onResume() {
         super.onResume();

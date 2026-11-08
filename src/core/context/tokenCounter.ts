@@ -1,70 +1,70 @@
 /**
- * Token 计数的**可替换实现**。
+ * Token 計數的**可替換實現**。
  *
- * 改造前这里只有一个写死的 `estimateTokens`：中文 ×1.5、拉丁 ÷4。它够用，
- * 但每一处预算计算都直接调那个函数，想换一套更准的算法（tiktoken、服务商的
- * count_tokens 接口、按模型分词器区分）就得改遍全仓库。
+ * 改造前這裡只有一個寫死的 `estimateTokens`：中文 ×1.5、拉丁 ÷4。它夠用，
+ * 但每一處預算計算都直接調那個函式，想換一套更準的演算法（tiktoken、服務商的
+ * count_tokens 介面、按模型分詞器區分）就得改遍全倉庫。
  *
- * 现在拆成三层：
+ * 現在拆成三層：
  *
- * 1. `TokenCounter` —— 接口。一个计数器要能「数一段文本」与「反推字符数」
- *    （截断需要后者），可选 `prepare()` 供需要加载 wasm / 词表的实现用。
- * 2. 注册表 —— `registerTokenCounter` / `useTokenCounter`。宿主启动时可以
- *    注册更准的实现并切过去，core 里其余代码只认 `countTokens`。
- * 3. `HeuristicTokenCounter` —— 默认实现，就是原来那套系数，零依赖、同步、
- *    永不失败。它是兜底：任何更准的实现加载失败都退回它。
+ * 1. `TokenCounter` —— 介面。一個計數器要能「數一段文字」與「反推字元數」
+ *    （截斷需要後者），可選 `prepare()` 供需要載入 wasm / 詞表的實現用。
+ * 2. 登錄檔 —— `registerTokenCounter` / `useTokenCounter`。宿主啟動時可以
+ *    註冊更準的實現並切過去，core 裡其餘程式碼只認 `countTokens`。
+ * 3. `HeuristicTokenCounter` —— 預設實現，就是原來那套係數，零依賴、同步、
+ *    永不失敗。它是兜底：任何更準的實現載入失敗都退回它。
  *
- * 另有一条**校准回路**：服务商返回真实用量时调 `recordUsage`，这里记下
- * 「估算 / 实际」的比值。目前只用于日志与统计展示，**不自动修正估算值**——
- * 估算必须是纯函数，否则同一份上下文两次装配会得出不同的预算判断，
- * 「不静默截断」的明细也就不可复现了。将来要做自适应计数器，`usageStats()`
- * 就是它的输入。
+ * 另有一條**校準迴路**：服務商返回真實用量時調 `recordUsage`，這裡記下
+ * 「估算 / 實際」的比值。目前只用於日誌與統計展示，**不自動修正估算值**——
+ * 估算必須是純函式，否則同一份上下文兩次裝配會得出不同的預算判斷，
+ * 「不靜默截斷」的明細也就不可復現了。將來要做自適應計數器，`usageStats()`
+ * 就是它的輸入。
  */
 
-/** 一次真实请求的 token 用量，由服务商返回。字段缺席表示该服务商没给。 */
+/** 一次真實請求的 token 用量，由服務商返回。欄位缺席表示該服務商沒給。 */
 export interface TokenUsage {
   inputTokens?: number;
   outputTokens?: number;
 }
 
 export interface TokenCounter {
-  /** 稳定标识，注册表的键。 */
+  /** 穩定標識，登錄檔的鍵。 */
   readonly id: string;
-  /** 展示名，出现在日志与设置页。 */
+  /** 展示名，出現在日誌與設定頁。 */
   readonly label: string;
   /**
-   * 精度自述。`estimate` 表示只保证量级正确（预算里另留安全余量），
-   * `exact` 表示与服务商的分词结果一致。
+   * 精度自述。`estimate` 表示只保證量級正確（預算裡另留安全餘量），
+   * `exact` 表示與服務商的分詞結果一致。
    */
   readonly accuracy: 'estimate' | 'exact';
   /**
-   * 需要异步初始化时实现它（加载 wasm、拉取词表）。注册表在切换时调用一次，
-   * 失败则保留当前计数器——**计数器坏掉不能让写作流程停下**。
+   * 需要非同步初始化時實現它（載入 wasm、拉取詞表）。登錄檔在切換時呼叫一次，
+   * 失敗則保留當前計數器——**計數器壞掉不能讓寫作流程停下**。
    */
   prepare?(): Promise<void>;
-  /** 数一段文本的 token 数。必须同步：装配器的预算判断是逐条同步做的。 */
+  /** 數一段文字的 token 數。必須同步：裝配器的預算判斷是逐條同步做的。 */
   count(text: string): number;
   /**
-   * 给定 token 预算，反推大致能放多少个字符。截断用。
-   * 宁可少给（截短一点），不能多给（超预算）。
+   * 給定 token 預算，反推大致能放多少個字元。截斷用。
+   * 寧可少給（截短一點），不能多給（超預算）。
    */
   charsFor(tokens: number): number;
 }
 
 /**
- * 默认实现：按字符类别加权。
+ * 預設實現：按字元類別加權。
  *
- * 不引入 tiktoken：一是体积大、需要 wasm，二是不同服务商分词器本就不同，
- * 精确到个位没有意义。这里只要保证「不低估」，预算里再留安全余量即可。
+ * 不引入 tiktoken：一是體積大、需要 wasm，二是不同服務商分詞器本就不同，
+ * 精確到個位沒有意義。這裡只要保證「不低估」，預算裡再留安全餘量即可。
  *
- * 经验系数：
- * - 中日韩字符：约 1 字 ≈ 1.5 token（GPT 系分词器对中文并不友好）
- * - 拉丁字母：约 4 字符 ≈ 1 token
- * - 其余字符（标点、空白、数字）：约 3 字符 ≈ 1 token
+ * 經驗係數：
+ * - 中日韓字元：約 1 字 ≈ 1.5 token（GPT 系分詞器對中文並不友好）
+ * - 拉丁字母：約 4 字元 ≈ 1 token
+ * - 其餘字元（標點、空白、數字）：約 3 字元 ≈ 1 token
  */
 export class HeuristicTokenCounter implements TokenCounter {
   readonly id = 'heuristic';
-  readonly label = '字符加权粗估';
+  readonly label = '字元加權粗估';
   readonly accuracy = 'estimate' as const;
 
   constructor(
@@ -97,7 +97,7 @@ export class HeuristicTokenCounter implements TokenCounter {
     return Math.ceil(cjk * this.weights.cjk + latin * this.weights.latin + other * this.weights.other);
   }
 
-  /** 按中文为主反推——中文最「贵」，用它算出的字符数最保守。 */
+  /** 按中文為主反推——中文最「貴」，用它算出的字元數最保守。 */
   charsFor(tokens: number): number {
     return Math.floor(tokens / this.weights.cjk);
   }
@@ -105,16 +105,16 @@ export class HeuristicTokenCounter implements TokenCounter {
 
 function isCjk(code: number): boolean {
   return (
-    (code >= 0x4e00 && code <= 0x9fff) || // 中日韩统一表意文字
-    (code >= 0x3400 && code <= 0x4dbf) || // 扩展 A
-    (code >= 0xf900 && code <= 0xfaff) || // 兼容表意文字
+    (code >= 0x4e00 && code <= 0x9fff) || // 中日韓統一表意文字
+    (code >= 0x3400 && code <= 0x4dbf) || // 擴充套件 A
+    (code >= 0xf900 && code <= 0xfaff) || // 相容表意文字
     (code >= 0x3040 && code <= 0x30ff) || // 假名
-    (code >= 0xac00 && code <= 0xd7af) || // 谚文
-    (code >= 0x3000 && code <= 0x303f) // 中日韩标点
+    (code >= 0xac00 && code <= 0xd7af) || // 諺文
+    (code >= 0x3000 && code <= 0x303f) // 中日韓標點
   );
 }
 
-// ---------------------------------------------------------------- 注册表
+// ---------------------------------------------------------------- 登錄檔
 
 const counters = new Map<string, TokenCounter>();
 const fallback = new HeuristicTokenCounter();
@@ -135,8 +135,8 @@ export function activeTokenCounter(): TokenCounter {
 }
 
 /**
- * 切换当前计数器。未注册的 id 或 `prepare()` 抛错都当作切换失败：
- * 保持原计数器并返回 false，绝不让写作流程因为「数不了 token」停下。
+ * 切換當前計數器。未註冊的 id 或 `prepare()` 拋錯都當作切換失敗：
+ * 保持原計數器並返回 false，絕不讓寫作流程因為「數不了 token」停下。
  */
 export async function useTokenCounter(id: string): Promise<boolean> {
   const next = counters.get(id);
@@ -152,39 +152,39 @@ export async function useTokenCounter(id: string): Promise<boolean> {
   return true;
 }
 
-/** 测试与宿主重启用：退回默认实现。 */
+/** 測試與宿主重啟用：退回預設實現。 */
 export function resetTokenCounter(): void {
   active = fallback;
 }
 
-/** 数一段文本的 token 数（走当前计数器）。 */
+/** 數一段文字的 token 數（走當前計數器）。 */
 export function countTokens(text: string): number {
   return active.count(text);
 }
 
-/** 目标 token 数对应的大致字符数（走当前计数器）。 */
+/** 目標 token 數對應的大致字元數（走當前計數器）。 */
 export function charsForTokens(tokens: number): number {
   return Math.max(0, active.charsFor(tokens));
 }
 
-// ---------------------------------------------------------------- 校准统计
+// ---------------------------------------------------------------- 校準統計
 
 export interface UsageSample {
-  /** 来源，如「续写」「摘要」。 */
+  /** 來源，如「續寫」「摘要」。 */
   scope: string;
-  /** 发出请求前我们估的输入 token。 */
+  /** 發出請求前我們估的輸入 token。 */
   estimated: number;
-  /** 服务商返回的真实输入 token。 */
+  /** 服務商返回的真實輸入 token。 */
   actual: number;
 }
 
 export interface UsageStats {
   samples: number;
-  /** 累计估算值 / 累计真实值。>1 表示我们高估（安全方向）。 */
+  /** 累計估算值 / 累計真實值。>1 表示我們高估（安全方向）。 */
   ratio: number;
   estimatedTotal: number;
   actualTotal: number;
-  /** 服务商真实计费的输出 token 累计。 */
+  /** 服務商真實計費的輸出 token 累計。 */
   outputTotal: number;
 }
 
@@ -193,11 +193,11 @@ const samples: UsageSample[] = [];
 let outputTotal = 0;
 
 /**
- * 记一次真实用量。
+ * 記一次真實用量。
  *
- * 只在服务商确实返回了 usage 时调用（OpenAI 需要 `stream_options.include_usage`，
- * Anthropic 在 message_start / message_delta 里给）。没有 usage 的服务商
- * 什么都不记——宁可样本少，也不能拿估算值冒充实测把比值污染掉。
+ * 只在服務商確實返回了 usage 時呼叫（OpenAI 需要 `stream_options.include_usage`，
+ * Anthropic 在 message_start / message_delta 裡給）。沒有 usage 的服務商
+ * 什麼都不記——寧可樣本少，也不能拿估算值冒充實測把比值汙染掉。
  */
 export function recordUsage(scope: string, estimated: number, usage: TokenUsage): void {
   if (usage.outputTokens !== undefined) {
@@ -230,19 +230,19 @@ export function resetUsageStats(): void {
 }
 
 /**
- * 一句话描述本次估算与实测的偏差，供日志用。没有实测数据时返回 undefined。
- * 用途是让作者在日志页能看出「插件报的 token 数靠不靠谱」。
+ * 一句話描述本次估算與實測的偏差，供日誌用。沒有實測資料時返回 undefined。
+ * 用途是讓作者在日誌頁能看出「外掛報的 token 數靠不靠譜」。
  */
 export function describeUsage(estimated: number, usage: TokenUsage): string | undefined {
   const parts: string[] = [];
   if (usage.inputTokens !== undefined) {
     const delta = estimated > 0 ? Math.round(((estimated - usage.inputTokens) / usage.inputTokens) * 100) : 0;
     parts.push(
-      `输入实测 ${usage.inputTokens} token（估算 ${estimated}，偏差 ${delta > 0 ? '+' : ''}${delta}%）`
+      `輸入實測 ${usage.inputTokens} token（估算 ${estimated}，偏差 ${delta > 0 ? '+' : ''}${delta}%）`
     );
   }
   if (usage.outputTokens !== undefined) {
-    parts.push(`输出 ${usage.outputTokens} token`);
+    parts.push(`輸出 ${usage.outputTokens} token`);
   }
   return parts.length > 0 ? parts.join('；') : undefined;
 }

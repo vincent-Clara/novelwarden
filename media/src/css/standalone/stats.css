@@ -1,7 +1,7 @@
 /*
- * 码字统计（editor/stats.ts、editor/statsPanel.ts）：状态栏字数那一格（全文 / 选中、距目标的细进度条、
- * 本次 / 今日码字），以及点它弹出来的小面板。面板挂在 body 上 `position: fixed`、贴着那一格往上弹，
- * 层级与「转到…」面板同一档（压在提示条上面、标题栏菜单下面）。
+ * 碼字統計（editor/stats.ts、editor/statsPanel.ts）：狀態列字數那一格（全文 / 選中、距目標的細進度條、
+ * 本次 / 今日碼字），以及點它彈出來的小面板。面板掛在 body 上 `position: fixed`、貼著那一格往上彈，
+ * 層級與「轉到…」面板同一檔（壓在提示條上面、標題欄選單下面）。
  */
 
 .ed-status .ed-words {
@@ -26,7 +26,7 @@
   outline-offset: -1px;
 }
 
-/* 距目标那一条：很细，跟在「还差 880」后面。 */
+/* 距目標那一條：很細，跟在「還差 880」後面。 */
 .ed-words-bar {
   display: inline-block;
   width: 56px;
@@ -44,7 +44,7 @@
   background: var(--vscode-progressBar-background, #0078d4);
 }
 
-/* 到了八成（后端判「写够了」的线）换色，与写正文时气泡上那条一致。 */
+/* 到了八成（後端判「寫夠了」的線）換色，與寫正文時氣泡上那條一致。 */
 .ed-words-bar.enough .ed-words-fill,
 .ed-stats-bar.enough .ed-stats-fill {
   background: var(--vscode-testing-iconPassed, #3fb950);

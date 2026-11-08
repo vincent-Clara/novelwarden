@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <title>Novelwarden</title>
 <!--
-  桌面壳的启动页。窗口先加载它，等 sidecar 就绪后由 Rust 侧 navigate 到
-  http://127.0.0.1:PORT/ —— 那之后这一页就退场了，正常情况下只闪一下。
+  桌面殼的啟動頁。視窗先載入它，等 sidecar 就緒後由 Rust 側 navigate 到
+  http://127.0.0.1:PORT/ —— 那之後這一頁就退場了，正常情況下只閃一下。
 
-  它存在的唯一理由是：spawn 进程 + 起服务要 0.5~1.5 秒，那段时间窗口不能是白的；
-  以及起不来的时候得有个地方说清楚原因、给个重试的按钮。打开文件夹在 sidecar
-  页面里做，这一页不再选目录。
+  它存在的唯一理由是：spawn 程序 + 起服務要 0.5~1.5 秒，那段時間視窗不能是白的；
+  以及起不來的時候得有個地方說清楚原因、給個重試的按鈕。開啟資料夾在 sidecar
+  頁面裡做，這一頁不再選目錄。
 
-  取值对齐 media/src/css/standalone/theme.css 的深色主题，但刻意不引用那边的
-  CSS —— 那些文件在 sidecar 里，这一页在壳里，两边不该有构建期依赖。
+  取值對齊 media/src/css/standalone/theme.css 的深色主題，但刻意不引用那邊的
+  CSS —— 那些檔案在 sidecar 裡，這一頁在殼裡，兩邊不該有構建期依賴。
 -->
 <style>
   :root {
@@ -83,7 +83,7 @@
   button:hover { background: var(--btn2-hover); }
   button.primary { background: var(--btn); color: #fff; }
   button.primary:hover { background: var(--btn-hover); }
-  /* 转圈：不用动图也不用第三方库，一个 conic-gradient 就够。 */
+  /* 轉圈：不用動圖也不用第三方庫，一個 conic-gradient 就夠。 */
   .spinner {
     width: 22px; height: 22px;
     margin: 0 auto 1rem;
@@ -107,13 +107,13 @@
   </svg>
 
   <div class="spinner" id="spinner"></div>
-  <h1 id="title">正在启动 Novelwarden…</h1>
+  <h1 id="title">正在啟動 Novelwarden…</h1>
   <p class="msg" id="msg"><span class="path" id="path"></span></p>
   <pre class="detail" id="detail" hidden></pre>
 
   <div class="actions" id="actions" hidden>
-    <button class="primary" id="btnRetry" hidden>重试</button>
-    <button id="btnLogs" hidden>查看日志</button>
+    <button class="primary" id="btnRetry" hidden>重試</button>
+    <button id="btnLogs" hidden>檢視日誌</button>
   </div>
 </main>
 <script src="splash.js"></script>

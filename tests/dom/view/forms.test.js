@@ -1,13 +1,13 @@
 /**
- * 两个弹窗（W3 表单 · W4 一句话 · W5 拆细纲）与主按钮上的调用次数。
+ * 兩個彈窗（W3 表單 · W4 一句話 · W5 拆細綱）與主按鈕上的呼叫次數。
  *
- * | 用例组 | 钉的是什么 |
+ * | 用例組 | 釘的是什麼 |
  * |---|---|
- * | 一句话 · 主按钮 | 「生成小说配置」打开表单而不直接发送；默认值来自后端；提交发 send 带 setup、切到对话页 |
- * | 一句话 · 校验 | 脑洞空着不许提交；全书字数实时算；Esc 关掉什么都不发 |
- * | 拆细纲 | 缺省区间、实时说明（跳过几章、分几批、预计与最多几次）与后端同一个纯函数；提交带 call |
- * | 拆细纲 · 越界 | 超出大纲覆盖时不许提交，并说清先续写大纲 |
- * | 调用次数 | 主按钮提示后面写「预计 2 次调用，最多 29 次」（第 4 条；细纲试点起多一次转写） |
+ * | 一句話 · 主按鈕 | 「生成小說配置」開啟表單而不直接傳送；預設值來自後端；提交發 send 帶 setup、切到對話頁 |
+ * | 一句話 · 校驗 | 腦洞空著不許提交；全書字數實時算；Esc 關掉什麼都不發 |
+ * | 拆細綱 | 預設區間、實時說明（跳過幾章、分幾批、預計與最多幾次）與後端同一個純函式；提交帶 call |
+ * | 拆細綱 · 越界 | 超出大綱覆蓋時不許提交，並說清先續寫大綱 |
+ * | 呼叫次數 | 主按鈕提示後面寫「預計 2 次呼叫，最多 29 次」（第 4 條；細綱試點起多一次轉寫） |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -26,14 +26,14 @@ function type(ui, key, value) {
 function key(ui, target, k, extra = {}) {
   target.dispatchEvent(new ui.window.KeyboardEvent('keydown', { key: k, bubbles: true, ...extra }));
 }
-/** 工程页某一组的标题栏右键，点其中一项。三个批量入口从前在工具栏上，现在只在分组右键里。 */
+/** 工程頁某一組的標題欄右鍵，點其中一項。三個批次入口從前在工具欄上，現在只在分組右鍵裡。 */
 function pickFromGroup(ui, group, label) {
   const head = [...ui.doc.querySelectorAll('#projectBody .group-head')]
     .find((n) => n.querySelector('.group-name').textContent === group);
   ui.pick(ui.rightClick(head), label);
 }
 
-describe('一句话弹窗 · 从主按钮打开', { skip: JSDOM_SKIP }, () => {
+describe('一句話彈窗 · 從主按鈕開啟', { skip: JSDOM_SKIP }, () => {
   let ui;
   const goBtn = () => ui.doc.getElementById('nextStepBtn');
   const hint = () => ui.doc.getElementById('nextStepHint').textContent;
@@ -43,12 +43,12 @@ describe('一句话弹窗 · 从主按钮打开', { skip: JSDOM_SKIP }, () => {
     ui.post({ type: 'session', session: emptySession() });
     ui.post({
       type: 'pipeline',
-      workbench: workbenchView({ stage: 'setting', title: '架构 · 小说配置' }),
+      workbench: workbenchView({ stage: 'setting', title: '架構 · 小說配置' }),
       next: {
         stage: 'setting',
         capability: 'generate',
-        label: '生成小说配置',
-        hint: '先把这个脑洞展开成一份小说配置。',
+        label: '生成小說配置',
+        hint: '先把這個腦洞展開成一份小說配置。',
         target: { kind: 'setting', doc: 'config' },
         form: 'idea',
         calls: { low: 1, high: 1, max: 3 },
@@ -57,48 +57,48 @@ describe('一句话弹窗 · 从主按钮打开', { skip: JSDOM_SKIP }, () => {
     });
   });
 
-  test('主按钮写明要先填表，提示里带调用次数', () => {
-    assert.equal(goBtn().textContent, '生成小说配置…');
-    assert.ok(hint().includes('（预计 1 次调用，最多 3 次）'), hint());
+  test('主按鈕寫明要先填表，提示裡帶呼叫次數', () => {
+    assert.equal(goBtn().textContent, '生成小說配置…');
+    assert.ok(hint().includes('（預計 1 次呼叫，最多 3 次）'), hint());
   });
 
-  test('点主按钮打开表单，不直接发送', () => {
+  test('點主按鈕開啟表單，不直接傳送', () => {
     ui.sent.length = 0;
     ui.clickEl(goBtn());
     assert.ok(isOpen(ui));
     assert.ok(!ui.sent.some((m) => m.type === 'send'), JSON.stringify(ui.sent));
   });
 
-  test('默认值来自后端：一句话原文与规模', () => {
+  test('預設值來自後端：一句話原文與規模', () => {
     assert.equal(field(ui, 'idea').value, '少年入宗');
     assert.equal(field(ui, 'totalChapters').value, '60');
     assert.equal(field(ui, 'wordsPerChapter').value, '2500');
   });
 
-  // 后端就是这么合的：配置写过东西时保留原文、生成的追加在后。
-  test('配置已有内容时明说「保留原文，追加生成」', () => {
+  // 後端就是這麼合的：配置寫過東西時保留原文、生成的追加在後。
+  test('配置已有內容時明說「保留原文，追加生成」', () => {
     assert.ok(ui.doc.querySelector('.nf-form .form-lead').textContent.includes('保留原文'));
   });
 
-  test('全书字数实时算', () => {
-    assert.ok(note(ui).includes('全书约 15 万字'), note(ui));
+  test('全書字數實時算', () => {
+    assert.ok(note(ui).includes('全書約 15 萬字'), note(ui));
     type(ui, 'totalChapters', 100);
     type(ui, 'wordsPerChapter', 3000);
-    assert.ok(note(ui).includes('全书约 30 万字'), note(ui));
+    assert.ok(note(ui).includes('全書約 30 萬字'), note(ui));
   });
 
-  // 2026-10-25 起配置写完转写一次：只报数，原因太长不进这一行。
-  test('说明里报配置的调用次数，不带原因', () => {
-    assert.ok(note(ui).includes('预计 2 次调用，最多 5 次 · Ctrl+Enter 提交'), note(ui));
+  // 2026-10-25 起配置寫完轉寫一次：只報數，原因太長不進這一行。
+  test('說明裡報配置的呼叫次數，不帶原因', () => {
+    assert.ok(note(ui).includes('預計 2 次呼叫，最多 5 次 · Ctrl+Enter 提交'), note(ui));
   });
 
-  test('Ctrl+Enter 提交：切到对话页，发 send 带 setup', () => {
+  test('Ctrl+Enter 提交：切到對話頁，發 send 帶 setup', () => {
     ui.sent.length = 0;
-    type(ui, 'idea', '一个从火里活下来的人回到起火的地方');
+    type(ui, 'idea', '一個從火裡活下來的人回到起火的地方');
     key(ui, field(ui, 'idea'), 'Enter', { ctrlKey: true });
     const send = ui.last('send');
     assert.ok(send, JSON.stringify(ui.sent));
-    assert.equal(send.payload.text, '一个从火里活下来的人回到起火的地方');
+    assert.equal(send.payload.text, '一個從火裡活下來的人回到起火的地方');
     assert.equal(send.payload.stage, 'setting');
     assert.equal(JSON.stringify(send.payload.target), JSON.stringify({ kind: 'setting', doc: 'config' }));
     assert.equal(JSON.stringify(send.payload.setup), JSON.stringify({ totalChapters: 100, wordsPerChapter: 3000 }));
@@ -108,32 +108,32 @@ describe('一句话弹窗 · 从主按钮打开', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('一句话弹窗 · 校验与关闭', { skip: JSDOM_SKIP }, () => {
+describe('一句話彈窗 · 校驗與關閉', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
     ui = mount();
     ui.post({ type: 'session', session: emptySession() });
     ui.post({ type: 'project', tree: sampleTree() });
-    // 故事架构组右键「从一句话生成小说配置…」也能打开它。
+    // 故事架構組右鍵「從一句話生成小說配置…」也能開啟它。
     const head = [...ui.doc.querySelectorAll('#projectBody .group-head')]
-      .find((n) => n.querySelector('.group-name').textContent === '故事架构');
-    ui.pick(ui.rightClick(head), '从一句话生成小说配置…');
+      .find((n) => n.querySelector('.group-name').textContent === '故事架構');
+    ui.pick(ui.rightClick(head), '從一句話生成小說配置…');
   });
 
-  test('从工程页也能打开，默认值来自工程页快照', () => {
+  test('從工程頁也能開啟，預設值來自工程頁快照', () => {
     assert.ok(isOpen(ui));
-    assert.equal(field(ui, 'idea').value, '一个从火里活下来的人回到起火的地方。');
+    assert.equal(field(ui, 'idea').value, '一個從火裡活下來的人回到起火的地方。');
     assert.equal(field(ui, 'totalChapters').value, '30');
   });
 
-  test('脑洞空着不许提交，并说清为什么', () => {
+  test('腦洞空著不許提交，並說清為什麼', () => {
     type(ui, 'idea', '');
     assert.ok(submitBtn(ui).disabled);
-    assert.ok(note(ui).includes('还空着'), note(ui));
+    assert.ok(note(ui).includes('還空著'), note(ui));
   });
 
-  test('规模越界不许提交', () => {
+  test('規模越界不許提交', () => {
     type(ui, 'idea', '少年入宗');
     type(ui, 'totalChapters', 0);
     assert.ok(submitBtn(ui).disabled, note(ui));
@@ -141,7 +141,7 @@ describe('一句话弹窗 · 校验与关闭', { skip: JSDOM_SKIP }, () => {
     assert.ok(!submitBtn(ui).disabled, note(ui));
   });
 
-  test('Esc 关掉，什么都不发', () => {
+  test('Esc 關掉，什麼都不發', () => {
     ui.sent.length = 0;
     key(ui, ui.doc, 'Escape');
     assert.ok(!isOpen(ui));
@@ -149,63 +149,63 @@ describe('一句话弹窗 · 校验与关闭', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('拆细纲弹窗', { skip: JSDOM_SKIP }, () => {
+describe('拆細綱彈窗', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
     ui = mount();
     ui.post({ type: 'project', tree: sampleTree() });
-    pickFromGroup(ui, '章节', '批量拆细纲…');
+    pickFromGroup(ui, '章節', '批次拆細綱…');
   });
 
-  // 下一可写章是第 4 章，缺省拆 5 章，不越过大纲覆盖（20）与总章数（30）。
-  test('缺省区间是下一可写章起 5 章', () => {
+  // 下一可寫章是第 4 章，預設拆 5 章，不越過大綱覆蓋（20）與總章數（30）。
+  test('預設區間是下一可寫章起 5 章', () => {
     assert.ok(isOpen(ui));
     assert.equal(field(ui, 'from').value, '4');
     assert.equal(field(ui, 'to').value, '8');
   });
 
-  // 第 4 章排过细纲：跳过它，第 5–8 章一批。已经有叙事线，不先排线。与后端 planPlotBatches 同一个算法。
-  test('实时说明：拆几章、跳过几章、分几批、预计与最多', () => {
-    assert.ok(note(ui).includes('要拆 4 章，分 1 批（每批最多 5 章），跳过已有细纲的 1 章'), note(ui));
-    assert.ok(note(ui).includes('预计 2 次调用，最多 23 次'), note(ui));
-    assert.ok(!note(ui).includes('叙事线'), note(ui));
+  // 第 4 章排過細綱：跳過它，第 5–8 章一批。已經有敘事線，不先排線。與後端 planPlotBatches 同一個演算法。
+  test('實時說明：拆幾章、跳過幾章、分幾批、預計與最多', () => {
+    assert.ok(note(ui).includes('要拆 4 章，分 1 批（每批最多 5 章），跳過已有細綱的 1 章'), note(ui));
+    assert.ok(note(ui).includes('預計 2 次呼叫，最多 23 次'), note(ui));
+    assert.ok(!note(ui).includes('敘事線'), note(ui));
   });
 
-  test('改区间说明跟着变', () => {
+  test('改區間說明跟著變', () => {
     type(ui, 'from', 1);
     type(ui, 'to', 12);
-    // 第 1、3、4 章排过：2 一批，5–9 一批，10–12 一批。
-    assert.ok(note(ui).includes('要拆 9 章，分 3 批') && note(ui).includes('预计 6 次调用，最多 51 次'), note(ui));
+    // 第 1、3、4 章排過：2 一批，5–9 一批，10–12 一批。
+    assert.ok(note(ui).includes('要拆 9 章，分 3 批') && note(ui).includes('預計 6 次呼叫，最多 51 次'), note(ui));
   });
 
-  // 叙事线重做（设计稿 ⚑8）：一条线都没有时后端开拆之前先排一次，弹窗把它算进去（2026-10-25 起排 1 次、转写 1 次，最多 3 次）。
-  test('一条叙事线都没有：说明里 +2 次（最多 +3），写明先从情节大纲排一次', () => {
+  // 敘事線重做（設計稿 ⚑8）：一條線都沒有時後端開拆之前先排一次，彈窗把它算進去（2026-10-25 起排 1 次、轉寫 1 次，最多 3 次）。
+  test('一條敘事線都沒有：說明裡 +2 次（最多 +3），寫明先從情節大綱排一次', () => {
     key(ui, ui.doc, 'Escape');
     ui.post({ type: 'project', tree: { ...sampleTree(), threads: { lines: [], current: 0 } } });
-    pickFromGroup(ui, '章节', '批量拆细纲…');
-    assert.ok(note(ui).includes('预计 4 次调用，最多 26 次'), note(ui));
-    assert.ok(note(ui).includes('还没有叙事线：开拆之前先从情节大纲排一次（排 1 次、转写 1 次'), note(ui));
+    pickFromGroup(ui, '章節', '批次拆細綱…');
+    assert.ok(note(ui).includes('預計 4 次呼叫，最多 26 次'), note(ui));
+    assert.ok(note(ui).includes('還沒有敘事線：開拆之前先從情節大綱排一次（排 1 次、轉寫 1 次'), note(ui));
     key(ui, ui.doc, 'Escape');
     ui.post({ type: 'project', tree: sampleTree() });
-    pickFromGroup(ui, '章节', '批量拆细纲…');
+    pickFromGroup(ui, '章節', '批次拆細綱…');
   });
 
-  test('超出大纲覆盖不许提交，说清先续写大纲', () => {
+  test('超出大綱覆蓋不許提交，說清先續寫大綱', () => {
     type(ui, 'to', 25);
     assert.ok(submitBtn(ui).disabled);
-    assert.ok(note(ui).includes('只覆盖到第 20 章'), note(ui));
+    assert.ok(note(ui).includes('只覆蓋到第 20 章'), note(ui));
   });
 
-  test('这一段都排过时不许提交', () => {
+  test('這一段都排過時不許提交', () => {
     type(ui, 'from', 3);
     type(ui, 'to', 4);
     assert.ok(submitBtn(ui).disabled);
-    assert.ok(note(ui).includes('都已经排过细纲了'), note(ui));
+    assert.ok(note(ui).includes('都已經排過細綱了'), note(ui));
   });
 
-  // 弹窗已经报过调用次数：带 call（这一次的模型与详细度，缺省按分档、设置页那一级），后端不再弹第二个确认框（不叠弹窗）。
-  test('提交发 generatePlots，带区间与 call', () => {
+  // 彈窗已經報過呼叫次數：帶 call（這一次的模型與詳細度，預設按分檔、設定頁那一級），後端不再彈第二個確認框（不疊彈窗）。
+  test('提交發 generatePlots，帶區間與 call', () => {
     type(ui, 'from', 5);
     type(ui, 'to', 9);
     ui.sent.length = 0;
@@ -218,22 +218,22 @@ describe('拆细纲弹窗', { skip: JSDOM_SKIP }, () => {
     assert.ok(!isOpen(ui));
   });
 
-  test('再从章节组右键打开，只开弹窗、什么都不发', () => {
+  test('再從章節組右鍵開啟，只開彈窗、什麼都不發', () => {
     ui.sent.length = 0;
-    pickFromGroup(ui, '章节', '批量拆细纲…');
+    pickFromGroup(ui, '章節', '批次拆細綱…');
     assert.ok(isOpen(ui));
     assert.ok(!ui.sent.some((m) => m.type === 'projectAction'), JSON.stringify(ui.sent));
     key(ui, ui.doc, 'Escape');
   });
 
-  test('故事架构组右键「补齐架构（只补空白）」发 completeSettings（后端先问）', () => {
+  test('故事架構組右鍵「補齊架構（只補空白）」發 completeSettings（後端先問）', () => {
     ui.sent.length = 0;
-    pickFromGroup(ui, '故事架构', '补齐架构（只补空白）');
+    pickFromGroup(ui, '故事架構', '補齊架構（只補空白）');
     assert.equal(ui.last('projectAction')?.action, 'completeSettings', JSON.stringify(ui.sent));
   });
 });
 
-describe('故事架构 · 第一件没填的是小说配置时', { skip: JSDOM_SKIP }, () => {
+describe('故事架構 · 第一件沒填的是小說配置時', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
@@ -244,19 +244,19 @@ describe('故事架构 · 第一件没填的是小说配置时', { skip: JSDOM_S
     ui.post({ type: 'project', tree });
   });
 
-  // 配置要作者先给一句话：「去生成」直接打开一句话弹窗，不绕去对话页。
-  test('「去生成」打开一句话弹窗', () => {
+  // 配置要作者先給一句話：「去生成」直接開啟一句話彈窗，不繞去對話頁。
+  test('「去生成」開啟一句話彈窗', () => {
     const go = [...ui.doc.querySelectorAll('#projectBody .row-architecture .row-go')];
     assert.equal(go.length, 1);
     ui.sent.length = 0;
     ui.clickEl(go[0]);
     assert.ok(isOpen(ui));
-    assert.ok(ui.doc.querySelector('.nf-form .form-lead').textContent.includes('写下你的脑洞'));
+    assert.ok(ui.doc.querySelector('.nf-form .form-lead').textContent.includes('寫下你的腦洞'));
     assert.ok(!ui.sent.some((m) => m.type === 'setTarget' || m.type === 'send'), JSON.stringify(ui.sent));
   });
 });
 
-describe('故事架构 · 已经写了正文时生成小说配置', { skip: JSDOM_SKIP }, () => {
+describe('故事架構 · 已經寫了正文時生成小說配置', { skip: JSDOM_SKIP }, () => {
   let ui;
 
   before(() => {
@@ -267,11 +267,11 @@ describe('故事架构 · 已经写了正文时生成小说配置', { skip: JSDO
     ui.post({ type: 'project', tree });
   });
 
-  test('「去生成」打开的是照已写正文生成的弹窗，补充要求可以留空', () => {
+  test('「去生成」開啟的是照已寫正文生成的彈窗，補充要求可以留空', () => {
     const go = [...ui.doc.querySelectorAll('#projectBody .row-architecture .row-go')];
     ui.clickEl(go[0]);
     assert.ok(isOpen(ui));
-    assert.ok(ui.doc.querySelector('.nf-form .form-lead').textContent.includes('已经写了第 1–3 章'));
+    assert.ok(ui.doc.querySelector('.nf-form .form-lead').textContent.includes('已經寫了第 1–3 章'));
     assert.equal(field(ui, 'totalChapters').value, '100');
     ui.sent.length = 0;
     ui.clickEl(submitBtn(ui));
@@ -284,14 +284,14 @@ describe('故事架构 · 已经写了正文时生成小说配置', { skip: JSDO
 });
 
 /**
- * 批量写章弹窗（四期，W9）：区间、模式、调用上限与后端同一个 `planWriteBatch`；
- * 「写完即定稿」要点两下（按钮文案两段式，不叠弹窗）。
+ * 批次寫章彈窗（四期，W9）：區間、模式、呼叫上限與後端同一個 `planWriteBatch`；
+ * 「寫完即定稿」要點兩下（按鈕文案兩段式，不疊彈窗）。
  *
- * sampleTree：第 1–3 章有正文，第 1、3、4 章排过细纲，下一可写章是第 4 章。
+ * sampleTree：第 1–3 章有正文，第 1、3、4 章排過細綱，下一可寫章是第 4 章。
  */
-describe('批量写章弹窗', { skip: JSDOM_SKIP }, () => {
+describe('批次寫章彈窗', { skip: JSDOM_SKIP }, () => {
   let ui;
-  const open = () => pickFromGroup(ui, '章节', '批量写章…');
+  const open = () => pickFromGroup(ui, '章節', '批次寫章…');
   function choose(value) {
     const sel = field(ui, 'mode');
     sel.value = value;
@@ -304,42 +304,42 @@ describe('批量写章弹窗', { skip: JSDOM_SKIP }, () => {
     open();
   });
 
-  test('章节组右键「批量写章…」打开弹窗', () => {
+  test('章節組右鍵「批次寫章…」開啟彈窗', () => {
     assert.ok(isOpen(ui));
   });
 
-  test('缺省从下一可写章起 3 章、只写正文', () => {
+  test('預設從下一可寫章起 3 章、只寫正文', () => {
     assert.equal(field(ui, 'from').value, '4');
     assert.equal(field(ui, 'to').value, '6');
     assert.equal(field(ui, 'mode').value, 'draft');
   });
 
-  // 第 5、6 章没排细纲、大纲覆盖到第 20 章：写到时先拆。上限含自动续写（一章最多 8 次）、写前比对（比对 1 次、转写 1 次、
-  // 重转 1 次，最多 3 次）与拆细纲（2 章一批最多 6 次）。
-  test('实时说明：写几章、哪几章写到时先拆细纲、预计与最多', () => {
-    assert.ok(note(ui).includes('要写 3 章（第 4–6 章）。第 5–6 章还没有细纲，写到时先拆'), note(ui));
-    assert.ok(note(ui).includes('预计 5–14 次调用，最多 47 次'), note(ui));
+  // 第 5、6 章沒排細綱、大綱覆蓋到第 20 章：寫到時先拆。上限含自動續寫（一章最多 8 次）、寫前比對（比對 1 次、轉寫 1 次、
+  // 重轉 1 次，最多 3 次）與拆細綱（2 章一批最多 6 次）。
+  test('實時說明：寫幾章、哪幾章寫到時先拆細綱、預計與最多', () => {
+    assert.ok(note(ui).includes('要寫 3 章（第 4–6 章）。第 5–6 章還沒有細綱，寫到時先拆'), note(ui));
+    assert.ok(note(ui).includes('預計 5–14 次呼叫，最多 47 次'), note(ui));
   });
 
-  test('大纲只覆盖到第 4 章：第 5 章在它前面收住', () => {
+  test('大綱只覆蓋到第 4 章：第 5 章在它前面收住', () => {
     ui.post({ type: 'project', tree: { ...sampleTree(), book: { ...sampleTree().book, outlineCoverage: 4 } } });
     open();
-    assert.ok(note(ui).includes('要写 1 章（第 4 章）；第 5 章还没有细纲、大纲也没覆盖到，写到它前面为止。'), note(ui));
-    assert.ok(note(ui).includes('预计 1–4 次调用，最多 12 次'), note(ui));
+    assert.ok(note(ui).includes('要寫 1 章（第 4 章）；第 5 章還沒有細綱、大綱也沒覆蓋到，寫到它前面為止。'), note(ui));
+    assert.ok(note(ui).includes('預計 1–4 次呼叫，最多 12 次'), note(ui));
     ui.post({ type: 'project', tree: sampleTree() });
     open();
   });
 
-  // 叙事线二期：写前检查的两类提醒（零调用、不拦），与后端确认框同一个 `threadRemindersFor`、同一句；数据是工程页「叙事线」那一份。
-  test('叙事线提醒：区间里写到哪一章就过了回收章、断了几章，区间里的计划又都没安排的，说明里多一句', () => {
+  // 敘事線二期：寫前檢查的兩類提醒（零呼叫、不攔），與後端確認框同一個 `threadRemindersFor`、同一句；資料是工程頁「敘事線」那一份。
+  test('敘事線提醒：區間裡寫到哪一章就過了回收章、斷了幾章，區間裡的計劃又都沒安排的，說明裡多一句', () => {
     const watch = {
       lines: [
-        { name: '青崖旧案', kind: '主线', lastActive: 1, stall: 5, planned: [] },
-        { name: '林昭与沈氏', kind: '感情线', lastActive: 1, stall: 15, planned: [] },
+        { name: '青崖舊案', kind: '主线', lastActive: 1, stall: 5, planned: [] },
+        { name: '林昭與沈氏', kind: '感情线', lastActive: 1, stall: 15, planned: [] },
       ],
       foreshadowing: [
-        { name: '玉佩的来历', resolve: 3, planned: [] },
-        { name: '残令', resolve: 4, planned: [6] },
+        { name: '玉佩的來歷', resolve: 3, planned: [] },
+        { name: '殘令', resolve: 4, planned: [6] },
       ],
     };
     const tree = sampleTree();
@@ -348,24 +348,24 @@ describe('批量写章弹窗', { skip: JSDOM_SKIP }, () => {
     type(ui, 'to', 7);
     assert.ok(
       note(ui).includes(
-        '叙事线提醒：伏笔〈玉佩的来历〉计划第 3 章前收，写到第 4 章还没收，区间里也没安排收；〈青崖旧案〉（主线）写到第 7 章就断了 5 章，区间里也没安排推进。只是提醒，不拦。'
+        '敘事線提醒：伏筆〈玉佩的來歷〉計劃第 3 章前收，寫到第 4 章還沒收，區間裡也沒安排收；〈青崖舊案〉（主線）寫到第 7 章就斷了 5 章，區間裡也沒安排推進。只是提醒，不攔。'
       ),
       note(ui)
     );
     type(ui, 'to', 6);
-    assert.ok(!note(ui).includes('青崖旧案'), note(ui));
+    assert.ok(!note(ui).includes('青崖舊案'), note(ui));
     ui.post({ type: 'project', tree: sampleTree() });
     open();
   });
 
-  // 复跑之后的第三类：伏笔计划第 a 章埋，写到 a 之后还没埋、区间里也没安排埋。与后端同一个函数、同一句。
-  test('叙事线提醒：计划埋了却一直没埋的伏笔，说明里也提', () => {
+  // 復跑之後的第三類：伏筆計劃第 a 章埋，寫到 a 之後還沒埋、區間裡也沒安排埋。與後端同一個函式、同一句。
+  test('敘事線提醒：計劃埋了卻一直沒埋的伏筆，說明裡也提', () => {
     const watch = {
       lines: [],
       foreshadowing: [],
       unplanted: [
-        { name: '阿婆的真实身份', plant: 2, planned: [] },
-        { name: '照骨镜', plant: 3, planned: [5] },
+        { name: '阿婆的真實身份', plant: 2, planned: [] },
+        { name: '照骨鏡', plant: 3, planned: [5] },
       ],
     };
     const tree = sampleTree();
@@ -373,7 +373,7 @@ describe('批量写章弹窗', { skip: JSDOM_SKIP }, () => {
     open();
     type(ui, 'to', 7);
     assert.ok(
-      note(ui).includes('叙事线提醒：伏笔〈阿婆的真实身份〉计划第 2 章埋，写到第 4 章还没埋，区间里也没安排埋。只是提醒，不拦。'),
+      note(ui).includes('敘事線提醒：伏筆〈阿婆的真實身份〉計劃第 2 章埋，寫到第 4 章還沒埋，區間裡也沒安排埋。只是提醒，不攔。'),
       note(ui)
     );
     ui.post({ type: 'project', tree: sampleTree() });
@@ -384,38 +384,38 @@ describe('批量写章弹窗', { skip: JSDOM_SKIP }, () => {
     type(ui, 'from', 1);
     type(ui, 'to', 11);
     assert.ok(submitBtn(ui).disabled);
-    assert.ok(note(ui).includes('一次最多写 10 章'), note(ui));
+    assert.ok(note(ui).includes('一次最多寫 10 章'), note(ui));
   });
 
-  test('这一段都写过了不许提交', () => {
+  test('這一段都寫過了不許提交', () => {
     type(ui, 'to', 3);
     assert.ok(submitBtn(ui).disabled);
-    assert.ok(note(ui).includes('都已经写过正文了'), note(ui));
+    assert.ok(note(ui).includes('都已經寫過正文了'), note(ui));
   });
 
-  test('写完即定稿：说明里加上定稿那几次', () => {
+  test('寫完即定稿：說明裡加上定稿那幾次', () => {
     type(ui, 'from', 4);
     type(ui, 'to', 6);
     choose('finalize');
-    assert.ok(note(ui).includes('预计 23–50 次调用，最多 101 次'), note(ui));
-    assert.ok(note(ui).includes('每写完一章就同步'), note(ui));
-    assert.ok(note(ui).includes('由转写模型照抄成 JSON'), note(ui));
+    assert.ok(note(ui).includes('預計 23–50 次呼叫，最多 101 次'), note(ui));
+    assert.ok(note(ui).includes('每寫完一章就同步'), note(ui));
+    assert.ok(note(ui).includes('由轉寫模型照抄成 JSON'), note(ui));
   });
 
-  test('写完即定稿要点两下：第一下只换字，不发', () => {
+  test('寫完即定稿要點兩下：第一下只換字，不發', () => {
     ui.sent.length = 0;
     ui.clickEl(submitBtn(ui));
     assert.ok(isOpen(ui));
-    assert.equal(submitBtn(ui).textContent, '再点一下：写完即同步 3 章');
+    assert.equal(submitBtn(ui).textContent, '再點一下：寫完即同步 3 章');
     assert.ok(!ui.sent.some((m) => m.type === 'projectAction'), JSON.stringify(ui.sent));
   });
 
-  test('改了任何一个值就退回第一段', () => {
+  test('改了任何一個值就退回第一段', () => {
     type(ui, 'to', 5);
-    assert.equal(submitBtn(ui).textContent, '开始写章');
+    assert.equal(submitBtn(ui).textContent, '開始寫章');
   });
 
-  test('第二下才发：writeManuscripts，带区间、模式与 call', () => {
+  test('第二下才發：writeManuscripts，帶區間、模式與 call', () => {
     ui.clickEl(submitBtn(ui));
     ui.clickEl(submitBtn(ui));
     const msg = ui.last('projectAction');
@@ -426,7 +426,7 @@ describe('批量写章弹窗', { skip: JSDOM_SKIP }, () => {
     assert.ok(!isOpen(ui));
   });
 
-  test('只写正文一下就发', () => {
+  test('只寫正文一下就發', () => {
     open();
     ui.sent.length = 0;
     ui.clickEl(submitBtn(ui));
@@ -435,37 +435,37 @@ describe('批量写章弹窗', { skip: JSDOM_SKIP }, () => {
     assert.equal(msg.review, undefined);
   });
 
-  // 五期补遗 §4：写完即审稿，与模式分开选；多出审稿那几次，也要点两下。
-  test('写完即审稿：说明里加上审稿那几次，点两下才发，带 review', () => {
+  // 五期補遺 §4：寫完即審稿，與模式分開選；多出審稿那幾次，也要點兩下。
+  test('寫完即審稿：說明裡加上審稿那幾次，點兩下才發，帶 review', () => {
     open();
     assert.equal(field(ui, 'review').value, 'off');
     const sel = field(ui, 'review');
     sel.value = 'on';
     sel.dispatchEvent(new ui.window.Event('change', { bubbles: true }));
-    assert.ok(note(ui).includes('预计 11–20 次调用，最多 68 次'), note(ui));
-    assert.ok(note(ui).includes('报告放进一个新会话「批量审稿」'), note(ui));
+    assert.ok(note(ui).includes('預計 11–20 次呼叫，最多 68 次'), note(ui));
+    assert.ok(note(ui).includes('報告放進一個新會話「批次審稿」'), note(ui));
     ui.sent.length = 0;
     ui.clickEl(submitBtn(ui));
-    assert.equal(submitBtn(ui).textContent, '再点一下：写完即审稿 3 章');
+    assert.equal(submitBtn(ui).textContent, '再點一下：寫完即審稿 3 章');
     ui.clickEl(submitBtn(ui));
     const msg = ui.last('projectAction');
     assert.equal(msg?.review, true, JSON.stringify(ui.sent));
     assert.equal(msg.mode, 'draft');
   });
 
-  test('章节组右键「批量写章…」打开同一个弹窗', () => {
+  test('章節組右鍵「批次寫章…」開啟同一個彈窗', () => {
     const head = [...ui.doc.querySelectorAll('#projectBody .group-head')]
-      .find((n) => n.querySelector('.group-name').textContent === '章节');
+      .find((n) => n.querySelector('.group-name').textContent === '章節');
     ui.sent.length = 0;
-    ui.pick(ui.rightClick(head), '批量写章…');
+    ui.pick(ui.rightClick(head), '批次寫章…');
     assert.ok(isOpen(ui));
     assert.ok(!ui.sent.some((m) => m.type === 'projectAction'), JSON.stringify(ui.sent));
     key(ui, ui.doc, 'Escape');
   });
 });
 
-// 调模型之前那两个下拉框（2026-10-20）：批量表单上作者为这一次挑模型与详细度，提交时作为 `call` 带给后端。
-describe('批量表单上的模型与上下文详细度', { skip: JSDOM_SKIP }, () => {
+// 調模型之前那兩個下拉框（2026-10-20）：批次表單上作者為這一次挑模型與詳細度，提交時作為 `call` 帶給後端。
+describe('批次表單上的模型與上下文詳細度', { skip: JSDOM_SKIP }, () => {
   let ui;
   const options = (key) => [...field(ui, key).querySelectorAll('option')].map((o) => o.value);
   const choose = (key, value) => {
@@ -481,29 +481,29 @@ describe('批量表单上的模型与上下文详细度', { skip: JSDOM_SKIP }, 
       state: viewState({
         contextDetail: 2,
         models: [
-          { ref: 'glm/glm-4-plus', label: 'glm-4-plus', group: '智谱 GLM' },
+          { ref: 'glm/glm-4-plus', label: 'glm-4-plus', group: '智譜 GLM' },
           { ref: 'or/claude', label: 'claude', group: 'OpenRouter' },
         ],
       }),
     });
     ui.post({ type: 'project', tree: sampleTree() });
-    pickFromGroup(ui, '章节', '批量拆细纲…');
+    pickFromGroup(ui, '章節', '批次拆細綱…');
   });
 
-  test('模型：第一项按分档（缺省），其余按服务商分组', () => {
+  test('模型：第一項按分檔（預設），其餘按服務商分組', () => {
     assert.deepEqual(options('callModel'), ['', 'glm/glm-4-plus', 'or/claude']);
     assert.equal(field(ui, 'callModel').value, '');
-    assert.equal(field(ui, 'callModel').options[0].textContent, '按分档');
+    assert.equal(field(ui, 'callModel').options[0].textContent, '按分檔');
     const groups = [...field(ui, 'callModel').querySelectorAll('optgroup')].map((g) => g.label);
-    assert.deepEqual(groups, ['智谱 GLM', 'OpenRouter']);
+    assert.deepEqual(groups, ['智譜 GLM', 'OpenRouter']);
   });
 
-  test('详细度：四级，缺省是设置页那一级', () => {
+  test('詳細度：四級，預設是設定頁那一級', () => {
     assert.deepEqual(options('callDetail'), ['1', '2', '3', '4']);
     assert.equal(field(ui, 'callDetail').value, '2');
   });
 
-  test('挑了模型与级别：提交的 call 带上这两样', () => {
+  test('挑了模型與級別：提交的 call 帶上這兩樣', () => {
     choose('callModel', 'or/claude');
     choose('callDetail', '1');
     ui.sent.length = 0;

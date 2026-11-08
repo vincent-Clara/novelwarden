@@ -1,30 +1,30 @@
 /**
- * 拆书的纯函数：一整本 txt → 一章一份。**零 I/O、绝不抛**（第 1 条：作者给什么都不崩）。
+ * 拆書的純函式：一整本 txt → 一章一份。**零 I/O、絕不拋**（第 1 條：作者給什麼都不崩）。
  *
- * 两条路共用：「导入原稿」把作者自己的稿子切成 `chapters/NNN-标题.txt`；「从参考书学写法」
- * 把别人的书切开、抽几章样章（features/importManuscript.ts、features/reference.ts）。
+ * 兩條路共用：「匯入原稿」把作者自己的稿子切成 `chapters/NNN-标题.txt`；「從參考書學寫法」
+ * 把別人的書切開、抽幾章樣章（features/importManuscript.ts、features/reference.ts）。
  *
- * 借鉴 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）的导入：上游切章只认三条正则
+ * 借鑑 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）的匯入：上游切章只認三條正則
  * （`electron/controllers/import-controller.ts:56-66`：`第X章`、`Chapter N`、`# 第X章`），
- * 认不出就把整个文件当一章。这里多认了「回 / 节」、序章楔子番外、卷标题，丢掉目录里那一串空标题；
- * 认不出就不导入（作者的原稿被当成一章塞进来，比拒绝更难收拾）。
+ * 認不出就把整個檔案當一章。這裡多認了「回 / 節」、序章楔子番外、卷標題，丟掉目錄裡那一串空標題；
+ * 認不出就不匯入（作者的原稿被當成一章塞進來，比拒絕更難收拾）。
  *
- * ## 切章的判据只在这里
+ * ## 切章的判據只在這裡
  *
- * 一行算章标题要同时满足：去掉 `#` 与空白之后不超过 {@link HEADING_MAX} 字、不以句末标点收尾、
- * 开头是 `第X章`（中文或阿拉伯数字，`回`/`节` 后面还得跟分隔符或行尾——「第三回合」是正文）、
- * `Chapter N`，或序章 / 楔子 / 引子 / 尾声 / 终章 / 番外。`第X卷/部/集` 那一行是卷标题：不算章、丢掉，
- * 说一声。
+ * 一行算章標題要同時滿足：去掉 `#` 與空白之後不超過 {@link HEADING_MAX} 字、不以句末標點收尾、
+ * 開頭是 `第X章`（中文或阿拉伯數字，`回`/`節` 後面還得跟分隔符或行尾——「第三回合」是正文）、
+ * `Chapter N`，或序章 / 楔子 / 引子 / 尾聲 / 終章 / 番外。`第X卷/部/集` 那一行是卷標題：不算章、丟掉，
+ * 說一聲。
  */
 import { countWords } from './fs';
 
-// ---------------------------------------------------------------- 解码
+// ---------------------------------------------------------------- 解碼
 
 export type TextEncodingName = 'utf-8' | 'utf-16le' | 'utf-16be' | 'gb18030';
 
 /**
- * 字节 → 文本。BOM 说了算；没有 BOM 时先按 UTF-8 严格解，解不了就当 GB18030（中文 txt 小说
- * 最常见的另一种编码，GBK 是它的子集）。换行统一成 `\n`。
+ * 位元組 → 文字。BOM 說了算；沒有 BOM 時先按 UTF-8 嚴格解，解不了就當 GB18030（中文 txt 小說
+ * 最常見的另一種編碼，GBK 是它的子集）。換行統一成 `\n`。
  */
 export function decodeTextBytes(bytes: Uint8Array): { text: string; encoding: TextEncodingName } {
   const decode = (encoding: TextEncodingName, from: number, fatal = false): string =>
@@ -53,15 +53,15 @@ export function decodeTextBytes(bytes: Uint8Array): { text: string; encoding: Te
 }
 
 /**
- * 读工程里的文件给 agent 看、数字数、检索用：UTF-8 原样返回（不动换行与 BOM，与写盘那条路读到的一字不差），
- * 不是 UTF-8 才走 `decodeTextBytes`——作者丢进工程的 txt 常是 GBK，按 UTF-8 读出来是一屏乱码。
+ * 讀工程裡的檔案給 agent 看、數字數、檢索用：UTF-8 原樣返回（不動換行與 BOM，與寫盤那條路讀到的一字不差），
+ * 不是 UTF-8 才走 `decodeTextBytes`——作者丟進工程的 txt 常是 GBK，按 UTF-8 讀出來是一屏亂碼。
  */
 export function decodeFileText(bytes: Uint8Array): string {
   const decoded = decodeTextBytes(bytes);
   return decoded.encoding === 'utf-8' ? Buffer.from(bytes).toString('utf8') : decoded.text;
 }
 
-/** 确认框里怎么称呼这种编码。 */
+/** 確認框裡怎麼稱呼這種編碼。 */
 export const ENCODING_LABEL: Record<TextEncodingName, string> = {
   'utf-8': 'UTF-8',
   'utf-16le': 'UTF-16',
@@ -69,24 +69,24 @@ export const ENCODING_LABEL: Record<TextEncodingName, string> = {
   gb18030: 'GBK / GB18030',
 };
 
-// ---------------------------------------------------------------- 认标题
+// ---------------------------------------------------------------- 認標題
 
-/** 章标题一行最长几个字。再长就是正文。 */
+/** 章標題一行最長几個字。再長就是正文。 */
 export const HEADING_MAX = 40;
 
-const NUM = '[0-9０-９零〇○一二两三四五六七八九十百千万]+';
+const NUM = '[0-9０-９零〇○一二两兩三四五六七八九十百千千万萬]+';
 const SEP = '[\\s：:、.．·\\-—｜|]';
-/** 「第X章」后面可以直接跟标题；「第X回 / 节」后面必须是分隔符或行尾（「第三回合」「第二节课」是正文）。 */
-const CHAPTER_HEAD = new RegExp(`^第\\s*${NUM}\\s*(?:章(.*)|[回节](?:${SEP}+(.*))?)$`);
+/** 「第X章」後面可以直接跟標題；「第X回 / 節」後面必須是分隔符或行尾（「第三回合」「第二節課」是正文）。 */
+const CHAPTER_HEAD = new RegExp(`^第\\s*${NUM}\\s*(?:章(.*)|[回节節](?:${SEP}+(.*))?)$`);
 const VOLUME_HEAD = new RegExp(`^第\\s*${NUM}\\s*[卷部集](?:$|${SEP})`);
 const EN_HEAD = /^chapter\s+\d+\b[\s:：.\-—]*(.*)$/i;
-/** 序章、楔子这几样后面跟的标题不长（「番外篇 旧事」「楔子·雨夜」）；整行仍受 {@link HEADING_MAX} 与句末标点约束。 */
-const SPECIAL_HEAD = /^(?:序章|楔子|引子|尾声|终章|番外)(?:$|.{0,20}$)/;
-/** 正文的句子收尾。标题几乎不以它们结尾。 */
+/** 序章、楔子這幾樣後面跟的標題不長（「番外篇 舊事」「楔子·雨夜」）；整行仍受 {@link HEADING_MAX} 與句末標點約束。 */
+const SPECIAL_HEAD = /^(?:序章|楔子|引子|尾(?:声|聲)|(?:终|終)章|番外)(?:$|.{0,20}$)/;
+/** 正文的句子收尾。標題幾乎不以它們結尾。 */
 const SENTENCE_END = /[。！？!?…”」』，,；;]$/;
 const SEPARATORS = new RegExp(`^${SEP}+|${SEP}+$`, 'g');
 
-/** 行首行尾的空白（含全角空格、不换行空格、BOM）。 */
+/** 行首行尾的空白（含全形空格、不換行空格、BOM）。 */
 function trimAll(line: string): string {
   return line.replace(/^[\s　 ﻿]+|[\s　 ]+$/g, '');
 }
@@ -97,7 +97,7 @@ function stripHashes(line: string): string {
 
 export type HeadingKind = 'chapter' | 'volume';
 
-/** 一行是不是标题；是章标题时交回标题（可能为空：「第一章」一行什么都没写）。 */
+/** 一行是不是標題；是章標題時交回標題（可能為空：「第一章」一行什麼都沒寫）。 */
 export function classifyHeading(raw: string): { kind: HeadingKind; title: string } | undefined {
   const line = stripHashes(raw);
   if (!line || line.length > HEADING_MAX || SENTENCE_END.test(line)) {
@@ -123,27 +123,27 @@ export function classifyHeading(raw: string): { kind: HeadingKind; title: string
 // ---------------------------------------------------------------- 切章
 
 export interface SplitChapter {
-  /** 章名（不带「第X章」）。原文那一行只写了「第一章」时为空。 */
+  /** 章名（不帶「第X章」）。原文那一行只寫了「第一章」時為空。 */
   title: string;
-  /** 原文里的那一行标题，确认框里给作者看。按字数切的段没有。 */
+  /** 原文裡的那一行標題，確認框裡給作者看。按字數切的段沒有。 */
   heading: string;
-  /** 规整过的正文：一段一行、段间空一行。 */
+  /** 規整過的正文：一段一行、段間空一行。 */
   body: string;
   words: number;
 }
 
 export interface SplitResult {
   chapters: SplitChapter[];
-  /** 第一个标题之前的文字（书名、作者、简介）：不导入。 */
+  /** 第一個標題之前的文字（書名、作者、簡介）：不匯入。 */
   preface: { words: number; head: string };
-  /** 卷标题那几行：不算章，丢掉。 */
+  /** 卷標題那幾行：不算章，丟掉。 */
   volumes: string[];
-  /** 标题下面一个字都没有的（目录里那一串）：跳过。 */
+  /** 標題下面一個字都沒有的（目錄裡那一串）：跳過。 */
   empty: string[];
 }
 
 /**
- * 一整本 → 一章一份。认不出任何章标题时 `chapters` 为空——调用方据此拒绝导入，或者（学写法时）
+ * 一整本 → 一章一份。認不出任何章標題時 `chapters` 為空——呼叫方據此拒絕匯入，或者（學寫法時）
  * 改用 {@link splitBySize}。
  */
 export function splitChapters(text: string): SplitResult {
@@ -198,7 +198,7 @@ export function splitChapters(text: string): SplitResult {
   };
 }
 
-/** 没有章标题的书（学写法时）：按段落攒到约 `size` 字切一段。标题是「第 N 段」。 */
+/** 沒有章標題的書（學寫法時）：按段落攢到約 `size` 字切一段。標題是「第 N 段」。 */
 export function splitBySize(text: string, size = 3000): SplitChapter[] {
   const paragraphs = normalizeParagraphs(text.split('\n')).split('\n\n').filter(Boolean);
   const out: SplitChapter[] = [];
@@ -223,7 +223,7 @@ export function splitBySize(text: string, size = 3000): SplitChapter[] {
   return out;
 }
 
-/** 每个非空行一段、段间空一行，去掉行首行尾的空白（含全角空格）。 */
+/** 每個非空行一段、段間空一行，去掉行首行尾的空白（含全形空格）。 */
 export function normalizeParagraphs(lines: readonly string[]): string {
   return lines.map(trimAll).filter(Boolean).join('\n\n');
 }
@@ -233,9 +233,9 @@ function clipLine(text: string, max: number): string {
   return one.length > max ? `${one.slice(0, max)}…` : one;
 }
 
-// ---------------------------------------------------------------- 抽样与节选
+// ---------------------------------------------------------------- 抽樣與節選
 
-/** 从 `total` 份里均匀抽 `count` 份的下标（0 起、升序、不重复）：首尾必在，中间均匀。 */
+/** 從 `total` 份裡均勻抽 `count` 份的下標（0 起、升序、不重複）：首尾必在，中間均勻。 */
 export function evenSample(total: number, count: number): number[] {
   const n = Math.max(0, Math.floor(total));
   const k = Math.max(0, Math.floor(count));
@@ -256,8 +256,8 @@ export function evenSample(total: number, count: number): number[] {
 }
 
 /**
- * 学写法时看结构用的那几章（下标）：开头 `opening` 章（开篇自成一套写法），加全书 30% 处连续
- * `window` 章（过了开篇、还没进高潮的日常推进）。书太短时两段会重叠，去重。
+ * 學寫法時看結構用的那幾章（下標）：開頭 `opening` 章（開篇自成一套寫法），加全書 30% 處連續
+ * `window` 章（過了開篇、還沒進高潮的日常推進）。書太短時兩段會重疊，去重。
  */
 export function structureSample(total: number, opening = 3, window = 3): number[] {
   const n = Math.max(0, Math.floor(total));
@@ -272,12 +272,12 @@ export function structureSample(total: number, opening = 3, window = 3): number[
   return [...picked].sort((a, b) => a - b);
 }
 
-/** 开头 `head` 字（按字符），超出时在末尾写明省略了多少。 */
+/** 開頭 `head` 字（按字元），超出時在末尾寫明省略了多少。 */
 export function headOf(text: string, head: number): string {
-  return text.length <= head ? text : `${text.slice(0, head)}\n\n（后略 ${text.length - head} 字）`;
+  return text.length <= head ? text : `${text.slice(0, head)}\n\n（後略 ${text.length - head} 字）`;
 }
 
-/** 开头 `head` 字 + 结尾 `tail` 字，中间省略的那一段写明字数。不够长就整份。 */
+/** 開頭 `head` 字 + 結尾 `tail` 字，中間省略的那一段寫明字數。不夠長就整份。 */
 export function headTail(text: string, head: number, tail: number): string {
   if (text.length <= head + tail) {
     return text;
@@ -285,23 +285,23 @@ export function headTail(text: string, head: number, tail: number): string {
   return `${text.slice(0, head)}\n\n（中略 ${text.length - head - tail} 字）\n\n${text.slice(text.length - tail)}`;
 }
 
-// ---------------------------------------------------------------- 篇幅统计（零调用）
+// ---------------------------------------------------------------- 篇幅統計（零呼叫）
 
 export interface ShapeStats {
   chapters: number;
-  /** 每章字数的平均与中位数。 */
+  /** 每章字數的平均與中位數。 */
   avgWords: number;
   medianWords: number;
-  /** 每章几段（平均）、每段几个字（平均）。 */
+  /** 每章幾段（平均）、每段幾個字（平均）。 */
   avgParagraphs: number;
   avgParagraphWords: number;
-  /** 含对白（引号）的段落占几成，0–100。 */
+  /** 含對白（引號）的段落佔幾成，0–100。 */
   dialoguePercent: number;
 }
 
 const QUOTE = /[“”「」『』"]/;
 
-/** 一本书的篇幅形状：给学写法那一次调用当数据——模型自己数不准。 */
+/** 一本書的篇幅形狀：給學寫法那一次呼叫當資料——模型自己數不準。 */
 export function shapeStats(chapters: readonly Pick<SplitChapter, 'body' | 'words'>[]): ShapeStats {
   if (chapters.length === 0) {
     return { chapters: 0, avgWords: 0, medianWords: 0, avgParagraphs: 0, avgParagraphWords: 0, dialoguePercent: 0 };
@@ -323,15 +323,15 @@ export function shapeStats(chapters: readonly Pick<SplitChapter, 'body' | 'words
 
 export function describeShape(s: ShapeStats): string {
   return [
-    `- 全书 ${s.chapters} 章；每章平均 ${s.avgWords} 字，中位数 ${s.medianWords} 字`,
+    `- 全書 ${s.chapters} 章；每章平均 ${s.avgWords} 字，中位數 ${s.medianWords} 字`,
     `- 每章平均 ${s.avgParagraphs} 段，每段平均 ${s.avgParagraphWords} 字`,
-    `- 含对白的段落约占 ${s.dialoguePercent}%`,
+    `- 含對白的段落約佔 ${s.dialoguePercent}%`,
   ].join('\n');
 }
 
-// ---------------------------------------------------------------- 规模
+// ---------------------------------------------------------------- 規模
 
-/** 已写的章平均多长，取整到百（小说配置「每章字数」的缺省）。一章正文都没有时 undefined。 */
+/** 已寫的章平均多長，取整到百（小說配置「每章字數」的預設）。一章正文都沒有時 undefined。 */
 export function roundedAverageWords(words: readonly number[]): number | undefined {
   const written = words.filter((w) => w > 0);
   if (written.length === 0) {
@@ -340,20 +340,20 @@ export function roundedAverageWords(words: readonly number[]): number | undefine
   return Math.max(100, Math.round(written.reduce((s, w) => s + w, 0) / written.length / 100) * 100);
 }
 
-/** 没写总章数时问作者的缺省值：已写章数的两倍取整到 50，不少于 100。 */
+/** 沒寫總章數時問作者的預設值：已寫章數的兩倍取整到 50，不少於 100。 */
 export function defaultTotalChapters(written: number): number {
   return Math.max(100, Math.ceil((Math.max(0, written) * 2) / 50) * 50);
 }
 
-// ---------------------------------------------------------------- 参考书的写法技能
+// ---------------------------------------------------------------- 參考書的寫法技能
 
-/** 名字留给 `-写法` 与去重后缀的余量：技能名最长 64（`model/writingSkill.ts` 的 `isSkillName`）。 */
+/** 名字留給 `-寫法` 與去重字尾的餘量：技能名最長 64（`model/writingSkill.ts` 的 `isSkillName`）。 */
 const SKILL_NAME_BODY_MAX = 54;
 
 /**
- * 参考书的写法技能叫什么：书名（文件名去扩展名）+ `-写法`，不合规的字符换成 `-`；`taken` 里已经有了
- * 就加 `-2`、`-3`。书名清洗完是空的就叫「参考书-写法」。规则与 `isSkillName` 一致：字母或数字开头，
- * 只含字母、数字、`._-`。
+ * 參考書的寫法技能叫什麼：書名（檔名去副檔名）+ `-寫法`，不合規的字元換成 `-`；`taken` 裡已經有了
+ * 就加 `-2`、`-3`。書名清洗完是空的就叫「參考書-寫法」。規則與 `isSkillName` 一致：字母或數字開頭，
+ * 只含字母、數字、`._-`。
  */
 export function referenceSkillName(bookTitle: string, taken: ReadonlySet<string>): string {
   const cleaned = bookTitle
@@ -362,7 +362,7 @@ export function referenceSkillName(bookTitle: string, taken: ReadonlySet<string>
     .replace(/^[^\p{L}\p{N}]+/u, '')
     .slice(0, SKILL_NAME_BODY_MAX)
     .replace(/[-._]+$/, '');
-  const base = `${cleaned || '参考书'}-写法`;
+  const base = `${cleaned || '參考書'}-寫法`;
   let name = base;
   for (let i = 2; taken.has(name); i++) {
     name = `${base}-${i}`;
@@ -370,14 +370,14 @@ export function referenceSkillName(bookTitle: string, taken: ReadonlySet<string>
   return name;
 }
 
-/** 写法技能的 `SKILL.md`：frontmatter 是上游那份手写格式（一行一个键），`stage: planning`。 */
+/** 寫法技能的 `SKILL.md`：frontmatter 是上游那份手寫格式（一行一個鍵），`stage: planning`。 */
 export function renderReferenceSkill(input: { name: string; bookTitle: string; body: string }): string {
-  const title = input.bookTitle.replace(/[\r\n]+/g, ' ').trim() || '参考书';
+  const title = input.bookTitle.replace(/[\r\n]+/g, ' ').trim() || '參考書';
   return [
     '---',
     `name: ${input.name}`,
-    `display_name: 《${title}》的写法`,
-    `description: 从参考书《${title}》拆出的结构与节奏写法，规划大纲与细纲时参考；只学怎么排，不照搬它的情节与人物。`,
+    `display_name: 《${title}》的寫法`,
+    `description: 從參考書《${title}》拆出的結構與節奏寫法，規劃大綱與細綱時參考；只學怎麼排，不照搬它的情節與人物。`,
     'stage: planning',
     'version: 1',
     '---',

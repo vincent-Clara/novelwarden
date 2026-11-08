@@ -1,23 +1,23 @@
 /*
- * 正文的排版（editor/look.ts）：字体、字号、行距、版心宽度、内边距是**一组 CSS 变量**，编辑区的 textarea、
- * 高亮镜像层（highlight.ts 的 .ed-mirror-content，含量位置用的那一份）、Markdown 预览读同一组——下面那条规则
- * 三处共用，别给哪一处单写一份：镜像层要与 textarea 排得一模一样，画在它上面的高亮、从它上面量出来的位置才对得上。
- * 镜像层每次重画仍从 textarea 的计算样式抄一遍（两道保险，.mono 文件换了字体也跟得上）。
+ * 正文的排版（editor/look.ts）：字型、字號、行距、版心寬度、內邊距是**一組 CSS 變數**，編輯區的 textarea、
+ * 高亮映象層（highlight.ts 的 .ed-mirror-content，含量位置用的那一份）、Markdown 預覽讀同一組——下面那條規則
+ * 三處共用，別給哪一處單寫一份：映象層要與 textarea 排得一模一樣，畫在它上面的高亮、從它上面量出來的位置才對得上。
+ * 映象層每次重畫仍從 textarea 的計算樣式抄一遍（兩道保險，.mono 檔案換了字型也跟得上）。
  *
- * 前四个由 look.ts 按偏好写在 <html> 上（lookCore.ts 的 LOOK_VARS），这里是缺省（与改造前写死的值一样）；
- * 内边距不给作者调，窄屏（narrow.css）改小；底部内边距打字机滚动开着时垫半屏（focus.css）。
+ * 前四個由 look.ts 按偏好寫在 <html> 上（lookCore.ts 的 LOOK_VARS），這裡是預設（與改造前寫死的值一樣）；
+ * 內邊距不給作者調，窄屏（narrow.css）改小；底部內邊距打字機滾動開著時墊半屏（focus.css）。
  */
 
 :root {
   --nf-ed-font-family: var(--nf-prose-font-family);
   --nf-ed-font-size: 15px;
   --nf-ed-line-height: 1.95;
-  /* 一行最多几个字（按 em 写，全角字宽 = 字号）。100cqi = 整个编辑区宽，就是「铺满」。 */
+  /* 一行最多幾個字（按 em 寫，全形字寬 = 字號）。100cqi = 整個編輯區寬，就是「鋪滿」。 */
   --nf-ed-measure: 100cqi;
   --nf-ed-pad-x: 24px;
   --nf-ed-pad-y: 18px;
   --nf-ed-pad-bottom: var(--nf-ed-pad-y);
-  /* 竖滚动条的宽（scrollbar.css 的 10px）：居中那一栏算宽度时让出来，一行才放得下那么多字。 */
+  /* 豎捲軸的寬（scrollbar.css 的 10px）：居中那一欄算寬度時讓出來，一行才放得下那麼多字。 */
   --nf-ed-gutter: 10px;
 }
 
@@ -37,9 +37,9 @@
 }
 
 /*
- * 版心：宽屏时左右内边距撑开，那一栏居中。按容器宽（.ed-stage 的 cqi）算，textarea 与镜像层落在同一个容器里，
- * 算出来一样宽（按百分比算的话，镜像层的包含块比 textarea 窄一条滚动条，两边会差半条）。
- * 不认容器单位的旧浏览器整段跳过：照旧铺满，不至于把内边距算成 0。
+ * 版心：寬屏時左右內邊距撐開，那一欄居中。按容器寬（.ed-stage 的 cqi）算，textarea 與映象層落在同一個容器裡，
+ * 算出來一樣寬（按百分比算的話，映象層的包含塊比 textarea 窄一條捲軸，兩邊會差半條）。
+ * 不認容器單位的舊瀏覽器整段跳過：照舊鋪滿，不至於把內邊距算成 0。
  */
 @supports (width: 1cqi) {
   .ed-stage {
@@ -54,7 +54,7 @@
   }
 }
 
-/* json / yml：等宽字体、小两号（跟着字号缩放），不收版心。 */
+/* json / yml：等寬字型、小兩號（跟著字號縮放），不收版心。 */
 .ed-area.mono {
   font-family: var(--vscode-editor-font-family);
   font-size: calc(var(--nf-ed-font-size) - 2px);
@@ -63,7 +63,7 @@
   padding-right: var(--nf-ed-pad-x);
 }
 
-/* ---- 外观面板（editor/lookPanel.ts）：面板样子是 modal.css 那一套；外面那一层透明、不拦点击，正文照样能点能滚。 */
+/* ---- 外觀面板（editor/lookPanel.ts）：面板樣子是 modal.css 那一套；外面那一層透明、不攔點選，正文照樣能點能滾。 */
 
 .ed-look-overlay {
   position: fixed;

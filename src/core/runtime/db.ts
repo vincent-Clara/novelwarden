@@ -1,45 +1,45 @@
 /**
- * 工程内的 SQLite 库（`.novelwarden/novelwarden.db`）。
+ * 工程內的 SQLite 庫（`.novelwarden/novelwarden.db`）。
  *
- * **Markdown 仍然是内容的唯一真相**。库里只放两类东西：
- * - `errors` —— 失败记录，驱动工程页上的红色感叹号（见 [errorLog.ts](errorLog.ts)）；
- * - `logs` —— 日志的持久副本，让日志页能跨会话回看。
+ * **Markdown 仍然是內容的唯一真相**。庫裡只放兩類東西：
+ * - `errors` —— 失敗記錄，驅動工程頁上的紅色感嘆號（見 [errorLog.ts](errorLog.ts)）；
+ * - `logs` —— 日誌的持久副本，讓日誌頁能跨會話回看。
  *
- * 两者都是「可丢弃的痕迹」：把 db 文件删掉，全部功能照常，只是丢历史。
- * 别往这里放角色卡/摘要/设定的正文——那些作者要手改、要 diff、要进 Git。
- * 改名前的 `novelforge.db` 留在原地不动（它只是痕迹，不迁移、不删除）。
+ * 兩者都是「可丟棄的痕跡」：把 db 檔案刪掉，全部功能照常，只是丟歷史。
+ * 別往這裡放角色卡/摘要/設定的正文——那些作者要手改、要 diff、要進 Git。
+ * 改名前的 `novelforge.db` 留在原地不動（它只是痕跡，不遷移、不刪除）。
  *
- * ## 两个壳要两个驱动
+ * ## 兩個殼要兩個驅動
  *
- * 这不是可选项，是实测结论：
+ * 這不是可選項，是實測結論：
  *
- * | 运行时 | `node:sqlite` | `bun:sqlite` |
+ * | 執行時 | `node:sqlite` | `bun:sqlite` |
  * |---|---|---|
  * | Node 22（跑 smoke） | ✓ | ✗ |
  * | VS Code / Electron（Node 24） | ✓ | ✗ |
- * | Bun（独立版） | ✗ 没有这个内置模块 | ✓ |
+ * | Bun（獨立版） | ✗ 沒有這個內建模組 | ✓ |
  *
- * 而 esbuild 解析不了 `bun:sqlite`（会直接构建失败），`bun build --compile`
- * 又能把 `node:sqlite` 打进去、跑起来才炸。所以模块名**拼接**出来再
- * `await import`：拼接让 esbuild 的静态分析看不见它，于是两条构建路径
- * 都不必配 external，运行时按谁能 import 成功来选。
+ * 而 esbuild 解析不了 `bun:sqlite`（會直接構建失敗），`bun build --compile`
+ * 又能把 `node:sqlite` 打進去、跑起來才炸。所以模組名**拼接**出來再
+ * `await import`：拼接讓 esbuild 的靜態分析看不見它，於是兩條構建路徑
+ * 都不必配 external，執行時按誰能 import 成功來選。
  *
- * ## 语句必须显式 finalize（Windows 上不 finalize 就删不掉库文件）
+ * ## 語句必須顯式 finalize（Windows 上不 finalize 就刪不掉庫檔案）
  *
- * 两个驱动的另一处差异，比构造函数名要紧得多：`bun:sqlite` 的语句对象
- * 持有底层句柄，**不 finalize 就 `close()` 的话，Windows 上库文件仍被占着**
- * （`fs.rmSync` 报 EBUSY，临时工程清理不掉）；`node:sqlite` 的语句压根没有
+ * 兩個驅動的另一處差異，比建構函式名要緊得多：`bun:sqlite` 的語句物件
+ * 持有底層控制代碼，**不 finalize 就 `close()` 的話，Windows 上庫檔案仍被佔著**
+ * （`fs.rmSync` 報 EBUSY，臨時工程清理不掉）；`node:sqlite` 的語句壓根沒有
  * `finalize` 方法，靠 GC。
  *
- * 所以对外只暴露 {@link SqlDatabase} 的 run/all/insertMany——它们内部
- * 「准备 → 执行 → 立刻 finalize」，调用方碰不到语句对象，也就不可能忘。
+ * 所以對外只暴露 {@link SqlDatabase} 的 run/all/insertMany——它們內部
+ * 「準備 → 執行 → 立刻 finalize」，呼叫方碰不到語句物件，也就不可能忘。
  *
- * ## 绝不因为库坏了而带崩正事
+ * ## 絕不因為庫壞了而帶崩正事
  *
- * 「容错优先」在这里的落法：{@link openDatabase} 把所有异常吞掉并只 warn
- * 一次，返回 `undefined`。库锁了、盘满了、驱动缺了，角色卡该更新照样更新，
- * 只是这次的失败记录留不下来。SQLite 是增强，不是新的失败源——一旦这条
- * 破了，「更新角色卡」就会因为一个日志表而失败，那比没有感叹号糟得多。
+ * 「容錯優先」在這裡的落法：{@link openDatabase} 把所有異常吞掉並只 warn
+ * 一次，返回 `undefined`。庫鎖了、盤滿了、驅動缺了，角色卡該更新照樣更新，
+ * 只是這次的失敗記錄留不下來。SQLite 是增強，不是新的失敗源——一旦這條
+ * 破了，「更新角色卡」就會因為一個日誌表而失敗，那比沒有感嘆號糟得多。
  */
 
 import * as path from 'node:path';
@@ -47,23 +47,23 @@ import { addLogSink, LogEntry, LogLevel, recentLogs, scoped, Unsubscribe } from 
 import { exists } from '../model/fs';
 import { NovelProject } from '../model/project';
 
-const log = scoped('数据库');
+const log = scoped('資料庫');
 
-/** 库文件名。放在元数据目录（`.novelwarden/`，旧工程是 `.novelforge/`）下，与 summaries/ characters/ 平级。 */
+/** 庫檔名。放在後設資料目錄（`.novelwarden/`，舊工程是 `.novelforge/`）下，與 summaries/ characters/ 平級。 */
 const DB_FILE = 'novelwarden.db';
 
-/** 日志保留天数。超期的行在开库时删掉，库不会无限长。 */
+/** 日誌保留天數。超期的行在開庫時刪掉，庫不會無限長。 */
 const LOG_RETENTION_DAYS = 30;
 
-/** 日志攒批写入的间隔。长任务每秒好几条，逐条一次事务会拖慢正事。 */
+/** 日誌攢批寫入的間隔。長任務每秒好幾條，逐條一次事務會拖慢正事。 */
 const LOG_FLUSH_MS = 200;
 
-/** 能进 SQLite 的值。刻意不收 undefined——那多半是拼参数时漏了一个。 */
+/** 能進 SQLite 的值。刻意不收 undefined——那多半是拼引數時漏了一個。 */
 export type SqlValue = string | number | null;
 
-// ---------------------------------------------------------------- 驱动适配
+// ---------------------------------------------------------------- 驅動適配
 
-/** 两个驱动的语句对象的公共子集。`finalize` 只有 bun 有。 */
+/** 兩個驅動的語句物件的公共子集。`finalize` 只有 bun 有。 */
 interface RawStatement {
   run(...params: SqlValue[]): unknown;
   all(...params: SqlValue[]): unknown[];
@@ -85,30 +85,30 @@ interface NodeSqliteModule {
 }
 
 /**
- * 对外的库接口。**没有 prepare**——语句的生命周期全在这一层里管掉，
- * 见文件头「语句必须显式 finalize」。
+ * 對外的庫介面。**沒有 prepare**——語句的生命週期全在這一層裡管掉，
+ * 見檔案頭「語句必須顯式 finalize」。
  */
 export interface SqlDatabase {
   exec(sql: string): void;
-  /** 跑一条写语句。 */
+  /** 跑一條寫語句。 */
   run(sql: string, ...params: SqlValue[]): void;
   /** 查一批行。 */
   all<T>(sql: string, ...params: SqlValue[]): T[];
-  /** 同一条语句跑很多行，一次事务。日志攒批写入用它。 */
+  /** 同一條語句跑很多行，一次事務。日誌攢批寫入用它。 */
   insertMany(sql: string, rows: SqlValue[][]): void;
   close(): void;
 }
 
 /**
- * 按运行时挑一个驱动开库。
+ * 按執行時挑一個驅動開庫。
  *
- * 顺序是 bun 优先：独立版跑在 Bun 里，那儿 `node:sqlite` 根本不存在；
- * 插件与 smoke 跑在 Node/Electron 里，`bun:sqlite` import 会抛，落到第二条。
+ * 順序是 bun 優先：獨立版跑在 Bun 裡，那兒 `node:sqlite` 根本不存在；
+ * 外掛與 smoke 跑在 Node/Electron 裡，`bun:sqlite` import 會拋，落到第二條。
  *
- * **模块名必须是拼接出来的**（`'bun' + ':sqlite'`）。写成字面量的话
- * esbuild 会在打包 `dist/extension.js` 时试图解析 `bun:sqlite` 并直接
- * 构建失败——那个模块在 Node 侧不存在，也没法 external 掉（external 之后
- * 插件运行时会 require 一个不存在的模块）。
+ * **模組名必須是拼接出來的**（`'bun' + ':sqlite'`）。寫成字面量的話
+ * esbuild 會在打包 `dist/extension.js` 時試圖解析 `bun:sqlite` 並直接
+ * 構建失敗——那個模組在 Node 側不存在，也沒法 external 掉（external 之後
+ * 外掛執行時會 require 一個不存在的模組）。
  */
 async function openWithAnyDriver(filename: string): Promise<RawDatabase> {
   const bunSpec = 'bun' + ':sqlite';
@@ -122,9 +122,9 @@ async function openWithAnyDriver(filename: string): Promise<RawDatabase> {
   }
 }
 
-/** 把裸驱动包成 {@link SqlDatabase}：语句一律用完即 finalize。 */
+/** 把裸驅動包成 {@link SqlDatabase}：語句一律用完即 finalize。 */
 function wrap(raw: RawDatabase): SqlDatabase {
-  /** 准备 → 用 → 收。`finalize` 只有 bun 有，node 侧是个空操作。 */
+  /** 準備 → 用 → 收。`finalize` 只有 bun 有，node 側是個空操作。 */
   const withStatement = <T>(sql: string, use: (stmt: RawStatement) => T): T => {
     const stmt = raw.prepare(sql);
     try {
@@ -133,7 +133,7 @@ function wrap(raw: RawDatabase): SqlDatabase {
       try {
         stmt.finalize?.();
       } catch {
-        /* 收不掉也不能让调用方看见——查询本身已经成了 */
+        /* 收不掉也不能讓呼叫方看見——查詢本身已經成了 */
       }
     }
   };
@@ -158,7 +158,7 @@ function wrap(raw: RawDatabase): SqlDatabase {
           try {
             raw.exec('ROLLBACK');
           } catch {
-            /* 回滚失败时原始异常更有价值，别用它盖掉 */
+            /* 回滾失敗時原始異常更有價值，別用它蓋掉 */
           }
           throw err;
         }
@@ -168,27 +168,27 @@ function wrap(raw: RawDatabase): SqlDatabase {
   };
 }
 
-// ---------------------------------------------------------------- 打开
+// ---------------------------------------------------------------- 開啟
 
-/** 已打开的连接，按工程根缓存。一个工程一个连接，别每次查询都开一次。 */
+/** 已開啟的連線，按工程根快取。一個工程一個連線，別每次查詢都開一次。 */
 const connections = new Map<string, SqlDatabase>();
 /**
- * 开库失败过的工程根。
+ * 開庫失敗過的工程根。
  *
- * 记住它才不会每查一次错误记录就重试一次开库——那会在盘满/无写权限时
- * 把日志刷满，而结论每次都一样。
+ * 記住它才不會每查一次錯誤記錄就重試一次開庫——那會在盤滿/無寫許可權時
+ * 把日誌刷滿，而結論每次都一樣。
  */
 const failedRoots = new Set<string>();
 
 /**
- * 拿这个工程的库连接；拿不到返回 `undefined`（调用方一律当「没有库」处理）。
+ * 拿這個工程的庫連線；拿不到返回 `undefined`（呼叫方一律當「沒有庫」處理）。
  *
- * 首次调用时建表、设 PRAGMA、清理过期日志。
+ * 首次呼叫時建表、設 PRAGMA、清理過期日誌。
  *
- * `opts.create` 为 false 时**库文件不存在就直接返回 undefined，不建库**。
- * 纯读取的调用方（`listActiveFailures`，工程页每次刷新都走）必须用这一档：
- * 否则光是打开工程页就会在作者的 `.novelwarden/` 里凭空生出一个 db 文件，
- * 而那个工程可能从来没出过错。写入方（记失败、写日志）才有理由建库。
+ * `opts.create` 為 false 時**庫檔案不存在就直接返回 undefined，不建庫**。
+ * 純讀取的呼叫方（`listActiveFailures`，工程頁每次重新整理都走）必須用這一檔：
+ * 否則光是開啟工程頁就會在作者的 `.novelwarden/` 裡憑空生出一個 db 檔案，
+ * 而那個工程可能從來沒出過錯。寫入方（記失敗、寫日誌）才有理由建庫。
  */
 export async function openDatabase(
   project: NovelProject,
@@ -205,38 +205,38 @@ export async function openDatabase(
 
   const file = path.join(project.novelDir, DB_FILE);
   if (opts.create === false && !(await exists(file))) {
-    // 刻意不记进 failedRoots：这不是失败，只是「还没有库」。
-    // 之后某次写入把库建出来，读取方下一次就该看得见。
+    // 刻意不記進 failedRoots：這不是失敗，只是「還沒有庫」。
+    // 之後某次寫入把庫建出來，讀取方下一次就該看得見。
     return undefined;
   }
 
   try {
     const db = wrap(await openWithAnyDriver(file));
-    // WAL：写日志时不阻塞工程页读错误记录。
-    // busy_timeout：插件与独立版同开一个工程时，撞锁先等一会儿而不是直接报错。
+    // WAL：寫日誌時不阻塞工程頁讀錯誤記錄。
+    // busy_timeout：外掛與獨立版同開一個工程時，撞鎖先等一會兒而不是直接報錯。
     db.exec('PRAGMA journal_mode = WAL');
     db.exec('PRAGMA busy_timeout = 3000');
     db.exec(SCHEMA);
     pruneOldLogs(db);
     connections.set(key, db);
-    log.debug('已打开工程数据库', `${project.relPath(project.novelDir)}/${DB_FILE}`);
+    log.debug('已開啟工程資料庫', `${project.relPath(project.novelDir)}/${DB_FILE}`);
     return db;
   } catch (err) {
     failedRoots.add(key);
-    // 只 warn 不 error：这不影响任何功能，只是这个工程没有失败记录与日志历史。
+    // 只 warn 不 error：這不影響任何功能，只是這個工程沒有失敗記錄與日誌歷史。
     log.warn(
-      '打不开工程数据库，本次会话不记录失败历史',
-      `${(err as Error)?.message ?? String(err)}｜功能不受影响，只是工程页上不会显示错误标记`
+      '打不開工程資料庫，本次會話不記錄失敗歷史',
+      `${(err as Error)?.message ?? String(err)}｜功能不受影響，只是工程頁上不會顯示錯誤標記`
     );
     return undefined;
   }
 }
 
 /**
- * 关掉某个工程的连接（壳销毁时调）。
+ * 關掉某個工程的連線（殼銷燬時調）。
  *
- * 顺带 flush 掉攒着还没写的日志——不然最后那一两百毫秒的日志会丢，
- * 而崩溃前的最后几条恰恰是最想看的。
+ * 順帶 flush 掉攢著還沒寫的日誌——不然最後那一兩百毫秒的日誌會丟，
+ * 而崩潰前的最後幾條恰恰是最想看的。
  */
 export function closeDatabase(project: NovelProject): void {
   flushPendingLogs();
@@ -249,11 +249,11 @@ export function closeDatabase(project: NovelProject): void {
   try {
     db.close();
   } catch {
-    /* 关不掉也没什么可做的，进程退出时系统会收 */
+    /* 關不掉也沒什麼可做的，程序退出時系統會收 */
   }
 }
 
-/** 仅供测试：关掉全部连接、忘掉失败记忆，让下一次 openDatabase 重新来。 */
+/** 僅供測試：關掉全部連線、忘掉失敗記憶，讓下一次 openDatabase 重新來。 */
 export function resetDatabases(): void {
   flushPendingLogs();
   for (const db of connections.values()) {
@@ -286,9 +286,9 @@ CREATE INDEX IF NOT EXISTS idx_errors_target ON errors(target_kind, target_key, 
 
 CREATE TABLE IF NOT EXISTS logs (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,
-  -- logger 那边的进程内序号。**不是主键**——它每次进程重启都从 1 开始，
-  -- 做主键会让今天的日志覆盖昨天的。留着它是因为前端按 seq 去重：
-  -- 内存缓冲与库里那份必然重叠（同一条既进了缓冲也写了库）。
+  -- logger 那邊的程式內序號。**不是主鍵**——它每次程式重啟都從 1 開始，
+  -- 做主鍵會讓今天的日誌覆蓋昨天的。留著它是因為前端按 seq 去重：
+  -- 記憶體緩衝與庫裡那份必然重疊（同一條既進了緩衝也寫了庫）。
   seq     INTEGER NOT NULL,
   at      TEXT NOT NULL,
   level   TEXT NOT NULL,
@@ -304,50 +304,50 @@ function pruneOldLogs(db: SqlDatabase): void {
   try {
     db.run('DELETE FROM logs WHERE at < ?', cutoff);
   } catch {
-    /* 清不掉只是库大一点，不值得打扰用户 */
+    /* 清不掉只是庫大一點，不值得打擾使用者 */
   }
 }
 
-// ---------------------------------------------------------------- 日志持久化
+// ---------------------------------------------------------------- 日誌持久化
 
 /**
- * 待写的日志。
+ * 待寫的日誌。
  *
- * 攒批而不是逐条写：一次摘要同步会打几百条，每条一次事务足以让长任务
- * 明显变慢。200ms 一批，用户感知不到，写入次数降两个数量级。
+ * 攢批而不是逐條寫：一次摘要同步會打幾百條，每條一次事務足以讓長任務
+ * 明顯變慢。200ms 一批，使用者感知不到，寫入次數降兩個數量級。
  */
 let pendingLogs: LogEntry[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | undefined;
 /**
- * 日志写进哪个库：最近一个挂上来的。独立版一个进程可能同时开着几个工程，
- * 日志是进程级的，写进其中一份就够；那个工程关了就落到前一个上。
+ * 日誌寫進哪個庫：最近一個掛上來的。獨立版一個程序可能同時開著幾個工程，
+ * 日誌是程序級的，寫進其中一份就夠；那個工程關了就落到前一個上。
  */
 let logDbs: SqlDatabase[] = [];
 /**
- * 写库失败过了。
+ * 寫庫失敗過了。
  *
- * **写日志失败绝不能再打日志**——那会递归刷屏（`logger.ts` 的重入保护只挡
- * 转发，不挡入缓冲）。所以只在第一次往 stderr 说一句，此后彻底静默。
+ * **寫日誌失敗絕不能再打日誌**——那會遞迴刷屏（`logger.ts` 的重入保護只擋
+ * 轉發，不擋入緩衝）。所以只在第一次往 stderr 說一句，此後徹底靜默。
  */
 let logWriteBroken = false;
 
 /**
- * 把日志落进库里。返回的 dispose 必须在壳销毁时调用。
+ * 把日誌落進庫裡。返回的 dispose 必須在殼銷燬時呼叫。
  *
- * 不写在 `logger.ts` 里是有意的：那个模块是 core 里唯一的零依赖模块
- * （连 host.ts 都不引），而这里要 import `model/project`，反向 import
- * 会成环。用它现成的 `addLogSink` 从外面挂，是同一件事的干净做法。
+ * 不寫在 `logger.ts` 裡是有意的：那個模組是 core 裡唯一的零依賴模組
+ * （連 host.ts 都不引），而這裡要 import `model/project`，反向 import
+ * 會成環。用它現成的 `addLogSink` 從外面掛，是同一件事的乾淨做法。
  *
- * 开库是异步的，而 core 的模块在 import 期就已经在打日志了（配置读取、
- * 迁移检测）。所以挂上 sink 之后**先把环形缓冲里已有的补写一遍**——
- * 否则「启动时到底加载了什么」这段永远进不了库，而那正是排查启动问题
+ * 開庫是非同步的，而 core 的模組在 import 期就已經在打日誌了（配置讀取、
+ * 遷移檢測）。所以掛上 sink 之後**先把環形緩衝裡已有的補寫一遍**——
+ * 否則「啟動時到底載入了什麼」這段永遠進不了庫，而那正是排查啟動問題
  * 要看的第一段。
  */
 export async function installLogPersistence(project: NovelProject): Promise<Unsubscribe> {
   const db = await openDatabase(project);
   if (!db) {
-    // 没有库就什么都不做，但仍然给一个可 dispose 的对象——
-    // 让调用方不必区分「挂上了」和「没挂上」。
+    // 沒有庫就什麼都不做，但仍然給一個可 dispose 的物件——
+    // 讓呼叫方不必區分「掛上了」和「沒掛上」。
     return { dispose: () => undefined };
   }
   logDbs.push(db);
@@ -362,8 +362,8 @@ export async function installLogPersistence(project: NovelProject): Promise<Unsu
     }
   });
 
-  // 补上挂载之前的那些。sink 已经装好了，所以这里塞进同一个缓冲，
-  // 由同一次 flush 写掉；重复的那几条由 seq 去重（前端与这里都按 seq 认）。
+  // 補上掛載之前的那些。sink 已經裝好了，所以這裡塞進同一個緩衝，
+  // 由同一次 flush 寫掉；重複的那幾條由 seq 去重（前端與這裡都按 seq 認）。
   const backlog = recentLogs();
   if (backlog.length > 0) {
     pendingLogs.unshift(...backlog);
@@ -381,7 +381,7 @@ export async function installLogPersistence(project: NovelProject): Promise<Unsu
   };
 }
 
-/** 把攒着的日志一次事务写完。库坏了就丢掉这一批并从此静默。 */
+/** 把攢著的日誌一次事務寫完。庫壞了就丟掉這一批並從此靜默。 */
 export function flushPendingLogs(): void {
   if (flushTimer) {
     clearTimeout(flushTimer);
@@ -395,8 +395,8 @@ export function flushPendingLogs(): void {
   }
 
   try {
-    // 按 seq 去重：补写启动前的缓冲时，同一条可能既在 backlog 里
-    // 又被 sink 收到过（`installLogPersistence` 的补写与实时推送会重叠）。
+    // 按 seq 去重：補寫啟動前的緩衝時，同一條可能既在 backlog 裡
+    // 又被 sink 收到過（`installLogPersistence` 的補寫與實時推送會重疊）。
     const seen = new Set<number>();
     const rows: SqlValue[][] = [];
     for (const e of batch) {
@@ -412,31 +412,31 @@ export function flushPendingLogs(): void {
     );
   } catch (err) {
     logWriteBroken = true;
-    // 刻意用 console 而不是 log.warn：见 logWriteBroken 的注释。
-    console.error('[novelwarden] 日志写入数据库失败，已停止持久化：', (err as Error)?.message ?? err);
+    // 刻意用 console 而不是 log.warn：見 logWriteBroken 的註釋。
+    console.error('[novelwarden] 日誌寫入資料庫失敗，已停止持久化：', (err as Error)?.message ?? err);
   }
 }
 
 /**
- * 库里存着的历史日志，按时间正序返回最近的 `limit` 条。
+ * 庫裡存著的歷史日誌，按時間正序返回最近的 `limit` 條。
  *
- * 日志页默认仍然显示内存缓冲（那是实时的），这条只在用户点「加载更早」
- * 时才走——默认路径一次查询都不做。`before` 给了就只取更早的，供翻页。
+ * 日誌頁預設仍然顯示記憶體緩衝（那是實時的），這條只在使用者點「載入更早」
+ * 時才走——預設路徑一次查詢都不做。`before` 給了就只取更早的，供翻頁。
  */
 export async function readLogHistory(
   project: NovelProject,
   limit: number,
   before?: string
 ): Promise<LogEntry[]> {
-  // 纯读取，不建库：没有库就是没有历史。
+  // 純讀取，不建庫：沒有庫就是沒有歷史。
   const db = await openDatabase(project, { create: false });
   if (!db) {
     return [];
   }
   try {
-    // 先取最近的 N 条（倒序 + LIMIT 才用得上索引），再翻回正序给前端。
-    // 排序用 id（库内自增、跨会话单调）而不是 seq——seq 每次进程重启都从 1
-    // 开始，按它排会把昨天和今天的日志交错在一起。
+    // 先取最近的 N 條（倒序 + LIMIT 才用得上索引），再翻回正序給前端。
+    // 排序用 id（庫內自增、跨會話單調）而不是 seq——seq 每次程序重啟都從 1
+    // 開始，按它排會把昨天和今天的日誌交錯在一起。
     const rows = before
       ? db.all<LogRow>(
           'SELECT * FROM logs WHERE at < ? ORDER BY at DESC, id DESC LIMIT ?',
@@ -446,7 +446,7 @@ export async function readLogHistory(
       : db.all<LogRow>('SELECT * FROM logs ORDER BY at DESC, id DESC LIMIT ?', limit);
     return rows.map(toLogEntry).reverse();
   } catch (err) {
-    log.warn('读取日志历史失败', (err as Error)?.message ?? String(err));
+    log.warn('讀取日誌歷史失敗', (err as Error)?.message ?? String(err));
     return [];
   }
 }
@@ -466,16 +466,16 @@ const LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
 function toLogEntry(row: LogRow): LogEntry {
   return {
     /**
-     * **负数**，取库内自增 id 的相反数。
+     * **負數**，取庫內自增 id 的相反數。
      *
-     * 前端按 seq 去重，而库里存的 `seq` 是各次进程的进程内序号——昨天的
-     * 第 7 条与本次会话的第 7 条 seq 一样，直接用它会让「加载更早」把昨天
-     * 那条当成重复的丢掉。取负的库内 id 则永不与实时序号（从 1 递增）撞车，
-     * 而真正防重复显示的是查询里的 `at < before`（只取比已显示的更早的）。
+     * 前端按 seq 去重，而庫裡存的 `seq` 是各次程序的程序內序號——昨天的
+     * 第 7 條與本次會話的第 7 條 seq 一樣，直接用它會讓「載入更早」把昨天
+     * 那條當成重複的丟掉。取負的庫內 id 則永不與實時序號（從 1 遞增）撞車，
+     * 而真正防重複顯示的是查詢裡的 `at < before`（只取比已顯示的更早的）。
      */
     seq: -row.id,
     at: row.at,
-    // 库里的 level 是自由文本，读回来时收一次口——手改过库的人不该让日志页崩。
+    // 庫裡的 level 是自由文字，讀回來時收一次口——手改過庫的人不該讓日誌頁崩。
     level: LEVELS.includes(row.level as LogLevel) ? (row.level as LogLevel) : 'info',
     scope: row.scope,
     message: row.message,

@@ -9,14 +9,14 @@ import { persist } from './persist';
 
 const log = scoped('面板');
 
-/** 会话落盘与会话列表操作。接收 ChatController，字段只给 controller/ 同包用。 */
+/** 會話落盤與會話列表操作。接收 ChatController，欄位只給 controller/ 同包用。 */
 
 /**
- * 换这个会话的思考深度。
+ * 換這個會話的思考深度。
  *
- * 落在会话上而不是配置里（见 model/session.ts）。**当场落盘**：作者选完
- * 「深思考」就去泡茶，回来发现面板重开后又变回不思考，是最容易让人以为
- * 「这个开关没用」的一种表现。
+ * 落在會話上而不是配置裡（見 model/session.ts）。**當場落盤**：作者選完
+ * 「深思考」就去泡茶，回來發現面板重開後又變回不思考，是最容易讓人以為
+ * 「這個開關沒用」的一種表現。
  */
 export async function setThinking(c: ChatController, depth: ThinkingDepth): Promise<void> {
   const next = normalizeThinkingDepth(depth);
@@ -24,21 +24,21 @@ export async function setThinking(c: ChatController, depth: ThinkingDepth): Prom
     return;
   }
   c.current.thinking = next;
-  log.info(`思考深度改为「${THINKING_LABEL[next]}」`, `会话 ${c.current.id}`);
+  log.info(`思考深度改為「${THINKING_LABEL[next]}」`, `會話 ${c.current.id}`);
   await persist(c);
   c.post({ type: 'session', session: serializeSession(c.current) });
 }
 
 export async function newSession(c: ChatController): Promise<void> {
   if (c.busy) {
-    c.toast('正在生成，请先停止。', 'error');
+    c.toast('正在生成，請先停止。', 'error');
     return;
   }
   await persist(c);
-  // 换会话 = 上一条气泡走出视野，挂在它上面那张还没答的落盘卡片一并作废。
+  // 換會話 = 上一條氣泡走出視野，掛在它上面那張還沒答的落盤卡片一併作廢。
   cancelGates(c);
-  // 走掉的那个会话的草稿留在它自己的 JSON 里，内存这份扔掉——不然开一天
-  // 面板会攒下几十份没人再看的正文。
+  // 走掉的那個會話的草稿留在它自己的 JSON 裡，記憶體這份扔掉——不然開一天
+  // 面板會攢下幾十份沒人再看的正文。
   c.drafts.dropBySession(c.current.id);
   c.current = c.store.create({
     target: c.current.target,
@@ -55,12 +55,12 @@ export async function newSession(c: ChatController): Promise<void> {
 
 export async function openSession(c: ChatController, id: string): Promise<void> {
   if (c.busy) {
-    c.toast('正在生成，请先停止。', 'error');
+    c.toast('正在生成，請先停止。', 'error');
     return;
   }
   const loaded = await c.store.read(id);
   if (!loaded) {
-    c.toast('这个会话读不出来，可能已被删除或损坏。', 'error');
+    c.toast('這個會話讀不出來，可能已被刪除或損壞。', 'error');
     await c.pushSessions();
     return;
   }
@@ -69,9 +69,9 @@ export async function openSession(c: ChatController, id: string): Promise<void> 
   await restoreTarget(c, loaded);
   c.drafts.dropBySession(c.current.id);
   c.current = loaded;
-  // 把落盘的那批草稿装回内存：`write draftId=…` 认的是它们，翻回一个旧会话
-  // 接着让 agent 干活时，那几份草稿还得在。
-  // （**落盘不再靠它**：写不写在产出的当下就问过了，气泡上没有采纳按钮。）
+  // 把落盤的那批草稿裝回記憶體：`write draftId=…` 認的是它們，翻回一箇舊會話
+  // 接著讓 agent 幹活時，那幾份草稿還得在。
+  // （**落盤不再靠它**：寫不寫在產出的當下就問過了，氣泡上沒有採納按鈕。）
   c.drafts.load(loaded.id, loaded.drafts);
   c.pending = [];
   c.tab = 'chat';
@@ -84,11 +84,11 @@ export async function openSession(c: ChatController, id: string): Promise<void> 
 export async function deleteSession(c: ChatController, id: string): Promise<void> {
   const target = await c.store.read(id);
   const pick = await getHost().confirm(
-    `删除对话「${target?.title ?? id}」？`,
-    ['删除'],
-    { modal: true, detail: '会移到 .novelwarden/.trash/，可手动找回。' }
+    `刪除對話「${target?.title ?? id}」？`,
+    ['刪除'],
+    { modal: true, detail: '會移到 .novelwarden/.trash/，可手動找回。' }
   );
-  if (pick !== '删除') {
+  if (pick !== '刪除') {
     return;
   }
   await c.store.delete(id);
@@ -110,9 +110,9 @@ export async function renameSession(c: ChatController, id: string): Promise<void
     return;
   }
   const title = await getHost().input({
-    title: '重命名对话',
+    title: '重新命名對話',
     value: target.title,
-    validate: (v) => (v.trim() ? undefined : '不能为空'),
+    validate: (v) => (v.trim() ? undefined : '不能為空'),
   });
   if (!title) {
     return;

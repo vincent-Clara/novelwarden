@@ -1,13 +1,13 @@
 /**
- * 删修饰：写完正文之后的一轮「只许删」修稿（续写链最后一步，对话页与批量写章同一条）。
+ * 刪修飾：寫完正文之後的一輪「只許刪」修稿（續寫鏈最後一步，對話頁與批次寫章同一條）。
  *
- * - 用写这一章的同一个模型，不经装配器，只给删减规矩与编好号的正文（`context/prompts.ts` 的
+ * - 用寫這一章的同一個模型，不經裝配器，只給刪減規矩與編好號的正文（`context/prompts.ts` 的
  *   `trimMessages`）。
- * - 逐段验收（`model/trimProse.ts`）：加了字、动了对白、删得太狠、改了段尾的段退回原文，其余照用。
- * - 删完不到八成就从删得最多的段开始退回，主按钮不会因为这一轮转去推「接着写」。
- * - **失败不连累正文**：调用失败、被截断、一段都没交回来，都保留删之前那一版，记一条说明。
- * - 不流进气泡：模型交回来的是带编号的一段段文字，作者看着它只会以为正文写坏了。气泡里先加
- *   一行「——删修饰——」说明在干什么，完了退回成删后的正文。
+ * - 逐段驗收（`model/trimProse.ts`）：加了字、動了對白、刪得太狠、改了段尾的段退回原文，其餘照用。
+ * - 刪完不到八成就從刪得最多的段開始退回，主按鈕不會因為這一輪轉去推「接著寫」。
+ * - **失敗不連累正文**：呼叫失敗、被截斷、一段都沒交回來，都保留刪之前那一版，記一條說明。
+ * - 不流進氣泡：模型交回來的是帶編號的一段段文字，作者看著它只會以為正文寫壞了。氣泡裡先加
+ *   一行「——刪修飾——」說明在幹什麼，完了退回成刪後的正文。
  */
 import { CancelledError } from '../llm/provider';
 import { countWords } from '../model/fs';
@@ -16,18 +16,18 @@ import { trimMessages } from '../context/prompts';
 import { describeError } from '../runtime/logger';
 import { ChainIO, Tally } from './structured';
 
-/** 删修饰用的温度：删减不需要发挥。 */
+/** 刪修飾用的溫度：刪減不需要發揮。 */
 const TRIM_TEMPERATURE = 0.3;
 
 export interface TrimResult {
-  /** 删完的正文；没删成时就是传进来的那份。 */
+  /** 刪完的正文；沒刪成時就是傳進來的那份。 */
   text: string;
-  /** 真删了字时才有：删之前那一版（落盘前的合并视图拿它与删后那版逐段对照）。 */
+  /** 真刪了字時才有：刪之前那一版（落盤前的合併檢視拿它與刪後那版逐段對照）。 */
   untrimmed?: string;
 }
 
 /**
- * 删 `text` 里的修饰。`floor` 是删完之后 `text` 至少要剩多少字（调用方按目标字数的八成减去本章
+ * 刪 `text` 裡的修飾。`floor` 是刪完之後 `text` 至少要剩多少字（呼叫方按目標字數的八成減去本章
  * 已有的算好）；缺席就不保底。
  */
 export async function trimModifiers(
@@ -43,13 +43,13 @@ export async function trimModifiers(
   const paragraphs = trimParagraphs(source);
   let output: string;
   try {
-    const out = await t.call(io, trimMessages(numberParagraphs(paragraphs)), '删修饰', {
+    const out = await t.call(io, trimMessages(numberParagraphs(paragraphs)), '刪修飾', {
       quiet: true,
       temperature: TRIM_TEMPERATURE,
     });
     if (out.stop === 'maxTokens') {
       io.reset?.(text);
-      t.note('删修饰被输出上限截断，没有采用，正文保持删之前的样子');
+      t.note('刪修飾被輸出上限截斷，沒有采用，正文保持刪之前的樣子');
       return { text };
     }
     output = out.text;
@@ -58,7 +58,7 @@ export async function trimModifiers(
       throw err;
     }
     io.reset?.(text);
-    t.note(`删修饰调用失败（${describeError(err)}），正文保持删之前的样子`);
+    t.note(`刪修飾呼叫失敗（${describeError(err)}），正文保持刪之前的樣子`);
     return { text };
   }
 
@@ -73,16 +73,16 @@ export async function trimModifiers(
     io.reset?.(text);
     t.note(
       trimmed.restored > 0
-        ? '删修饰删完不到目标的八成，删改全部退回，正文保持原样'
-        : `删修饰没有删掉什么${rejected ? `（退回原文：${rejected}）` : ''}，正文保持原样`
+        ? '刪修飾刪完不到目標的八成，刪改全部退回，正文保持原樣'
+        : `刪修飾沒有刪掉什麼${rejected ? `（退回原文：${rejected}）` : ''}，正文保持原樣`
     );
     return { text };
   }
   io.reset?.(trimmed.text);
   t.note(
-    `删修饰：${paragraphs.length} 段里删了 ${trimmed.changed} 段，${before} → ${after} 字（删掉 ${Math.round((100 * (before - after)) / before)}%）` +
+    `刪修飾：${paragraphs.length} 段裡刪了 ${trimmed.changed} 段，${before} → ${after} 字（刪掉 ${Math.round((100 * (before - after)) / before)}%）` +
       `${rejected ? `；退回原文：${rejected}` : ''}` +
-      `${trimmed.restored > 0 ? `；删完不到目标的八成，又退回删得最多的 ${trimmed.restored} 段` : ''}`
+      `${trimmed.restored > 0 ? `；刪完不到目標的八成，又退回刪得最多的 ${trimmed.restored} 段` : ''}`
   );
   return { text: trimmed.text, untrimmed: source };
 }

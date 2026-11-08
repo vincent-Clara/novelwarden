@@ -1,13 +1,13 @@
 /**
- * 上下文详细度落到后台任务上：提取文风、提取角色默认勾几章。
+ * 上下文詳細度落到後臺任務上：提取文風、提取角色預設勾幾章。
  *
- * 作者仍然可以在输入框里改章号——级别只决定**缺省勾哪几章**。这里只看缺省值：输入框直接取消，
- * 一次模型都不调。
+ * 作者仍然可以在輸入框裡改章號——級別只決定**預設勾哪幾章**。這裡只看預設值：輸入框直接取消，
+ * 一次模型都不調。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 文风：「精简」前 1 章、缺省前 2 章、「完整」前 3 章 | 第 3 级 = 从前写死的前两章 |
- * | 角色：「精简」最近 1 章、缺省最近 3 章、「完整」最近 5 章 | 第 3 级 = 从前写死的最近三章 |
+ * | 文風：「精簡」前 1 章、預設前 2 章、「完整」前 3 章 | 第 3 級 = 從前寫死的前兩章 |
+ * | 角色：「精簡」最近 1 章、預設最近 3 章、「完整」最近 5 章 | 第 3 級 = 從前寫死的最近三章 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -38,9 +38,9 @@ before(async () => {
     }),
   });
   bundle.host.initHost(h.host);
-  t = await makeTempProject(bundle.project, { prefix: 'detailDefaults', title: '缺省取章' });
+  t = await makeTempProject(bundle.project, { prefix: 'detailDefaults', title: '預設取章' });
   for (let no = 1; no <= 6; no++) {
-    t.write(`chapters/${String(no).padStart(3, '0')}-第${no}章.md`, `# 第${no}章\n\n第${no}章的正文，林昭往井边走。\n`);
+    t.write(`chapters/${String(no).padStart(3, '0')}-第${no}章.md`, `# 第${no}章\n\n第${no}章的正文，林昭往井邊走。\n`);
   }
   t.project.invalidate();
 });
@@ -49,7 +49,7 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-/** 跑一次、在选章那一步取消，返回输入框里缺省填的章号。 */
+/** 跑一次、在選章那一步取消，返回輸入框裡預設填的章號。 */
 async function defaultsOf(run, detail) {
   contextDetail = detail;
   h.expect(undefined);
@@ -58,8 +58,8 @@ async function defaultsOf(run, detail) {
   return h.inputs[0].value;
 }
 
-describe('上下文详细度 · 后台任务缺省勾几章', () => {
-  test('提取文风：前 1 / 2 / 3 章', async () => {
+describe('上下文詳細度 · 後臺任務預設勾幾章', () => {
+  test('提取文風：前 1 / 2 / 3 章', async () => {
     const run = (p) => bundle.style.extractStyle(p);
     assert.equal(await defaultsOf(run, 1), '1');
     assert.equal(await defaultsOf(run, undefined), '1,2');

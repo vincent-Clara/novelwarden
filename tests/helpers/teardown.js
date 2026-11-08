@@ -1,29 +1,29 @@
 /**
- * 临时工程的收尾。
+ * 臨時工程的收尾。
  *
- * **必须先关库再删目录**：SQLite 连接开着时 Windows 上删不掉
- * `.novelwarden/novelwarden.db`，临时工程会全留在 temp 里（EBUSY）。迁移前这条只有
- * 两个脚本做对，另有一个脚本从不删目录——每跑一次泄漏一个临时工程。
+ * **必須先關庫再刪目錄**：SQLite 連線開著時 Windows 上刪不掉
+ * `.novelwarden/novelwarden.db`，臨時工程會全留在 temp 裡（EBUSY）。遷移前這條只有
+ * 兩個指令碼做對，另有一個指令碼從不刪目錄——每跑一次洩漏一個臨時工程。
  */
 const fs = require('fs');
 
 /**
- * 关库（如果这组测试碰过库）再删目录。两步都不抛：收尾失败不该盖掉真正的失败原因。
- * @param {string} dir 临时目录
- * @param {{ resetDatabases?: () => void }} [db] 载入的 `src/core/runtime/db.ts`，没碰过库就不用传
+ * 關庫（如果這組測試碰過庫）再刪目錄。兩步都不拋：收尾失敗不該蓋掉真正的失敗原因。
+ * @param {string} dir 臨時目錄
+ * @param {{ resetDatabases?: () => void }} [db] 載入的 `src/core/runtime/db.ts`，沒碰過庫就不用傳
  */
 function cleanup(dir, db) {
   if (db && typeof db.resetDatabases === 'function') {
     try {
       db.resetDatabases();
     } catch {
-      /* 关不掉也要接着删 */
+      /* 關不掉也要接著刪 */
     }
   }
   try {
     fs.rmSync(dir, { recursive: true, force: true });
   } catch {
-    /* 删不掉就算了，不要盖掉真正的失败 */
+    /* 刪不掉就算了，不要蓋掉真正的失敗 */
   }
 }
 

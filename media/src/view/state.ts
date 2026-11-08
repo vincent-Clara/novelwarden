@@ -1,14 +1,14 @@
 /**
- * `ViewState` 的渲染：输入框旁的模型下拉、写入目标下拉、活动栏上的待办圆点，
- * 以及生成中的按钮状态。
+ * `ViewState` 的渲染：輸入框旁的模型下拉、寫入目標下拉、活動欄上的待辦圓點，
+ * 以及生成中的按鈕狀態。
  *
- * 后端全量推 state，这里整块重画——数据量只有几十行，增量更新换来的那点
- * 开销不值得多维护一份状态。
+ * 後端全量推 state，這裡整塊重畫——資料量只有幾十行，增量更新換來的那點
+ * 開銷不值得多維護一份狀態。
  */
 import { maybeById, setHidden } from '../dom';
 import { THINKING_DEPTHS, THINKING_HINT, ThinkingDepth, plotOfTarget } from '../protocol';
 
-/** 下拉框只在这里用英文短标签，日志那边的中文说法（THINKING_LABEL）不受影响。 */
+/** 下拉框只在這裡用英文短標籤，日誌那邊的中文說法（THINKING_LABEL）不受影響。 */
 const THINKING_LABEL_DISPLAY: Record<ThinkingDepth, string> = {
   off: 'None',
   low: 'Low',
@@ -25,9 +25,9 @@ import { store, hasWorkspace } from './store';
 
 export function renderState(state: ViewState): void {
   store.state = state;
-  // 这里从前有一段「如果是独立版就把 VS Code 专属入口 hidden 掉、把存储说明
-  // 改一改」。现在那两处差异由壳在渲染页面时决定要不要产出（见
-  // src/shells/shared/panes.ts 的 nativeSettings），前端不再认得环境。
+  // 這裡從前有一段「如果是獨立版就把 VS Code 專屬入口 hidden 掉、把儲存說明
+  // 改一改」。現在那兩處差異由殼在渲染頁面時決定要不要產出（見
+  // src/shells/shared/panes.ts 的 nativeSettings），前端不再認得環境。
   renderModelSelect(state);
   renderThinkingSelect();
 
@@ -36,12 +36,12 @@ export function renderState(state: ViewState): void {
     el.sendBtn.disabled = true;
   }
 
-  // 打开了文件夹但还不是小说工程：消息区换成「下一步：初始化」那一块（W12）。没打开文件夹时
-  // 不显示——那时独立版有空窗口的遮罩，插件没有这个状态。
+  // 開啟了資料夾但還不是小說工程：訊息區換成「下一步：初始化」那一塊（W12）。沒開啟資料夾時
+  // 不顯示——那時獨立版有空視窗的遮罩，外掛沒有這個狀態。
   el.messages.classList.toggle('uninit', hasWorkspace() && !state.initialized);
   if (!state.initialized) {
-    // 从前这里写「先运行「Novel: 初始化小说工程」」——那是 VS Code 的命令名，独立版里找不到。
-    el.providerMeta.textContent = '当前工作区还不是小说工程。';
+    // 從前這裡寫「先執行「Novel: 初始化小說工程」」——那是 VS Code 的命令名，獨立版裡找不到。
+    el.providerMeta.textContent = '當前工作區還不是小說工程。';
     el.sendBtn.disabled = true;
     return;
   }
@@ -49,14 +49,14 @@ export function renderState(state: ViewState): void {
   el.sendBtn.disabled = store.busy || !hasWorkspace();
   el.providerMeta.textContent = state.modelIssue
     ? state.modelIssue
-    : `${state.modelLabel} · 窗口 ${fmt(state.contextWindow)} / 输出 ${fmt(state.maxOutputTokens)}`;
+    : `${state.modelLabel} · 視窗 ${fmt(state.contextWindow)} / 輸出 ${fmt(state.maxOutputTokens)}`;
   el.providerMeta.classList.toggle('warn', !!state.modelIssue);
 
   renderTargetSelect(state);
 
-  // 没定稿的提示只在工程页出现（那份横幅由 project/groups.ts 画，还带进度条）。
-  // 对话页不再挂一份纯文字版——同一句话说两遍，占的却是消息流的地方。
-  // 独立版的活动栏上给「工程」挂一个小圆点，切走了也看得见待办。
+  // 沒定稿的提示只在工程頁出現（那份橫幅由 project/groups.ts 畫，還帶進度條）。
+  // 對話頁不再掛一份純文字版——同一句話說兩遍，佔的卻是訊息流的地方。
+  // 獨立版的活動欄上給「工程」掛一個小圓點，切走了也看得見待辦。
   const dot = maybeById('projectStaleDot');
   if (dot) {
     setHidden(dot, state.staleCount === 0);
@@ -64,22 +64,22 @@ export function renderState(state: ViewState): void {
 }
 
 /**
- * 当前创作目标是哪一章。
+ * 當前創作目標是哪一章。
  *
- * 它不只是「采纳写到哪」了——装配的每一层都跟着它走，所以选项里带上
- * `relPath`（目标一律按路径标识，章号会撞）。第一项「全书（架构 · 大纲）」没有
- * relPath：选它就是回到全书那一层，主按钮是全书的下一步。它与下面那一串章之间隔一条
- * 选不中的分隔线——不隔开的话它看着就像列表里的又一章（2026-10-24，作者找不到回全书的路）。
- * 停在一章上时，流水线条上的「大纲」那一格也回到这一层。
+ * 它不只是「採納寫到哪」了——裝配的每一層都跟著它走，所以選項裡帶上
+ * `relPath`（目標一律按路徑標識，章號會撞）。第一項「全書（架構 · 大綱）」沒有
+ * relPath：選它就是回到全書那一層，主按鈕是全書的下一步。它與下面那一串章之間隔一條
+ * 選不中的分隔線——不隔開的話它看著就像列表裡的又一章（2026-10-24，作者找不到回全書的路）。
+ * 停在一章上時，流水線條上的「大綱」那一格也回到這一層。
  *
- * 列的是**每个章号一行**，最近的在上面。说法由后端给（`p.label`）。
+ * 列的是**每個章號一行**，最近的在上面。說法由後端給（`p.label`）。
  */
 function renderTargetSelect(state: ViewState): void {
   el.targetSelect.innerHTML = '';
 
   const bookOpt = document.createElement('option');
   bookOpt.value = '0';
-  bookOpt.textContent = '全书（架构 · 大纲）';
+  bookOpt.textContent = '全書（架構 · 大綱）';
   el.targetSelect.appendChild(bookOpt);
 
   if (state.plots.length > 0) {
@@ -98,8 +98,8 @@ function renderTargetSelect(state: ViewState): void {
     el.targetSelect.appendChild(opt);
   }
 
-  // 以会话里的目标为准（后端是唯一真相）。目标是架构或大纲、或它指向的那一章
-  // 不在列表里（刚被删/改名、还没有细纲也没有正文）时停在「全书」那一项。
+  // 以會話裡的目標為準（後端是唯一真相）。目標是架構或大綱、或它指向的那一章
+  // 不在列表裡（剛被刪/改名、還沒有細綱也沒有正文）時停在「全書」那一項。
   const relPath = plotOfTarget(store.session.target);
   const matched = relPath
     ? [...el.targetSelect.options].find((o) => o.dataset.rel === relPath)
@@ -107,7 +107,7 @@ function renderTargetSelect(state: ViewState): void {
   el.targetSelect.value = matched?.value ?? '0';
 }
 
-/** 输入框旁的模型下拉框，按服务商分组。 */
+/** 輸入框旁的模型下拉框，按服務商分組。 */
 function renderModelSelect(state: ViewState): void {
   el.modelSelect.innerHTML = '';
   const models = state.models || [];
@@ -133,14 +133,14 @@ function renderModelSelect(state: ViewState): void {
     }
     const opt = document.createElement('option');
     opt.value = m.ref;
-    // 显示完整引用，因为它才是用户在别处（配置文件、文档）看到的东西。
+    // 顯示完整引用，因為它才是使用者在別處（配置檔案、文件）看到的東西。
     opt.textContent = m.ref;
     opt.title = `${m.group} · ${m.label}`;
     optgroup?.appendChild(opt);
   }
 
-  // 当前引用可能指向一个已被删掉的模型，这时补一条占位项，
-  // 否则下拉框会静默跳到第一个模型，用户以为自己在用另一个。
+  // 當前引用可能指向一個已被刪掉的模型，這時補一條佔位項，
+  // 否則下拉框會靜默跳到第一個模型，使用者以為自己在用另一個。
   if (state.model && !models.some((m) => m.ref === state.model)) {
     const opt = document.createElement('option');
     opt.value = state.model;
@@ -151,10 +151,10 @@ function renderModelSelect(state: ViewState): void {
 }
 
 /**
- * 输入框旁的思考深度下拉框。
+ * 輸入框旁的思考深度下拉框。
  *
- * 选项是**固定五档**（后端那张表，前端直接打包同一份），所以只在首次渲染
- * 时建；当前值跟着会话走，由 `syncThinkingSelect` 在每次收到 session 时回填。
+ * 選項是**固定五檔**（後端那張表，前端直接打包同一份），所以只在首次渲染
+ * 時建；當前值跟著會話走，由 `syncThinkingSelect` 在每次收到 session 時回填。
  */
 function renderThinkingSelect(): void {
   if (el.thinkSelect.options.length === 0) {
@@ -169,7 +169,7 @@ function renderThinkingSelect(): void {
   syncThinkingSelect();
 }
 
-/** 把会话里那一档回显到下拉框上。后端是唯一真相，这里只是画它。 */
+/** 把會話裡那一檔回顯到下拉框上。後端是唯一真相，這裡只是畫它。 */
 export function syncThinkingSelect(): void {
   el.thinkSelect.value = store.session.thinking;
 }
@@ -183,13 +183,13 @@ export function setBusy(value: boolean): void {
   el.atBtn.disabled = value || locked;
   el.selBtn.disabled = value || locked;
   el.newSessionBtn.disabled = value || locked;
-  // 生成期间不给改名：改名会动这一章的路径，而正在跑的那一轮攥着旧路径，
-  // 采纳时会写到一个已经不存在的地方去。
+  // 生成期間不給改名：改名會動這一章的路徑，而正在跑的那一輪攥著舊路徑，
+  // 採納時會寫到一個已經不存在的地方去。
   el.renamePlotBtn.disabled = value || locked;
-  // 主按钮与命令面板在生成期间都禁用：两者都会发起新的一轮。面板要是正开着
-  // 也一并收掉——一个点不动的候选列表挂在输入框上方只会挡住消息流。
+  // 主按鈕與命令面板在生成期間都禁用：兩者都會發起新的一輪。面板要是正開著
+  // 也一併收掉——一個點不動的候選列表掛在輸入框上方只會擋住訊息流。
   el.nextStepBtn.disabled = value || locked;
   setCommandsDisabled(value || locked);
-  // 审稿报告卡上的「按勾选的 n 条修稿」也会发起新的一轮。
+  // 審稿報告卡上的「按勾選的 n 條修稿」也會發起新的一輪。
   syncReviewCards();
 }

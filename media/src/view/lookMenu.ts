@@ -1,59 +1,59 @@
 /**
- * 标题栏「视图」菜单里的「外观」与「专注」两组（接在 `viewMenu.ts` 的 `GROUPS` 里，一组一个函数）。状态问编辑器
- * （`nf-view-query` 的 `look` / `focus`，`editor/look.ts` 与 `editor/focus.ts` 回答），开关经 `nf-view-command`
- * 交过去。编辑器没装（插件、空窗口之外不会发生）时没人回答，两组置灰。
+ * 標題欄「檢視」選單裡的「外觀」與「專注」兩組（接在 `viewMenu.ts` 的 `GROUPS` 裡，一組一個函式）。狀態問編輯器
+ * （`nf-view-query` 的 `look` / `focus`，`editor/look.ts` 與 `editor/focus.ts` 回答），開關經 `nf-view-command`
+ * 交過去。編輯器沒裝（外掛、空視窗之外不會發生）時沒人回答，兩組置灰。
  */
 import { shortcutLabel } from '../editor/shortcuts';
 import { commandViewPrefs } from '../globals';
 import type { ViewPrefsStatus } from '../globals';
 import type { MenuEntry } from './menubar';
 
-/** 外观：字号放大 / 缩小 / 还原（快捷键只在焦点在编辑区里时拦），其余几项在外观面板里。 */
+/** 外觀：字號放大 / 縮小 / 還原（快捷鍵只在焦點在編輯區裡時攔），其餘幾項在外觀面板裡。 */
 export function appearanceEntries(status: ViewPrefsStatus): MenuEntry[] {
   const look = status.look;
-  const size = look ? `当前 ${look.fontSize}px，缺省 ${look.defaultFontSize}px。` : '';
-  const keys = '快捷键只在焦点在编辑区里时管用，别处照常是浏览器的页面缩放。';
+  const size = look ? `當前 ${look.fontSize}px，預設 ${look.defaultFontSize}px。` : '';
+  const keys = '快捷鍵只在焦點在編輯區裡時管用，別處照常是瀏覽器的頁面縮放。';
   return [
     {
-      label: '放大字号',
+      label: '放大字號',
       kbd: shortcutLabel('zoomIn'),
       disabled: !look?.canZoomIn,
-      detail: look?.canZoomIn === false ? `已经是最大字号（${look.fontSize}px）。` : `${size}${keys}`,
+      detail: look?.canZoomIn === false ? `已經是最大字號（${look.fontSize}px）。` : `${size}${keys}`,
       run: () => commandViewPrefs('zoomIn'),
     },
     {
-      label: '缩小字号',
+      label: '縮小字號',
       kbd: shortcutLabel('zoomOut'),
       disabled: !look?.canZoomOut,
-      detail: look?.canZoomOut === false ? `已经是最小字号（${look.fontSize}px）。` : `${size}${keys}`,
+      detail: look?.canZoomOut === false ? `已經是最小字號（${look.fontSize}px）。` : `${size}${keys}`,
       run: () => commandViewPrefs('zoomOut'),
     },
     {
-      label: '还原字号',
+      label: '還原字號',
       kbd: shortcutLabel('zoomReset'),
       disabled: !look,
       detail: `${size}${keys}`,
       run: () => commandViewPrefs('zoomReset'),
     },
     {
-      label: '外观设置…',
+      label: '外觀設定…',
       disabled: !look,
-      detail: '正文字体、字号、行距、版心宽度与主题（深色 / 浅色 / 护眼），改了当场生效。',
+      detail: '正文字型、字號、行距、版心寬度與主題（深色 / 淺色 / 護眼），改了當場生效。',
       run: () => commandViewPrefs('openLook'),
     },
   ];
 }
 
-/** 专注：专注模式、全屏、打字机滚动、段落聚焦，开着的打 ✓。 */
+/** 專注：專注模式、全屏、打字機滾動、段落聚焦，開著的打 ✓。 */
 export function focusEntries(status: ViewPrefsStatus): MenuEntry[] {
   const focus = status.focus;
   return [
     {
-      label: '专注模式',
+      label: '專注模式',
       kbd: shortcutLabel('focusMode'),
       checked: !!focus?.focusMode,
       disabled: !focus,
-      detail: `只留正文：藏起侧栏、标签条、工具栏与章节条，状态栏淡成一行。两块编辑区都开着时只专注当前那一块。Esc 或再按 ${shortcutLabel('focusMode')} 退出。`,
+      detail: `只留正文：藏起側欄、標籤條、工具欄與章節條，狀態列淡成一行。兩塊編輯區都開著時只專注當前那一塊。Esc 或再按 ${shortcutLabel('focusMode')} 退出。`,
       run: () => commandViewPrefs('toggleFocusMode'),
     },
     {
@@ -61,22 +61,22 @@ export function focusEntries(status: ViewPrefsStatus): MenuEntry[] {
       checked: !!focus?.fullscreen,
       disabled: !focus?.fullscreenSupported,
       detail: focus?.fullscreenSupported
-        ? '整个页面占满屏幕（浏览器的 F11 也行）。Esc 退出。'
-        : '这个浏览器（或窗口）不支持全屏。',
+        ? '整個頁面佔滿螢幕（瀏覽器的 F11 也行）。Esc 退出。'
+        : '這個瀏覽器（或視窗）不支援全屏。',
       run: () => commandViewPrefs('toggleFullscreen'),
     },
     {
-      label: '打字机滚动',
+      label: '打字機滾動',
       checked: !!focus?.typewriter,
       disabled: !focus,
-      detail: '光标所在那一行始终停在编辑区中间附近；用滚轮翻看前文时不拉回来，下一次打字才回来。',
+      detail: '游標所在那一行始終停在編輯區中間附近；用滾輪翻看前文時不拉回來，下一次打字才回來。',
       run: () => commandViewPrefs('toggleTypewriter'),
     },
     {
       label: '段落聚焦',
       checked: !!focus?.paragraphFocus,
       disabled: !focus,
-      detail: '正文里光标所在那一段照常显示，其余变淡。按工程的分段格式认段落。',
+      detail: '正文裡游標所在那一段照常顯示，其餘變淡。按工程的分段格式認段落。',
       run: () => commandViewPrefs('toggleParagraphFocus'),
     },
   ];

@@ -2,39 +2,39 @@
  * 定稿一章（D17、D18、D15、七期）：
  *
  * ```
- * 1. 反向更新细纲（1 次）：当前细纲 + 正文 → 七节（含连续性事实）→ 证据用 bigram 在正文里找（0 次）
- *    → 旧版进回收站 → 落盘（记 sourceHash / cast，writtenFrom 刷新）
- * 2. 角色状态（0–1 次）：本章出场、已经建卡的人 → 按归属写、或挂黄 ❗
- * 3. 叙事线（1–3 次）：a 认事件（线是空的也认）→ c 有新线 / 新伏笔时归并 → 证据逐字校验后追加
- *    → b 本章动过的线更新当前进度（作者改过的不写）
- * 4. 故事时间（1 次，2026-10-24 重做）：上一章的结尾 + 前面几章的时间 + 本章正文 → 晚几天、章内几跳、结尾时段、正文写明的日子
- *    → 证据逐字校验后写进 threads/时间线.md（机器写的行照新推的换，作者的不动；features/storyTime.ts）
+ * 1. 反向更新細綱（1 次）：當前細綱 + 正文 → 七節（含連續性事實）→ 證據用 bigram 在正文裡找（0 次）
+ *    → 舊版進回收站 → 落盤（記 sourceHash / cast，writtenFrom 重新整理）
+ * 2. 角色狀態（0–1 次）：本章出場、已經建卡的人 → 按歸屬寫、或掛黃 ❗
+ * 3. 敘事線（1–3 次）：a 認事件（線是空的也認）→ c 有新線 / 新伏筆時歸併 → 證據逐字校驗後追加
+ *    → b 本章動過的線更新當前進度（作者改過的不寫）
+ * 4. 故事時間（1 次，2026-10-24 重做）：上一章的結尾 + 前面幾章的時間 + 本章正文 → 晚幾天、章內幾跳、結尾時段、正文寫明的日子
+ *    → 證據逐字校驗後寫進 threads/时间线.md（機器寫的行照新推的換，作者的不動；features/storyTime.ts）
  * ```
  *
- * 后几步读的都是第一步更新过的那份细纲（出场人物、时间地点）与正文。
+ * 後幾步讀的都是第一步更新過的那份細綱（出場人物、時間地點）與正文。
  *
- * 2026-10-25 起每一步都改成转写：干活的模型按格式写自然语言，「转写」那一档的模型照抄成原来那份 JSON（features/transcribe.ts）。
- * 几步共用一个转写调用（{@link FinalizeOptions.transcribe}），转写那一档不跟确认框上为这一次挑的模型。
+ * 2026-10-25 起每一步都改成轉寫：幹活的模型按格式寫自然語言，「轉寫」那一檔的模型照抄成原來那份 JSON（features/transcribe.ts）。
+ * 幾步共用一個轉寫呼叫（{@link FinalizeOptions.transcribe}），轉寫那一檔不跟確認框上為這一次挑的模型。
  *
- * 前两步移植自 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）`finalize-chapter.command.ts` 的
- * `buildFinalizePostProcessSteps`（FC:246-563）的后两步。知识库导入、定稿收据、来源 hash、
- * 项目租约不搬（总计划 §1 #14）。第三步上游不在定稿里（是叙事线编辑器里的一颗按钮），叙事线重做之后
- * 拆成认事件 / 当前进度 / 归并三段，见 features/threads.ts 的 `recordThreads`。
+ * 前兩步移植自 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）`finalize-chapter.command.ts` 的
+ * `buildFinalizePostProcessSteps`（FC:246-563）的後兩步。知識庫匯入、定稿收據、來源 hash、
+ * 專案租約不搬（總計劃 §1 #14）。第三步上游不在定稿裡（是敘事線編輯器裡的一顆按鈕），敘事線重做之後
+ * 拆成認事件 / 當前進度 / 歸併三段，見 features/threads.ts 的 `recordThreads`。
  *
- * ## 几步的失败各算各的
+ * ## 幾步的失敗各算各的
  *
- * 更新细纲是这一章能不能「记住」的那一步：它失败了整个定稿就算没成，红 ❗ 挂在章节上，细纲
- * 一个字不动。角色状态、叙事线、故事时间失败时细纲照样算数——黄 ❗ 挂在章节上（第 16 条：
- * 部分完成），角色卡 / 叙事线 / 时间线停在上一次，下次重新定稿会再来一遍。
+ * 更新細綱是這一章能不能「記住」的那一步：它失敗了整個定稿就算沒成，紅 ❗ 掛在章節上，細綱
+ * 一個字不動。角色狀態、敘事線、故事時間失敗時細綱照樣算數——黃 ❗ 掛在章節上（第 16 條：
+ * 部分完成），角色卡 / 敘事線 / 時間線停在上一次，下次重新定稿會再來一遍。
  *
- * ## 用哪个模型
+ * ## 用哪個模型
  *
- * 单章入口（主按钮、章节工作台、MCP 的 `summary finalize`）用对话页选定的那个。批量入口
- * 各走各的档（细纲与叙事线 `plotSummary`、角色状态 `characterCard`），失败换同档其余。工程页章节右键
- * 先弹确认框（`askFinalizeChapterTask`），缺省仍是对话页那个，可以为这一次换一个、或按分档。
+ * 單章入口（主按鈕、章節工作臺、MCP 的 `summary finalize`）用對話頁選定的那個。批次入口
+ * 各走各的檔（細綱與敘事線 `plotSummary`、角色狀態 `characterCard`），失敗換同檔其餘。工程頁章節右鍵
+ * 先彈確認框（`askFinalizeChapterTask`），預設仍是對話頁那個，可以為這一次換一個、或按分檔。
  *
- * 后三步在 finalizeSteps.ts：工程页黄条上的「立即同步」（summarize.ts 的 `syncSummaries`）更新完细纲之后
- * 也走它们，同步过的章与逐章定稿的章是同一个结果。
+ * 後三步在 finalizeSteps.ts：工程頁黃條上的「立即同步」（summarize.ts 的 `syncSummaries`）更新完細綱之後
+ * 也走它們，同步過的章與逐章定稿的章是同一個結果。
  */
 import { getHost } from '../host';
 import { readConfig } from '../config';
@@ -59,7 +59,7 @@ export type { ModelRunner } from './finalizeSteps';
 
 const log = scoped('同步');
 
-/** 只有一个模型（对话页选定的那个）时的 runner：不换人，窗口取全局配置。 */
+/** 只有一個模型（對話頁選定的那個）時的 runner：不換人，視窗取全域配置。 */
 export function singleModel(llm: LlmProvider): ModelRunner {
   const config = readConfig();
   return {
@@ -70,30 +70,30 @@ export function singleModel(llm: LlmProvider): ModelRunner {
 
 export interface FinalizeOptions {
   signal?: AbortSignal;
-  /** 更新细纲那一步用谁。缺省对话页选定的那个。 */
+  /** 更新細綱那一步用誰。預設對話頁選定的那個。 */
   summary?: ModelRunner;
-  /** 角色状态那一步用谁。缺省同更新细纲。 */
+  /** 角色狀態那一步用誰。預設同更新細綱。 */
   state?: ModelRunner;
-  /** 叙事线那一步（认事件、当前进度、归并）与故事时间那一步用谁。缺省同更新细纲（读一章、按合同摘出东西，是同一种活）。 */
+  /** 敘事線那一步（認事件、當前進度、歸併）與故事時間那一步用誰。預設同更新細綱（讀一章、按合同摘出東西，是同一種活）。 */
   threads?: ModelRunner;
   /**
-   * 转写那一次怎么调（2026-10-25 起改成转写，几步共用）。缺省走「转写」那一档（features/poolIO.ts 的 `poolTranscriber`），
-   * 那一档一个可用的模型都没有时用更新细纲那一个。
+   * 轉寫那一次怎麼調（2026-10-25 起改成轉寫，幾步共用）。預設走「轉寫」那一檔（features/poolIO.ts 的 `poolTranscriber`），
+   * 那一檔一個可用的模型都沒有時用更新細綱那一個。
    */
   transcribe?: TranscribeCall;
-  /** 走到第几步了（任务条上那一行）。 */
+  /** 走到第幾步了（任務條上那一行）。 */
   onStep?(step: 'summary' | 'state' | 'threads' | 'time'): void;
 }
 
 export interface FinalizeOutcome extends StateAndThreadsOutcome {
-  /** 实际调了几次模型（四步合计，写 3–6 次，加上转写的）。 */
+  /** 實際調了幾次模型（四步合計，寫 3–6 次，加上轉寫的）。 */
   calls: number;
   summary: SummaryOutcome;
 }
 
 /**
- * 定稿一章。没有可用的模型、正文是空的时返回 undefined（已经说过原因）；模型返回解析不出时抛错
- * （失败已经挂在章节上，细纲没动）。
+ * 定稿一章。沒有可用的模型、正文是空的時返回 undefined（已經說過原因）；模型返回解析不出時拋錯
+ * （失敗已經掛在章節上，細綱沒動）。
  */
 export async function finalizeChapter(
   project: NovelProject,
@@ -104,15 +104,15 @@ export async function finalizeChapter(
   if (!summaryRunner) {
     const llm = await resolveProvider();
     if (!llm) {
-      log.warn(`第 ${chapter.order} 章没有同步：没有可用的模型（未配置或未录入 API Key）`);
-      getHost().toast('没有可用的模型：先在设置页配一个。', 'error');
+      log.warn(`第 ${chapter.order} 章沒有同步：沒有可用的模型（未配置或未錄入 API Key）`);
+      getHost().toast('沒有可用的模型：先在設定頁配一個。', 'error');
       return undefined;
     }
     summaryRunner = singleModel(llm);
   }
   const transcribe = opts.transcribe ?? poolTranscriber(opts.signal ?? new AbortController().signal, summaryRunner);
   opts.onStep?.('summary');
-  const summary = await summaryRunner.run(`第 ${chapter.order} 章 · 细纲`, (llm) =>
+  const summary = await summaryRunner.run(`第 ${chapter.order} 章 · 細綱`, (llm) =>
     summarizeChapter(project, chapter, llm, opts.signal, summaryRunner!.primaryBudget, transcribe)
   );
   if (!summary) {
@@ -129,33 +129,33 @@ export async function finalizeChapter(
 }
 
 /**
- * 「第 3 章已定稿：细纲照正文更新，7 条连续性事实；林昭、沈氏的当前状态更新到这一章；叙事线：林昭与沈青推进；
- * 埋〈玉佩的来历〉」。叙事线一定说（设计稿：什么都没认出就说「叙事线没有新进展」）。丢了的事实、没覆盖的卡、没记的事件、
- * 没成的那一步都说出来（第 2 条）；旧版细纲进了回收站也说。
+ * 「第 3 章已定稿：細綱照正文更新，7 條連續性事實；林昭、沈氏的當前狀態更新到這一章；敘事線：林昭與沈青推進；
+ * 埋〈玉佩的來歷〉」。敘事線一定說（設計稿：什麼都沒認出就說「敘事線沒有新進展」）。丟了的事實、沒覆蓋的卡、沒記的事件、
+ * 沒成的那一步都說出來（第 2 條）；舊版細綱進了回收站也說。
  */
 export function describeFinalize(no: number, o: FinalizeOutcome): string {
   const parts = [
-    `第 ${no} 章已同步：细纲照正文${o.summary.trashed ? '更新（旧版已放进回收站）' : '整理了一份'}，${o.summary.facts.length} 条连续性事实`,
+    `第 ${no} 章已同步：細綱照正文${o.summary.trashed ? '更新（舊版已放進回收站）' : '整理了一份'}，${o.summary.facts.length} 條連續性事實`,
   ];
   if (o.summary.dropped.length > 0) {
-    parts.push(`另有 ${o.summary.dropped.length} 条在正文里找不到依据，没有收`);
+    parts.push(`另有 ${o.summary.dropped.length} 條在正文裡找不到依據，沒有收`);
   }
   const s = o.states;
   if (o.stateError) {
-    parts.push(`角色状态没更新成（${o.stateError}）`);
+    parts.push(`角色狀態沒更新成（${o.stateError}）`);
   } else if (s) {
     if (s.updated.length > 0) {
-      parts.push(`${s.updated.join('、')}的当前状态更新到这一章`);
+      parts.push(`${s.updated.join('、')}的當前狀態更新到這一章`);
     }
     if (s.guarded.length > 0) {
-      parts.push(`${s.guarded.join('、')}的当前状态你改过，没有覆盖（卡上挂了黄 ❗，可以对比后决定）`);
+      parts.push(`${s.guarded.join('、')}的當前狀態你改過，沒有覆蓋（卡上掛了黃 ❗，可以對比後決定）`);
     }
     if (s.calls === 0) {
-      parts.push('出场的人都还没有角色卡，没有状态可更新');
+      parts.push('出場的人都還沒有角色卡，沒有狀態可更新');
     }
   }
   if (o.threadsError) {
-    parts.push(`叙事线没认成（${o.threadsError}）`);
+    parts.push(`敘事線沒認成（${o.threadsError}）`);
   } else if (o.threads) {
     parts.push(describeThreads(o.threads));
   }
@@ -167,8 +167,8 @@ export function describeFinalize(no: number, o: FinalizeOutcome): string {
 }
 
 /**
- * 单章定稿的外壳：进度、日志、完成提示。主按钮、章节工作台、工程页右键与 VS Code 的
- * 「定稿这一章」命令共用这一份（第 11 条：不闷着干活）。`runners` 缺省用对话页选定的那个。返回实际调用次数。
+ * 單章定稿的外殼：進度、日誌、完成提示。主按鈕、章節工作臺、工程頁右鍵與 VS Code 的
+ * 「定稿這一章」命令共用這一份（第 11 條：不悶著幹活）。`runners` 預設用對話頁選定的那個。返回實際呼叫次數。
  */
 export async function finalizeChapterTask(
   project: NovelProject,
@@ -179,17 +179,17 @@ export async function finalizeChapterTask(
   await runTask(
     `同步第 ${chapter.order} 章`,
     async ({ signal, report }) => {
-      report({ message: `《${chapter.title}》 · 细纲`, current: 0, total: 4 });
+      report({ message: `《${chapter.title}》 · 細綱`, current: 0, total: 4 });
       const outcome = await finalizeChapter(project, chapter, {
         ...runners,
         signal,
         onStep: (step) => {
           if (step === 'state') {
-            report({ message: `《${chapter.title}》 · 角色状态`, current: 1, total: 4 });
+            report({ message: `《${chapter.title}》 · 角色狀態`, current: 1, total: 4 });
           } else if (step === 'threads') {
-            report({ message: `《${chapter.title}》 · 叙事线`, current: 2, total: 4 });
+            report({ message: `《${chapter.title}》 · 敘事線`, current: 2, total: 4 });
           } else if (step === 'time') {
-            report({ message: `《${chapter.title}》 · 故事时间`, current: 3, total: 4 });
+            report({ message: `《${chapter.title}》 · 故事時間`, current: 3, total: 4 });
           }
         },
       });
@@ -208,22 +208,22 @@ export async function finalizeChapterTask(
 }
 
 /**
- * 工程页章节右键「定稿」「重新定稿」：先经确认框问这一次用哪个模型、带多少上下文（features/askCall.ts），再走
- * {@link finalizeChapterTask}。模型下拉框打开时选着对话页那个——直接点与不问时是同一个模型；
- * 选「按分档」就与「立即同步」一样各走各的档（细纲与叙事线 `plotSummary`、角色状态 `characterCard`），
- * 失败换同档其余。取消返回 0。
+ * 工程頁章節右鍵「定稿」「重新定稿」：先經確認框問這一次用哪個模型、帶多少上下文（features/askCall.ts），再走
+ * {@link finalizeChapterTask}。模型下拉框開啟時選著對話頁那個——直接點與不問時是同一個模型；
+ * 選「按分檔」就與「立即同步」一樣各走各的檔（細綱與敘事線 `plotSummary`、角色狀態 `characterCard`），
+ * 失敗換同檔其餘。取消返回 0。
  */
 export async function askFinalizeChapterTask(project: NovelProject, chapter: Chapter): Promise<number> {
-  // 定稿过、正文没再改过的是「重新定稿」，与右键菜单上的字同一个判据。
+  // 定稿過、正文沒再改過的是「重新定稿」，與右鍵選單上的字同一個判據。
   const plot = await project.plotOfChapter(chapter);
   const verb = plot?.sourceHash && plot.sourceHash === chapter.contentHash ? '重新同步' : '同步';
   const { why, ...calls } = FINALIZE_CALLS;
   const answer = await askCall({
-    message: `${verb}第 ${chapter.order} 章《${chapter.title}》：照正文更新细纲、更新出场角色的当前状态、认这一章在叙事线上发生了什么、推这一章的故事时间。${describeCalls(calls)}。`,
+    message: `${verb}第 ${chapter.order} 章《${chapter.title}》：照正文更新細綱、更新出場角色的當前狀態、認這一章在敘事線上發生了什麼、推這一章的故事時間。${describeCalls(calls)}。`,
     actions: [verb],
-    detail: `${why}。\n旧版细纲先复制一份进 .novelwarden/.trash/。`,
+    detail: `${why}。\n舊版細綱先複製一份進 .novelwarden/.trash/。`,
     tasks: ['plotSummary', 'characterCard', 'transcribe'],
-    // 定稿认叙事线带几条线、几条伏笔随详细度（`recordThreads`）。
+    // 定稿認敘事線帶幾條線、幾條伏筆隨詳細度（`recordThreads`）。
     contextDetail: true,
     preset: { model: readConfig().model || undefined },
   });
@@ -234,10 +234,10 @@ export async function askFinalizeChapterTask(project: NovelProject, chapter: Cha
   return withCallChoice(answer.choice, async () => {
     const summary = await createModelPool({ task: 'plotSummary', concurrent: false });
     if (!summary) {
-      getHost().toast('没有可用的模型：先在设置页配一个。', 'error');
+      getHost().toast('沒有可用的模型：先在設定頁配一個。', 'error');
       return 0;
     }
-    // 角色状态走「角色卡」档（与「立即同步」同一个分法），没配就沿用定稿那一档。
+    // 角色狀態走「角色卡」檔（與「立即同步」同一個分法），沒配就沿用定稿那一檔。
     const state = (await createModelPool({ task: 'characterCard', concurrent: false })) ?? summary;
     log.info(`${verb}第 ${chapter.order} 章，使用模型 ${summary.label}`);
     return finalizeChapterTask(project, chapter, { summary, state, threads: summary });

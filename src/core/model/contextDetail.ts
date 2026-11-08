@@ -1,144 +1,144 @@
 /**
- * 上下文详细度：**每一次调用带多少前文与设定。**
+ * 上下文詳細度：**每一次呼叫帶多少前文與設定。**
  *
- * 与 `thinking.ts` 同一个位置的东西——级别、界面上的说法、每一级的上限在数据层定义一次
- * （纯数据 + 纯函数、零 import，所以前端可以直接打包这一份）。装配器的各层与后台任务
- * 只经 {@link contextLimitsOf} 取上限，不再各自写死常量。
+ * 與 `thinking.ts` 同一個位置的東西——級別、介面上的說法、每一級的上限在資料層定義一次
+ * （純資料 + 純函式、零 import，所以前端可以直接打包這一份）。裝配器的各層與後臺任務
+ * 只經 {@link contextLimitsOf} 取上限，不再各自寫死常量。
  *
- * ## 为什么是全局设置
+ * ## 為什麼是全域設定
  *
- * 它是成本偏好，不是某一轮的难度：批量写章最费上下文，而批量不跟对话走。所以与
- * `trimModifiers` 一样存在 `~/.novelwarden/config.json`，对话页、工程页批量、外部 agent
- * 三条路都经 `readConfig()` 拿到同一个值。调模型之前的确认框上可以只为这一次换一级
- * （`runtime/callScope.ts`，不写回设置）：那之后 `readConfig()` 读到的就是换过的那一级。
+ * 它是成本偏好，不是某一輪的難度：批次寫章最費上下文，而批次不跟對話走。所以與
+ * `trimModifiers` 一樣存在 `~/.novelwarden/config.json`，對話頁、工程頁批次、外部 agent
+ * 三條路都經 `readConfig()` 拿到同一個值。調模型之前的確認框上可以只為這一次換一級
+ * （`runtime/callScope.ts`，不寫回設定）：那之後 `readConfig()` 讀到的就是換過的那一級。
  *
- * ## 第 3 级就是从前的行为
+ * ## 第 3 級就是從前的行為
  *
- * 「详细」那一行逐项等于这个开关出现之前写死的常量。从前另有一项「更早章的细纲最多带最近几章」
- * （`summaryChapters`），2026-10-21 情节大纲一章一条之后写正文、写大纲都不再带更早几十章的细纲，那一项删了。
- * 2026-10-24 规划时又收了两样（docs/design/plans/2026-10-24-planning-roster-plotlist.md）：前序细纲一览从 100 章
- * 降到 30 章（`plotListMax`，大纲的中段另成 `outlineBriefMax`、数不变），角色图谱只给近 20 章出场的带身份
- * （`rosterRecent`，从前全员）。
+ * 「詳細」那一行逐項等於這個開關出現之前寫死的常量。從前另有一項「更早章的細綱最多帶最近幾章」
+ * （`summaryChapters`），2026-10-21 情節大綱一章一條之後寫正文、寫大綱都不再帶更早幾十章的細綱，那一項刪了。
+ * 2026-10-24 規劃時又收了兩樣（docs/design/plans/2026-10-24-planning-roster-plotlist.md）：前序細綱一覽從 100 章
+ * 降到 30 章（`plotListMax`，大綱的中段另成 `outlineBriefMax`、數不變），角色圖譜只給近 20 章出場的帶身份
+ * （`rosterRecent`，從前全員）。
  *
- * ## 不分级的东西
+ * ## 不分級的東西
  *
- * - **后 5 章边界**（`AHEAD_PLOTS`）：它是「不许提前写」的边界，`planWriting` 算「本章不出场」
- *   也用同一个窗口，两边必须一致。
- * - **本章已写末尾**、**@ 引用**、**落定细纲时的历史**：前两样是这一次任务本身，后一样是
- *   `settle` 要沉淀的讨论。
- * - **定稿、全文大纲、角色状态、建卡、设定扫描**：输入就是那一章本身，或按窗口分批——
- *   调低只会截掉要整理的东西、或多拆几次调用，不会少花。
+ * - **後 5 章邊界**（`AHEAD_PLOTS`）：它是「不許提前寫」的邊界，`planWriting` 算「本章不出場」
+ *   也用同一個視窗，兩邊必須一致。
+ * - **本章已寫末尾**、**@ 引用**、**落定細綱時的歷史**：前兩樣是這一次任務本身，後一樣是
+ *   `settle` 要沉澱的討論。
+ * - **定稿、全文大綱、角色狀態、建卡、設定掃描**：輸入就是那一章本身，或按視窗分批——
+ *   調低只會截掉要整理的東西、或多拆幾次呼叫，不會少花。
  *
- * 任何一级都不改调用次数（第 4 条）。
+ * 任何一級都不改呼叫次數（第 4 條）。
  */
 
 export type ContextDetail = 1 | 2 | 3 | 4;
 
 export const CONTEXT_DETAILS: ContextDetail[] = [1, 2, 3, 4];
 
-/** 缺省「详细」：逐项等于这个开关出现之前的行为。 */
+/** 預設「詳細」：逐項等於這個開關出現之前的行為。 */
 export const DEFAULT_CONTEXT_DETAIL: ContextDetail = 3;
 
-/** 下拉框、装配清单与日志共用这一份说法，前端不另写。 */
+/** 下拉框、裝配清單與日誌共用這一份說法，前端不另寫。 */
 export const CONTEXT_DETAIL_LABEL: Record<ContextDetail, string> = {
-  1: '精简',
-  2: '标准',
-  3: '详细',
+  1: '精簡',
+  2: '標準',
+  3: '詳細',
   4: '完整',
 };
 
 export const CONTEXT_DETAIL_HINT: Record<ContextDetail, string> = {
-  1: '只带写这一章必需的，最省 token；规划时一章一行：大纲最近 30 章、细纲最近 10 章，更早的靠全文大纲',
-  2: '近一章全文、少量原文片段，日常够用',
-  3: '近两章全文、原文片段；规划时一章一行：大纲最近 100 章、细纲最近 30 章（缺省）',
-  4: '近三章全文、更多片段；规划时一章一行不封顶、角色图谱全员，窗口能装多少装多少',
+  1: '只帶寫這一章必需的，最省 token；規劃時一章一行：大綱最近 30 章、細綱最近 10 章，更早的靠全文大綱',
+  2: '近一章全文、少量原文片段，日常夠用',
+  3: '近兩章全文、原文片段；規劃時一章一行：大綱最近 100 章、細綱最近 30 章（預設）',
+  4: '近三章全文、更多片段；規劃時一章一行不封頂、角色圖譜全員，視窗能裝多少裝多少',
 };
 
 /**
- * 一级的全部上限。**扁平**：测试覆盖某一项只是一层浅合并。
+ * 一級的全部上限。**扁平**：測試覆蓋某一項只是一層淺合併。
  *
- * 数字 0 = 不带；`Infinity` = 不限（只在核心里用，绝不经协议发给前端——
- * `JSON.stringify` 会把它变成 `null`）。
+ * 數字 0 = 不帶；`Infinity` = 不限（只在核心裡用，絕不經協議發給前端——
+ * `JSON.stringify` 會把它變成 `null`）。
  */
 export interface ContextLimits {
-  /** 写正文第一次调用带前几章的正文全文（`manuscriptFull`）。 */
+  /** 寫正文第一次呼叫帶前幾章的正文全文（`manuscriptFull`）。 */
   readonly fullTextChapters: number;
-  /** 上一章结尾原文带多少字（`prevTail`）。 */
+  /** 上一章結尾原文帶多少字（`prevTail`）。 */
   readonly prevTailChars: number;
-  /** 定稿原文片段：前几章的连续性事实全取（`evidence`）。 */
+  /** 定稿原文片段：前幾章的連續性事實全取（`evidence`）。 */
   readonly evidenceRecent: number;
-  /** 定稿原文片段：最多从几章里取。0 = 整层不带。 */
+  /** 定稿原文片段：最多從幾章裡取。0 = 整層不帶。 */
   readonly evidenceChapters: number;
   /** 定稿原文片段：一共多少字。 */
   readonly evidenceChars: number;
-  /** 近章连续性事实最多从几章里取（`recentFacts`，以及写前冲突检查）。 */
+  /** 近章連續性事實最多從幾章裡取（`recentFacts`，以及寫前衝突檢查）。 */
   readonly factsChapters: number;
-  /** 近章连续性事实一共多少字。 */
+  /** 近章連續性事實一共多少字。 */
   readonly factsChars: number;
-  /** 写正文时带几条叙事线（`threads`）。 */
+  /** 寫正文時帶幾條敘事線（`threads`）。 */
   readonly threadCount: number;
-  /** 叙事线一共多少字（只算各行）。 */
+  /** 敘事線一共多少字（只算各行）。 */
   readonly threadChars: number;
   /**
-   * 拆细纲时带几条线（`plot` 配方的 `threads` 层，叙事线二期）。拆细纲是一批几章一起排，要知道的线比写一章多，
-   * 另设一组，不与写正文的 {@link threadCount} 共用。
+   * 拆細綱時帶幾條線（`plot` 配方的 `threads` 層，敘事線二期）。拆細綱是一批幾章一起排，要知道的線比寫一章多，
+   * 另設一組，不與寫正文的 {@link threadCount} 共用。
    */
   readonly plotThreadCount: number;
-  /** 拆细纲时带几条没收的伏笔。 */
+  /** 拆細綱時帶幾條沒收的伏筆。 */
   readonly plotForeshadowCount: number;
-  /** 拆细纲时线、伏笔各一共多少字（只算各行；两样各按这个数封顶）。 */
+  /** 拆細綱時線、伏筆各一共多少字（只算各行；兩樣各按這個數封頂）。 */
   readonly plotThreadChars: number;
   /**
-   * 大纲阶段一章一行最多带几章（`outlineDoc` 只带第一行的那一段，中段）。更早的不逐章列，交给全文大纲（2026-10-22）。
+   * 大綱階段一章一行最多帶幾章（`outlineDoc` 只帶第一行的那一段，中段）。更早的不逐章列，交給全文大綱（2026-10-22）。
    */
   readonly outlineBriefMax: number;
   /**
-   * 细纲阶段的前序细纲一览（`plotList`）最多带几章，更早的交给全文大纲。从前与大纲的中段共用一个数（缺省 100），
-   * 写到八十章时一览与全文大纲把同一段前情各说一遍，2026-10-24 单独一组、调小。
+   * 細綱階段的前序細綱一覽（`plotList`）最多帶幾章，更早的交給全文大綱。從前與大綱的中段共用一個數（預設 100），
+   * 寫到八十章時一覽與全文大綱把同一段前情各說一遍，2026-10-24 單獨一組、調小。
    */
   readonly plotListMax: number;
   /**
-   * 规划时（大纲、细纲）角色图谱里带身份、关系、当前状态的：近几章出场的（与这一次提到的）。其余只列名字；
-   * `Infinity` = 全员都带（2026-10-24）。
+   * 規劃時（大綱、細綱）角色圖譜裡帶身份、關係、當前狀態的：近幾章出場的（與這一次提到的）。其餘只列名字；
+   * `Infinity` = 全員都帶（2026-10-24）。
    */
   readonly rosterRecent: number;
-  /** 细纲单章与写正文：带前几章的细纲（`plotPrev`）。写正文时这就是全部的前几章细纲，更早的不带。 */
+  /** 細綱單章與寫正文：帶前幾章的細綱（`plotPrev`）。寫正文時這就是全部的前幾章細綱，更早的不帶。 */
   readonly prevPlots: number;
-  /** 细纲单章：带后几章的细纲（`plotNext`）。 */
+  /** 細綱單章：帶後幾章的細綱（`plotNext`）。 */
   readonly nextPlots: number;
-  /** 对话历史最多占预算的几成（落定细纲另有固定的 0.6）。 */
+  /** 對話歷史最多佔預算的幾成（落定細綱另有固定的 0.6）。 */
   readonly historyCap: number;
-  /** 角色卡一律只带要点：身份 / 当前状态 / 暗设（写正文时暗设不带，`context/layers/render.ts` 的 `essentialCardKeys`）。 */
+  /** 角色卡一律只帶要點：身份 / 當前狀態 / 暗設（寫正文時暗設不帶，`context/layers/render.ts` 的 `essentialCardKeys`）。 */
   readonly essentialCards: boolean;
-  /** 挑出场角色时看前几章定稿过的细纲的「出场人物」。 */
+  /** 挑出場角色時看前幾章定稿過的細綱的「出場人物」。 */
   readonly castSummaries: number;
-  /** 从已写正文补齐架构时均匀抽样几章（`written`）。 */
+  /** 從已寫正文補齊架構時均勻抽樣幾章（`written`）。 */
   readonly deriveSamples: number;
-  /** 提取文风：默认勾前几章当样章（作者仍可改，最多 3 章）。 */
+  /** 提取文風：預設勾前幾章當樣章（作者仍可改，最多 3 章）。 */
   readonly styleSamples: number;
-  /** 提取角色：默认勾最近几章。 */
+  /** 提取角色：預設勾最近幾章。 */
   readonly characterChapters: number;
-  /** 从参考书学写法：文风抽样几章。 */
+  /** 從參考書學寫法：文風抽樣幾章。 */
   readonly referenceSamples: number;
-  /** 排叙事线：情节大纲最多带多少字。 */
+  /** 排敘事線：情節大綱最多帶多少字。 */
   readonly threadPlanOutlineChars: number;
-  /** 定稿认叙事线：最多送几条线去认。 */
+  /** 定稿認敘事線：最多送幾條線去認。 */
   readonly threadJudge: number;
-  /** 定稿认叙事线：最多送几条伏笔去认（叙事线重做，伏笔并进了叙事线）。 */
+  /** 定稿認敘事線：最多送幾條伏筆去認（敘事線重做，伏筆並進了敘事線）。 */
   readonly foreshadowJudge: number;
-  /** 设定：整条带（正文 + 还没整合的新事实）最多几条（`lore`）。 */
+  /** 設定：整條帶（正文 + 還沒整合的新事實）最多幾條（`lore`）。 */
   readonly loreFull: number;
-  /** 设定：只带一句话的最多几条。 */
+  /** 設定：只帶一句話的最多幾條。 */
   readonly loreLines: number;
-  /** 设定：整层一共多少字。 */
+  /** 設定：整層一共多少字。 */
   readonly loreChars: number;
-  /** 设定：整条带时，水位之后还没整合进条目的新事实跟几行。 */
+  /** 設定：整條帶時，水位之後還沒整合進條目的新事實跟幾行。 */
   readonly loreTail: number;
 }
 
 /**
- * 每一级的上限。第 3 级逐项等于从前写死的常量，只多三样：设定从前命中就整条塞、不排序不封顶，几百条的书
- * 会把窗口填满，现在按 `lore*` 四项封顶（设定名录，2026-10-18）；前序细纲一览与角色图谱（2026-10-24，见文件头）。
+ * 每一級的上限。第 3 級逐項等於從前寫死的常量，只多三樣：設定從前命中就整條塞、不排序不封頂，幾百條的書
+ * 會把視窗填滿，現在按 `lore*` 四項封頂（設定名錄，2026-10-18）；前序細綱一覽與角色圖譜（2026-10-24，見檔案頭）。
  */
 export const CONTEXT_DETAIL_LIMITS: Readonly<Record<ContextDetail, ContextLimits>> = Object.freeze({
   1: Object.freeze({
@@ -279,17 +279,17 @@ export function isContextDetail(value: unknown): value is ContextDetail {
   return typeof value === 'number' && (CONTEXT_DETAILS as number[]).includes(value);
 }
 
-/** 容错读取：认不出（缺席、越界、小数、字符串）一律回落缺省，绝不抛。 */
+/** 容錯讀取：認不出（缺席、越界、小數、字串）一律回落預設，絕不拋。 */
 export function normalizeContextDetail(value: unknown): ContextDetail {
   return isContextDetail(value) ? value : DEFAULT_CONTEXT_DETAIL;
 }
 
 /**
- * 取这一份配置的上限：级别那一行，再叠上 `contextOverrides`。
+ * 取這一份配置的上限：級別那一行，再疊上 `contextOverrides`。
  *
- * **唯一的解析入口**。参数只要求这两个字段，测试里手写的半截配置（没有 `contextDetail`）
- * 照样拿到缺省那一行。`contextOverrides` 只给代码与测试用，不从 config.json 读——
- * 作者能动的只有级别（见 config.ts）。
+ * **唯一的解析入口**。引數只要求這兩個欄位，測試裡手寫的半截配置（沒有 `contextDetail`）
+ * 照樣拿到預設那一行。`contextOverrides` 只給程式碼與測試用，不從 config.json 讀——
+ * 作者能動的只有級別（見 config.ts）。
  */
 export function contextLimitsOf(config: {
   readonly contextDetail?: unknown;
@@ -300,10 +300,10 @@ export function contextLimitsOf(config: {
 }
 
 /**
- * 取最后 n 个。n ≤ 0 是空，`Infinity` 是全部。
+ * 取最後 n 個。n ≤ 0 是空，`Infinity` 是全部。
  *
- * 不直接写 `slice(-n)`：n 为 0 时 `slice(-0)` 等于 `slice(0)`，「一章都不带」会变成整份都带
- * （四期修过一次「注入完整原文章数设成 0」就是这个坑）。
+ * 不直接寫 `slice(-n)`：n 為 0 時 `slice(-0)` 等於 `slice(0)`，「一章都不帶」會變成整份都帶
+ * （四期修過一次「注入完整原文章數設成 0」就是這個坑）。
  */
 export function takeLast<T>(list: readonly T[], n: number): T[] {
   if (!(n > 0)) {
@@ -312,20 +312,20 @@ export function takeLast<T>(list: readonly T[], n: number): T[] {
   return Number.isFinite(n) ? list.slice(-n) : list.slice();
 }
 
-/** 设置页说明行：这一级具体带多少。 */
+/** 設定頁說明行：這一級具體帶多少。 */
 export function describeContextDetail(detail: ContextDetail): string {
   const l = CONTEXT_DETAIL_LIMITS[detail];
-  const n = (v: number, unit: string): string => (v === Infinity ? '不限' : v <= 0 ? '不带' : `${v} ${unit}`);
+  const n = (v: number, unit: string): string => (v === Infinity ? '不限' : v <= 0 ? '不帶' : `${v} ${unit}`);
   return [
     `近章全文 ${n(l.fullTextChapters, '章')}`,
-    `上一章结尾 ${n(l.prevTailChars, '字')}`,
-    `前几章细纲 ${n(l.prevPlots, '章')}`,
-    `大纲一章一行 ${n(l.outlineBriefMax, '章')}`,
-    `细纲一览 ${n(l.plotListMax, '章')}`,
-    `角色图谱 ${l.rosterRecent === Infinity ? '全员' : `近 ${l.rosterRecent} 章出场的`}`,
-    `原文片段 ${l.evidenceChapters <= 0 ? '不带' : `${l.evidenceChapters} 章内 ${l.evidenceChars} 字`}`,
-    `叙事线 ${l.threadCount} 条`,
-    `对话历史 ${Math.round(l.historyCap * 100)}%`,
-    ...(l.essentialCards ? ['角色卡只带要点'] : []),
+    `上一章結尾 ${n(l.prevTailChars, '字')}`,
+    `前幾章細綱 ${n(l.prevPlots, '章')}`,
+    `大綱一章一行 ${n(l.outlineBriefMax, '章')}`,
+    `細綱一覽 ${n(l.plotListMax, '章')}`,
+    `角色圖譜 ${l.rosterRecent === Infinity ? '全員' : `近 ${l.rosterRecent} 章出場的`}`,
+    `原文片段 ${l.evidenceChapters <= 0 ? '不帶' : `${l.evidenceChapters} 章內 ${l.evidenceChars} 字`}`,
+    `敘事線 ${l.threadCount} 條`,
+    `對話歷史 ${Math.round(l.historyCap * 100)}%`,
+    ...(l.essentialCards ? ['角色卡只帶要點'] : []),
   ].join(' · ');
 }

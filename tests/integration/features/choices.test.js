@@ -1,9 +1,9 @@
 /**
- * 「让用户挑一个」的清单构造（`src/core/choices.ts`）。
+ * 「讓使用者挑一個」的清單構造（`src/core/choices.ts`）。
  *
- * 这两份清单原先长在插件壳的 extension.ts 里，其中「＋N 章待读」是算出来的：
- * 出场章（由定稿过的细纲关联）里章号大于卡上 `updatedThrough` 的有几章。壳里抄一份这种
- * 计算，迟早与工程页上的同一行说明分叉，所以它回到了 core，并且有了这份测试。
+ * 這兩份清單原先長在外掛殼的 extension.ts 裡，其中「＋N 章待讀」是算出來的：
+ * 出場章（由定稿過的細綱關聯）裡章號大於卡上 `updatedThrough` 的有幾章。殼裡抄一份這種
+ * 計算，遲早與工程頁上的同一行說明分叉，所以它回到了 core，並且有了這份測試。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -15,7 +15,7 @@ const { cleanup } = require('../../helpers/teardown');
 let choices;
 let t;
 
-/** 一章：成品正文 + 一份定稿过（带 sourceHash 与 cast）的细纲。 */
+/** 一章：成品正文 + 一份定稿過（帶 sourceHash 與 cast）的細綱。 */
 function makePlot(no, title, text, cast) {
   const n = String(no).padStart(3, '0');
   const stem = `${n}-${title}`;
@@ -23,7 +23,7 @@ function makePlot(no, title, text, cast) {
   t.write(
     `.novelwarden/summaries/${stem}.md`,
     `---\nno: ${no}\ntitle: ${title}\nsourceHash: x\ncast: [${cast.join(', ')}]\n---\n\n` +
-      `# 第${no}章 ${title}\n\n## 梗概\n\n略。\n\n## 出场人物\n\n${cast.join('、')}\n\n## 关键事件\n\n甲乙丙。\n\n## 看点\n\n略。\n`
+      `# 第${no}章 ${title}\n\n## 梗概\n\n略。\n\n## 出場人物\n\n${cast.join('、')}\n\n## 關鍵事件\n\n甲乙丙。\n\n## 看點\n\n略。\n`
   );
 }
 
@@ -38,8 +38,8 @@ before(async () => {
   t = await makeTempProject(bundle.project, { prefix: 'choices' });
 
   makePlot(1, '楔子', '雨下了三天。', ['林昭']);
-  makePlot(2, '夜访', '门被敲响了两次又停住。', ['林昭', '沈砚']);
-  // 手写文件绕过了所有写入口，缓存要显式作废。
+  makePlot(2, '夜訪', '門被敲響了兩次又停住。', ['林昭', '沈硯']);
+  // 手寫檔案繞過了所有寫入口，快取要顯式作廢。
   t.project.invalidate();
 });
 
@@ -53,30 +53,30 @@ describe('plotChoices', () => {
     list = await choices.plotChoices(t.project);
   });
 
-  test('每章一条，按章序', () => {
+  test('每章一條，按章序', () => {
     assert.deepEqual(
       list.map((c) => c.value),
       [1, 2]
     );
   });
 
-  test('序号补零到三位——长篇下拉里才是一列', () => {
+  test('序號補零到三位——長篇下拉里才是一列', () => {
     assert.equal(list[0].label, '001 楔子');
   });
 
-  test('说明是正文字数', () => {
+  test('說明是正文字數', () => {
     assert.match(list[0].description, /^\d+ 字$/);
   });
 
-  // 只排了细纲、还没写正文的章照样要列出来——那正是作者接下来要写的那些。
-  test('没写正文的章说「还没有正文」', async () => {
-    t.write('.novelwarden/summaries/003-空的.md', '## 梗概\n\n略。\n\n## 关键事件\n\n丁。\n');
+  // 只排了細綱、還沒寫正文的章照樣要列出來——那正是作者接下來要寫的那些。
+  test('沒寫正文的章說「還沒有正文」', async () => {
+    t.write('.novelwarden/summaries/003-空的.md', '## 梗概\n\n略。\n\n## 關鍵事件\n\n丁。\n');
     t.project.invalidate();
     const withEmpty = await choices.plotChoices(t.project);
-    assert.equal(withEmpty.find((c) => c.value === 3).description, '还没有正文');
+    assert.equal(withEmpty.find((c) => c.value === 3).description, '還沒有正文');
   });
 
-  test('空工程给空清单，不抛（「还没有章」由调用方说）', async () => {
+  test('空工程給空清單，不拋（「還沒有章」由呼叫方說）', async () => {
     const empty = await makeTempProject(loadBundle({ project: './src/core/model/project.ts' }).project, {
       prefix: 'choices-empty',
     });
@@ -89,7 +89,7 @@ describe('plotChoices', () => {
 });
 
 describe('characterChoices', () => {
-  /** 一张卡：读到第 `updatedThrough` 章为止。 */
+  /** 一張卡：讀到第 `updatedThrough` 章為止。 */
   function makeCard(name, updatedThrough) {
     t.write(
       `.novelwarden/characters/${name}.md`,
@@ -99,43 +99,43 @@ describe('characterChoices', () => {
     );
   }
 
-  test('value 是卡的相对路径（updateCharacterCard 认这个）', async () => {
+  test('value 是卡的相對路徑（updateCharacterCard 認這個）', async () => {
     makeCard('林昭', 2);
     const list = await choices.characterChoices(t.project);
     const zhao = list.find((c) => c.label === '林昭');
     assert.equal(zhao.value, '.novelwarden/characters/林昭.md');
   });
 
-  test('读全了就不挂「待读」', async () => {
+  test('讀全了就不掛「待讀」', async () => {
     t.project.invalidate();
     const list = await choices.characterChoices(t.project);
     assert.equal(list.find((c) => c.label === '林昭').description, undefined);
   });
 
-  test('落后几章就挂「＋N 章待读」', async () => {
-    makeCard('沈砚', 1); // 出场在第 2 章，只读到第 1 章
+  test('落後幾章就掛「＋N 章待讀」', async () => {
+    makeCard('沈硯', 1); // 出場在第 2 章，只讀到第 1 章
     t.project.invalidate();
     const list = await choices.characterChoices(t.project);
-    assert.equal(list.find((c) => c.label === '沈砚').description, '＋1 章待读');
+    assert.equal(list.find((c) => c.label === '沈硯').description, '＋1 章待讀');
   });
 
-  test('没在任何定稿里出现过的卡：不挂待读，detail 说「未在定稿中出现」', async () => {
-    // 从没更新过（无 updatedThrough）也不该凭空催人——出场 0 段就是待读 0 段。
-    makeCard('无名', undefined);
+  test('沒在任何定稿裡出現過的卡：不掛待讀，detail 說「未在定稿中出現」', async () => {
+    // 從沒更新過（無 updatedThrough）也不該憑空催人——出場 0 段就是待讀 0 段。
+    makeCard('無名', undefined);
     t.project.invalidate();
     const list = await choices.characterChoices(t.project);
-    const anon = list.find((c) => c.label === '无名');
+    const anon = list.find((c) => c.label === '無名');
     assert.equal(anon.description, undefined);
-    assert.equal(anon.detail, '未在同步过的章里出现');
+    assert.equal(anon.detail, '未在同步過的章裡出現');
   });
 
-  test('detail 是出场章的人话描述', async () => {
+  test('detail 是出場章的人話描述', async () => {
     t.project.invalidate();
     const list = await choices.characterChoices(t.project);
     assert.equal(list.find((c) => c.label === '林昭').detail, '第 1、2 章');
   });
 
-  test('没有角色卡时给空清单', async () => {
+  test('沒有角色卡時給空清單', async () => {
     const empty = await makeTempProject(loadBundle({ project: './src/core/model/project.ts' }).project, {
       prefix: 'choices-nocard',
     });

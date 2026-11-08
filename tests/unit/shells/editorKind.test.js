@@ -1,13 +1,13 @@
 /**
- * 独立版内置编辑器的文件负载带 `kind`（`kindOfPath` 算的）：前端据此分「正文」（chapter / draft）
- * 与其余文件——Tab 缩进全角还是半角就看它，前端不自己拿路径猜。
+ * 獨立版內建編輯器的檔案負載帶 `kind`（`kindOfPath` 算的）：前端據此分「正文」（chapter / draft）
+ * 與其餘檔案——Tab 縮排全形還是半形就看它，前端不自己拿路徑猜。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | `editorOpen` 带 kind：章节、草稿、角色卡、工程外的随手文件各是各的 | 与网关同一张表 |
- * | `editorSaved` 也带 kind | 前端的保存分支会拿回执刷新文件，漏了等于保存一次就忘了是正文 |
- * | 三条都带 `label`（标签上的短标记与名字、面包屑） | 称呼由后端算，前端不拿路径猜；漏一条前端就退回原始路径 |
- * | 打开请求上的 `preview` / `replace` 原样带回 `editorOpen` | 临时标签与「原位换掉」由内置编辑器决定，后端不看 |
+ * | `editorOpen` 帶 kind：章節、草稿、角色卡、工程外的隨手檔案各是各的 | 與閘道器同一張表 |
+ * | `editorSaved` 也帶 kind | 前端的儲存分支會拿回執重新整理檔案，漏了等於儲存一次就忘了是正文 |
+ * | 三條都帶 `label`（標籤上的短標記與名字、麵包屑） | 稱呼由後端算，前端不拿路徑猜；漏一條前端就退回原始路徑 |
+ * | 開啟請求上的 `preview` / `replace` 原樣帶回 `editorOpen` | 臨時標籤與「原位換掉」由內建編輯器決定，後端不看 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -30,10 +30,10 @@ const put = (rel, text) => {
 
 before(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-editor-kind-'));
-  put('chapters/001-雨夜.md', '# 雨夜\n\n林昭推开客栈的门。\n');
+  put('chapters/001-雨夜.md', '# 雨夜\n\n林昭推開客棧的門。\n');
   put('drafts/001-雨夜.md', '草稿\n');
   put('.novelwarden/characters/林昭.md', '# 林昭\n');
-  put('notes.txt', '随手记\n');
+  put('notes.txt', '隨手記\n');
 });
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
@@ -49,8 +49,8 @@ async function openKind(rel) {
   return msg.file.kind;
 }
 
-describe('内置编辑器的文件负载带 kind', () => {
-  test('章节是 chapter', async () => {
+describe('內建編輯器的檔案負載帶 kind', () => {
+  test('章節是 chapter', async () => {
     assert.equal(await openKind('chapters/001-雨夜.md'), 'chapter');
   });
 
@@ -62,11 +62,11 @@ describe('内置编辑器的文件负载带 kind', () => {
     assert.equal(await openKind('.novelwarden/characters/林昭.md'), 'character');
   });
 
-  test('不在任何区里的文件是 other', async () => {
+  test('不在任何區裡的檔案是 other', async () => {
     assert.equal(await openKind('notes.txt'), 'other');
   });
 
-  test('editorOpen 带称呼：正文不带短标记、面包屑写第几章', async () => {
+  test('editorOpen 帶稱呼：正文不帶短標記、麵包屑寫第幾章', async () => {
     const sent = [];
     await hostWith(sent).openInEditor('chapters/001-雨夜.md');
     const label = sent.find((m) => m.type === 'editorOpen').file.label;
@@ -77,7 +77,7 @@ describe('内置编辑器的文件负载带 kind', () => {
     });
   });
 
-  test('草稿带「草稿」，与同一章的正文分得清', async () => {
+  test('草稿帶「草稿」，與同一章的正文分得清', async () => {
     const sent = [];
     await hostWith(sent).openInEditor('drafts/001-雨夜.md');
     const label = sent.find((m) => m.type === 'editorOpen').file.label;
@@ -85,17 +85,17 @@ describe('内置编辑器的文件负载带 kind', () => {
     assert.equal(label.title, '001-雨夜');
   });
 
-  test('打开请求上的 preview / replace 原样带回', async () => {
+  test('開啟請求上的 preview / replace 原樣帶回', async () => {
     const sent = [];
-    await hostWith(sent).openInEditor('chapters/001-雨夜.md', 'draft', { preview: true, replace: 'chapters/000-旧.md' });
+    await hostWith(sent).openInEditor('chapters/001-雨夜.md', 'draft', { preview: true, replace: 'chapters/000-舊.md' });
     const msg = sent.find((m) => m.type === 'editorOpen');
     assert.deepEqual(
       { pane: msg.pane, preview: msg.preview, replace: msg.replace },
-      { pane: 'draft', preview: true, replace: 'chapters/000-旧.md' }
+      { pane: 'draft', preview: true, replace: 'chapters/000-舊.md' }
     );
   });
 
-  test('没带标记的打开：editorOpen 上也没有（正常标签）', async () => {
+  test('沒帶標記的開啟：editorOpen 上也沒有（正常標籤）', async () => {
     const sent = [];
     await hostWith(sent).openFile('chapters/001-雨夜.md');
     const msg = sent.find((m) => m.type === 'editorOpen');
@@ -103,7 +103,7 @@ describe('内置编辑器的文件负载带 kind', () => {
     assert.equal('replace' in msg, false);
   });
 
-  test('openFile / openBeside 把 preview 传下去', async () => {
+  test('openFile / openBeside 把 preview 傳下去', async () => {
     const sent = [];
     const host = hostWith(sent);
     await host.openFile('chapters/001-雨夜.md', { preview: true });
@@ -115,19 +115,19 @@ describe('内置编辑器的文件负载带 kind', () => {
     ]);
   });
 
-  test('保存回执也带 kind', async () => {
+  test('儲存回執也帶 kind', async () => {
     const sent = [];
     const host = hostWith(sent);
-    await host.saveFromEditor('chapters/001-雨夜.md', '# 雨夜\n\n改过了。\n');
+    await host.saveFromEditor('chapters/001-雨夜.md', '# 雨夜\n\n改過了。\n');
     const msg = sent.find((m) => m.type === 'editorSaved');
     assert.ok(msg, JSON.stringify(sent));
     assert.equal(msg.file.kind, 'chapter');
   });
 
-  test('保存回执与磁盘核对的新版也带称呼', async () => {
+  test('儲存回執與磁碟核對的新版也帶稱呼', async () => {
     const sent = [];
     const host = hostWith(sent);
-    await host.saveFromEditor('.novelwarden/characters/林昭.md', '# 林昭\n\n改过。\n');
+    await host.saveFromEditor('.novelwarden/characters/林昭.md', '# 林昭\n\n改過。\n');
     assert.equal(sent.find((m) => m.type === 'editorSaved').file.label.tag, '角色');
     await host.checkEditorFiles([{ path: '.novelwarden/characters/林昭.md', hash: 'stale' }]);
     const changed = sent.find((m) => m.type === 'editorDiskChanged');

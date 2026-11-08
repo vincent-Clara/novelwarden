@@ -1,81 +1,82 @@
+import { traditionalLabel } from './labels';
 /**
- * 一章的细纲（`.novelwarden/summaries/<与正文相同的相对路径>.md`）的格式定义。
+ * 一章的細綱（`.novelwarden/summaries/<與正文相同的相對路徑>.md`）的格式定義。
  *
- * **纯函数、零 I/O**，与 chapterFile.ts / settingFile.ts 同类；
- * 路径规则与读写在 model/project.ts，解析与渲染只在这里定义一次。
+ * **純函式、零 I/O**，與 chapterFile.ts / settingFile.ts 同類；
+ * 路徑規則與讀寫在 model/project.ts，解析與渲染只在這裡定義一次。
  *
- * ## 一份细纲 = 一章，前后两个阶段是同一份文件
+ * ## 一份細綱 = 一章，前後兩個階段是同一份檔案
  *
- * 细纲**镜像正文在章节根下的相对路径**，扩展名换成 `.md`：`chapters/第一卷/003-深处.txt` 的细纲是
- * `summaries/第一卷/003-深处.md`（与草稿同一套镜像，规则在 `NovelProject.plotPathForChapter`）。
- * 文件名前缀就是章号；还没有正文的章，正文照细纲的路径反推着落。
+ * 細綱**映象正文在章節根下的相對路徑**，副檔名換成 `.md`：`chapters/第一卷/003-深处.txt` 的細綱是
+ * `summaries/第一卷/003-深处.md`（與草稿同一套映象，規則在 `NovelProject.plotPathForChapter`）。
+ * 檔名字首就是章號；還沒有正文的章，正文照細綱的路徑反推著落。
  *
- * - **写正文之前它是计划**：正文照它写。
- * - **定稿之后它是档案**：作者点「定稿」，模型拿着它与正文把它改成正文实际写成的样子
- *   （反向更新，features/summarize.ts）——正文写偏的改掉、没写到的删掉、一致的保留原措辞。
+ * - **寫正文之前它是計劃**：正文照它寫。
+ * - **定稿之後它是檔案**：作者點「定稿」，模型拿著它與正文把它改成正文實際寫成的樣子
+ *   （反向更新，features/summarize.ts）——正文寫偏的改掉、沒寫到的刪掉、一致的保留原措辭。
  *
- * 从前计划（`plots/` 三节）与档案（单章摘要）各存一份。作者的原则是相似的东西不留两份，
- * 摘要那一套更完善，于是细纲换成了摘要的八节；`plots/` 不再读（老工程里那个目录判成
- * `other`，一个字节都不动）。叙事线重做二期又删了「新增伏笔」一节，剩七节：伏笔并进了叙事线
- * （计划写进线里，`model/threadFile.ts`），细纲里不再有任何关于线的小节。
+ * 從前計劃（`plots/` 三節）與檔案（單章摘要）各存一份。作者的原則是相似的東西不留兩份，
+ * 摘要那一套更完善，於是細綱換成了摘要的八節；`plots/` 不再讀（老工程裡那個目錄判成
+ * `other`，一個位元組都不動）。敘事線重做二期又刪了「新增伏筆」一節，剩七節：伏筆並進了敘事線
+ * （計劃寫進線裡，`model/threadFile.ts`），細綱裡不再有任何關於線的小節。
  *
- * ## 它可以写具体场面
+ * ## 它可以寫具體場面
  *
- * 旧版明文禁止细纲写画面、动作、台词，只许写抽象的因果链。那是让模型去「扩写」
- * 一条梗概，写出来就是流水账。现在「关键事件」按发生的顺序一条一件事、合计 100–300 字，
- * 每条**可以写具体场面**——谁在哪、对谁做了什么、结果怎样；它仍然不是正文（不写成段的描写
- * 与对白）。计划与定稿都是一条一行的列表，定稿时才能逐条改，而不是把一整段重写一遍。
- * 「看点」写爽点，也写章末吊着读者的那一下（从前单列的「章末钩子」并进了这里）。
+ * 舊版明文禁止細綱寫畫面、動作、臺詞，只許寫抽象的因果鏈。那是讓模型去「擴寫」
+ * 一條梗概，寫出來就是流水賬。現在「關鍵事件」按發生的順序一條一件事、合計 100–300 字，
+ * 每條**可以寫具體場面**——誰在哪、對誰做了什麼、結果怎樣；它仍然不是正文（不寫成段的描寫
+ * 與對白）。計劃與定稿都是一條一行的列表，定稿時才能逐條改，而不是把一整段重寫一遍。
+ * 「看點」寫爽點，也寫章末吊著讀者的那一下（從前單列的「章末鉤子」並進了這裡）。
  *
  * ## frontmatter
  *
- * - `targetWords`：这一章写多少字。没写就用 `config.md` 的每章字数。
- * - `upstreamHash`：排这份细纲（写下其余几节）时**这一章梗概**的指纹（{@link plotSynopsisHash}）。梗概就是情节大纲里
- *   这一章那一条（大纲是各章梗概的汇总，model/outlineFile.ts）：在大纲里改了它、其余几节没跟，这一章挂 ⟳（{@link isPlotUpstreamStale}）。
- * - `writtenFrom`：**正文据以写成的细纲指纹**，正文落盘那一步记，定稿时刷成反向更新之后的指纹。
- *   记在细纲这一侧，是因为章节是作者的文件、可以是 `.txt`、没有 frontmatter
- *   （第 9 条），这条链只能从这边指过去。与当前内容指纹对不上 = 细纲在正文（或定稿）之后
- *   改过，正文挂 ⟳。从没记过（作者手写的正文）就永不标脏（第 18a 条）。
- * - `sourceHash`：定稿时正文的 `contentHash`。**有它就表示这份细纲反向更新过**；与正文现在的
- *   指纹对得上才算这一章写完（第 23 条）。
- * - `cast`：定稿时记的**实际**出场，`林昭(阿昭)` 一项一人，给出场统计读（第 14 条）。定稿之前
- *   「出场人物」一节写的是**计划**出场，只给装配器挑角色卡、算「后几章才出场的人」、做一致性预检，
- *   **不进出场统计**——计划与实际混在一起会污染它（D13）。
- * - `status: done`：作者手工宣布这一章过了。只允许向前覆盖推导值。
- * - `preflightOk`：一致性预检的**永久放行**（五期补遗 §2），一行一条「名字：理由」——作者说过
- *   「这一章里他出场是刻意的安排（回忆、幻象……）」的那几个人，写这一章之前不再为他们亮卡。
- *   按章记：第 8 章是回忆，不代表第 12 章再排他也是。**重新生成这一章的细纲会丢掉它**（handlers/plot.ts
- *   的渲染不带它）：重排过的出场是新的安排，要再问一次。改名、记账、定稿都原样留着。作者要撤销就删掉那一行。
- *   不进内容指纹（{@link PLOT_SECTION_KEYS} 之外的都不进），记下它不会让正文变成「细纲改过」。
- * - `factCheckOk: true`：批量写章写前冲突检查（features/plotCheck.ts）的放行。检查说本章细纲与前面
- *   定稿的事实矛盾、作者看过认为是刻意安排时手写这一行；与 `preflightOk` 一样不进内容指纹。
+ * - `targetWords`：這一章寫多少字。沒寫就用 `config.md` 的每章字數。
+ * - `upstreamHash`：排這份細綱（寫下其餘幾節）時**這一章梗概**的指紋（{@link plotSynopsisHash}）。梗概就是情節大綱裡
+ *   這一章那一條（大綱是各章梗概的彙總，model/outlineFile.ts）：在大綱裡改了它、其餘幾節沒跟，這一章掛 ⟳（{@link isPlotUpstreamStale}）。
+ * - `writtenFrom`：**正文據以寫成的細綱指紋**，正文落盤那一步記，定稿時刷成反向更新之後的指紋。
+ *   記在細綱這一側，是因為章節是作者的檔案、可以是 `.txt`、沒有 frontmatter
+ *   （第 9 條），這條鏈只能從這邊指過去。與當前內容指紋對不上 = 細綱在正文（或定稿）之後
+ *   改過，正文掛 ⟳。從沒記過（作者手寫的正文）就永不標髒（第 18a 條）。
+ * - `sourceHash`：定稿時正文的 `contentHash`。**有它就表示這份細綱反向更新過**；與正文現在的
+ *   指紋對得上才算這一章寫完（第 23 條）。
+ * - `cast`：定稿時記的**實際**出場，`林昭(阿昭)` 一項一人，給出場統計讀（第 14 條）。定稿之前
+ *   「出場人物」一節寫的是**計劃**出場，只給裝配器挑角色卡、算「後幾章才出場的人」、做一致性預檢，
+ *   **不進出場統計**——計劃與實際混在一起會汙染它（D13）。
+ * - `status: done`：作者手工宣佈這一章過了。只允許向前覆蓋推導值。
+ * - `preflightOk`：一致性預檢的**永久放行**（五期補遺 §2），一行一條「名字：理由」——作者說過
+ *   「這一章裡他出場是刻意的安排（回憶、幻象……）」的那幾個人，寫這一章之前不再為他們亮卡。
+ *   按章記：第 8 章是回憶，不代表第 12 章再排他也是。**重新生成這一章的細綱會丟掉它**（handlers/plot.ts
+ *   的渲染不帶它）：重排過的出場是新的安排，要再問一次。改名、記賬、定稿都原樣留著。作者要撤銷就刪掉那一行。
+ *   不進內容指紋（{@link PLOT_SECTION_KEYS} 之外的都不進），記下它不會讓正文變成「細綱改過」。
+ * - `factCheckOk: true`：批次寫章寫前衝突檢查（features/plotCheck.ts）的放行。檢查說本章細綱與前面
+ *   定稿的事實矛盾、作者看過認為是刻意安排時手寫這一行；與 `preflightOk` 一樣不進內容指紋。
  *
- * 老工程 `summaries/` 下的单章摘要（`001-楔子.md`、`第一卷/003-深处.md`）本来就是这几节、本来就镜像
- * 正文的路径，带着 `sourceHash` 与 `cast`，直接当成定稿过的细纲读；它 frontmatter 里的 `chapter:`
- * 不认，章号取文件名前缀。
+ * 老工程 `summaries/` 下的單章摘要（`001-楔子.md`、`第一卷/003-深处.md`）本來就是這幾節、本來就映象
+ * 正文的路徑，帶著 `sourceHash` 與 `cast`，直接當成定稿過的細綱讀；它 frontmatter 裡的 `chapter:`
+ * 不認，章號取檔名字首。
  *
- * ## 删掉的「新增伏笔」（叙事线二期）
+ * ## 刪掉的「新增伏筆」（敘事線二期）
  *
- * 老细纲里那一节当认不出的小节留在文件里，**不读**（不进 `sections`、不进上下文、不进内容指纹），一个字节不动
- * （第 1 条；设计稿「删掉什么、不兼容什么」）。⚑ 内容指纹因此变了（定案 A）：写过正文的章都会挂一次 ⟳
- * （「细纲在写正文之后改过」），重新定稿才消；⟳ 只是一个记号，不把章拉回「待写」，不做迁移。
+ * 老細綱裡那一節當認不出的小節留在檔案裡，**不讀**（不進 `sections`、不進上下文、不進內容指紋），一個位元組不動
+ * （第 1 條；設計稿「刪掉什麼、不相容什麼」）。⚑ 內容指紋因此變了（定案 A）：寫過正文的章都會掛一次 ⟳
+ * （「細綱在寫正文之後改過」），重新定稿才消；⟳ 只是一個記號，不把章拉回「待寫」，不做遷移。
  *
- * ## 「设定」一节
+ * ## 「設定」一節
  *
- * 七节之后另有一节「设定」（`Plot.lore`，从前是第九节，删了「新增伏笔」之后成了第八节；代码里的标识符没改），
- * 一行一个东西：`- 名〔分类〕：本章确立的定义或规则`（格式在 model/loreFile.ts）。写之前是**计划**用到、要引入的设定，
- * 定稿后是正文里**实际**出现的。
+ * 七節之後另有一節「設定」（`Plot.lore`，從前是第九節，刪了「新增伏筆」之後成了第八節；程式碼裡的識別符號沒改），
+ * 一行一個東西：`- 名〔分類〕：本章確立的定義或規則`（格式在 model/loreFile.ts）。寫之前是**計劃**用到、要引入的設定，
+ * 定稿後是正文裡**實際**出現的。
  *
- * - **不进内容指纹**（{@link plotContentHash} 只算七节），与 frontmatter 的 `cast` 一样当机器读的旁注：
- *   给老章节补记设定时要往定稿过的细纲里加这一节，算进指纹会把这些章全挂上 ⟳；只改了「计划用到
- *   哪些设定」也不值得把正文标成过期。
- * - **有没有记过看标题在不在**：`lore` 为 undefined = 文件里没有这一节（老细纲、还没补记）；
- *   空数组 = 记过、这一章没有设定（落盘写「（无）」）。
+ * - **不進內容指紋**（{@link plotContentHash} 只算七節），與 frontmatter 的 `cast` 一樣當機器讀的旁註：
+ *   給老章節補記設定時要往定稿過的細綱里加這一節，算進指紋會把這些章全掛上 ⟳；只改了「計劃用到
+ *   哪些設定」也不值得把正文標成過期。
+ * - **有沒有記過看標題在不在**：`lore` 為 undefined = 檔案裡沒有這一節（老細綱、還沒補記）；
+ *   空陣列 = 記過、這一章沒有設定（落盤寫「（無）」）。
  *
- * ## 派生数据一律不写进这份文件
+ * ## 派生資料一律不寫進這份檔案
  *
- * 「这一章写了几个字」「写到几成」都是别处算得出来的东西，写进来就会漂移。
- * 要看就现算（core/views/pipeline.ts）。
+ * 「這一章寫了幾個字」「寫到幾成」都是別處算得出來的東西，寫進來就會漂移。
+ * 要看就現算（core/views/pipeline.ts）。
  */
 import * as path from 'node:path';
 import { hash } from './fs';
@@ -94,9 +95,9 @@ import { LoreLine, PLOT_LORE_KEY, parseLoreLines, renderLoreLines } from './lore
 import type { SummaryCast } from './types';
 
 /**
- * 七节，照单章摘要原来的那八节去掉「新增伏笔」（叙事线二期：伏笔并进了叙事线）。顺序即「读它们的顺序」：先知道这一章
- * 发生了什么、谁在、在哪，再看落在哪些事件上，然后是吊着读者的看点、人物变成了什么样，最后是后面各章必须保持一致的
- * 事实。判「排过没有」只看「关键事件」，见 {@link isPlotFilled}。
+ * 七節，照單章摘要原來的那八節去掉「新增伏筆」（敘事線二期：伏筆並進了敘事線）。順序即「讀它們的順序」：先知道這一章
+ * 發生了什麼、誰在、在哪，再看落在哪些事件上，然後是吊著讀者的看點、人物變成了什麼樣，最後是後面各章必須保持一致的
+ * 事實。判「排過沒有」只看「關鍵事件」，見 {@link isPlotFilled}。
  */
 export const PLOT_SECTION_KEYS = [
   '梗概',
@@ -111,37 +112,37 @@ export const PLOT_SECTION_KEYS = [
 export type PlotSectionKey = (typeof PLOT_SECTION_KEYS)[number];
 
 /**
- * 七节的内容。缺失的小节为空串。
+ * 七節的內容。缺失的小節為空串。
  *
- * - 「看点」：读者最爽、最想往下看的地方（爽点与章末吊着读者的东西）。拆书整理架构与大纲时靠它提炼卖点。
- * - 「连续性事实」：后面各章必须保持一致的事实，一条一行，每条挂一句正文里的证据原文（D18）：
- *   `- 林昭左臂被划伤，未愈 〔证据：「血顺着左臂往下淌」〕`。格式与解析在 model/continuity.ts。
- *   计划时是空的（证据句要回原文定位，没有正文就没法定位），定稿时才生成；写正文时不拿这一节
- *   当事实，而是拿证据原句回到那一章的正文里取原文段落（`evidence` 层）。
+ * - 「看點」：讀者最爽、最想往下看的地方（爽點與章末吊著讀者的東西）。拆書整理架構與大綱時靠它提煉賣點。
+ * - 「連續性事實」：後面各章必須保持一致的事實，一條一行，每條掛一句正文裡的證據原文（D18）：
+ *   `- 林昭左臂被劃傷，未愈 〔證據：「血順著左臂往下淌」〕`。格式與解析在 model/continuity.ts。
+ *   計劃時是空的（證據句要回原文定位，沒有正文就沒法定位），定稿時才生成；寫正文時不拿這一節
+ *   當事實，而是拿證據原句回到那一章的正文裡取原文段落（`evidence` 層）。
  */
 export type PlotSections = Record<PlotSectionKey, string>;
 
 /**
- * 模型排一章细纲时各字段的长度上限（字）。提示词里的合同（context/prompts.ts）与
- * 解码（features/blueprint.ts）共用这一份。
+ * 模型排一章細綱時各欄位的長度上限（字）。提示詞裡的合同（context/prompts.ts）與
+ * 解碼（features/blueprint.ts）共用這一份。
  *
- * 标题会变成文件名（`012-<标题>.md`），所以比上游（AI-Novel-Writer 的
- * `blueprint-semantic-contract.ts`，60 字）紧得多。关键事件是一条一件事的列表（与定稿时
- * 写出来的一样），合同要 3–6 条、合计 100–300 字；条数硬上限 8，总字数硬上限沿用上游的 1200。
- * 看点是一条一句的列表。
+ * 標題會變成檔名（`012-<標題>.md`），所以比上游（AI-Novel-Writer 的
+ * `blueprint-semantic-contract.ts`，60 字）緊得多。關鍵事件是一條一件事的列表（與定稿時
+ * 寫出來的一樣），合同要 3–6 條、合計 100–300 字；條數硬上限 8，總字數硬上限沿用上游的 1200。
+ * 看點是一條一句的列表。
  */
 export const BLUEPRINT_LIMITS = {
   title: 18,
-  /** 梗概就是情节大纲里这一章那一条：一句话，最多再补两句。 */
+  /** 梗概就是情節大綱裡這一章那一條：一句話，最多再補兩句。 */
   synopsis: 150,
   timePlace: 120,
-  /** 关键事件所有条目加起来最多几个字。 */
+  /** 關鍵事件所有條目加起來最多幾個字。 */
   keyEvents: 1200,
-  /** 关键事件最多几条。 */
+  /** 關鍵事件最多幾條。 */
   keyEventItems: 8,
-  /** 看点最多几条。 */
+  /** 看點最多幾條。 */
   listItems: 5,
-  /** 看点每条最多几个字。 */
+  /** 看點每條最多幾個字。 */
   listItem: 120,
   stateChange: 400,
   characters: 12,
@@ -149,54 +150,54 @@ export const BLUEPRINT_LIMITS = {
 } as const;
 
 export interface Plot {
-  /** 细纲文件的工作区相对路径（镜像正文的相对路径，见文件头）。 */
+  /** 細綱檔案的工作區相對路徑（映象正文的相對路徑，見檔案頭）。 */
   relPath: string;
-  /** 章号，来自文件名数字前缀。**文件名是身份**，与发布章节同一套规则。 */
+  /** 章號，來自檔名數字字首。**檔名是身份**，與釋出章節同一套規則。 */
   no: number;
   title: string;
   /**
-   * 这一章出场的人（只有名字）。定稿过（有 `sourceHash`）取 `cast`——实际出场；没定稿取
-   * 「出场人物」一节——**计划**出场，只给装配器挑角色卡、预检用（见文件头）。
+   * 這一章出場的人（只有名字）。定稿過（有 `sourceHash`）取 `cast`——實際出場；沒定稿取
+   * 「出場人物」一節——**計劃**出場，只給裝配器挑角色卡、預檢用（見檔案頭）。
    */
   characters: string[];
   /**
-   * 结构化的出场人物：frontmatter 的 `cast`，没有就从「出场人物」一节反解（手写的老摘要）。
-   * **只有定稿过的细纲**这一份才是实际出场，出场统计据此过滤（`sourceHash`）。
+   * 結構化的出場人物：frontmatter 的 `cast`，沒有就從「出場人物」一節反解（手寫的老摘要）。
+   * **只有定稿過的細綱**這一份才是實際出場，出場統計據此過濾（`sourceHash`）。
    */
   cast: SummaryCast[];
-  /** 这一章预计写多少字正文。 */
+  /** 這一章預計寫多少字正文。 */
   targetWords?: number;
-  /** 排这份细纲时梗概（情节大纲里这一章那一条）的指纹。与现在的梗概对不上 = 大纲改了、细纲没跟。 */
+  /** 排這份細綱時梗概（情節大綱裡這一章那一條）的指紋。與現在的梗概對不上 = 大綱改了、細綱沒跟。 */
   upstreamHash: string;
-  /** 正文据以写成的细纲指纹。见文件头。 */
+  /** 正文據以寫成的細綱指紋。見檔案頭。 */
   writtenFrom: string;
-  /** 定稿时正文的 contentHash。空串 = 从没定稿过。见文件头。 */
+  /** 定稿時正文的 contentHash。空串 = 從沒定稿過。見檔案頭。 */
   sourceHash: string;
-  /** 作者手工宣布这一章过了（frontmatter `status: done`）。只允许向前覆盖推导值。 */
+  /** 作者手工宣佈這一章過了（frontmatter `status: done`）。只允許向前覆蓋推導值。 */
   done: boolean;
-  /** 一致性预检的永久放行（frontmatter `preflightOk`）。见文件头。 */
+  /** 一致性預檢的永久放行（frontmatter `preflightOk`）。見檔案頭。 */
   preflightOk: PreflightOk[];
-  /** 写前冲突检查的放行（frontmatter `factCheckOk: true`）。见文件头。 */
+  /** 寫前衝突檢查的放行（frontmatter `factCheckOk: true`）。見檔案頭。 */
   factCheckOk?: boolean;
   sections: PlotSections;
   /**
-   * 「设定」一节（见文件头）。undefined = 文件里没有这一节（老细纲、还没记过）；
-   * 空数组 = 记过、没有设定。
+   * 「設定」一節（見檔案頭）。undefined = 檔案裡沒有這一節（老細綱、還沒記過）；
+   * 空陣列 = 記過、沒有設定。
    */
   lore?: LoreLine[];
-  /** frontmatter 之外的正文全文。作者可能加了自定义小节，读回来时保留。 */
+  /** frontmatter 之外的正文全文。作者可能加了自定義小節，讀回來時保留。 */
   body: string;
 }
 
-/** 预检永久放行的一条：谁、为什么（作者没写理由时是空串）。 */
+/** 預檢永久放行的一條：誰、為什麼（作者沒寫理由時是空串）。 */
 export interface PreflightOk {
   name: string;
   reason: string;
 }
 
 /**
- * 写盘时需要的字段（relPath / body 由调用方与渲染决定）。出场的人写在「出场人物」一节里，
- * `characters` 是读回来时推出来的，不写。`preflightOk` 不给就不写（见文件头）。
+ * 寫盤時需要的欄位（relPath / body 由呼叫方與渲染決定）。出場的人寫在「出場人物」一節裡，
+ * `characters` 是讀回來時推出來的，不寫。`preflightOk` 不給就不寫（見檔案頭）。
  */
 export type WritablePlot = Omit<
   Plot,
@@ -209,7 +210,7 @@ export type WritablePlot = Omit<
   factCheckOk?: boolean;
 };
 
-/** `沈秋：回忆里的一场` ↔ `{ name, reason }`。全角半角冒号都认；没有冒号就整行是名字。 */
+/** `沈秋：回憶裡的一場` ↔ `{ name, reason }`。全形半形冒號都認；沒有冒號就整行是名字。 */
 export function parsePreflightOk(lines: readonly string[]): PreflightOk[] {
   const out: PreflightOk[] = [];
   for (const raw of lines) {
@@ -229,20 +230,20 @@ export function renderPreflightOk(entries: readonly PreflightOk[]): string[] {
 
 export interface PlotFileName {
   no: number;
-  /** 去掉序号前缀与扩展名后的词干，可能为空（如 `007.md`）。 */
+  /** 去掉序號字首與副檔名後的詞幹，可能為空（如 `007.md`）。 */
   stem: string;
 }
 
-/** 细纲文件只认 markdown 家族——它是插件自己的数据格式，与角色卡一致。 */
+/** 細綱檔案只認 markdown 家族——它是外掛自己的資料格式，與角色卡一致。 */
 const PLOT_EXTENSIONS: ReadonlySet<string> = new Set(['.md', '.markdown']);
 
 /**
- * 文件名 → 章号与词干。不是 `.md`、或没有数字前缀，返回 undefined。
+ * 檔名 → 章號與詞幹。不是 `.md`、或沒有數字字首，返回 undefined。
  *
- * 与 parseChapterFileName 一样**先剥扩展名再匹配前缀**：分隔符集合里含 `.`，
- * 直接对整个文件名跑正则的话 `007.md` 会被吃成「第 007 章 + 词干 md」。
- * 前缀位数也与章节一致（1–5 位）：细纲镜像正文的文件名，正文认得出的号这里必须也认得出。
- * `global.md`（全文大纲）没有数字前缀，天然不是细纲。
+ * 與 parseChapterFileName 一樣**先剝副檔名再匹配字首**：分隔符集合裡含 `.`，
+ * 直接對整個檔名跑正則的話 `007.md` 會被吃成「第 007 章 + 詞幹 md」。
+ * 字首位數也與章節一致（1–5 位）：細綱映象正文的檔名，正文認得出的號這裡必須也認得出。
+ * `global.md`（全文大綱）沒有數字字首，天然不是細綱。
  */
 export function parsePlotFileName(fileName: string): PlotFileName | undefined {
   const ext = path.extname(fileName).toLowerCase();
@@ -255,7 +256,7 @@ export function parsePlotFileName(fileName: string): PlotFileName | undefined {
     return undefined;
   }
   const no = Number(m[1]);
-  // 0 号章没有意义，且会让序号文案错位。
+  // 0 號章沒有意義，且會讓序號文案錯位。
   return no > 0 ? { no, stem: m[2] } : undefined;
 }
 
@@ -264,11 +265,11 @@ export function isPlotFileName(fileName: string): boolean {
 }
 
 /**
- * 章号 + 标题 → 文件名。三位数前缀，与发布章节对齐——一本书几百章是常态，
- * 两位数不够用。
+ * 章號 + 標題 → 檔名。三位數字首，與釋出章節對齊——一本書幾百章是常態，
+ * 兩位數不夠用。
  *
- * `sanitize` 由调用方（project.ts 的 sanitizeFileName）负责；这里只管拼，
- * 保持零 I/O 与零跨层依赖。
+ * `sanitize` 由呼叫方（project.ts 的 sanitizeFileName）負責；這裡只管拼，
+ * 保持零 I/O 與零跨層依賴。
  */
 export function plotFileName(no: number, safeTitle: string): string {
   const prefix = String(Math.max(1, Math.trunc(no))).padStart(3, '0');
@@ -288,19 +289,19 @@ export function emptyPlotSections(): PlotSections {
 }
 
 /**
- * 这一章有没有真的排过。
+ * 這一章有沒有真的排過。
  *
- * 判据是**「关键事件」非空**，只有它。「梗概」一句话就能写，拿它当判据的话
- * 只起了个头的空壳会立刻显示「已规划」，紧接着的批量写正文还会照着空壳往下写。
- * 占位文字（`（待补充）`）不算内容。
+ * 判據是**「關鍵事件」非空**，只有它。「梗概」一句話就能寫，拿它當判據的話
+ * 只起了個頭的空殼會立刻顯示「已規劃」，緊接著的批次寫正文還會照著空殼往下寫。
+ * 佔位文字（`（待補充）`）不算內容。
  */
 export function isPlotFilled(sections: PlotSections): boolean {
   return hasContent(sections.关键事件);
 }
 
 /**
- * 空壳：只有梗概（情节大纲里这一章那一条），别的几节都空、没记过设定、没定稿过——大纲排到了，细纲还没拆
- * （docs/design/plans/2026-10-22-outline-from-plots.md）。在汇总的大纲里删掉那一条时，只有空壳跟着进回收站。
+ * 空殼：只有梗概（情節大綱裡這一章那一條），別的幾節都空、沒記過設定、沒定稿過——大綱排到了，細綱還沒拆
+ * （docs/design/plans/2026-10-22-outline-from-plots.md）。在彙總的大綱裡刪掉那一條時，只有空殼跟著進回收站。
  */
 export function isPlotStub(plot: Pick<Plot, 'sections' | 'lore' | 'sourceHash'>): boolean {
   return (
@@ -311,15 +312,15 @@ export function isPlotStub(plot: Pick<Plot, 'sections' | 'lore' | 'sourceHash'>)
 }
 
 /**
- * 梗概的指纹——细纲的上游（`upstreamHash`）。梗概空着给空串：没有上游就不记、不标脏（第 18a 条）。
- * 换行与行尾空白不算改动。
+ * 梗概的指紋——細綱的上游（`upstreamHash`）。梗概空著給空串：沒有上游就不記、不標髒（第 18a 條）。
+ * 換行與行尾空白不算改動。
  */
 export function plotSynopsisHash(synopsis: string | undefined): string {
   const text = normalizeSynopsis(synopsis ?? '');
   return hasContent(text) ? hash(text) : '';
 }
 
-/** 梗概比较前的归一：换行统一、行尾空白去掉、首尾空行去掉。 */
+/** 梗概比較前的歸一：換行統一、行尾空白去掉、首尾空行去掉。 */
 export function normalizeSynopsis(text: string): string {
   return (text ?? '')
     .replace(/\r\n?/g, '\n')
@@ -330,8 +331,8 @@ export function normalizeSynopsis(text: string): string {
 }
 
 /**
- * 大纲改了、细纲没跟：记过上游指纹、这一章排过细纲（「关键事件」非空——空壳没有可跟的东西）、梗概现在的指纹对不上。
- * 没记过（作者手写的）永不标脏（第 18a 条）。
+ * 大綱改了、細綱沒跟：記過上游指紋、這一章排過細綱（「關鍵事件」非空——空殼沒有可跟的東西）、梗概現在的指紋對不上。
+ * 沒記過（作者手寫的）永不標髒（第 18a 條）。
  */
 export function isPlotUpstreamStale(plot: Pick<Plot, 'upstreamHash' | 'sections'> | undefined): boolean {
   if (!plot?.upstreamHash || !isPlotFilled(plot.sections)) {
@@ -341,13 +342,13 @@ export function isPlotUpstreamStale(plot: Pick<Plot, 'upstreamHash' | 'sections'
   return current !== '' && current !== plot.upstreamHash;
 }
 
-/** 行首的列表记号：`- ` `* ` `· ` `• ` `1.` `1、` `1)`。 */
+/** 行首的列表記號：`- ` `* ` `· ` `• ` `1.` `1、` `1)`。 */
 const LIST_MARKER = /^\s*(?:[-*·•]|\d+[.、)．])\s*/u;
 
 /**
- * 一条一行的那几节（关键事件、看点）→ 一条一项：按行切，去掉行首的列表记号，
- * 空行与占位文字（`（待补充）`）不算。**只按换行切**——一条里本来就可以有分号；
- * 作者手写成一整段的就是一项。
+ * 一條一行的那幾節（關鍵事件、看點）→ 一條一項：按行切，去掉行首的列表記號，
+ * 空行與佔位文字（`（待補充）`）不算。**只按換行切**——一條裡本來就可以有分號；
+ * 作者手寫成一整段的就是一項。
  */
 export function sectionItems(text: string): string[] {
   return (text ?? '')
@@ -357,31 +358,31 @@ export function sectionItems(text: string): string[] {
 }
 
 /**
- * 一条一行的那几节压成一行，条与条之间用「；」接。给一章一行的一览用（前序细纲一览、
- * 写正文的边界、排叙事线）：直接把换行换成空格会得到「- 甲 - 乙」。
+ * 一條一行的那幾節壓成一行，條與條之間用「；」接。給一章一行的一覽用（前序細綱一覽、
+ * 寫正文的邊界、排敘事線）：直接把換行換成空格會得到「- 甲 - 乙」。
  */
 export function sectionLine(text: string): string {
   return sectionItems(text).join('；');
 }
 
 /**
- * 细纲的内容指纹——**这一章正文的上游**。
+ * 細綱的內容指紋——**這一章正文的上游**。
  *
- * 只哈希**七个小节**，不含 frontmatter：`upstreamHash` / `writtenFrom` / `sourceHash` / `cast`
- * 自己就在 frontmatter 里，把它算进去会让「排一次细纲」「定稿一次」立刻使刚写好的正文过期。
- * 同理不含 `status`、`preflightOk`、`factCheckOk` 与标题——作者把这一章标成 done、记一条预检放行、
- * 改个标题，都不该让它的正文标脏。「设定」一节也不进；老细纲里认不出的「新增伏笔」也不进（见文件头）。
+ * 只雜湊**七個小節**，不含 frontmatter：`upstreamHash` / `writtenFrom` / `sourceHash` / `cast`
+ * 自己就在 frontmatter 裡，把它算進去會讓「排一次細綱」「定稿一次」立刻使剛寫好的正文過期。
+ * 同理不含 `status`、`preflightOk`、`factCheckOk` 與標題——作者把這一章標成 done、記一條預檢放行、
+ * 改個標題，都不該讓它的正文標髒。「設定」一節也不進；老細綱裡認不出的「新增伏筆」也不進（見檔案頭）。
  */
 export function plotContentHash(plot: Pick<Plot, 'sections'>): string {
   return hash(PLOT_SECTION_KEYS.map((key) => plot.sections[key]).join('\n---\n'));
 }
 
 /**
- * 「出场人物」一节 → 计划出场的名字。按顿号、逗号、斜杠、分号、换行切开，去掉列表符号，
- * `林昭(阿昭)` 只取名字。括号里的斜杠不切（那是别名的分隔）。
+ * 「出場人物」一節 → 計劃出場的名字。按頓號、逗號、斜槓、分號、換行切開，去掉列表符號，
+ * `林昭(阿昭)` 只取名字。括號裡的斜槓不切（那是別名的分隔）。
  *
- * 与 `castFromText` 不同，这里**不按长度与虚词过滤**：那两条是为了挡住模型把定稿的这一节
- * 写成句子，计划里的名单是作者与排细纲的模型写的，「沈从文」这种名字不该因为带个「从」就漏掉。
+ * 與 `castFromText` 不同，這裡**不按長度與虛詞過濾**：那兩條是為了擋住模型把定稿的這一節
+ * 寫成句子，計劃裡的名單是作者與排細綱的模型寫的，「沈從文」這種名字不該因為帶個「從」就漏掉。
  */
 export function plannedNames(text: string): string[] {
   const out: string[] = [];
@@ -392,7 +393,7 @@ export function plannedNames(text: string): string[] {
     }
     for (const part of splitOutsideBrackets(cleaned)) {
       const name = parseCastEntry(part)?.name.trim().slice(0, BLUEPRINT_LIMITS.name);
-      if (name && !/^(无|暂无|没有|未知)$/.test(name) && !out.includes(name)) {
+      if (name && !/^((?:无|無)|(?:暂|暫)(?:无|無)|(?:没|沒)有|未知)$/.test(name) && !out.includes(name)) {
         out.push(name);
       }
     }
@@ -400,7 +401,7 @@ export function plannedNames(text: string): string[] {
   return out;
 }
 
-/** 按顶层的分隔符切开：括号里的 `、` `/` 是别名分隔，不切。 */
+/** 按頂層的分隔符切開：括號裡的 `、` `/` 是別名分隔，不切。 */
 function splitOutsideBrackets(text: string): string[] {
   const parts: string[] = [];
   let depth = 0;
@@ -423,12 +424,12 @@ function splitOutsideBrackets(text: string): string[] {
 }
 
 /**
- * 解析细纲文件。**绝不抛**：作者会手改，frontmatter 写坏、小节改名、
- * 整份文件被换成大白话都只该退化为「解析出来的少一点」。
+ * 解析細綱檔案。**絕不拋**：作者會手改，frontmatter 寫壞、小節改名、
+ * 整份檔案被換成大白話都只該退化為「解析出來的少一點」。
  *
- * `no` 以文件名为准而不是 frontmatter 的 `no`：文件名是身份（作者重排顺序的方式
- * 就是改文件名前缀），frontmatter 里那份只是给人看的；老摘要的 `chapter:` 不认。
- * 占位文字读回来是空串，免得「（待补充）」被当成内容送进 prompt。
+ * `no` 以檔名為準而不是 frontmatter 的 `no`：檔名是身份（作者重排順序的方式
+ * 就是改檔名字首），frontmatter 裡那份只是給人看的；老摘要的 `chapter:` 不認。
+ * 佔位文字讀回來是空串，免得「（待補充）」被當成內容送進 prompt。
  */
 export function parsePlotFile(text: string, relPath: string): Plot {
   const { frontmatter, body } = parseMarkdown(text);
@@ -439,7 +440,7 @@ export function parsePlotFile(text: string, relPath: string): Plot {
   }
   const fromName = parsePlotFileName(path.basename(relPath));
   const sourceHash = asString(frontmatter.sourceHash);
-  // frontmatter 的 cast 是结构化真相；没有它（作者手写的老摘要）就从「出场人物」小节反解。
+  // frontmatter 的 cast 是結構化真相；沒有它（作者手寫的老摘要）就從「出場人物」小節反解。
   const cast = parseCast(frontmatter.cast) ?? castFromText(sections.出场人物);
   const lore = LORE_HEADING.test(body)
     ? parseLoreLines(pickSections(body, [PLOT_LORE_KEY])[PLOT_LORE_KEY])
@@ -463,10 +464,10 @@ export function parsePlotFile(text: string, relPath: string): Plot {
   };
 }
 
-/** 「设定」一节的标题行（`##` 或 `###`，前后空白不计）。 */
-const LORE_HEADING = new RegExp(`^#{2,3}[ \\t]*${PLOT_LORE_KEY}[ \\t]*$`, 'm');
+/** 「設定」一節的標題行（`##` 或 `###`，前後空白不計）。 */
+const LORE_HEADING = new RegExp(`^#{2,3}[ \\t]*(?:${PLOT_LORE_KEY}|${traditionalLabel(PLOT_LORE_KEY)})[ \\t]*$`, 'm');
 
-/** 渲染成落盘的 Markdown。空小节保留占位，作者手改时知道该往哪填。 */
+/** 渲染成落盤的 Markdown。空小節保留佔位，作者手改時知道該往哪填。 */
 export function renderPlotFile(plot: WritablePlot): string {
   const fm = stringifyFrontmatter({
     no: plot.no,
@@ -475,8 +476,8 @@ export function renderPlotFile(plot: WritablePlot): string {
     upstreamHash: plot.upstreamHash || undefined,
     writtenFrom: plot.writtenFrom || undefined,
     sourceHash: plot.sourceHash || undefined,
-    // 机器可读的实际出场，只在定稿时写。别名跟在名字后的括号里：`林昭(阿昭)`——
-    // frontmatter 解析器只认字符串数组，不要为此引入嵌套 YAML。
+    // 機器可讀的實際出場，只在定稿時寫。別名跟在名字後的括號裡：`林昭(阿昭)`——
+    // frontmatter 解析器只認字串陣列，不要為此引入巢狀 YAML。
     cast: plot.sourceHash && plot.cast ? plot.cast.map(renderCastEntry) : undefined,
     status: plot.done ? 'done' : undefined,
     preflightOk: plot.preflightOk?.length ? renderPreflightOk(plot.preflightOk) : undefined,
@@ -486,7 +487,7 @@ export function renderPlotFile(plot: WritablePlot): string {
   const body = stringifySections(plot.sections as unknown as Record<string, string>, PLOT_SECTION_KEYS, {
     keepEmpty: true,
   });
-  const lore = plot.lore ? `\n\n## ${PLOT_LORE_KEY}\n\n${renderLoreLines(plot.lore)}` : '';
+  const lore = plot.lore ? `\n\n## ${traditionalLabel(PLOT_LORE_KEY)}\n\n${renderLoreLines(plot.lore)}` : '';
   const heading = `# 第${plot.no}章${plot.title ? ` ${plot.title}` : ''}`;
   return `${fm}\n\n${heading}\n\n${body}${lore}\n`;
 }

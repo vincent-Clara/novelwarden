@@ -1,6 +1,6 @@
-/* 断线提示条。bridge.js 在 WS 断开时插入。 */
+/* 斷線提示條。bridge.js 在 WS 斷開時插入。 */
 
-/* bridge.js 在 WS 断开时插入。压在最顶层，但不挡住内容的可读性。 */
+/* bridge.js 在 WS 斷開時插入。壓在最頂層，但不擋住內容的可讀性。 */
 .wb-offline {
   position: fixed;
   top: 0;

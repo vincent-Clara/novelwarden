@@ -1,9 +1,9 @@
 /**
- * 「从正文提取角色卡」把「主角」「反派」建成卡（外部 issue，2026-10-24）。
+ * 「從正文提取角色卡」把「主角」「反派」建成卡（外部 issue，2026-10-24）。
  *
- * 那一次是三件事叠在一起：卷目录里的 `047 细纲.txt`、`048 作话.txt` 被当成正文读进语料；
- * 模型读到作者视角的文字，返回了「韩厉」与「反派（别名：韩厉、头领）」两条；
- * 同一批的两条各建了一张卡，`反派.md` 与 `韩厉.md` 抢同一个称呼。
+ * 那一次是三件事疊在一起：卷目錄裡的 `047 細綱.txt`、`048 作話.txt` 被當成正文讀進語料；
+ * 模型讀到作者視角的文字，返回了「韓厲」與「反派（別名：韓厲、頭領）」兩條；
+ * 同一批的兩條各建了一張卡，`反派.md` 與 `韓厲.md` 搶同一個稱呼。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -34,11 +34,11 @@ before(async () => {
   h = makeFakeHost({ supportsVscodeLm: true, settings: () => settings });
   bundle.host.initHost(h.host);
   fake = installFakeProvider(bundle.registry, { repeatLast: true, fallback: '[]' });
-  t = await makeTempProject(bundle.project, { prefix: 'extract-labels', title: '剧作称谓' });
+  t = await makeTempProject(bundle.project, { prefix: 'extract-labels', title: '劇作稱謂' });
   project = t.project;
-  t.write('chapters/046-夜袭.txt', `${'韩厉带人摸进镇口，火把一路烧到客栈门前。'.repeat(10)}\n`);
-  t.write('chapters/047 细纲.txt', '反派在此处需要透露哪些信息……描述反派的心理压力……\n');
-  t.write('chapters/048 作话.txt', '大家放心，主角是……下一章会升级……\n');
+  t.write('chapters/046-夜襲.txt', `${'韓厲帶人摸進鎮口，火把一路燒到客棧門前。'.repeat(10)}\n`);
+  t.write('chapters/047 細綱.txt', '反派在此處需要透露哪些資訊……描述反派的心理壓力……\n');
+  t.write('chapters/048 作話.txt', '大家放心，主角是……下一章會升級……\n');
   project.invalidate();
 });
 
@@ -46,7 +46,7 @@ after(() => {
   cleanup(t.dir, bundle.db);
 });
 
-describe('提取角色：笔记不进语料，称谓不建卡', () => {
+describe('提取角色：筆記不進語料，稱謂不建卡', () => {
   let chapters;
   let corpus;
   let files;
@@ -55,42 +55,42 @@ describe('提取角色：笔记不进语料，称谓不建卡', () => {
 
   before(async () => {
     chapters = (await project.listChapters()).map((c) => c.relPath);
-    // 输入框（章号）→ 确认框（开始提取）。并完只剩一张新卡，不该再问「逐个对比」。
-    h.expect('46', '开始提取');
+    // 輸入框（章號）→ 確認框（開始提取）。並完只剩一張新卡，不該再問「逐個對比」。
+    h.expect('46', '開始提取');
     fake.reset([
       JSON.stringify([
-        { name: '韩厉', aliases: [], tags: ['反派'], 身份: '黑风寨寨主' },
-        { name: '反派', aliases: ['韩厉', '头领'], tags: ['反派'], 身份: '黑风寨头领', 性格: '多疑' },
+        { name: '韓厲', aliases: [], tags: ['反派'], 身份: '黑風寨寨主' },
+        { name: '反派', aliases: ['韓厲', '頭領'], tags: ['反派'], 身份: '黑風寨頭領', 性格: '多疑' },
       ]),
     ]);
     await bundle.characters.extractCharacters(project);
     corpus = fake.calls[0]?.at(-1)?.content ?? '';
     files = fs.readdirSync(t.rel('.novelwarden/characters')).sort();
-    card = (await project.listCharacters()).find((c) => c.name === '韩厉');
+    card = (await project.listCharacters()).find((c) => c.name === '韓厲');
     confirms = h.confirms.map((c) => c.message);
   });
 
-  test('卷目录里的细纲、作话不算章节', () => {
-    assert.deepEqual(chapters, ['chapters/046-夜袭.txt']);
+  test('卷目錄裡的細綱、作話不算章節', () => {
+    assert.deepEqual(chapters, ['chapters/046-夜襲.txt']);
   });
 
-  test('喂给模型的只有正文', () => {
-    assert.match(corpus, /韩厉带人摸进镇口/);
-    assert.doesNotMatch(corpus, /心理压力|大家放心/);
+  test('餵給模型的只有正文', () => {
+    assert.match(corpus, /韓厲帶人摸進鎮口/);
+    assert.doesNotMatch(corpus, /心理壓力|大家放心/);
   });
 
-  test('只建了真名那一张卡', () => {
-    assert.deepEqual(files, ['韩厉.md']);
+  test('只建了真名那一張卡', () => {
+    assert.deepEqual(files, ['韓厲.md']);
   });
 
-  test('「反派」那一条并进来了：头领进别名、空着的小节补上', () => {
-    assert.deepEqual(card.aliases, ['头领']);
+  test('「反派」那一條並進來了：頭領進別名、空著的小節補上', () => {
+    assert.deepEqual(card.aliases, ['頭領']);
     assert.deepEqual(card.tags, ['反派']);
-    assert.equal(card.sections.身份, '黑风寨寨主');
+    assert.equal(card.sections.身份, '黑風寨寨主');
     assert.equal(card.sections.性格, '多疑');
   });
 
-  test('没有对一张刚建的卡再问「逐个对比」', () => {
-    assert.ok(!confirms.some((m) => m.includes('要逐个对比确认吗')), confirms.join(' | '));
+  test('沒有對一張剛建的卡再問「逐個對比」', () => {
+    assert.ok(!confirms.some((m) => m.includes('要逐個對比確認嗎')), confirms.join(' | '));
   });
 });

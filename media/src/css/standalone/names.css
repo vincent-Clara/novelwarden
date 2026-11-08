@@ -1,9 +1,9 @@
 /*
- * 名词补全的候选框（editor/names.ts，Alt+/ 或边打边弹）：贴在光标那一行下面（靠近底边翻到上面），挂在 body 上
- * `position: fixed`、由 names.ts 现造现拆、算好 left / top / max-height。不是遮罩，正文照样看得见。层级压在提示条（30）
- * 上面、「转到…」面板（35）与标题栏菜单（40）下面。
+ * 名詞補全的候選框（editor/names.ts，Alt+/ 或邊打邊彈）：貼在游標那一行下面（靠近底邊翻到上面），掛在 body 上
+ * `position: fixed`、由 names.ts 現造現拆、算好 left / top / max-height。不是遮罩，正文照樣看得見。層級壓在提示條（30）
+ * 上面、「轉到…」面板（35）與標題欄選單（40）下面。
  *
- * 后半是名词高亮（editor/nameMarks.ts）：高亮镜像层的 names 图层与悬停浮窗，见文件末尾。
+ * 後半是名詞高亮（editor/nameMarks.ts）：高亮映象層的 names 圖層與懸停浮窗，見檔案末尾。
  */
 
 .nc-box {
@@ -56,7 +56,7 @@
   flex: 0 0 auto;
 }
 
-/* 打过的那几个字：只换颜色加粗，不给底色（与「转到…」一样）。 */
+/* 打過的那幾個字：只換顏色加粗，不給底色（與「轉到…」一樣）。 */
 .nc-name mark {
   padding: 0;
   background: transparent;
@@ -64,12 +64,12 @@
   font-weight: 600;
 }
 
-/* 别名命中时后面那一截「→ 正名」。 */
+/* 別名命中時後面那一截「→ 正名」。 */
 .nc-canon {
   color: var(--vscode-descriptionForeground);
 }
 
-/* 类型：角色 / 地点 / 门派 / 设定…… */
+/* 型別：角色 / 地點 / 門派 / 設定…… */
 .nc-badge {
   flex: 0 0 auto;
   padding: 0 4px;
@@ -111,15 +111,15 @@
 }
 
 /*
- * ---- 名词高亮（editor/nameMarks.ts）
+ * ---- 名詞高亮（editor/nameMarks.ts）
  *
- * names 图层：角色名、设定名各一层底色，名录里出现过、还没建条目的名字画虚下划线。与 check 图层一样只碰底色与
- * text-decoration（不占排版；highlight.css 的规矩：<mark> 不许加内边距、边框、字重），下划线颜色明写（镜像里的字是透明的）。
- * 选择器与 check 图层一样重（:where 降一级），这份文件排在 check.css 前面：撞在同一段字上时体检的下划线与敏感词的淡底色
- * 盖过名字的，查找的底色（.ed-mirror mark.ed-hl-find，更重）盖过两者；段落聚焦管字色，互不相干。
+ * names 圖層：角色名、設定名各一層底色，名錄裡出現過、還沒建條目的名字畫虛下劃線。與 check 圖層一樣只碰底色與
+ * text-decoration（不佔排版；highlight.css 的規矩：<mark> 不許加內邊距、邊框、字重），下劃線顏色明寫（映象裡的字是透明的）。
+ * 選擇器與 check 圖層一樣重（:where 降一級），這份檔案排在 check.css 前面：撞在同一段字上時體檢的下劃線與敏感詞的淡底色
+ * 蓋過名字的，查詢的底色（.ed-mirror mark.ed-hl-find，更重）蓋過兩者；段落聚焦管字色，互不相干。
  *
- * 颜色三套主题各一份：底色要扫一眼就看得出哪几处是名字（最早那一版 0.1–0.18，作者嫌不显眼，2026-10-20 加深到两倍多），
- * 名字照样各管各的色相、和查找的橙色分得开；撞在同一段字上时查找的底色照旧盖过名字的（见上）。
+ * 顏色三套主題各一份：底色要掃一眼就看得出哪幾處是名字（最早那一版 0.1–0.18，作者嫌不顯眼，2026-10-20 加深到兩倍多），
+ * 名字照樣各管各的色相、和查詢的橙色分得開；撞在同一段字上時查詢的底色照舊蓋過名字的（見上）。
  */
 
 :root,
@@ -156,12 +156,12 @@
   text-decoration-skip-ink: none;
 }
 
-/* 按住 Ctrl（Mac 上 ⌘）指着一个能打开的名字。 */
+/* 按住 Ctrl（Mac 上 ⌘）指著一個能開啟的名字。 */
 .ed-area.nm-link {
   cursor: pointer;
 }
 
-/* 悬停浮窗：挂在 body 上 position: fixed，贴着鼠标；不接鼠标（不挡 textarea）。层级在提示条（30）上面、候选框（33）下面。 */
+/* 懸停浮窗：掛在 body 上 position: fixed，貼著滑鼠；不接滑鼠（不擋 textarea）。層級在提示條（30）上面、候選框（33）下面。 */
 .nm-tip {
   position: fixed;
   z-index: 32;
@@ -225,7 +225,7 @@
   border-top: 1px solid var(--vscode-panel-border);
 }
 
-/* 手指点出来的浮窗底下有一颗「打开角色卡 / 设定条目」（nameMarks.ts）：整只浮窗接住手指，不再透到底下的正文。 */
+/* 手指點出來的浮窗底下有一顆「開啟角色卡 / 設定條目」（nameMarks.ts）：整隻浮窗接住手指，不再透到底下的正文。 */
 .nm-tip.nm-touch {
   pointer-events: auto;
 }

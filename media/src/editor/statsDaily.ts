@@ -1,47 +1,47 @@
 /**
- * 「今日码字」记在哪、几个窗口怎么合（独立版内置编辑器，`stats.ts` 用）。
+ * 「今日碼字」記在哪、幾個視窗怎麼合（獨立版內建編輯器，`stats.ts` 用）。
  *
- * ## 记在浏览器里，不进工程
+ * ## 記在瀏覽器裡，不進工程
  *
- * localStorage `novelforge.editor.stats.daily@<工程>`（`projectStorageKey`，键里带工程根目录），形状
- * `{ v: 1, days: { 'YYYY-MM-DD': { words, ms } } }`，留最近 30 天，只显示今天。这只是码字习惯数据，丢了无所谓：
- * **不往工程目录写、也不往 SQLite 写**。读不懂（坏值）就当没有、从零记（`parseDaily`）。网址上没有工程标识、
- * 或者浏览器不让记（隐私模式、配额满），就只在这一页的内存里算——面板上照实说一句。
+ * localStorage `novelforge.editor.stats.daily@<工程>`（`projectStorageKey`，鍵裡帶工程根目錄），形狀
+ * `{ v: 1, days: { 'YYYY-MM-DD': { words, ms } } }`，留最近 30 天，只顯示今天。這只是碼字習慣資料，丟了無所謂：
+ * **不往工程目錄寫、也不往 SQLite 寫**。讀不懂（壞值）就當沒有、從零記（`parseDaily`）。網址上沒有工程標識、
+ * 或者瀏覽器不讓記（隱私模式、配額滿），就只在這一頁的記憶體裡算——面板上照實說一句。
  *
- * ## 几个窗口同开一个工程
+ * ## 幾個視窗同開一個工程
  *
- * **各窗口只加自己的增量，不写自己的总数**：码一下记进这个窗口的「待写」（按当时的工程键与本地日期分开），
- * 至多 {@link FLUSH_MS} 写一次——写的时候现读 localStorage 里那一份、加上待写的、写回去（`addDaily`），待写清零。
- * 所以谁也不会把别的窗口记的冲掉，也不会重复算。页面藏起来、关掉、换工程时立刻写。别的窗口写了，这边收
- * `storage` 事件换上新的那份重画。显示的是「上次读到的 + 自己还没写进去的」。读改写之间还隔着别的窗口的
- * 读改写的话（几毫秒之内两边同时写）会丢一笔——浏览器不给 localStorage 加锁，这点误差可以接受。
+ * **各視窗只加自己的增量，不寫自己的總數**：碼一下記進這個視窗的「待寫」（按當時的工程鍵與本地日期分開），
+ * 至多 {@link FLUSH_MS} 寫一次——寫的時候現讀 localStorage 裡那一份、加上待寫的、寫回去（`addDaily`），待寫清零。
+ * 所以誰也不會把別的視窗記的沖掉，也不會重複算。頁面藏起來、關掉、換工程時立刻寫。別的視窗寫了，這邊收
+ * `storage` 事件換上新的那份重畫。顯示的是「上次讀到的 + 自己還沒寫進去的」。讀改寫之間還隔著別的視窗的
+ * 讀改寫的話（幾毫秒之內兩邊同時寫）會丟一筆——瀏覽器不給 localStorage 加鎖，這點誤差可以接受。
  *
- * 跨午夜：每一笔按落笔那一刻的本地日期记，所以 23:59 打的字记在前一天，过了零点打的记在新的一天；显示的
- * 「今天」每次重画时现算。
+ * 跨午夜：每一筆按落筆那一刻的本地日期記，所以 23:59 打的字記在前一天，過了零點打的記在新的一天；顯示的
+ * 「今天」每次重畫時現算。
  */
 import { projectStorageKey, windowProject } from '../globals';
 import { addDaily, bumpDaily, dayKey, parseDaily, serializeDaily } from './writingStats';
 import type { DailyRecord, DayTally } from './writingStats';
 
 const BASE_KEY = 'novelforge.editor.stats.daily';
-/** 码字时至多隔多久写一次 localStorage（别的窗口至多晚这么久看到）。 */
+/** 碼字時至多隔多久寫一次 localStorage（別的視窗至多晚這麼久看到）。 */
 export const FLUSH_MS = 2_000;
 
-/** 工程键（没有工程标识时是 null，只在内存里算）→ 还没写进 localStorage 的增量。 */
+/** 工程鍵（沒有工程標識時是 null，只在記憶體裡算）→ 還沒寫進 localStorage 的增量。 */
 const pending = new Map<string | null, DailyRecord>();
-/** 工程键 → 上次读到 / 写下的那一份。 */
+/** 工程鍵 → 上次讀到 / 寫下的那一份。 */
 const stored = new Map<string, DailyRecord>();
-/** localStorage 读或写抛过：之后只在内存里算。 */
+/** localStorage 讀或寫拋過：之後只在記憶體裡算。 */
 let broken = false;
 let flushTimer: ReturnType<typeof setTimeout> | undefined;
 const listeners = new Set<() => void>();
 
-/** 这个窗口的工程在 localStorage 里的键。网址上没有工程标识时 null。 */
+/** 這個視窗的工程在 localStorage 裡的鍵。網址上沒有工程標識時 null。 */
 function currentKey(): string | null {
   return windowProject() ? projectStorageKey(BASE_KEY) : null;
 }
 
-/** 记一笔（`at` 那一刻的本地日期）。 */
+/** 記一筆（`at` 那一刻的本地日期）。 */
 export function recordDaily(at: number, words: number, ms: number): void {
   if (words === 0 && ms === 0) {
     return;
@@ -58,7 +58,7 @@ export function recordDaily(at: number, words: number, ms: number): void {
   }
 }
 
-/** 今天（`now` 那一刻的本地日期）这个工程码了多少，`persisted` 说是不是记在浏览器里（跨刷新、跨窗口）。 */
+/** 今天（`now` 那一刻的本地日期）這個工程碼了多少，`persisted` 說是不是記在瀏覽器裡（跨重新整理、跨視窗）。 */
 export function todayTally(now: number): DayTally & { persisted: boolean } {
   const key = currentKey();
   const day = dayKey(now);
@@ -71,7 +71,7 @@ export function todayTally(now: number): DayTally & { persisted: boolean } {
   };
 }
 
-/** 把待写的写进 localStorage：现读、加上、写回。抛了就记下「记不了」，待写的留在内存里照样算进显示。 */
+/** 把待寫的寫進 localStorage：現讀、加上、寫回。拋了就記下「記不了」，待寫的留在記憶體裡照樣算進顯示。 */
 export function flushDaily(): void {
   clearTimeout(flushTimer);
   flushTimer = undefined;
@@ -94,7 +94,7 @@ export function flushDaily(): void {
   }
 }
 
-/** 别的窗口写了（`storage` 事件）、或者想重新读一次时：丢掉缓存，下次显示现读。 */
+/** 別的視窗寫了（`storage` 事件）、或者想重新讀一次時：丟掉快取，下次顯示現讀。 */
 function forget(key: string | null): void {
   if (key === null) {
     stored.clear();
@@ -117,13 +117,13 @@ function storedOf(key: string): DailyRecord {
   return record;
 }
 
-/** 别的窗口改了「今日码字」时通知（重画）。 */
+/** 別的視窗改了「今日碼字」時通知（重畫）。 */
 export function onDailyChange(fn: () => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 
-/** 装一次（`stats.ts`）：别的窗口写了就重读重画；页面藏起来、关掉时立刻写。 */
+/** 裝一次（`stats.ts`）：別的視窗寫了就重讀重畫；頁面藏起來、關掉時立刻寫。 */
 export function installDaily(): void {
   window.addEventListener('storage', (e) => {
     if (e.key !== null && !e.key.startsWith(BASE_KEY)) {

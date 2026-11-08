@@ -2,14 +2,14 @@ import * as vscode from 'vscode';
 import { renderHtml } from './webviewHtml';
 
 /**
- * 两个 webview 宿主（侧边栏与编辑器标签页）共用的接线：能加载哪些目录、
- * 以及把页面模板接到 `webview.asWebviewUri`。
+ * 兩個 webview 宿主（側邊欄與編輯器標籤頁）共用的接線：能載入哪些目錄、
+ * 以及把頁面模板接到 `webview.asWebviewUri`。
  *
- * 这两件事从前在 chatViewProvider.ts 与 chatPanel.ts 里各写了一份，
- * `localResourceRoots` 少一条就是一片 404，不该有两个地方能写错。
+ * 這兩件事從前在 chatViewProvider.ts 與 chatPanel.ts 裡各寫了一份，
+ * `localResourceRoots` 少一條就是一片 404，不該有兩個地方能寫錯。
  */
 
-/** icon.svg 在 `media/`，脚本与样式在 `dist/media/`（构建产物）。 */
+/** icon.svg 在 `media/`，指令碼與樣式在 `dist/media/`（構建產物）。 */
 export function localResourceRoots(extensionUri: vscode.Uri): vscode.Uri[] {
   return [
     vscode.Uri.joinPath(extensionUri, 'media'),
@@ -17,14 +17,14 @@ export function localResourceRoots(extensionUri: vscode.Uri): vscode.Uri[] {
   ];
 }
 
-/** 建 webview 的标准 options（两个宿主再各自补 retainContextWhenHidden 之类）。 */
+/** 建 webview 的標準 options（兩個宿主再各自補 retainContextWhenHidden 之類）。 */
 export function webviewOptions(extensionUri: vscode.Uri): vscode.WebviewOptions {
   return { enableScripts: true, localResourceRoots: localResourceRoots(extensionUri) };
 }
 
 /**
- * 渲染页面。F5 调试前必须跑过 `npm run compile`——`dist/media/` 是构建产物，
- * 缺了它这里出来的 URI 全部 404，页面一片白。
+ * 渲染頁面。F5 除錯前必須跑過 `npm run compile`——`dist/media/` 是構建產物，
+ * 缺了它這裡出來的 URI 全部 404，頁面一片白。
  */
 export function htmlFor(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   return renderHtml({

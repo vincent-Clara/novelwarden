@@ -1,14 +1,14 @@
 /*
- * 全书查找替换（editor/bookFind.ts，Ctrl+Shift+F / 「编辑 → 全书查找替换…」）：压在侧栏上，与 VS Code 的「搜索」视图一样。
- * 面板挂进 #wbSide，开着时侧栏挂 .bf-open、原来那几页先藏起来（页头的任务条照常），编辑区一点都不挡。
- * DOM 由 bookFind.ts 现造（页面模板里没有它）。用户内容一律 textContent；命中的字用 <mark>、预览用 <del> / <ins>。
+ * 全書查詢替換（editor/bookFind.ts，Ctrl+Shift+F / 「編輯 → 全書查詢替換…」）：壓在側欄上，與 VS Code 的「搜尋」檢視一樣。
+ * 面板掛進 #wbSide，開著時側欄掛 .bf-open、原來那幾頁先藏起來（頁頭的任務條照常），編輯區一點都不擋。
+ * DOM 由 bookFind.ts 現造（頁面模板裡沒有它）。使用者內容一律 textContent；命中的字用 <mark>、預覽用 <del> / <ins>。
  */
 
 .wb-side.bf-open > .pane {
   display: none !important;
 }
 
-/* 专注模式（focus.css）藏起侧栏；作者自己开的全书查找照常露出来（与查找条、对比标签同一个说法）。 */
+/* 專注模式（focus.css）藏起側欄；作者自己開的全書查詢照常露出來（與查詢條、對比標籤同一個說法）。 */
 body.nf-focus .wb-side.bf-open {
   display: flex !important;
 }
@@ -60,7 +60,7 @@ body.nf-focus .wb-side.bf-open {
   outline-offset: -1px;
 }
 
-/* 「Aa」「.*」借查找条那两颗开关的样子（.ed-find-opt，find.css）。 */
+/* 「Aa」「.*」借查詢條那兩顆開關的樣子（.ed-find-opt，find.css）。 */
 .bf-scopes {
   display: flex;
   flex-wrap: wrap;

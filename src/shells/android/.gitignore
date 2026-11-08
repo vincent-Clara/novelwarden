@@ -1,6 +1,6 @@
 .gradle/
 build/
 local.properties
-# 构建时生成：内置服务端（scripts/build.sh）、Termux node（scripts/fetch-node.sh）
+# 構建時生成：內建服務端（scripts/build.sh）、Termux node（scripts/fetch-node.sh）
 /app/src/main/assets/
 /app/src/main/jniLibs/

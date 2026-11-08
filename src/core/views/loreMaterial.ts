@@ -8,22 +8,22 @@ import { finalizedPlots } from './cast';
 import type { LoreFact } from './lore';
 
 /**
- * 一条设定的原料：定稿过的细纲里关于它的记录（建条目、整合、展开共用）、没定稿的细纲里用到它的地方
- * （展开用），以及写完之后水位记到第几章、条目正文是不是机器写的。
+ * 一條設定的原料：定稿過的細綱裡關於它的記錄（建條目、整合、展開共用）、沒定稿的細綱裡用到它的地方
+ * （展開用），以及寫完之後水位記到第幾章、條目正文是不是機器寫的。
  *
- * 纯读盘、不调模型、不落盘。从 features/lore.ts 挪过来（完善设定，2026-10-19）：装配器展开一条设定时要
- * 同一份原料，而 context/ 不依赖 features/（见 context/README.md）。挪过来的那几样行为一字不变。
+ * 純讀盤、不調模型、不落盤。從 features/lore.ts 挪過來（完善設定，2026-10-19）：裝配器展開一條設定時要
+ * 同一份原料，而 context/ 不依賴 features/（見 context/README.md）。挪過來的那幾樣行為一字不變。
  */
 
-/** 建条目、整合、展开时给模型的记录最多多少 token（原料是一句一句的记录，很少到这么多）。 */
+/** 建條目、整合、展開時給模型的記錄最多多少 token（原料是一句一句的記錄，很少到這麼多）。 */
 export const MATERIAL_TOKENS = 6000;
 
 // ---------------------------------------------------------------- 水位
 
 /**
- * 整合能推到第几章：**第一处没定稿（或定稿之后正文又改过）的章之前**。第 5 章没定稿、第 6 章定稿了，
- * 水位最多到 4——否则第 5 章日后定稿，它的事实永远进不了条目（全文大纲的增量也是这么停的）。
- * 一章都没写是 0。展开写下的条目水位也记这个（展开喂的定稿记录就是整合会喂的那一份）。
+ * 整合能推到第幾章：**第一處沒定稿（或定稿之後正文又改過）的章之前**。第 5 章沒定稿、第 6 章定稿了，
+ * 水位最多到 4——否則第 5 章日後定稿，它的事實永遠進不了條目（全文大綱的增量也是這麼停的）。
+ * 一章都沒寫是 0。展開寫下的條目水位也記這個（展開喂的定稿記錄就是整合會喂的那一份）。
  */
 export async function integrationWatermark(project: NovelProject): Promise<number> {
   const chapters = [...(await project.listChapters())].sort((a, b) => a.order - b.order);
@@ -41,11 +41,11 @@ export async function integrationWatermark(project: NovelProject): Promise<numbe
   return through;
 }
 
-// ---------------------------------------------------------------- 定稿过的记录
+// ---------------------------------------------------------------- 定稿過的記錄
 
 /**
- * 一个名字在定稿过的细纲里的**所有记录**，带章号：「设定」一节冒号后那一句、连续性事实里提到它的、
- * 另外几节里提到它的句子。建条目的原料。
+ * 一個名字在定稿過的細綱裡的**所有記錄**，帶章號：「設定」一節冒號後那一句、連續性事實裡提到它的、
+ * 另外幾節裡提到它的句子。建條目的原料。
  */
 export function recordsAbout(plots: readonly Plot[], words: readonly string[], notes: readonly LoreFact[]): LoreFact[] {
   const out: LoreFact[] = [...notes];
@@ -77,11 +77,11 @@ export function recordsAbout(plots: readonly Plot[], words: readonly string[], n
     .sort((a, b) => a.no - b.no);
 }
 
-// ---------------------------------------------------------------- 谁写的
+// ---------------------------------------------------------------- 誰寫的
 
 /**
- * 条目正文是不是机器写的：空的，或记下的指纹对得上。没盖过章的非空正文算作者的。从 features/lore.ts 挪过来
- * （完善设定三期）：名录算「待完善」时要判批量展开会不会写它（{@link loreBatchExpandable}），而 views/ 不依赖 features/。
+ * 條目正文是不是機器寫的：空的，或記下的指紋對得上。沒蓋過章的非空正文算作者的。從 features/lore.ts 挪過來
+ * （完善設定三期）：名錄算「待完善」時要判批次展開會不會寫它（{@link loreBatchExpandable}），而 views/ 不依賴 features/。
  */
 export function loreOwnedByMachine(entry: Pick<LoreEntry, 'body' | 'bodyHash'>): boolean {
   const body = entry.body.trim();
@@ -89,10 +89,10 @@ export function loreOwnedByMachine(entry: Pick<LoreEntry, 'body' | 'bodyHash'>):
 }
 
 /**
- * 批量展开（完善设定三期）会不会写这一条：还只有一句话（`loreThin`），而且没有作者的字。第 19 条批量那一面——
- * 没有卡片、不问，只写吞不掉东西的：明面空的、新建设定的占位（都没有暗设），以及机器写的（`bodyHash` 对得上，
- * 设定清单起步时留下的三节「（未交代）」就是这种）。三节全是「（未交代）」却没盖过章的、明面空着但写过暗设的，
- * 都可能是作者手写的，批量跳过——要展开就单条展开，先对比。
+ * 批次展開（完善設定三期）會不會寫這一條：還只有一句話（`loreThin`），而且沒有作者的字。第 19 條批次那一面——
+ * 沒有卡片、不問，只寫吞不掉東西的：明面空的、新建設定的佔位（都沒有暗設），以及機器寫的（`bodyHash` 對得上，
+ * 設定清單起步時留下的三節「（未交代）」就是這種）。三節全是「（未交代）」卻沒蓋過章的、明面空著但寫過暗設的，
+ * 都可能是作者手寫的，批次跳過——要展開就單條展開，先對比。
  */
 export function loreBatchExpandable(entry: Pick<LoreEntry, 'body' | 'bodyHash'>): boolean {
   const thin = loreThin(entry);
@@ -105,11 +105,11 @@ export function loreBatchExpandable(entry: Pick<LoreEntry, 'body' | 'bodyHash'>)
   return thin !== 'untold' && !splitLoreHidden(entry.body).hidden;
 }
 
-// ---------------------------------------------------------------- 展开要的原料
+// ---------------------------------------------------------------- 展開要的原料
 
 /**
- * 路径上的那一条条目（单条设定这个目标认的就是它）。文件还不在时（MCP 给了一条新路径、展开期间被删了）
- * 按路径拼一条空的：标题取文件名、分类取它在 `lore/` 下的目录，`exists: false`。`entries` 给了就不再读盘。
+ * 路徑上的那一條條目（單條設定這個目標認的就是它）。檔案還不在時（MCP 給了一條新路徑、展開期間被刪了）
+ * 按路徑拼一條空的：標題取檔名、分類取它在 `lore/` 下的目錄，`exists: false`。`entries` 給了就不再讀盤。
  */
 export async function loreEntryAt(
   project: NovelProject,
@@ -129,27 +129,27 @@ export async function loreEntryAt(
   };
 }
 
-/** 没定稿的细纲里用到这一条的一处：「设定」一节点名它的那一行，或梗概、关键事件里提到它的一句。 */
+/** 沒定稿的細綱裡用到這一條的一處：「設定」一節點名它的那一行，或梗概、關鍵事件裡提到它的一句。 */
 export interface LorePlannedUse {
   no: number;
-  /** 那一章细纲的标题（可能是空串）。 */
+  /** 那一章細綱的標題（可能是空串）。 */
   title: string;
   where: '设定' | '梗概' | '关键事件';
   text: string;
 }
 
-/** 展开一条设定的原料（完善设定 §1「喂什么」）。 */
+/** 展開一條設定的原料（完善設定 §1「喂什麼」）。 */
 export interface LoreExpansionMaterial {
-  /** 已排（没定稿）的细纲里用到它的地方，按章号升序——展开是为这些情节服务的。 */
+  /** 已排（沒定稿）的細綱裡用到它的地方，按章號升序——展開是為這些情節服務的。 */
   uses: LorePlannedUse[];
-  /** 定稿过的细纲里关于它的全部记录（{@link recordsAbout}，「设定」一节那一句也算）——已经写进正文的，不能推翻。 */
+  /** 定稿過的細綱裡關於它的全部記錄（{@link recordsAbout}，「設定」一節那一句也算）——已經寫進正文的，不能推翻。 */
   records: LoreFact[];
 }
 
 /**
- * 展开一条设定要喂的两样原料。同一个号只认一份细纲（`pairPlots`，与名录同一个口径）；有 `sourceHash` 的是
- * 定稿过的，其余是计划。「设定」一节里的名字按名录同一张表认（`createLoreLookup`：标题优先、关键词抢不走别人的
- * 标题），句子里的提及按标题或关键词认（`loreMentionIn`）。`read` 里给了就直接用，不再读盘。
+ * 展開一條設定要喂的兩樣原料。同一個號只認一份細綱（`pairPlots`，與名錄同一個口徑）；有 `sourceHash` 的是
+ * 定稿過的，其餘是計劃。「設定」一節裡的名字按名錄同一張表認（`createLoreLookup`：標題優先、關鍵詞搶不走別人的
+ * 標題），句子裡的提及按標題或關鍵詞認（`loreMentionIn`）。`read` 裡給了就直接用，不再讀盤。
  */
 export async function expansionMaterial(
   project: NovelProject,

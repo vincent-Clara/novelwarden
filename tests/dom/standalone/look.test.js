@@ -1,18 +1,18 @@
 /**
- * 外观（`media/src/editor/look.ts` / `lookPanel.ts`，菜单那一半在 `view/lookMenu.ts`）：字号快捷键、外观面板、
- * 排版变量、护眼主题。取值的校验与上下限在 tests/unit/editor/lookCore.test.js。
+ * 外觀（`media/src/editor/look.ts` / `lookPanel.ts`，選單那一半在 `view/lookMenu.ts`）：字號快捷鍵、外觀面板、
+ * 排版變數、護眼主題。取值的校驗與上下限在 tests/unit/editor/lookCore.test.js。
  *
- * jsdom 没有排版，也不解析 `var()`：「镜像层与 textarea 读同一组变量」那一组把构建出来的 standalone.css 塞进页面，
- * 看两边算出来的是不是同一个 `var(--nf-ed-…)`，并按 CSSOM 核对那几条规则写在一起。
+ * jsdom 沒有排版，也不解析 `var()`：「映象層與 textarea 讀同一組變數」那一組把構建出來的 standalone.css 塞進頁面，
+ * 看兩邊算出來的是不是同一個 `var(--nf-ed-…)`，並按 CSSOM 核對那幾條規則寫在一起。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 「视图」菜单 | 第二组是「外观」：放大 / 缩小 / 还原字号（写着快捷键）与「外观设置…」；点了就变；到头置灰 |
- * | 字号快捷键 | Ctrl+= / Ctrl++ / Ctrl+- / Ctrl+0 **只在焦点在编辑区里时拦**；对话输入框、页面上、组字中途一律放行给浏览器 |
- * | 外观面板 | 页面模板里没有；打开时焦点进面板、不是遮罩（`.modal-overlay`）；字体 / 字号 / 行距 / 版心改了当场换变量；字号越界夹回去；恢复默认；Esc 关、焦点回编辑区；只开一个 |
- * | 同一组变量 | textarea 与镜像层算出来是同一组 `var(--nf-ed-…)`；CSS 里同一条规则；版心的居中算式三处同一条；预览也读它；不往元素上单写字号 |
- * | 护眼主题 | 标题栏按钮深 → 浅 → 护眼 → 深；面板里挑「护眼」；记在 `novelforge.theme`；theme.css 里那一套变量与浅色一样全；`theme-color` 跟着换成标题栏底色 |
- * | 记在本地 | 记进 `novelforge.editor.prefs`、同一处的成对符号开关不丢；刷新时坏值回落缺省、越界夹回去 |
+ * | 「檢視」選單 | 第二組是「外觀」：放大 / 縮小 / 還原字號（寫著快捷鍵）與「外觀設定…」；點了就變；到頭置灰 |
+ * | 字號快捷鍵 | Ctrl+= / Ctrl++ / Ctrl+- / Ctrl+0 **只在焦點在編輯區裡時攔**；對話輸入框、頁面上、組字中途一律放行給瀏覽器 |
+ * | 外觀面板 | 頁面模板裡沒有；開啟時焦點進面板、不是遮罩（`.modal-overlay`）；字型 / 字號 / 行距 / 版心改了當場換變數；字號越界夾回去；恢復預設；Esc 關、焦點回編輯區；只開一個 |
+ * | 同一組變數 | textarea 與映象層算出來是同一組 `var(--nf-ed-…)`；CSS 裡同一條規則；版心的居中算式三處同一條；預覽也讀它；不往元素上單寫字號 |
+ * | 護眼主題 | 標題欄按鈕深 → 淺 → 護眼 → 深；面板裡挑「護眼」；記在 `novelforge.theme`；theme.css 裡那一套變數與淺色一樣全；`theme-color` 跟著換成標題欄底色 |
+ * | 記在本地 | 記進 `novelforge.editor.prefs`、同一處的成對符號開關不丟；重新整理時壞值回落預設、越界夾回去 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -23,12 +23,12 @@ const { mount, JSDOM_SKIP, MEDIA, file, standaloneBodyHtml } = require('../../he
 const SHIMS = ['pointerCapture', 'confirm', 'scrollIntoView', 'clipboard'];
 const SONG = "'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', Georgia, serif";
 
-/** 一个装好编辑器、开着一章正文的页面，外加几样小工具。 */
+/** 一個裝好編輯器、開著一章正文的頁面，外加幾樣小工具。 */
 function harness(opts = {}) {
   const ui = mount({ body: 'standalone', scripts: ['view.js', 'editor.js'], shims: SHIMS, ...opts });
-  ui.post({ type: 'editorOpen', file: file('chapters/001-雨夜.md', '雨夜。\n\n林昭推门。', { kind: 'chapter' }) });
+  ui.post({ type: 'editorOpen', file: file('chapters/001-雨夜.md', '雨夜。\n\n林昭推門。', { kind: 'chapter' }) });
   const area = () => ui.doc.getElementById('edArea');
-  /** `<html>` 上那组变量的当前值。 */
+  /** `<html>` 上那組變數的當前值。 */
   const v = (name) => ui.doc.documentElement.style.getPropertyValue(name).trim();
   const key = (target, init) => {
     const ev = new ui.window.KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
@@ -43,7 +43,7 @@ function harness(opts = {}) {
   const item = (label) => [...viewMenu().querySelectorAll('.wb-menu-item')].find((b) => b.querySelector('.wb-menu-label')?.textContent === label);
   const pickMenu = (label) => {
     const btn = item(label);
-    assert.ok(btn, `「视图」里没有「${label}」`);
+    assert.ok(btn, `「檢視」裡沒有「${label}」`);
     ui.clickEl(btn);
   };
   const panel = () => ui.doc.querySelector('.ed-look');
@@ -55,7 +55,7 @@ function harness(opts = {}) {
   return { ui, area, v, key, viewMenu, closeBar, item, pickMenu, panel, part, change };
 }
 
-/** 「视图」菜单拆成组（分隔线隔开），每一项「名字|快捷键」。 */
+/** 「檢視」選單拆成組（分隔線隔開），每一項「名字|快捷鍵」。 */
 function menuGroups(drop) {
   const groups = [[]];
   for (const node of drop.children) {
@@ -70,60 +70,60 @@ function menuGroups(drop) {
   return groups;
 }
 
-describe('外观：「视图」菜单那一组', { skip: JSDOM_SKIP }, () => {
+describe('外觀：「檢視」選單那一組', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
   });
 
-  test('第一组仍是「单击打开为临时标签」，第二组是「外观」', () => {
+  test('第一組仍是「單擊開啟為臨時標籤」，第二組是「外觀」', () => {
     const groups = menuGroups(h.viewMenu());
     h.closeBar();
     assert.deepEqual(groups.slice(0, 2), [
-      ['单击打开为临时标签'],
-      ['放大字号|Ctrl+=', '缩小字号|Ctrl+-', '还原字号|Ctrl+0', '外观设置…'],
+      ['單擊開啟為臨時標籤'],
+      ['放大字號|Ctrl+=', '縮小字號|Ctrl+-', '還原字號|Ctrl+0', '外觀設定…'],
     ]);
   });
 
-  test('点「放大字号」：字号变量变成 16px', () => {
-    h.pickMenu('放大字号');
+  test('點「放大字號」：字號變數變成 16px', () => {
+    h.pickMenu('放大字號');
     assert.equal(h.v('--nf-ed-font-size'), '16px');
   });
 
-  test('提示里写着当前字号与缺省字号', () => {
-    const tip = h.item('还原字号').title;
+  test('提示裡寫著當前字號與預設字號', () => {
+    const tip = h.item('還原字號').title;
     h.closeBar();
-    assert.match(tip, /当前 16px，缺省 15px/);
+    assert.match(tip, /當前 16px，預設 15px/);
   });
 
-  test('点「还原字号」：回到 15px', () => {
-    h.pickMenu('还原字号');
+  test('點「還原字號」：回到 15px', () => {
+    h.pickMenu('還原字號');
     assert.equal(h.v('--nf-ed-font-size'), '15px');
   });
 
-  test('点「缩小字号」：14px', () => {
-    h.pickMenu('缩小字号');
+  test('點「縮小字號」：14px', () => {
+    h.pickMenu('縮小字號');
     assert.equal(h.v('--nf-ed-font-size'), '14px');
   });
 
-  test('缩到最小（12px）：「缩小字号」置灰、「放大字号」照常', () => {
-    h.pickMenu('缩小字号');
-    h.pickMenu('缩小字号');
+  test('縮到最小（12px）：「縮小字號」置灰、「放大字號」照常', () => {
+    h.pickMenu('縮小字號');
+    h.pickMenu('縮小字號');
     const drop = h.viewMenu();
     const find = (label) => [...drop.querySelectorAll('.wb-menu-item')].find((b) => b.querySelector('.wb-menu-label').textContent === label);
-    const [dec, inc] = [find('缩小字号'), find('放大字号')];
+    const [dec, inc] = [find('縮小字號'), find('放大字號')];
     h.closeBar();
     assert.deepEqual([h.v('--nf-ed-font-size'), dec.disabled, inc.disabled], ['12px', true, false]);
   });
 });
 
-describe('外观：字号快捷键只在焦点在编辑区时拦', { skip: JSDOM_SKIP }, () => {
+describe('外觀：字號快捷鍵只在焦點在編輯區時攔', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
   });
 
-  test('编辑区里 Ctrl+=：拦下，字号 16px', () => {
+  test('編輯區裡 Ctrl+=：攔下，字號 16px', () => {
     h.area().focus();
     const ev = h.key(h.area(), { key: '=', code: 'Equal', ctrlKey: true });
     assert.deepEqual([ev.defaultPrevented, h.v('--nf-ed-font-size')], [true, '16px']);
@@ -134,134 +134,134 @@ describe('外观：字号快捷键只在焦点在编辑区时拦', { skip: JSDOM
     assert.deepEqual([ev.defaultPrevented, h.v('--nf-ed-font-size')], [true, '17px']);
   });
 
-  test('Ctrl+-：缩小', () => {
+  test('Ctrl+-：縮小', () => {
     h.key(h.area(), { key: '-', code: 'Minus', ctrlKey: true });
     assert.equal(h.v('--nf-ed-font-size'), '16px');
   });
 
-  test('Ctrl+0：还原', () => {
+  test('Ctrl+0：還原', () => {
     const ev = h.key(h.area(), { key: '0', code: 'Digit0', ctrlKey: true });
     assert.deepEqual([ev.defaultPrevented, h.v('--nf-ed-font-size')], [true, '15px']);
   });
 
-  test('Mac 的 Cmd 也认', () => {
+  test('Mac 的 Cmd 也認', () => {
     h.key(h.area(), { key: '=', code: 'Equal', metaKey: true });
     assert.equal(h.v('--nf-ed-font-size'), '16px');
     h.key(h.area(), { key: '0', code: 'Digit0', metaKey: true });
   });
 
-  test('焦点在对话输入框里：不拦（浏览器照常缩放整页），字号不变', () => {
+  test('焦點在對話輸入框裡：不攔（瀏覽器照常縮放整頁），字號不變', () => {
     const input = h.ui.doc.getElementById('input');
     input.focus();
     const ev = h.key(input, { key: '=', code: 'Equal', ctrlKey: true });
     assert.deepEqual([ev.defaultPrevented, h.v('--nf-ed-font-size')], [false, '15px']);
   });
 
-  test('焦点在页面上（没在任何输入框里）：不拦', () => {
+  test('焦點在頁面上（沒在任何輸入框裡）：不攔', () => {
     h.ui.doc.activeElement?.blur();
     const ev = h.key(h.ui.doc.body, { key: '-', code: 'Minus', ctrlKey: true });
     assert.deepEqual([ev.defaultPrevented, h.v('--nf-ed-font-size')], [false, '15px']);
   });
 
-  test('输入法组字中途：放行', () => {
+  test('輸入法組字中途：放行', () => {
     h.area().focus();
     const ev = h.key(h.area(), { key: '=', code: 'Equal', ctrlKey: true, isComposing: true });
     assert.deepEqual([ev.defaultPrevented, h.v('--nf-ed-font-size')], [false, '15px']);
   });
 
-  test('不带 Ctrl 的 = 照常是打字', () => {
+  test('不帶 Ctrl 的 = 照常是打字', () => {
     const ev = h.key(h.area(), { key: '=', code: 'Equal' });
     assert.equal(ev.defaultPrevented, false);
   });
 
-  test('按字认、不按位置认：德语布局上 Ctrl+ß（主键盘 - 那个位置）不算缩小', () => {
+  test('按字認、不按位置認：德語佈局上 Ctrl+ß（主鍵盤 - 那個位置）不算縮小', () => {
     const ev = h.key(h.area(), { key: 'ß', code: 'Minus', ctrlKey: true });
     assert.deepEqual([ev.defaultPrevented, h.v('--nf-ed-font-size')], [false, '15px']);
   });
 
-  test('小键盘的 + 也认', () => {
+  test('小鍵盤的 + 也認', () => {
     h.key(h.area(), { key: '+', code: 'NumpadAdd', ctrlKey: true });
     assert.equal(h.v('--nf-ed-font-size'), '16px');
     h.key(h.area(), { key: '0', code: 'Numpad0', ctrlKey: true });
   });
 });
 
-describe('外观：外观面板', { skip: JSDOM_SKIP }, () => {
+describe('外觀：外觀面板', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
   });
 
-  test('页面模板里没有它（DOM 现造现拆）', () => {
+  test('頁面模板裡沒有它（DOM 現造現拆）', () => {
     assert.equal(standaloneBodyHtml().includes('ed-look'), false);
     assert.equal(h.panel(), null);
   });
 
-  test('「视图 → 外观设置…」打开面板，焦点落在字体下拉框', () => {
+  test('「檢視 → 外觀設定…」開啟面板，焦點落在字型下拉框', () => {
     h.area().focus();
-    h.pickMenu('外观设置…');
+    h.pickMenu('外觀設定…');
     assert.equal(h.panel().getAttribute('role'), 'dialog');
     assert.equal(h.ui.doc.activeElement, h.part('ed-look-font'));
   });
 
-  test('不是遮罩：外面那一层不是 .modal-overlay（不挡 Ctrl+P、不拦点击）', () => {
+  test('不是遮罩：外面那一層不是 .modal-overlay（不擋 Ctrl+P、不攔點選）', () => {
     assert.equal(h.ui.doc.querySelector('.modal-overlay:not(.hidden)'), null);
     assert.ok(h.panel().closest('.ed-look-overlay'));
   });
 
-  test('面板上的值是当前的：宋体、15、1.95、铺满', () => {
+  test('面板上的值是當前的：宋體、15、1.95、鋪滿', () => {
     assert.deepEqual(
       [h.part('ed-look-font').value, h.part('ed-look-size').value, h.part('ed-look-line').value, h.part('ed-look-measure').value],
       ['song', '15', '1.95', '0']
     );
   });
 
-  test('改字体：当场换字体变量', () => {
+  test('改字型：當場換字型變數', () => {
     h.change(h.part('ed-look-font'), 'kai');
     assert.match(h.v('--nf-ed-font-family'), /^'LXGW WenKai'/);
   });
 
-  test('字号输入框：当场换，越界夹进上下限、输入框写回夹过的值', () => {
+  test('字號輸入框：當場換，越界夾進上下限、輸入框寫回夾過的值', () => {
     h.change(h.part('ed-look-size'), 99);
     assert.deepEqual([h.v('--nf-ed-font-size'), h.part('ed-look-size').value], ['32px', '32']);
   });
 
-  test('字号输入框清空了不算数：写回当前字号', () => {
+  test('字號輸入框清空了不算數：寫回當前字號', () => {
     h.change(h.part('ed-look-size'), '');
     assert.deepEqual([h.v('--nf-ed-font-size'), h.part('ed-look-size').value], ['32px', '32']);
   });
 
-  test('到最大时「+」置灰', () => {
+  test('到最大時「+」置灰', () => {
     assert.equal(h.part('ed-look-size-inc').disabled, true);
   });
 
-  test('「−」缩一档', () => {
+  test('「−」縮一檔', () => {
     h.ui.clickEl(h.part('ed-look-size-dec'));
     assert.deepEqual([h.v('--nf-ed-font-size'), h.part('ed-look-size').value], ['31px', '31']);
   });
 
-  test('行距滑块：拖的时候就换，旁边写着当前值', () => {
+  test('行距滑塊：拖的時候就換，旁邊寫著當前值', () => {
     h.change(h.part('ed-look-line'), 2.2, 'input');
     assert.deepEqual([h.v('--nf-ed-line-height'), h.part('ed-look-line-value').textContent], ['2.2', '2.20']);
   });
 
-  test('版心：挑「一行最多 40 字」，变量按 em 写', () => {
+  test('版心：挑「一行最多 40 字」，變數按 em 寫', () => {
     const select = h.part('ed-look-measure');
     const opt = [...select.options].find((o) => o.textContent === '一行最多 40 字');
     h.change(select, opt.value);
     assert.equal(h.v('--nf-ed-measure'), '40em');
   });
 
-  test('不往 textarea 上单写字号、字体、行距（只认那组变量）', () => {
+  test('不往 textarea 上單寫字號、字型、行距（只認那組變數）', () => {
     const s = h.area().style;
     assert.deepEqual([s.fontSize, s.fontFamily, s.lineHeight], ['', '', '']);
   });
 
-  test('段间距不单列一项：面板上说清跟着分段格式走', () => {
-    assert.match(h.panel().textContent, /段间距跟着分段格式走/);
+  test('段間距不單列一項：面板上說清跟著分段格式走', () => {
+    assert.match(h.panel().textContent, /段間距跟著分段格式走/);
   });
 
-  test('恢复默认：四项回到缺省，面板上的值跟着变', () => {
+  test('恢復預設：四項回到預設，面板上的值跟著變', () => {
     h.ui.clickEl(h.part('ed-look-reset'));
     assert.deepEqual(
       [h.v('--nf-ed-font-family'), h.v('--nf-ed-font-size'), h.v('--nf-ed-line-height'), h.v('--nf-ed-measure')],
@@ -270,36 +270,36 @@ describe('外观：外观面板', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([h.part('ed-look-font').value, h.part('ed-look-size').value, h.part('ed-look-measure').value], ['song', '15', '0']);
   });
 
-  test('开着时用快捷键改字号，面板上的值跟着变', () => {
+  test('開著時用快捷鍵改字號，面板上的值跟著變', () => {
     h.area().focus();
     h.key(h.area(), { key: '=', code: 'Equal', ctrlKey: true });
     assert.equal(h.part('ed-look-size').value, '16');
     h.key(h.area(), { key: '0', code: 'Digit0', ctrlKey: true });
   });
 
-  test('再打开一次：还是那一个，焦点放回面板', () => {
+  test('再開啟一次：還是那一個，焦點放回面板', () => {
     h.area().focus();
-    h.pickMenu('外观设置…');
+    h.pickMenu('外觀設定…');
     assert.deepEqual([h.ui.doc.querySelectorAll('.ed-look').length, h.ui.doc.activeElement], [1, h.part('ed-look-font')]);
   });
 
-  test('Esc 关掉，焦点回到打开之前的地方（编辑区）', () => {
+  test('Esc 關掉，焦點回到開啟之前的地方（編輯區）', () => {
     const ev = h.key(h.part('ed-look-font'), { key: 'Escape' });
     assert.deepEqual([ev.defaultPrevented, h.panel(), h.ui.doc.activeElement], [true, null, h.area()]);
   });
 
-  test('「关闭」按钮也关', () => {
-    h.pickMenu('外观设置…');
+  test('「關閉」按鈕也關', () => {
+    h.pickMenu('外觀設定…');
     h.ui.clickEl(h.part('ed-look-close'));
     assert.equal(h.panel(), null);
   });
 });
 
-describe('外观：镜像层与 textarea 读同一组变量', { skip: JSDOM_SKIP }, () => {
+describe('外觀：映象層與 textarea 讀同一組變數', { skip: JSDOM_SKIP }, () => {
   let h;
   let sheet;
   const css = fs.readFileSync(path.join(MEDIA, 'standalone.css'), 'utf8');
-  /** 选择器列表里同时有这几个的那几条规则（顶层的，不含 @supports / @media 里的）。 */
+  /** 選擇器列表裡同時有這幾個的那幾條規則（頂層的，不含 @supports / @media 裡的）。 */
   const rulesWith = (rules, ...sels) =>
     [...rules].filter((r) => r.selectorText && sels.every((s) => r.selectorText.split(',').map((x) => x.trim()).includes(s)));
 
@@ -309,7 +309,7 @@ describe('外观：镜像层与 textarea 读同一组变量', { skip: JSDOM_SKIP
     style.textContent = css;
     h.ui.doc.head.appendChild(style);
     sheet = style.sheet;
-    // 打开查找、找一个字：镜像层（.ed-mirror-content）造出来，样式从 textarea 抄过去。
+    // 開啟查詢、找一個字：映象層（.ed-mirror-content）造出來，樣式從 textarea 抄過去。
     h.area().focus();
     h.key(h.area(), { key: 'f', ctrlKey: true });
     const input = h.ui.doc.querySelector('.ed-find-input');
@@ -317,7 +317,7 @@ describe('外观：镜像层与 textarea 读同一组变量', { skip: JSDOM_SKIP
     input.dispatchEvent(new h.ui.window.Event('input', { bubbles: true }));
   });
 
-  test('textarea 的字体、字号、行距算出来是那组变量', () => {
+  test('textarea 的字型、字號、行距算出來是那組變數', () => {
     const cs = h.ui.window.getComputedStyle(h.area());
     assert.deepEqual(
       [cs.fontFamily, cs.fontSize, cs.lineHeight],
@@ -325,7 +325,7 @@ describe('外观：镜像层与 textarea 读同一组变量', { skip: JSDOM_SKIP
     );
   });
 
-  test('镜像层抄过去的是同一组变量', () => {
+  test('映象層抄過去的是同一組變數', () => {
     const content = h.ui.doc.querySelector('.ed-mirror:not(.ed-mirror-probe) .ed-mirror-content');
     assert.deepEqual(
       [content.style.fontFamily, content.style.fontSize, content.style.lineHeight],
@@ -333,9 +333,9 @@ describe('外观：镜像层与 textarea 读同一组变量', { skip: JSDOM_SKIP
     );
   });
 
-  test('CSS 里 textarea 与镜像层是同一条规则：字体、字号、行距、内边距都读变量', () => {
+  test('CSS 裡 textarea 與映象層是同一條規則：字型、字號、行距、內邊距都讀變數', () => {
     const [rule] = rulesWith(sheet.cssRules, '.ed-area', '.ed-mirror-content');
-    assert.ok(rule, '找不到 .ed-area 与 .ed-mirror-content 写在一起的那条规则');
+    assert.ok(rule, '找不到 .ed-area 與 .ed-mirror-content 寫在一起的那條規則');
     assert.deepEqual(
       ['font-family', 'font-size', 'line-height', 'padding'].map((p) => rule.style.getPropertyValue(p)),
       [
@@ -347,25 +347,25 @@ describe('外观：镜像层与 textarea 读同一组变量', { skip: JSDOM_SKIP
     );
   });
 
-  test('版心的居中算式：@supports 里 textarea、镜像层、预览三处同一条', () => {
+  test('版心的居中算式：@supports 裡 textarea、映象層、預覽三處同一條', () => {
     const supports = [...sheet.cssRules].find((r) => r.conditionText === '(width: 1cqi)');
     const [rule] = rulesWith(supports.cssRules, '.ed-area', '.ed-mirror-content', '.ed-preview');
     assert.match(rule.style.getPropertyValue('padding-left'), /100cqi - var\(--nf-ed-measure\)/);
     assert.equal(rule.style.getPropertyValue('padding-left'), rule.style.getPropertyValue('padding-right'));
   });
 
-  test('居中按容器宽算：.ed-stage 是容器', () => {
+  test('居中按容器寬算：.ed-stage 是容器', () => {
     const supports = [...sheet.cssRules].find((r) => r.conditionText === '(width: 1cqi)');
     const [stage] = rulesWith(supports.cssRules, '.ed-stage');
     assert.equal(stage.style.getPropertyValue('container-type'), 'inline-size');
   });
 
-  test('预览读同一组变量', () => {
+  test('預覽讀同一組變數', () => {
     const cs = h.ui.window.getComputedStyle(h.ui.doc.getElementById('edPreview'));
     assert.deepEqual([cs.fontFamily, cs.fontSize, cs.lineHeight], ['var(--nf-ed-font-family)', 'var(--nf-ed-font-size)', 'var(--nf-ed-line-height)']);
   });
 
-  test('别处不再写死正文字号（15px）与行距（1.95）', () => {
+  test('別處不再寫死正文字號（15px）與行距（1.95）', () => {
     const literal = [...sheet.cssRules].filter(
       (r) =>
         r.selectorText &&
@@ -375,14 +375,14 @@ describe('外观：镜像层与 textarea 读同一组变量', { skip: JSDOM_SKIP
     assert.deepEqual(literal.map((r) => r.selectorText), []);
   });
 
-  test('窄屏收窄内边距改的是变量，不是元素上的 padding', () => {
+  test('窄屏收窄內邊距改的是變數，不是元素上的 padding', () => {
     const narrow = [...sheet.cssRules].find((r) => r.conditionText === '(max-width: 900px)');
     const padded = rulesWith(narrow.cssRules, '.ed-area').filter((r) => r.style.getPropertyValue('padding'));
     const root = rulesWith(narrow.cssRules, ':root')[0];
     assert.deepEqual([padded.length, root?.style.getPropertyValue('--nf-ed-pad-x').trim()], [0, '16px']);
   });
 
-  test('改了字号：镜像层当场重抄一遍样式（不等尺寸变化）', () => {
+  test('改了字號：映象層當場重抄一遍樣式（不等尺寸變化）', () => {
     const content = h.ui.doc.querySelector('.ed-mirror:not(.ed-mirror-probe) .ed-mirror-content');
     content.style.removeProperty('font-size');
     h.key(h.area(), { key: '=', code: 'Equal', ctrlKey: true });
@@ -390,16 +390,16 @@ describe('外观：镜像层与 textarea 读同一组变量', { skip: JSDOM_SKIP
   });
 });
 
-describe('外观：护眼主题', { skip: JSDOM_SKIP }, () => {
+describe('外觀：護眼主題', { skip: JSDOM_SKIP }, () => {
   let h;
   const theme = () => h.ui.doc.documentElement.dataset.theme;
   before(() => {
     h = harness({ url: 'http://localhost/?project=a' });
-    // 编辑器启动时按记下的（或系统的）主题定；从深色起测。
+    // 編輯器啟動時按記下的（或系統的）主題定；從深色起測。
     h.ui.window.localStorage.removeItem('novelforge.theme');
   });
 
-  test('标题栏按钮：深色 → 浅色 → 护眼 → 深色轮着换', () => {
+  test('標題欄按鈕：深色 → 淺色 → 護眼 → 深色輪著換', () => {
     const btn = h.ui.doc.getElementById('wbThemeBtn');
     const seen = [theme()];
     for (let i = 0; i < 3; i++) {
@@ -409,29 +409,29 @@ describe('外观：护眼主题', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual(seen, ['dark', 'light', 'sepia', 'dark']);
   });
 
-  test('按钮上写的是下一套：深色时提示切到浅色', () => {
-    assert.match(h.ui.doc.getElementById('wbThemeBtn').title, /切换到浅色/);
+  test('按鈕上寫的是下一套：深色時提示切到淺色', () => {
+    assert.match(h.ui.doc.getElementById('wbThemeBtn').title, /切換到淺色/);
   });
 
-  test('外观面板里挑「护眼」：当场换，记在 novelforge.theme', () => {
-    h.pickMenu('外观设置…');
+  test('外觀面板裡挑「護眼」：當場換，記在 novelforge.theme', () => {
+    h.pickMenu('外觀設定…');
     const sepia = h.panel().querySelector('.ed-look-theme input[value="sepia"]');
     sepia.checked = true;
     sepia.dispatchEvent(new h.ui.window.Event('change', { bubbles: true }));
     assert.deepEqual([theme(), h.ui.window.localStorage.getItem('novelforge.theme')], ['sepia', 'sepia']);
   });
 
-  test('「恢复默认」不动主题', () => {
+  test('「恢復預設」不動主題', () => {
     h.ui.clickEl(h.part('ed-look-reset'));
     assert.equal(theme(), 'sepia');
   });
 
-  test('面板上那一组单选跟着当前主题', () => {
+  test('面板上那一組單選跟著當前主題', () => {
     const checked = h.panel().querySelector('.ed-look-theme input:checked');
     assert.equal(checked.value, 'sepia');
   });
 
-  test('theme.css 里护眼那一套的变量与浅色一样全', () => {
+  test('theme.css 裡護眼那一套的變數與淺色一樣全', () => {
     const css = fs.readFileSync(path.join(MEDIA, 'standalone.css'), 'utf8');
     const style = h.ui.doc.createElement('style');
     style.textContent = css;
@@ -444,7 +444,7 @@ describe('外观：护眼主题', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual(names('sepia'), names('light'));
   });
 
-  test('换主题时 <meta name="theme-color"> 跟着换成标题栏底色（手机浏览器的地址栏、Android 壳的系统栏按它染）', () => {
+  test('換主題時 <meta name="theme-color"> 跟著換成標題欄底色（手機瀏覽器的位址列、Android 殼的系統欄按它染）', () => {
     const doc = h.ui.doc;
     const style = doc.createElement('style');
     style.textContent = fs.readFileSync(path.join(MEDIA, 'standalone.css'), 'utf8');
@@ -456,41 +456,41 @@ describe('外观：护眼主题', { skip: JSDOM_SKIP }, () => {
     const seen = {};
     for (let i = 0; i < 3; i++) {
       h.ui.clickEl(doc.getElementById('wbThemeBtn'));
-      assert.equal(meta.content, bar(), `${theme()}：theme-color 与标题栏底色不一致`);
+      assert.equal(meta.content, bar(), `${theme()}：theme-color 與標題欄底色不一致`);
       seen[theme()] = meta.content;
     }
     assert.deepEqual(Object.keys(seen).sort(), ['dark', 'light', 'sepia']);
-    assert.equal(new Set(Object.values(seen)).size, 3, `三套该是三个颜色：${JSON.stringify(seen)}`);
+    assert.equal(new Set(Object.values(seen)).size, 3, `三套該是三個顏色：${JSON.stringify(seen)}`);
   });
 });
 
-describe('外观：记在本地', { skip: JSDOM_SKIP }, () => {
-  test('改了记进 novelforge.editor.prefs，同一处的成对符号开关不丢', () => {
+describe('外觀：記在本地', { skip: JSDOM_SKIP }, () => {
+  test('改了記進 novelforge.editor.prefs，同一處的成對符號開關不丟', () => {
     const h = harness({ storage: { 'novelforge.editor.prefs': JSON.stringify({ autoPair: false }) } });
-    h.pickMenu('放大字号');
+    h.pickMenu('放大字號');
     const saved = JSON.parse(h.ui.window.localStorage.getItem('novelforge.editor.prefs'));
     assert.deepEqual([saved.autoPair, saved.fontSize], [false, 16]);
   });
 
-  test('别的开关存一下也不冲掉外观那几项', () => {
+  test('別的開關存一下也不沖掉外觀那幾項', () => {
     const h = harness({ storage: { 'novelforge.editor.prefs': JSON.stringify({ fontSize: 20 }) } });
     h.ui.clickEl(h.ui.doc.querySelector('[data-menu="edit"]'));
-    const toggle = [...h.ui.doc.querySelectorAll('.wb-menu-item')].find((b) => b.textContent.includes('成对符号'));
+    const toggle = [...h.ui.doc.querySelectorAll('.wb-menu-item')].find((b) => b.textContent.includes('成對符號'));
     h.ui.clickEl(toggle);
     const saved = JSON.parse(h.ui.window.localStorage.getItem('novelforge.editor.prefs'));
     assert.deepEqual([saved.autoPair, saved.fontSize], [false, 20]);
   });
 
-  test('外观与码字统计的 stats 子对象互不冲掉：改字号留着 stats，改统计开关留着字号', () => {
+  test('外觀與碼字統計的 stats 子物件互不沖掉：改字號留著 stats，改統計開關留著字號', () => {
     const h = harness({
       storage: { 'novelforge.editor.prefs': JSON.stringify({ stats: { goal: true, session: true, today: false } }) },
     });
-    h.pickMenu('放大字号');
+    h.pickMenu('放大字號');
     const afterZoom = JSON.parse(h.ui.window.localStorage.getItem('novelforge.editor.prefs'));
-    // 「视图 → 统计 ›」子菜单里打开「今日码字」。
-    const stats = [...h.viewMenu().querySelectorAll('.wb-menu-item')].find((b) => b.querySelector('.wb-menu-label').textContent === '统计');
+    // 「檢視 → 統計 ›」子選單裡開啟「今日碼字」。
+    const stats = [...h.viewMenu().querySelectorAll('.wb-menu-item')].find((b) => b.querySelector('.wb-menu-label').textContent === '統計');
     stats.dispatchEvent(new h.ui.window.MouseEvent('mouseenter'));
-    const today = [...h.ui.doc.querySelectorAll('.wb-menu-drop.submenu .wb-menu-item')].find((b) => b.textContent.includes('今日码字'));
+    const today = [...h.ui.doc.querySelectorAll('.wb-menu-drop.submenu .wb-menu-item')].find((b) => b.textContent.includes('今日碼字'));
     h.ui.clickEl(today);
     const afterStats = JSON.parse(h.ui.window.localStorage.getItem('novelforge.editor.prefs'));
     assert.deepEqual(
@@ -499,15 +499,15 @@ describe('外观：记在本地', { skip: JSDOM_SKIP }, () => {
     );
   });
 
-  test('写坏了（不是 JSON）：全当缺省，下一次写把它整份换掉', () => {
-    const h = harness({ storage: { 'novelforge.editor.prefs': '{坏了' } });
+  test('寫壞了（不是 JSON）：全當預設，下一次寫把它整份換掉', () => {
+    const h = harness({ storage: { 'novelforge.editor.prefs': '{壞了' } });
     const before = h.v('--nf-ed-font-size');
-    h.pickMenu('放大字号');
+    h.pickMenu('放大字號');
     const saved = JSON.parse(h.ui.window.localStorage.getItem('novelforge.editor.prefs'));
     assert.deepEqual([before, saved.fontSize, saved.autoPair], ['15px', 16, true]);
   });
 
-  test('刷新时坏值回落缺省、越界的夹回去，好的照用', () => {
+  test('重新整理時壞值回落預設、越界的夾回去，好的照用', () => {
     const h = harness({
       storage: {
         'novelforge.editor.prefs': JSON.stringify({ fontFamily: 'comic', fontSize: '大', lineHeight: 2.2, measure: 999 }),
@@ -519,9 +519,9 @@ describe('外观：记在本地', { skip: JSDOM_SKIP }, () => {
     );
   });
 
-  test('恢复默认从偏好里删掉那几项（以后缺省改了也跟着走）', () => {
+  test('恢復預設從偏好裡刪掉那幾項（以後預設改了也跟著走）', () => {
     const h = harness({ storage: { 'novelforge.editor.prefs': JSON.stringify({ fontSize: 20, autoSave: true }) } });
-    h.pickMenu('外观设置…');
+    h.pickMenu('外觀設定…');
     h.ui.clickEl(h.part('ed-look-reset'));
     const saved = JSON.parse(h.ui.window.localStorage.getItem('novelforge.editor.prefs'));
     assert.deepEqual([('fontSize' in saved), saved.autoSave], [false, true]);

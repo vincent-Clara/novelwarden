@@ -1,14 +1,14 @@
 /**
- * `pushState` 连流水线条一起推。
+ * `pushState` 連流水線條一起推。
  *
- * 从前它只推 state：总结完、在编辑器里手改了细纲、文件监听触发，流水线条与主按钮
- * 都停在旧状态。壳的文件监听、编辑器保存、工程页动作走的都是 pushState，所以这里
- * 直接调它，守的是「磁盘变了 → 主按钮跟着变」这一件事。
+ * 從前它只推 state：總結完、在編輯器裡手改了細綱、檔案監聽觸發，流水線條與主按鈕
+ * 都停在舊狀態。殼的檔案監聽、編輯器儲存、工程頁動作走的都是 pushState，所以這裡
+ * 直接調它，守的是「磁碟變了 → 主按鈕跟著變」這一件事。
  *
- * 一章一纲之后单章状态机是「细纲 → 正文 → 定稿 → 完成」，这里把四格各走一遍：
- * 每一格都是磁盘在创作页之外变了（编辑器里写细纲、手贴正文、改细纲、定稿），
- * 主按钮都得跟上。最后一格还守着「单章做完就转去问全书」——主按钮不该在一章做完
- * 之后沉默。
+ * 一章一綱之後單章狀態機是「細綱 → 正文 → 定稿 → 完成」，這裡把四格各走一遍：
+ * 每一格都是磁碟在創作頁之外變了（編輯器裡寫細綱、手貼正文、改細綱、定稿），
+ * 主按鈕都得跟上。最後一格還守著「單章做完就轉去問全書」——主按鈕不該在一章做完
+ * 之後沉默。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,13 +27,13 @@ let ws;
 const PLOT = '.novelwarden/summaries/010-夜渡.md';
 const CHAPTER = 'chapters/010-夜渡.md';
 
-/** 第 10 章的细纲（七节），判「排过没有」只看「关键事件」。 */
+/** 第 10 章的細綱（七節），判「排過沒有」只看「關鍵事件」。 */
 const plot = (sections) => ({
   no: 10, title: '夜渡', upstreamHash: '', done: false,
   sections: { 梗概: '', 出场人物: '', 时间地点: '', 关键事件: '', 看点: '', 状态变更: '', 连续性事实: '', ...sections },
 });
 
-/** 调一次 pushState，回收这一轮推出去的最后一份流水线。 */
+/** 調一次 pushState，回收這一輪推出去的最後一份流水線。 */
 async function refresh() {
   posted.length = 0;
   await controller.pushState();
@@ -50,11 +50,11 @@ before(async () => {
   });
   const h = makeFakeHost({ settings: () => ({}) });
   bundle.host.initHost(h.host);
-  t = await makeTempProject(bundle.project, { prefix: 'pipelinerefresh', title: '刷新测试' });
+  t = await makeTempProject(bundle.project, { prefix: 'pipelinerefresh', title: '重新整理測試' });
   project = t.project;
   ws = new bundle.ws.Workspace(project);
 
-  // 一份只有「梗概」的细纲：还没排过，主按钮该是「写细纲」。
+  // 一份只有「梗概」的細綱：還沒排過，主按鈕該是「寫細綱」。
   await ws.writePlot(plot({ 梗概: '渡河' }));
   project.invalidate();
 
@@ -69,58 +69,58 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('pushState 推流水线条', () => {
-  test('推了一份流水线', async () => {
+describe('pushState 推流水線條', () => {
+  test('推了一份流水線', async () => {
     const pipe = await refresh();
-    assert.ok(pipe, '没推 pipeline');
+    assert.ok(pipe, '沒推 pipeline');
     assert.equal(pipe.pipeline?.no, 10, JSON.stringify(pipe.pipeline?.no));
   });
 
-  // 只写了「梗概」不算排过：一句话就能写，拿它当判据的话空壳会立刻显示「已规划」。
-  test('还没排细纲：主按钮落在细纲层', async () => {
+  // 只寫了「梗概」不算排過：一句話就能寫，拿它當判據的話空殼會立刻顯示「已規劃」。
+  test('還沒排細綱：主按鈕落在細綱層', async () => {
     const pipe = await refresh();
     assert.equal(pipe.next?.stage, 'plot', JSON.stringify(pipe.next));
   });
 
-  // 模拟作者在编辑器里把细纲写好、保存——磁盘变了，没有经过创作页。
-  test('细纲在别处写好之后，主按钮跟着换到正文', async () => {
+  // 模擬作者在編輯器裡把細綱寫好、儲存——磁碟變了，沒有經過創作頁。
+  test('細綱在別處寫好之後，主按鈕跟著換到正文', async () => {
     await ws.writePlot(plot({ 梗概: '渡河', 关键事件: '林昭夜渡青河，船到中流翻了。' }));
     const pipe = await refresh();
     assert.equal(pipe.next?.stage, 'manuscript', JSON.stringify(pipe.next));
-    assert.equal(pipe.next?.label, '写第 10 章', JSON.stringify(pipe.next));
+    assert.equal(pipe.next?.label, '寫第 10 章', JSON.stringify(pipe.next));
   });
 
-  // 正文就落在同号的章节上（没有中转站了）。作者手贴进来的一样算：细纲与配置
-  // 都没写目标字数，于是「有字就算写够」，下一步是定稿。
-  test('同号章节在别处写出正文之后，主按钮换到定稿', async () => {
-    t.write(CHAPTER, '# 夜渡\n\n船到中流，缆绳断了。\n');
+  // 正文就落在同號的章節上（沒有中轉站了）。作者手貼進來的一樣算：細綱與配置
+  // 都沒寫目標字數，於是「有字就算寫夠」，下一步是定稿。
+  test('同號章節在別處寫出正文之後，主按鈕換到定稿', async () => {
+    t.write(CHAPTER, '# 夜渡\n\n船到中流，纜繩斷了。\n');
     const pipe = await refresh();
     assert.equal(pipe.pipeline?.chapter.relPath, CHAPTER, JSON.stringify(pipe.pipeline?.chapter));
     assert.equal(pipe.next?.projectAction, 'finalizeChapter', JSON.stringify(pipe.next));
   });
 
-  // 细纲在正文之后改过（在编辑器里改，走 edit）→ 正文标脏 → 主按钮换成「重写」。
-  // 前提是这一章记过 writtenFrom：作者手贴的正文没有这笔账，永远不标脏（第 18a 条），
-  // 所以先按正文落盘那一步的样子记一笔。
-  test('细纲在正文之后改过，主按钮换成重写', async () => {
+  // 細綱在正文之後改過（在編輯器裡改，走 edit）→ 正文標髒 → 主按鈕換成「重寫」。
+  // 前提是這一章記過 writtenFrom：作者手貼的正文沒有這筆賬，永遠不標髒（第 18a 條），
+  // 所以先按正文落盤那一步的樣子記一筆。
+  test('細綱在正文之後改過，主按鈕換成重寫', async () => {
     const current = await project.readPlot(PLOT);
     await ws.recordWrittenFrom(PLOT, bundle.plotFile.plotContentHash(current));
     const fresh = await refresh();
-    assert.equal(fresh.next?.projectAction, 'finalizeChapter', '前提：记完账这一章仍是待定稿');
+    assert.equal(fresh.next?.projectAction, 'finalizeChapter', '前提：記完賬這一章仍是待定稿');
 
-    await ws.edit(PLOT, [{ old: '船到中流翻了', new: '船到中流被人凿穿了' }]);
+    await ws.edit(PLOT, [{ old: '船到中流翻了', new: '船到中流被人鑿穿了' }]);
     const pipe = await refresh();
     assert.equal(pipe.pipeline?.chapter.upstreamStale, true, JSON.stringify(pipe.pipeline?.chapter));
-    assert.equal(pipe.next?.label, '重写第 10 章', JSON.stringify(pipe.next));
+    assert.equal(pipe.next?.label, '重寫第 10 章', JSON.stringify(pipe.next));
   });
 
-  // 定稿（细纲照正文反向更新，sourceHash 对得上正文）之后这一章做完了——主按钮**转去问全书**，
-  // 而不是沉默。这个工程的架构一件都没填，全书的下一步是「生成小说配置」。
-  test('这一章定稿之后，主按钮转去问全书的下一步', async () => {
+  // 定稿（細綱照正文反向更新，sourceHash 對得上正文）之後這一章做完了——主按鈕**轉去問全書**，
+  // 而不是沉默。這個工程的架構一件都沒填，全書的下一步是「生成小說配置」。
+  test('這一章定稿之後，主按鈕轉去問全書的下一步', async () => {
     const chapter = (await project.listChapters()).find((c) => c.order === 10);
     await ws.finalizePlot(
       chapter,
-      { ...plot({}).sections, 梗概: '林昭夜渡青河。', 出场人物: '林昭', 关键事件: '缆绳断了。' },
+      { ...plot({}).sections, 梗概: '林昭夜渡青河。', 出场人物: '林昭', 关键事件: '纜繩斷了。' },
       [{ name: '林昭', aliases: [] }]
     );
     const pipe = await refresh();

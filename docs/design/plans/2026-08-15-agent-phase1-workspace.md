@@ -1,67 +1,67 @@
-# 一期：workspace 读写网关 Implementation Plan
+# 一期：workspace 讀寫閘道器 Implementation Plan
 
-> **接手须知：** 这份计划面向新的 agent，假设你**没有读过**前面的对话。开工前必读：
-> 1. 根目录 [AGENTS.md](../../../AGENTS.md) —— 23 条产品承诺。本期直接关系到第 **3、6、7、8、9、10、18** 条
-> 2. 设计依据 [docs/design/specs/2026-08-15-agent-architecture-design.md](../specs/2026-08-15-agent-architecture-design.md) 的 **L1 一节**
-> 3. [src/core/README.md](../../../src/core/README.md) 的「已知约定」全段
-> 4. 前置：[零期](2026-08-15-agent-phase0-provider-events.md) 必须已经合入
+> **接手須知：** 這份計劃面向新的 agent，假設你**沒有讀過**前面的對話。開工前必讀：
+> 1. 根目錄 [AGENTS.md](../../../AGENTS.md) —— 23 條產品承諾。本期直接關係到第 **3、6、7、8、9、10、18** 條
+> 2. 設計依據 [docs/design/specs/2026-08-15-agent-architecture-design.md](../specs/2026-08-15-agent-architecture-design.md) 的 **L1 一節**
+> 3. [src/core/README.md](../../../src/core/README.md) 的「已知約定」全段
+> 4. 前置：[零期](2026-08-15-agent-phase0-provider-events.md) 必須已經合入
 >
-> 每个 Task 按 `- [ ]` 逐步执行，做完立刻 commit。
+> 每個 Task 按 `- [ ]` 逐步執行，做完立刻 commit。
 
-**Goal:** 把散在六处的文件读写收敛成**唯一网关** `core/workspace/`，守卫在入口做一次，产物记账下沉到写入路径本身。这一期结束时，「给 agent 一个 `write`」不再是一件危险的事。
+**Goal:** 把散在六處的檔案讀寫收斂成**唯一閘道器** `core/workspace/`，守衛在入口做一次，產物記賬下沉到寫入路徑本身。這一期結束時，「給 agent 一個 `write`」不再是一件危險的事。
 
-**Architecture:** 自底向上三步：先抽**纯函数**的路径种类表（零 I/O，可单测），再抽**统一守卫**（把六处各自的检查合并成一份），最后逐个把既有写盘路径改成经网关。**每一步都保证全量测试绿**——这一期一个新功能都没有，任何一条测试变红都意味着改错了。
+**Architecture:** 自底向上三步：先抽**純函式**的路徑種類表（零 I/O，可單測），再抽**統一守衛**（把六處各自的檢查合併成一份），最後逐個把既有寫盤路徑改成經閘道器。**每一步都保證全量測試綠**——這一期一個新功能都沒有，任何一條測試變紅都意味著改錯了。
 
-**Tech Stack:** TypeScript（`src/core/workspace/`，零 vscode 依赖）+ `node:test` + `npm run typecheck`。不新增依赖。
+**Tech Stack:** TypeScript（`src/core/workspace/`，零 vscode 依賴）+ `node:test` + `npm run typecheck`。不新增依賴。
 
 ## Global Constraints
 
-- **行为不变**（唯一例外见下）。`npm test` 全绿是本期的验收标准。
-- **唯一有意的行为变化**：`upstreamHash` / `beatsHash` 的记账从「只在采纳路径上做」下沉到「谁写都做」。这修掉一个既有缺陷——作者在内置编辑器里改一份细纲，指纹链现在会断（那一章从此不挂 ⟳）。要为它**补一条集成测试**。
-- 守卫八条一条都不能少（见下面的守卫表）。**新代码不许绕过 `guard.ts` 直接 `fs.writeFile`。**
+- **行為不變**（唯一例外見下）。`npm test` 全綠是本期的驗收標準。
+- **唯一有意的行為變化**：`upstreamHash` / `beatsHash` 的記賬從「只在採納路徑上做」下沉到「誰寫都做」。這修掉一個既有缺陷——作者在內建編輯器裡改一份細綱，指紋鏈現在會斷（那一章從此不掛 ⟳）。要為它**補一條整合測試**。
+- 守衛八條一條都不能少（見下面的守衛表）。**新程式碼不許繞過 `guard.ts` 直接 `fs.writeFile`。**
 - `src/core/` 零 `vscode` import（`tests/contract/corePurity.test.js`）。
-- 不要同时留下 `project.ts` 的旧写方法与 `workspace` 的新方法。每个 Task 搬完就删旧的。
-- 每个 Task 结束立刻 commit；前缀 `refactor` / `test` / `docs`；中文正文。
+- 不要同時留下 `project.ts` 的舊寫方法與 `workspace` 的新方法。每個 Task 搬完就刪舊的。
+- 每個 Task 結束立刻 commit；字首 `refactor` / `test` / `docs`；中文正文。
 
 ---
 
-## 目标态文件结构
+## 目標態檔案結構
 
 ```
 src/core/workspace/
-├── index.ts        Workspace 门面：list / read / write / edit / move / remove / search
-├── kind.ts         ★ 路径 → 种类（纯函数，零 I/O，绝不抛）
-├── guard.ts        ★ 统一入口守卫（八条）
-├── search.ts       全文检索（朴素扫描，零模型调用）
+├── index.ts        Workspace 門面：list / read / write / edit / move / remove / search
+├── kind.ts         ★ 路徑 → 種類（純函式，零 I/O，絕不拋）
+├── guard.ts        ★ 統一入口守衛（八條）
+├── search.ts       全文檢索（樸素掃描，零模型呼叫）
 ├── handlers/
-│   ├── index.ts    种类 → handler 注册表
-│   ├── plot.ts     解析/渲染/记 upstreamHash/伴生搬迁
-│   ├── scene.ts    解析/渲染/记 upstreamHash/改标题清旧文件名
-│   ├── manuscript.ts 追加/记 beatsHash
-│   ├── chapter.ts  草稿跟随/manifest 同步
+│   ├── index.ts    種類 → handler 登錄檔
+│   ├── plot.ts     解析/渲染/記 upstreamHash/伴生搬遷
+│   ├── scene.ts    解析/渲染/記 upstreamHash/改標題清舊檔名
+│   ├── manuscript.ts 追加/記 beatsHash
+│   ├── chapter.ts  草稿跟隨/manifest 同步
 │   ├── summary.ts  sourceHash
-│   ├── doc.ts      outline / style / globalSummary / character / lore（纯文本 + frontmatter）
-│   └── plain.ts    other / draft（纯文本，无记账）
+│   ├── doc.ts      outline / style / globalSummary / character / lore（純文字 + frontmatter）
+│   └── plain.ts    other / draft（純文字，無記賬）
 └── README.md
 ```
 
-搬空之后：
+搬空之後：
 
-- `model/project.ts` 只剩**领域查询**（`listPlots` / `getPlot` / `nextPlotNo` / `listChapters` / `listScenes` / `readPlot` / `readScene` / `readManuscript` / `readSummary` / `syncManifest` / 路径推导 getter…）与 `initialize`。写方法（`writePlot` / `writeScene` / `deletePlot` / `appendToManuscript` / `splitManuscript` / `writeCharacter` / `writeLore` / `writeSummary` / `writeStyleGuide` / `writeGlobalSummary` / `createChapter` / `ensureDraft`）全部搬走。
-- `files/fileOps.ts`、`files/projectFiles.ts`、`files/fileEditing.ts` 的**守卫部分**搬进 `guard.ts`，只留各自的交互流程（弹输入框、拼 toast 文案）。
-- `features/creation.ts` 的 `acceptArtifact` 六条分支变成六次 `workspace.write(path, {artifact})`。
+- `model/project.ts` 只剩**領域查詢**（`listPlots` / `getPlot` / `nextPlotNo` / `listChapters` / `listScenes` / `readPlot` / `readScene` / `readManuscript` / `readSummary` / `syncManifest` / 路徑推導 getter…）與 `initialize`。寫方法（`writePlot` / `writeScene` / `deletePlot` / `appendToManuscript` / `splitManuscript` / `writeCharacter` / `writeLore` / `writeSummary` / `writeStyleGuide` / `writeGlobalSummary` / `createChapter` / `ensureDraft`）全部搬走。
+- `files/fileOps.ts`、`files/projectFiles.ts`、`files/fileEditing.ts` 的**守衛部分**搬進 `guard.ts`，只留各自的互動流程（彈輸入框、拼 toast 文案）。
+- `features/creation.ts` 的 `acceptArtifact` 六條分支變成六次 `workspace.write(path, {artifact})`。
 
-## 提交节奏（8 个 commit）
+## 提交節奏（8 個 commit）
 
-| # | 前缀 | 主题 |
+| # | 字首 | 主題 |
 |---|---|---|
-| 1 | `refactor` | 抽出 `workspace/kind.ts`（纯函数种类表） |
-| 2 | `refactor` | 抽出 `workspace/guard.ts`（统一守卫） |
-| 3 | `refactor` | `Workspace` 门面 + `plain` / `doc` handler |
-| 4 | `refactor` | plot / scene handler，记账下沉 |
+| 1 | `refactor` | 抽出 `workspace/kind.ts`（純函式種類表） |
+| 2 | `refactor` | 抽出 `workspace/guard.ts`（統一守衛） |
+| 3 | `refactor` | `Workspace` 門面 + `plain` / `doc` handler |
+| 4 | `refactor` | plot / scene handler，記賬下沉 |
 | 5 | `refactor` | manuscript / chapter / summary handler |
-| 6 | `refactor` | `acceptArtifact` 六条分支改走网关 |
-| 7 | `refactor` | 文件页 / 内置编辑器 / fileOps 改走网关 |
+| 6 | `refactor` | `acceptArtifact` 六條分支改走閘道器 |
+| 7 | `refactor` | 檔案頁 / 內建編輯器 / fileOps 改走閘道器 |
 | 8 | `feat` | `workspace/search.ts` |
 
 ---
@@ -72,15 +72,15 @@ src/core/workspace/
 - Create: `src/core/workspace/kind.ts`
 - Create: `tests/unit/workspace/kind.test.js`
 
-这是整期的地基：**纯函数、零 I/O、绝不抛**。判定逻辑现在散在四处，本 Task 把它们合成一处并**逐字保留口径**：
+這是整期的地基：**純函式、零 I/O、絕不拋**。判定邏輯現在散在四處，本 Task 把它們合成一處並**逐字保留口徑**：
 
-| 现有判定 | 位置 | 搬进 `kind.ts` 后 |
+| 現有判定 | 位置 | 搬進 `kind.ts` 後 |
 |---|---|---|
-| 章节文件名规则（数字前缀 + 扩展名不在黑名单） | `model/chapterFile.ts` 的 `isChapterFileName` | **继续 import 它**，不复制 |
-| 细纲文件名 | `model/plotFile.ts` 的 `parsePlotFileName` | 继续 import |
-| 场景文件名 | `model/sceneFile.ts` 的 `parseSceneFileName` | 继续 import |
-| 区归属 | `files/fileOps.ts` 的 `sectionOf` | `kindOfPath` 内部用同一套前缀比较 |
-| `plots/` 路径判定 | `files/fileOps.ts` 的 `isPlotPath` | 合进来，原处改为转发 |
+| 章節檔名規則（數字字首 + 副檔名不在黑名單） | `model/chapterFile.ts` 的 `isChapterFileName` | **繼續 import 它**，不復制 |
+| 細綱檔名 | `model/plotFile.ts` 的 `parsePlotFileName` | 繼續 import |
+| 場景檔名 | `model/sceneFile.ts` 的 `parseSceneFileName` | 繼續 import |
+| 區歸屬 | `files/fileOps.ts` 的 `sectionOf` | `kindOfPath` 內部用同一套字首比較 |
+| `plots/` 路徑判定 | `files/fileOps.ts` 的 `isPlotPath` | 合進來，原處改為轉發 |
 
 **Interfaces:**
 
@@ -94,46 +94,46 @@ export type ArtifactKind =
 
 export interface PathKind {
   kind: ArtifactKind;
-  /** 规范化后的相对路径（正斜杠）。越界时是 undefined，此时 kind 恒为 'other'。 */
+  /** 規範化後的相對路徑（正斜槓）。越界時是 undefined，此時 kind 恆為 'other'。 */
   rel?: string;
-  /** 该路径对应的创作层。非创作产物为 undefined。 */
+  /** 該路徑對應的創作層。非創作產物為 undefined。 */
   stage?: CreationStage;
-  /** 该路径对应的创作目标，供 generate 直接用。 */
+  /** 該路徑對應的創作目標，供 generate 直接用。 */
   target?: CreationTarget;
   no?: number;
   sceneNo?: number;
-  /** scene / manuscript / summary 这类镜像产物所属的细纲路径。 */
+  /** scene / manuscript / summary 這類映象產物所屬的細綱路徑。 */
   plotRelPath?: string;
 }
 
 export function kindOfPath(project: NovelProject, relPath: string): PathKind;
 
-/** 反过来：这个创作目标该落在哪个路径。`acceptArtifact` 用它。 */
+/** 反過來：這個創作目標該落在哪個路徑。`acceptArtifact` 用它。 */
 export function pathOfTarget(project: NovelProject, target: CreationTarget): string;
 ```
 
-**三条必须写进注释的取舍：**
+**三條必須寫進註釋的取捨：**
 
-1. **`scene` 的 `plotRelPath` 要从镜像目录名反推**。`scenes/012-入宗/02-翻越侧峰.md` → 细纲是 `plots/012-入宗.md`。反推靠 `project.plotStem` 的逆运算；找不到对应细纲文件时**仍然返回 `kind: 'scene'`**（文件确实在那儿），只是 `plotRelPath` 指向那个应该存在的位置。
-2. **`chapter` 与 `other` 的边界**：章节根之下、数字前缀、扩展名不在二进制黑名单 → `chapter`；否则 `other`。**不看是不是 `.md`**（第 9 条：章节不认扩展名）。
-3. **越界一律 `other` 且 `rel: undefined`**，不抛。这个函数会被前端传上来的路径调用。
+1. **`scene` 的 `plotRelPath` 要從映象目錄名反推**。`scenes/012-入宗/02-翻越侧峰.md` → 細綱是 `plots/012-入宗.md`。反推靠 `project.plotStem` 的逆運算；找不到對應細綱檔案時**仍然返回 `kind: 'scene'`**（檔案確實在那兒），只是 `plotRelPath` 指向那個應該存在的位置。
+2. **`chapter` 與 `other` 的邊界**：章節根之下、數字字首、副檔名不在二進位制黑名單 → `chapter`；否則 `other`。**不看是不是 `.md`**（第 9 條：章節不認副檔名）。
+3. **越界一律 `other` 且 `rel: undefined`**，不拋。這個函式會被前端傳上來的路徑呼叫。
 
-- [ ] **Step 1: 写失败测试** `tests/unit/workspace/kind.test.js`
+- [ ] **Step 1: 寫失敗測試** `tests/unit/workspace/kind.test.js`
 
-用例矩阵（至少这些）：
+用例矩陣（至少這些）：
 
-| 输入 | 期望 kind | 期望其余字段 |
+| 輸入 | 期望 kind | 期望其餘欄位 |
 |---|---|---|
 | `.novelforge/outline.md` | `outline` | `stage: 'outline'`, `target: {kind:'outline'}` |
 | `.novelforge/plots/012-入宗.md` | `plot` | `no: 12`, `stage: 'plot'` |
-| `.novelforge/plots/012.md`（无标题） | `plot` | `no: 12` |
+| `.novelforge/plots/012.md`（無標題） | `plot` | `no: 12` |
 | `.novelforge/scenes/012-入宗/02-翻越侧峰.md` | `scene` | `no: 12`, `sceneNo: 2`, `plotRelPath: '.novelforge/plots/012-入宗.md'` |
 | `.novelforge/manuscripts/012-入宗.md` | `manuscript` | `no: 12` |
 | `chapters/012-入宗.md` | `chapter` | `no: 12` |
-| `chapters/012-楔子`（无扩展名） | `chapter` | `no: 12` |
-| `chapters/第一卷/013-夜访.txt` | `chapter` | `no: 13`（层级只是收纳，第 8 条） |
+| `chapters/012-楔子`（無副檔名） | `chapter` | `no: 12` |
+| `chapters/第一卷/013-夜访.txt` | `chapter` | `no: 13`（層級只是收納，第 8 條） |
 | `chapters/cover.png` | `other` | — |
-| `chapters/说明.md`（无数字前缀） | `other` | — |
+| `chapters/说明.md`（無數字字首） | `other` | — |
 | `.novelforge/summaries/012-入宗.md` | `summary` | `no: 12` |
 | `.novelforge/characters/林昭.md` | `character` | — |
 | `.novelforge/lore/青云宗.md` | `lore` | — |
@@ -143,17 +143,17 @@ export function pathOfTarget(project: NovelProject, target: CreationTarget): str
 | `C:\Windows` | `other` | `rel: undefined` |
 | `` （空串） | `other` | `rel: undefined` |
 
-外加 `pathOfTarget` 的四支往返测试（`outline` / `plot` / `scene` / `manuscript`），断言 `kindOfPath(pathOfTarget(t)).target` 与 `t` 相等。
+外加 `pathOfTarget` 的四支往返測試（`outline` / `plot` / `scene` / `manuscript`），斷言 `kindOfPath(pathOfTarget(t)).target` 與 `t` 相等。
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: 跑測試確認失敗**
 
 ```bash
 node --test "tests/unit/workspace/kind.test.js"
 ```
 
-- [ ] **Step 3: 实现 `kind.ts`**
-- [ ] **Step 4: 把 `files/fileOps.ts` 的 `isPlotPath` 改成转发给 `kindOfPath`**（保留导出名，调用方不动）
-- [ ] **Step 5: 跑测试**
+- [ ] **Step 3: 實現 `kind.ts`**
+- [ ] **Step 4: 把 `files/fileOps.ts` 的 `isPlotPath` 改成轉發給 `kindOfPath`**（保留匯出名，呼叫方不動）
+- [ ] **Step 5: 跑測試**
 
 ```bash
 node --test "tests/unit/workspace/kind.test.js"
@@ -164,9 +164,9 @@ npm test
 - [ ] **Step 6: Commit**
 
 ```bash
-git commit -m "refactor(workspace): 抽出路径种类表
+git commit -m "refactor(workspace): 抽出路徑種類表
 
-细纲/场景/章节/摘要的路径判定散在四处，各自认一半。收成 kindOfPath 一张表，纯函数零 I/O 绝不抛——它会被前端传上来的路径调用。"
+細綱/場景/章節/摘要的路徑判定散在四處，各自認一半。收成 kindOfPath 一張表，純函式零 I/O 絕不拋——它會被前端傳上來的路徑呼叫。"
 ```
 
 ---
@@ -177,18 +177,18 @@ git commit -m "refactor(workspace): 抽出路径种类表
 - Create: `src/core/workspace/guard.ts`
 - Create: `tests/unit/workspace/guard.test.js`
 
-把六处各自的检查合并成一份。**八条守卫，一条都不能少**：
+把六處各自的檢查合併成一份。**八條守衛，一條都不能少**：
 
-| # | 守卫 | 现在在哪 | 触发时怎么办 |
+| # | 守衛 | 現在在哪 | 觸發時怎麼辦 |
 |---|---|---|---|
-| 1 | 路径规范化（拒绝绝对路径、`..`、空串） | `fileOps.normalizeRel` | 抛 `WsError('越界')` |
-| 2 | 工程根包含检查 | `fileEditing.resolveInRoot` | 抛 `WsError('越界')` |
-| 3 | 固定目录保护（改名/删除） | `fileOps.isProtectedPath` | 抛 `WsError('受保护')` |
-| 4 | `.trash/` 内容不可操作 | `projectFiles` | 抛 `WsError('回收站')` |
-| 5 | 读取大小上限（2MB） | `fileEditing.MAX_EDITABLE_BYTES` | 抛 `WsError('过大')` |
-| 6 | 同名不覆盖（`mode: 'create'`） | `fileOps` / `projectFiles` 各一份 | 抛 `WsError('已存在')` |
-| 7 | 覆盖前审阅（`reviewReplace` 或确认框） | `creation.confirmOverwrite` | 用户拒绝 → 返回 `{skipped: true}` |
-| 8 | 内容 hash 乐观锁 | `fileEditing.saveFromEditor` | 抛 `WsConflictError(diskText, diskHash)` |
+| 1 | 路徑規範化（拒絕絕對路徑、`..`、空串） | `fileOps.normalizeRel` | 拋 `WsError('越界')` |
+| 2 | 工程根包含檢查 | `fileEditing.resolveInRoot` | 拋 `WsError('越界')` |
+| 3 | 固定目錄保護（改名/刪除） | `fileOps.isProtectedPath` | 拋 `WsError('受保護')` |
+| 4 | `.trash/` 內容不可操作 | `projectFiles` | 拋 `WsError('回收站')` |
+| 5 | 讀取大小上限（2MB） | `fileEditing.MAX_EDITABLE_BYTES` | 拋 `WsError('過大')` |
+| 6 | 同名不覆蓋（`mode: 'create'`） | `fileOps` / `projectFiles` 各一份 | 拋 `WsError('已存在')` |
+| 7 | 覆蓋前審閱（`reviewReplace` 或確認框） | `creation.confirmOverwrite` | 使用者拒絕 → 返回 `{skipped: true}` |
+| 8 | 內容 hash 樂觀鎖 | `fileEditing.saveFromEditor` | 拋 `WsConflictError(diskText, diskHash)` |
 
 **Interfaces:**
 
@@ -204,42 +204,42 @@ export class WsConflictError extends WsError {
   constructor(readonly diskText: string, readonly diskHash: string) { … }
 }
 
-/** 读之前过一遍：返回绝对路径。 */
+/** 讀之前過一遍：返回絕對路徑。 */
 export async function guardRead(project: NovelProject, relPath: string): Promise<string>;
 
-/** 写之前过一遍。返回绝对路径与「目标是否已存在」。 */
+/** 寫之前過一遍。返回絕對路徑與「目標是否已存在」。 */
 export async function guardWrite(
   project: NovelProject,
   relPath: string,
   opts: { mode: 'create' | 'overwrite' | 'append'; baseHash?: string }
 ): Promise<{ abs: string; existed: boolean; current?: string }>;
 
-/** 改名/移动/删除之前过一遍（多两条：保护路径、回收站）。 */
+/** 改名/移動/刪除之前過一遍（多兩條：保護路徑、回收站）。 */
 export async function guardMutate(project: NovelProject, relPath: string): Promise<string>;
 
 /**
- * 覆盖前审阅。有 reviewReplace 的宿主开 diff，没有的弹确认框。
- * 逐字搬自 features/creation.ts 的 confirmOverwrite——那段文案是产品承诺的一部分。
+ * 覆蓋前審閱。有 reviewReplace 的宿主開 diff，沒有的彈確認框。
+ * 逐字搬自 features/creation.ts 的 confirmOverwrite——那段文案是產品承諾的一部分。
  */
 export async function reviewOverwrite(
   what: string, relPath: string, current: string, next: string
 ): Promise<boolean>;
 ```
 
-**注意**：`reviewOverwrite` 里的确认框文案（`「${what}」已经有内容了，用新版本覆盖？`、`现有 N 字，新版 M 字`）**逐字搬**，不要改措辞。
+**注意**：`reviewOverwrite` 裡的確認框文案（`「${what}」已經有內容了，用新版本覆蓋？`、`現有 N 字，新版 M 字`）**逐字搬**，不要改措辭。
 
-- [ ] **Step 1: 写失败测试** `tests/unit/workspace/guard.test.js`
+- [ ] **Step 1: 寫失敗測試** `tests/unit/workspace/guard.test.js`
 
-八条守卫各至少一条用例。第 7、8 条需要假 Host（`tests/helpers/` 里已有类似的，照抄）。
+八條守衛各至少一條用例。第 7、8 條需要假 Host（`tests/helpers/` 裡已有類似的，照抄）。
 
-- [ ] **Step 2: 跑测试确认失败**
-- [ ] **Step 3: 实现 `guard.ts`**
-- [ ] **Step 4: 跑测试 + `npm test`**
+- [ ] **Step 2: 跑測試確認失敗**
+- [ ] **Step 3: 實現 `guard.ts`**
+- [ ] **Step 4: 跑測試 + `npm test`**
 - [ ] **Step 5: Commit**
 
 ---
 
-### Task 3: `Workspace` 门面 + `plain` / `doc` handler
+### Task 3: `Workspace` 門面 + `plain` / `doc` handler
 
 **Files:**
 - Create: `src/core/workspace/index.ts`
@@ -256,7 +256,7 @@ export interface WsEntry {
   rel: string;
   type: 'file' | 'dir';
   kind: ArtifactKind;
-  /** 文本文件给字数，其余给字节数。 */
+  /** 文字檔案給字數，其餘給位元組數。 */
   words?: number;
   bytes: number;
 }
@@ -267,7 +267,7 @@ export interface WsFile {
   hash: string;
   bytes: number;
   kind: ArtifactKind;
-  /** 按 offset/limit 截过。**必须说出来**（第 2 条：不静默截断）。 */
+  /** 按 offset/limit 截過。**必須說出來**（第 2 條：不靜默截斷）。 */
   truncated?: { from: number; total: number };
 }
 
@@ -275,10 +275,10 @@ export type WriteInput = { text: string } | { artifact: Artifact };
 
 export interface WriteOptions {
   mode?: 'create' | 'overwrite' | 'append';
-  /** 覆盖前是否审阅。缺省 true。**agent 路径不允许传 false。** */
+  /** 覆蓋前是否審閱。預設 true。**agent 路徑不允許傳 false。** */
   review?: boolean;
   baseHash?: string;
-  /** 覆盖审阅框里显示的名字，如「第 12 章的细纲」。 */
+  /** 覆蓋審閱框裡顯示的名字，如「第 12 章的細綱」。 */
   what?: string;
 }
 
@@ -286,16 +286,16 @@ export interface WriteResult {
   rel: string;
   skipped?: boolean;
   message: string;
-  /** 这次写入连带做了什么（记了哪个 hash、搬了哪个伴生目录）。进日志用。 */
+  /** 這次寫入連帶做了什麼（記了哪個 hash、搬了哪個伴生目錄）。進日誌用。 */
   side?: string[];
 }
 
 export interface Handler {
-  /** 把结构化产物渲染成该种类的文件内容。 */
+  /** 把結構化產物渲染成該種類的檔案內容。 */
   render?(ctx: HandlerCtx, artifact: Artifact): Promise<string>;
-  /** 写入之后的记账与伴生动作。 */
+  /** 寫入之後的記賬與伴生動作。 */
   after?(ctx: HandlerCtx, result: WriteResult): Promise<void>;
-  /** 改名/移动时要连带搬走什么。 */
+  /** 改名/移動時要連帶搬走什麼。 */
   companions?(ctx: HandlerCtx, from: string, to: string): Promise<void>;
 }
 
@@ -310,105 +310,105 @@ export class Workspace {
 }
 ```
 
-本 Task 只接两个最简单的 handler：
+本 Task 只接兩個最簡單的 handler：
 
-- `plain`（`other` / `draft`）：纯文本进出，无记账。
-- `doc`（`outline` / `style` / `globalSummary` / `character` / `lore`）：纯文本 + frontmatter，无上游指纹。
+- `plain`（`other` / `draft`）：純文字進出，無記賬。
+- `doc`（`outline` / `style` / `globalSummary` / `character` / `lore`）：純文字 + frontmatter，無上游指紋。
 
-其余种类先落到 `plain`，Task 4/5 逐个接上。
+其餘種類先落到 `plain`，Task 4/5 逐個接上。
 
-**`remove` 必须搬进 `.trash/` 并保留原相对路径**（第 6 条），逐字复用 `project.trash` 的实现。
+**`remove` 必須搬進 `.trash/` 並保留原相對路徑**（第 6 條），逐字複用 `project.trash` 的實現。
 
-- [ ] **Step 1: 写失败测试** `tests/integration/workspace/basic.test.js`
+- [ ] **Step 1: 寫失敗測試** `tests/integration/workspace/basic.test.js`
 
-用真临时工程（`tests/helpers/` 里有现成的 fixture 工具）。至少覆盖：
+用真臨時工程（`tests/helpers/` 裡有現成的 fixture 工具）。至少覆蓋：
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| `write` 新文件 | 落盘，`mode: 'create'` |
-| `write` 同名 + `mode: 'create'` | 抛 `WsError('exists')` |
-| `write` 同名 + `mode: 'overwrite'` + 假 Host 同意 | 覆盖 |
-| `write` 同名 + `mode: 'overwrite'` + 假 Host 拒绝 | `{skipped: true}`，磁盘一字未改 |
-| `write` + `baseHash` 对不上 | 抛 `WsConflictError` |
-| `read` 超 offset/limit | `truncated` 字段说明截了多少 |
-| `remove` | 文件进 `.trash/` 且保留原相对路径 |
-| `remove` 受保护路径 | 抛 `WsError('protected')` |
-| `edit` old 不唯一 + `all: false` | 抛，不改 |
-| `list` 目录 | 条目带 `kind` |
+| `write` 新檔案 | 落盤，`mode: 'create'` |
+| `write` 同名 + `mode: 'create'` | 拋 `WsError('exists')` |
+| `write` 同名 + `mode: 'overwrite'` + 假 Host 同意 | 覆蓋 |
+| `write` 同名 + `mode: 'overwrite'` + 假 Host 拒絕 | `{skipped: true}`，磁碟一字未改 |
+| `write` + `baseHash` 對不上 | 拋 `WsConflictError` |
+| `read` 超 offset/limit | `truncated` 欄位說明截了多少 |
+| `remove` | 檔案進 `.trash/` 且保留原相對路徑 |
+| `remove` 受保護路徑 | 拋 `WsError('protected')` |
+| `edit` old 不唯一 + `all: false` | 拋，不改 |
+| `list` 目錄 | 條目帶 `kind` |
 
-- [ ] **Step 2: 跑测试确认失败**
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 跑测试 + `npm test`**
-- [ ] **Step 5: 写 `src/core/workspace/README.md`**（八条守卫表 + 种类表 + 「新代码不许绕过 guard 直接 fs.writeFile」）
+- [ ] **Step 2: 跑測試確認失敗**
+- [ ] **Step 3: 實現**
+- [ ] **Step 4: 跑測試 + `npm test`**
+- [ ] **Step 5: 寫 `src/core/workspace/README.md`**（八條守衛表 + 種類表 + 「新程式碼不許繞過 guard 直接 fs.writeFile」）
 - [ ] **Step 6: Commit**
 
 ---
 
-### Task 4: plot / scene handler，**记账下沉**
+### Task 4: plot / scene handler，**記賬下沉**
 
 **Files:**
 - Create: `src/core/workspace/handlers/plot.ts`
 - Create: `src/core/workspace/handlers/scene.ts`
-- Modify: `src/core/model/project.ts`（删 `writePlot` / `deletePlot` / `carryPlotCompanions` / `writeScene` / `deleteScene`）
-- Modify: 所有调用上述方法的地方
+- Modify: `src/core/model/project.ts`（刪 `writePlot` / `deletePlot` / `carryPlotCompanions` / `writeScene` / `deleteScene`）
+- Modify: 所有呼叫上述方法的地方
 - Create: `tests/integration/workspace/hashChain.test.js`
 
-**这是本期唯一有意的行为变化。** 现在 `upstreamHash` 只在 `features/creation.ts` 的 `acceptPlot` / `acceptSceneList` / `acceptScene` 里记；下沉之后，**任何一次 `workspace.write` 到 plot/scene 路径都记**。
+**這是本期唯一有意的行為變化。** 現在 `upstreamHash` 只在 `features/creation.ts` 的 `acceptPlot` / `acceptSceneList` / `acceptScene` 裡記；下沉之後，**任何一次 `workspace.write` 到 plot/scene 路徑都記**。
 
 `plot` handler：
 
 ```ts
-// render: Artifact{kind:'plot'} → renderPlotFile，四个小节换新，
-//         标题/幕/目标字数/done 沿用磁盘那份（「重写剧情」不该抹掉作者起的标题）
+// render: Artifact{kind:'plot'} → renderPlotFile，四個小節換新，
+//         標題/幕/目標字數/done 沿用磁碟那份（「重寫劇情」不該抹掉作者起的標題）
 // after:  upstreamHash = hash(await project.readOutline())
-// companions: 改名时搬 scenes/<stem>/ 与 manuscripts/<stem>.md（原 carryPlotCompanions）
+// companions: 改名時搬 scenes/<stem>/ 與 manuscripts/<stem>.md（原 carryPlotCompanions）
 ```
 
 `scene` handler：
 
 ```ts
 // render: Artifact{kind:'scene'} → renderSceneFile，
-//         标题沿用磁盘那份（标题决定文件名，改写一张卡不该顺手改文件名）
-//         status 由 isSceneReady(sections) 推，不靠调用方传
+//         標題沿用磁碟那份（標題決定檔名，改寫一張卡不該順手改檔名）
+//         status 由 isSceneReady(sections) 推，不靠呼叫方傳
 // after:  upstreamHash = plotContentHash(plot)
-// companions: 改标题时清掉旧文件名（原 writeScene 的行为）
+// companions: 改標題時清掉舊檔名（原 writeScene 的行為）
 ```
 
-**四条不能碰的既有取舍**（逐条在代码注释里保留原文）：
+**四條不能碰的既有取捨**（逐條在程式碼註釋裡保留原文）：
 
-1. `plotContentHash` 只哈希四个小节、不含 frontmatter（第 18b 条）
-2. `beatsHashFor` 排除场景的 `status`（同上）
-3. 手写的产物永不标脏——`upstreamHash` 为空就是「不是这条链生出来的」（第 18a 条）
-4. 删细纲要连带搬走场景目录与中转站正文，**但不碰 `chapters/` 与摘要**
+1. `plotContentHash` 只雜湊四個小節、不含 frontmatter（第 18b 條）
+2. `beatsHashFor` 排除場景的 `status`（同上）
+3. 手寫的產物永不標髒——`upstreamHash` 為空就是「不是這條鏈生出來的」（第 18a 條）
+4. 刪細綱要連帶搬走場景目錄與中轉站正文，**但不碰 `chapters/` 與摘要**
 
-- [ ] **Step 1: 写失败测试** `tests/integration/workspace/hashChain.test.js`
+- [ ] **Step 1: 寫失敗測試** `tests/integration/workspace/hashChain.test.js`
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| `write` 一份细纲 | frontmatter 里有 `upstreamHash = hash(outline)` |
-| **改大纲后再 `write` 细纲** | `upstreamHash` 跟着更新（**这是修的那个缺陷**） |
-| **不经采纳路径直接 `write` 细纲文本** | 一样记 `upstreamHash`（缺陷修复的核心断言） |
-| `write` 场景 | `upstreamHash = plotContentHash(plot)` |
-| 把细纲标 `done` | 场景**不**标脏（哈希不含 status） |
-| 细纲改名 | 场景目录与中转站正文跟着搬 |
-| 细纲改名到已存在的目标 | 不覆盖，伴生不动 |
-| 删细纲 | 细纲/场景/中转站进 `.trash`，`chapters/` 与摘要不动 |
+| `write` 一份細綱 | frontmatter 裡有 `upstreamHash = hash(outline)` |
+| **改大綱後再 `write` 細綱** | `upstreamHash` 跟著更新（**這是修的那個缺陷**） |
+| **不經採納路徑直接 `write` 細綱文字** | 一樣記 `upstreamHash`（缺陷修復的核心斷言） |
+| `write` 場景 | `upstreamHash = plotContentHash(plot)` |
+| 把細綱標 `done` | 場景**不**標髒（雜湊不含 status） |
+| 細綱改名 | 場景目錄與中轉站正文跟著搬 |
+| 細綱改名到已存在的目標 | 不覆蓋，伴生不動 |
+| 刪細綱 | 細綱/場景/中轉站進 `.trash`，`chapters/` 與摘要不動 |
 
-- [ ] **Step 2: 跑测试确认失败**
-- [ ] **Step 3: 实现两个 handler，从 `project.ts` 搬走五个方法**
-- [ ] **Step 4: 改所有调用点**
+- [ ] **Step 2: 跑測試確認失敗**
+- [ ] **Step 3: 實現兩個 handler，從 `project.ts` 搬走五個方法**
+- [ ] **Step 4: 改所有呼叫點**
 
 ```bash
 grep -rn "writePlot\|deletePlot\|writeScene\|deleteScene" src/ tests/
 ```
 
-- [ ] **Step 5: 跑测试 + `npm test`**
+- [ ] **Step 5: 跑測試 + `npm test`**
 - [ ] **Step 6: Commit**
 
 ```bash
-git commit -m "refactor(workspace): plot/scene handler，记账下沉
+git commit -m "refactor(workspace): plot/scene handler，記賬下沉
 
-upstreamHash 从前只在「采纳」路径上记，作者在内置编辑器里改一份细纲，指纹链就断了——那一章从此再也不挂 ⟳。下沉到写入路径本身，谁写都记。"
+upstreamHash 從前只在「採納」路徑上記，作者在內建編輯器裡改一份細綱，指紋鏈就斷了——那一章從此再也不掛 ⟳。下沉到寫入路徑本身，誰寫都記。"
 ```
 
 ---
@@ -419,68 +419,68 @@ upstreamHash 从前只在「采纳」路径上记，作者在内置编辑器里�
 - Create: `src/core/workspace/handlers/manuscript.ts`
 - Create: `src/core/workspace/handlers/chapter.ts`
 - Create: `src/core/workspace/handlers/summary.ts`
-- Modify: `src/core/model/project.ts`（删 `appendToManuscript` / `createChapter` / `writeSummary` / `markSummarized` / `ensureDraft` 的写入部分）
-- Modify: `src/core/features/splitChapter.ts`（改走网关）
-- Modify: 调用点
+- Modify: `src/core/model/project.ts`（刪 `appendToManuscript` / `createChapter` / `writeSummary` / `markSummarized` / `ensureDraft` 的寫入部分）
+- Modify: `src/core/features/splitChapter.ts`（改走閘道器）
+- Modify: 呼叫點
 
 `manuscript` handler：
 
-- `mode: 'append'` 是**默认**（正文是追加不是覆盖）
-- 首次写入建 frontmatter + `# 第N章… · 正文` 标题行
-- 两次追加之间插一行 `---`（默认拆分候选点，第 23 条）
-- `after`：记 `beatsHash = await project.beatsHashFor(plotRelPath)`
-- `contentHash` 只哈希正文本身，不含 frontmatter 与标题行
+- `mode: 'append'` 是**預設**（正文是追加不是覆蓋）
+- 首次寫入建 frontmatter + `# 第N章… · 正文` 標題行
+- 兩次追加之間插一行 `---`（預設拆分候選點，第 23 條）
+- `after`：記 `beatsHash = await project.beatsHashFor(plotRelPath)`
+- `contentHash` 只雜湊正文字身，不含 frontmatter 與標題行
 
 `chapter` handler：
 
-- 改名/移动时草稿跟随（原 `fileOps.carryDraft`）
-- 删章节**不删草稿**（第 10 条，确认框里说明）
+- 改名/移動時草稿跟隨（原 `fileOps.carryDraft`）
+- 刪章節**不刪草稿**（第 10 條，確認框裡說明）
 - `after`：`syncManifest`
 
-`summary` handler：`sourceHash` 记的是**成品**的 `contentHash`。
+`summary` handler：`sourceHash` 記的是**成品**的 `contentHash`。
 
-**`splitChapter.ts` 的顺序不能改**：先移号再落盘（第 23 条）。反过来的话，落盘后重编号失败会留下「章节已建但细纲还撞着号」的中间态。
+**`splitChapter.ts` 的順序不能改**：先移號再落盤（第 23 條）。反過來的話，落盤後重編號失敗會留下「章節已建但細綱還撞著號」的中間態。
 
-- [ ] **Step 1: 写失败测试**（扩充 `hashChain.test.js`，加一个 `tests/integration/workspace/split.test.js`）
+- [ ] **Step 1: 寫失敗測試**（擴充 `hashChain.test.js`，加一個 `tests/integration/workspace/split.test.js`）
 - [ ] **Step 2–5: 同上**
 
 ---
 
-### Task 6: `acceptArtifact` 六条分支改走网关
+### Task 6: `acceptArtifact` 六條分支改走閘道器
 
 **Files:**
-- Modify: `src/core/features/creation.ts`（`acceptArtifact` 及其六个私有方法、`confirmOverwrite` 删掉）
-- Modify: `tests/integration/features/*`（涉及采纳的）
+- Modify: `src/core/features/creation.ts`（`acceptArtifact` 及其六個私有方法、`confirmOverwrite` 刪掉）
+- Modify: `tests/integration/features/*`（涉及採納的）
 
-六条分支各变成一次 `workspace.write`：
+六條分支各變成一次 `workspace.write`：
 
 | 分支 | 改成 |
 |---|---|
-| `acceptOutline` | `ws.write(outlinePath, {artifact}, {mode:'overwrite', what:'全书大纲'})` |
-| `acceptPlotList` | 循环 `ws.write(plotPathForNo(no), {artifact}, {mode:'create'})`，**已存在的跳过并在 message 里说出来** |
-| `acceptPlot` | `ws.write(plot.relPath, {artifact}, {mode:'overwrite', what:'第 N 章的细纲'})` |
-| `acceptSceneList` | 循环 `ws.write(scenePath, …, {mode:'create'})`，已存在的跳过 |
-| `acceptScene` | `ws.write(scenePath, {artifact}, {mode:'overwrite', what:'第 N 章 · 场景 M'})` |
+| `acceptOutline` | `ws.write(outlinePath, {artifact}, {mode:'overwrite', what:'全書大綱'})` |
+| `acceptPlotList` | 迴圈 `ws.write(plotPathForNo(no), {artifact}, {mode:'create'})`，**已存在的跳過並在 message 裡說出來** |
+| `acceptPlot` | `ws.write(plot.relPath, {artifact}, {mode:'overwrite', what:'第 N 章的細綱'})` |
+| `acceptSceneList` | 迴圈 `ws.write(scenePath, …, {mode:'create'})`，已存在的跳過 |
+| `acceptScene` | `ws.write(scenePath, {artifact}, {mode:'overwrite', what:'第 N 章 · 場景 M'})` |
 | `acceptManuscript` | `ws.write(manuscriptPath, {artifact}, {mode:'append'})` |
 
-**「跳过已存在」的文案必须保留**（`，跳过已存在的第 3、5 章`）——默默少建三章，作者要到写到那里才发现。
+**「跳過已存在」的文案必須保留**（`，跳過已存在的第 3、5 章`）——默默少建三章，作者要到寫到那裡才發現。
 
-`confirmOverwrite` 整个删掉，它的实现已经在 `guard.reviewOverwrite` 里。
+`confirmOverwrite` 整個刪掉，它的實現已經在 `guard.reviewOverwrite` 裡。
 
-- [ ] **Step 1–5: 同上**。这一步的验收是既有的采纳集成测试**一条都不改**还能全绿。
+- [ ] **Step 1–5: 同上**。這一步的驗收是既有的採納整合測試**一條都不改**還能全綠。
 
 ---
 
-### Task 7: 文件页 / 内置编辑器 / fileOps 改走网关
+### Task 7: 檔案頁 / 內建編輯器 / fileOps 改走閘道器
 
 **Files:**
-- Modify: `src/core/files/fileEditing.ts`（`readFileForEditor` / `saveFromEditor` 改成 `ws.read` / `ws.write`，只留 `EditorFile` 的形状转换）
+- Modify: `src/core/files/fileEditing.ts`（`readFileForEditor` / `saveFromEditor` 改成 `ws.read` / `ws.write`，只留 `EditorFile` 的形狀轉換）
 - Modify: `src/core/files/projectFiles.ts`（`renameAny` / `moveInto` / `copyInto` 改走 `ws.move`）
-- Modify: `src/core/files/fileOps.ts`（`renameEntry` / `moveEntry` / `deleteEntry` 改走 `ws.move` / `ws.remove`，只留区界限判断与交互流程）
+- Modify: `src/core/files/fileOps.ts`（`renameEntry` / `moveEntry` / `deleteEntry` 改走 `ws.move` / `ws.remove`，只留區界限判斷與互動流程）
 
-**注意区界限**：`fileOps` 的三区约束（章节挪不进角色目录）是**工程页的产品承诺**，比 `guard` 的工程根约束更严。这一层保留在 `fileOps` 里，先判区再调网关。
+**注意區界限**：`fileOps` 的三區約束（章節挪不進角色目錄）是**工程頁的產品承諾**，比 `guard` 的工程根約束更嚴。這一層保留在 `fileOps` 裡，先判區再調閘道器。
 
-- [ ] **Step 1–5: 同上**。验收是 `tests/integration/files/*` 与 `tests/dom/standalone/*` 全绿。
+- [ ] **Step 1–5: 同上**。驗收是 `tests/integration/files/*` 與 `tests/dom/standalone/*` 全綠。
 
 ---
 
@@ -490,21 +490,21 @@ upstreamHash 从前只在「采纳」路径上记，作者在内置编辑器里�
 - Create: `src/core/workspace/search.ts`
 - Create: `tests/integration/workspace/search.test.js`
 
-本期唯一的新代码。**零模型调用的朴素全文扫描**，三期的 `search` 工具吃它。
+本期唯一的新程式碼。**零模型呼叫的樸素全文掃描**，三期的 `search` 工具吃它。
 
 ```ts
 export interface SearchOptions {
-  /** 限定目录，缺省全工程。 */
+  /** 限定目錄，預設全工程。 */
   path?: string;
-  /** 限定种类，如 ['chapter','summary']。 */
+  /** 限定種類，如 ['chapter','summary']。 */
   kinds?: ArtifactKind[];
-  /** 正则还是字面量。缺省字面量（作者搜的是人名地名，不是正则）。 */
+  /** 正則還是字面量。預設字面量（作者搜的是人名地名，不是正則）。 */
   regex?: boolean;
-  /** 每个文件最多返回几条命中。缺省 5。 */
+  /** 每個檔案最多返回幾條命中。預設 5。 */
   perFile?: number;
-  /** 总共最多返回几条。缺省 50。 */
+  /** 總共最多返回幾條。預設 50。 */
   limit?: number;
-  /** 命中行前后各带几行。缺省 1。 */
+  /** 命中行前後各帶幾行。預設 1。 */
   context?: number;
 }
 
@@ -520,31 +520,31 @@ export interface SearchHit {
 
 export interface SearchResult {
   hits: SearchHit[];
-  /** 扫了几个文件。 */
+  /** 掃了幾個檔案。 */
   scanned: number;
-  /** 因为超上限被丢掉了几条。**必须报出来**（第 2 条）。 */
+  /** 因為超上限被丟掉了幾條。**必須報出來**（第 2 條）。 */
   dropped: number;
 }
 ```
 
-**四条实现约束：**
+**四條實現約束：**
 
-1. **跳过 `.trash/` 与二进制**（走 `kindOfPath`，`other` 且扩展名在黑名单里的不读）。
-2. **单文件读入有上限**（复用 `MAX_EDITABLE_BYTES`），超了跳过并计入 `dropped`。
-3. **`dropped > 0` 时必须在返回值里说出来**，三期的工具会把它转述给模型。
-4. **默认按章号排序**，不按文件系统顺序——作者问「他前面说过吗」，时间线顺序才有意义。
+1. **跳過 `.trash/` 與二進位制**（走 `kindOfPath`，`other` 且副檔名在黑名單裡的不讀）。
+2. **單檔案讀入有上限**（複用 `MAX_EDITABLE_BYTES`），超了跳過並計入 `dropped`。
+3. **`dropped > 0` 時必須在返回值裡說出來**，三期的工具會把它轉述給模型。
+4. **預設按章號排序**，不按檔案系統順序——作者問「他前面說過嗎」，時間線順序才有意義。
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: 寫失敗測試**
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| 搜一个只在第 9 章出现的词 | 命中一条，`no: 9` |
-| 跨多章命中 | 按章号升序 |
+| 搜一個只在第 9 章出現的詞 | 命中一條，`no: 9` |
+| 跨多章命中 | 按章號升序 |
 | 超 `limit` | `dropped > 0` |
-| `.trash/` 里的内容 | 不命中 |
+| `.trash/` 裡的內容 | 不命中 |
 | `kinds: ['summary']` | 只搜摘要 |
-| 正则模式 | 生效 |
-| 坏正则 | 不抛，降级成字面量并在结果里说明 |
+| 正則模式 | 生效 |
+| 壞正則 | 不拋，降級成字面量並在結果裡說明 |
 
 - [ ] **Step 2–5: 同上**
 
@@ -552,27 +552,27 @@ export interface SearchResult {
 
 ## 本期不做
 
-- **不接 agent**。这一期结束时 `workspace` 还没有任何 agent 调用方。
-- **不改 `context/`**。装配器读文件走的是 `project.read*`（查询），不受影响。
-- **不改协议与前端**。
-- **不动 `pipelineBatch.ts` 的批量逻辑**（它的落盘会跟着 handler 走，但「只补不改」的策略不变）。
+- **不接 agent**。這一期結束時 `workspace` 還沒有任何 agent 呼叫方。
+- **不改 `context/`**。裝配器讀檔案走的是 `project.read*`（查詢），不受影響。
+- **不改協議與前端**。
+- **不動 `pipelineBatch.ts` 的批次邏輯**（它的落盤會跟著 handler 走，但「只補不改」的策略不變）。
 
-## 给接手 agent 的提示词
+## 給接手 agent 的提示詞
 
-> 你在 novelwarden 仓库里执行「一期：workspace 读写网关」。前置是零期（事件流 provider），确认它已经合入。
+> 你在 novelwarden 倉庫裡執行「一期：workspace 讀寫閘道器」。前置是零期（事件流 provider），確認它已經合入。
 >
-> 先读 `AGENTS.md`（尤其第 3、6、7、8、9、10、18 条）、`src/core/README.md` 的「已知约定」全段、以及 `docs/design/specs/2026-08-15-agent-architecture-design.md` 的 L1 一节。然后读这六个文件，它们是你要收敛的对象：
+> 先讀 `AGENTS.md`（尤其第 3、6、7、8、9、10、18 條）、`src/core/README.md` 的「已知約定」全段、以及 `docs/design/specs/2026-08-15-agent-architecture-design.md` 的 L1 一節。然後讀這六個檔案，它們是你要收斂的物件：
 > `src/core/model/project.ts`、`src/core/features/creation.ts`、`src/core/files/{fileOps,fileEditing,projectFiles}.ts`、`src/core/features/splitChapter.ts`。
 >
-> 这一期**只有一个有意的行为变化**：`upstreamHash` / `beatsHash` 的记账从「只在采纳路径上做」下沉到「谁写都做」——它修掉一个既有缺陷（作者在内置编辑器里改细纲，指纹链会断）。除此之外任何一条测试变红都意味着你改错了。
+> 這一期**只有一個有意的行為變化**：`upstreamHash` / `beatsHash` 的記賬從「只在採納路徑上做」下沉到「誰寫都做」——它修掉一個既有缺陷（作者在內建編輯器裡改細綱，指紋鏈會斷）。除此之外任何一條測試變紅都意味著你改錯了。
 >
-> 按 `docs/design/plans/2026-08-15-agent-phase1-workspace.md` 的 8 个 Task 逐个做，每个 Task 做完立刻 commit（前缀 `refactor(workspace)`，中文正文，**不要加 Co-Authored-By 或 Generated with 标记**）。
+> 按 `docs/design/plans/2026-08-15-agent-phase1-workspace.md` 的 8 個 Task 逐個做，每個 Task 做完立刻 commit（字首 `refactor(workspace)`，中文正文，**不要加 Co-Authored-By 或 Generated with 標記**）。
 >
-> 五件最容易做错的事：
-> 1. **守卫八条一条都不能少**（Task 2 的表）。少一条就是给 agent 开了一个后门。
-> 2. **`plotContentHash` 只哈希四个小节，`beatsHashFor` 排除 `status`**。把 frontmatter 或 status 算进去，会让「排一次剧情」立刻使全部场景过期。
-> 3. **手写的产物永不标脏**：`upstreamHash` 为空 = 不是这条链生出来的，不要给它补一个。
-> 4. **拆分是先移号再落盘**，顺序反了会留下中间态。
-> 5. **删细纲连带搬场景与中转站，但不碰 `chapters/` 与摘要**。
+> 五件最容易做錯的事：
+> 1. **守衛八條一條都不能少**（Task 2 的表）。少一條就是給 agent 開了一個後門。
+> 2. **`plotContentHash` 只雜湊四個小節，`beatsHashFor` 排除 `status`**。把 frontmatter 或 status 算進去，會讓「排一次劇情」立刻使全部場景過期。
+> 3. **手寫的產物永不標髒**：`upstreamHash` 為空 = 不是這條鏈生出來的，不要給它補一個。
+> 4. **拆分是先移號再落盤**，順序反了會留下中間態。
+> 5. **刪細綱連帶搬場景與中轉站，但不碰 `chapters/` 與摘要**。
 >
-> `project.ts` 有 1501 行，不要试图一次读完再动手——按 Task 顺序，每次只看你这一步要搬的那几个方法。
+> `project.ts` 有 1501 行，不要試圖一次讀完再動手——按 Task 順序，每次只看你這一步要搬的那幾個方法。

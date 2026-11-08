@@ -1,23 +1,23 @@
 /**
- * 并发工具：runPool 的并发上限、结果对齐、失败与取消，serialize 的排队语义。
- * 迁自 scripts/smoke-pool.js 的 `== runPool：并发上限与顺序 ==`、
- * `== runPool：失败与取消 ==`、`== serialize：审阅排队 ==` 三节。
+ * 併發工具：runPool 的併發上限、結果對齊、失敗與取消，serialize 的排隊語義。
+ * 遷自 scripts/smoke-pool.js 的 `== runPool：併發上限與順序 ==`、
+ * `== runPool：失敗與取消 ==`、`== serialize：審閱排隊 ==` 三節。
  *
- * concurrency.ts 只 import 了 CancelledError，不碰 host / config，所以单独 bundle 即可。
+ * concurrency.ts 只 import 了 CancelledError，不碰 host / config，所以單獨 bundle 即可。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { loadModule } = require('../../helpers/load');
 const { sleep } = require('../../helpers/fakeProvider');
 
-describe('runPool：并发上限与顺序', () => {
+describe('runPool：併發上限與順序', () => {
   let runPool;
 
   before(() => {
     ({ runPool } = loadModule('src/core/runtime/concurrency.ts'));
   });
 
-  describe('并发上限', () => {
+  describe('併發上限', () => {
     let peak = 0;
     let results;
 
@@ -27,26 +27,26 @@ describe('runPool：并发上限与顺序', () => {
       results = await runPool(items, 4, async (item) => {
         inFlight++;
         peak = Math.max(peak, inFlight);
-        await sleep(5 + ((item * 7) % 11)); // 参差的耗时，制造乱序完成
+        await sleep(5 + ((item * 7) % 11)); // 參差的耗時，製造亂序完成
         inFlight--;
         return item * 2;
       });
     });
 
-    test('并发峰值不超过 limit', () => {
+    test('併發峰值不超過 limit', () => {
       assert.ok(peak <= 4, `峰值 ${peak}`);
     });
 
-    // 依赖真实定时器交错，是这一组里唯一天生有抖动的断言。
-    test('确实并发了（不是退化成串行）', () => {
+    // 依賴真實定時器交錯，是這一組裡唯一天生有抖動的斷言。
+    test('確實併發了（不是退化成序列）', () => {
       assert.ok(peak > 1, `峰值 ${peak}`);
     });
 
-    test('每一项都有结果', () => {
+    test('每一項都有結果', () => {
       assert.equal(results.length, 12);
     });
 
-    test('结果按 index 对齐（完成顺序不影响）', () => {
+    test('結果按 index 對齊（完成順序不影響）', () => {
       assert.ok(results.every((r, i) => r.status === 'fulfilled' && r.value === i * 2));
     });
   });
@@ -63,20 +63,20 @@ describe('runPool：并发上限与顺序', () => {
       });
     });
 
-    test('limit=1 严格串行（与改造前逐字一致）', () => {
+    test('limit=1 嚴格序列（與改造前逐字一致）', () => {
       assert.equal(order.join(','), 'start1,end1,start2,end2,start3,end3,start4,end4', order.join(','));
     });
   });
 });
 
-describe('runPool：失败与取消', () => {
+describe('runPool：失敗與取消', () => {
   let runPool;
 
   before(() => {
     ({ runPool } = loadModule('src/core/runtime/concurrency.ts'));
   });
 
-  describe('单项失败', () => {
+  describe('單項失敗', () => {
     let ran;
     let results;
 
@@ -85,25 +85,25 @@ describe('runPool：失败与取消', () => {
       results = await runPool([1, 2, 3], 2, async (item) => {
         ran.push(item);
         if (item === 2) {
-          throw new Error('第二项炸了');
+          throw new Error('第二項炸了');
         }
         return item;
       });
     });
 
-    test('单项失败不影响其余', () => {
+    test('單項失敗不影響其餘', () => {
       assert.equal(ran.length, 3, ran.join(','));
     });
 
-    test('失败项标为 rejected', () => {
+    test('失敗項標為 rejected', () => {
       assert.equal(results[1].status, 'rejected');
     });
 
-    test('失败项带得出原因', () => {
-      assert.ok(String(results[1].reason.message).includes('第二项炸了'));
+    test('失敗項帶得出原因', () => {
+      assert.ok(String(results[1].reason.message).includes('第二項炸了'));
     });
 
-    test('其余项照常有值', () => {
+    test('其餘項照常有值', () => {
       assert.equal(results[0].value, 1);
       assert.equal(results[2].value, 3);
     });
@@ -130,15 +130,15 @@ describe('runPool：失败与取消', () => {
       );
     });
 
-    test('取消后不再启动新任务', () => {
+    test('取消後不再啟動新任務', () => {
       assert.equal(ran.length, 2, `跑了 ${ran.join('、')}`);
     });
 
-    test('未启动的项留在结果里（占位为 CancelledError）', () => {
+    test('未啟動的項留在結果裡（佔位為 CancelledError）', () => {
       assert.equal(results.length, 6);
     });
 
-    test('占位是取消而不是成功', () => {
+    test('佔位是取消而不是成功', () => {
       assert.equal(results[5].status, 'rejected');
       assert.equal(results[5].reason.name, 'CancelledError');
     });
@@ -158,24 +158,24 @@ describe('runPool：失败与取消', () => {
       });
     });
 
-    test('onSettled 的计数单调递增到总数', () => {
+    test('onSettled 的計數單調遞增到總數', () => {
       assert.equal(done, 4, seen.join(' '));
     });
 
-    test('onSettled 的计数没有重复（进度条不会倒退）', () => {
+    test('onSettled 的計數沒有重複（進度條不會倒退）', () => {
       assert.equal(new Set(seen.map((s) => s.split(':')[1])).size, 4, seen.join(' '));
     });
   });
 });
 
-describe('serialize：审阅排队', () => {
+describe('serialize：審閱排隊', () => {
   let serialize;
 
   before(() => {
     ({ serialize } = loadModule('src/core/runtime/concurrency.ts'));
   });
 
-  describe('排队执行', () => {
+  describe('排隊執行', () => {
     let peak = 0;
     let order;
 
@@ -195,23 +195,23 @@ describe('serialize：审阅排队', () => {
       );
     });
 
-    test('同一时刻只有一个在跑', () => {
+    test('同一時刻只有一個在跑', () => {
       assert.equal(peak, 1, `峰值 ${peak}`);
     });
 
-    test('按入队顺序执行', () => {
+    test('按入隊順序執行', () => {
       assert.equal(order.join(','), '1,2,3', order.join(','));
     });
   });
 
-  describe('一个抛错不卡死后面的', () => {
+  describe('一個拋錯不卡死後面的', () => {
     let after;
 
     before(async () => {
-      // 一次审阅抛错不能卡死后面排队的（用户放弃某张卡后其余还得能弹）。
+      // 一次審閱拋錯不能卡死後面排隊的（使用者放棄某張卡後其餘還得能彈）。
       after = [];
       const boom = serialize(async () => {
-        throw new Error('审阅炸了');
+        throw new Error('審閱炸了');
       }).catch((e) => after.push(`caught:${e.message}`));
       const next = serialize(async () => {
         after.push('next-ran');
@@ -219,11 +219,11 @@ describe('serialize：审阅排队', () => {
       await Promise.all([boom, next]);
     });
 
-    test('前一个抛错不影响后面排队的', () => {
+    test('前一個拋錯不影響後面排隊的', () => {
       assert.ok(after.includes('next-ran'), after.join(','));
     });
 
-    test('异常照旧抛给它自己的调用方', () => {
+    test('異常照舊拋給它自己的呼叫方', () => {
       assert.ok(after.some((s) => s.startsWith('caught:')));
     });
   });

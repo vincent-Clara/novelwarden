@@ -1,83 +1,83 @@
 /**
- * 权限询问：**agent 动手之前那一句问在对话页里，不是一个盖住窗口的模态框。**
+ * 許可權詢問：**agent 動手之前那一句問在對話頁裡，不是一個蓋住視窗的模態框。**
  *
- * ## 为什么不是模态框
+ * ## 為什麼不是模態框
  *
- * 作者要判断的恰恰是「这一步动的是哪个文件、写的是什么」，而那串上下文——
- * 前几条工具调用、模型刚说的那段话——就在被模态框盖住的消息流里。一个居中的
- * 「Agent 要写入…，允许吗」把他从要看的东西上拽走，还顺手锁住整个窗口：想
- * 先翻一眼那个文件再决定都做不到。所以这一句改成**贴在输入框上方的一张卡片**
- * （`media/src/view/gate.ts`），页面照常能滚、能翻、能点别的。它也不挂在气泡
- * 上——那样会跟着内容滚出视野，而调用正卡在它上面等回答。
+ * 作者要判斷的恰恰是「這一步動的是哪個檔案、寫的是什麼」，而那串上下文——
+ * 前幾條工具呼叫、模型剛說的那段話——就在被模態框蓋住的訊息流裡。一個居中的
+ * 「Agent 要寫入…，允許嗎」把他從要看的東西上拽走，還順手鎖住整個視窗：想
+ * 先翻一眼那個檔案再決定都做不到。所以這一句改成**貼在輸入框上方的一張卡片**
+ * （`media/src/view/gate.ts`），頁面照常能滾、能翻、能點別的。它也不掛在氣泡
+ * 上——那樣會跟著內容滾出視野，而呼叫正卡在它上面等回答。
  *
- * ## 这一层只做「问」这件事
+ * ## 這一層只做「問」這件事
  *
- * 问不问、问什么由调用方定（工具自报的 `ToolIntent`、落盘卡片的形状），这里把那一问
- * 变成一条协议消息，等前端回话：
+ * 問不問、問什麼由呼叫方定（工具自報的 `ToolIntent`、落盤卡片的形狀），這裡把那一問
+ * 變成一條協議訊息，等前端回話：
  *
  * ```
- * mcp.ts / chat.ts ──askGate──▶ gate ──▶ 输入框上方那张卡片
+ * mcp.ts / chat.ts ──askGate──▶ gate ──▶ 輸入框上方那張卡片
  *                      ▲                       │
  *                      └───── gateResult ◀─────┘
  * ```
  *
- * **两种问法共用这一条路**：
+ * **兩種問法共用這一條路**：
  *
- * | 谁在问 | 什么时候 | 按钮 |
+ * | 誰在問 | 什麼時候 | 按鈕 |
  * |---|---|---|
- * | 外部 agent 的 `always` 动作（`controller/mcp.ts`） | 动手前 | 确认 / 跳过 |
- * | 产物落盘（第 19 条） | `generate` 一产出就问 | 确认 / 不采纳 |
+ * | 外部 agent 的 `always` 動作（`controller/mcp.ts`） | 動手前 | 確認 / 跳過 |
+ * | 產物落盤（第 19 條） | `generate` 一產出就問 | 確認 / 不採納 |
  *
- * 两种都只有两颗：**叫停整轮不在这张卡上**——那是输入框旁边那颗「停止」，
- * 与「这一个文件要不要动」是两件事，混进闸门只会被误当成「跳过」。
+ * 兩種都只有兩顆：**叫停整輪不在這張卡上**——那是輸入框旁邊那顆「停止」，
+ * 與「這一個檔案要不要動」是兩件事，混進閘門只會被誤當成「跳過」。
  *
- * ## 三件必须做对的事
+ * ## 三件必須做對的事
  *
- * 1. **两个视图同时收卡**——侧边栏与编辑器标签页挂同一个 controller，只在被
- *    点的那一边收，另一边会留一张点了没反应的卡（`gateDone` 广播）。
- * 2. **重连之后卡片还在**——前端无状态，刷新网页/webview 重建后靠
- *    `resendFullState` 把还没答的这几条重推一遍；不重推的话调用就永远停在
- *    一个没人看得见的等待上。
- * 3. **取消要能解开等待**——作者点「停止」时调用正卡在这里等回答，
- *    signal 一断就按「停止」结算，不留一个永远悬着的 Promise。
+ * 1. **兩個檢視同時收卡**——側邊欄與編輯器標籤頁掛同一個 controller，只在被
+ *    點的那一邊收，另一邊會留一張點了沒反應的卡（`gateDone` 廣播）。
+ * 2. **重連之後卡片還在**——前端無狀態，重新整理網頁/webview 重建後靠
+ *    `resendFullState` 把還沒答的這幾條重推一遍；不重推的話呼叫就永遠停在
+ *    一個沒人看得見的等待上。
+ * 3. **取消要能解開等待**——作者點「停止」時呼叫正卡在這裡等回答，
+ *    signal 一斷就按「停止」結算，不留一個永遠懸著的 Promise。
  */
 import type { OutMessage } from '../protocol';
 import type { ChatController } from './index';
 
 /**
- * 一次询问的结论。作者只点得到前两个：**停止**是没人回答（取消）时替他记下的那一笔，
- * 不是卡片上的一颗按钮。
+ * 一次詢問的結論。作者只點得到前兩個：**停止**是沒人回答（取消）時替他記下的那一筆，
+ * 不是卡片上的一顆按鈕。
  */
 export type GateVerdict = 'proceed' | 'skip' | 'stop';
 
 /**
- * 两颗按钮上的缺省字。**同意那颗不写动词**：「Agent 要写入「第 12 章」」这句话就在
- * 按钮上方，按钮再说一遍是重复；每次换一个动词的话，作者反而要先读按钮才敢点。
+ * 兩顆按鈕上的預設字。**同意那顆不寫動詞**：「Agent 要寫入「第 12 章」」這句話就在
+ * 按鈕上方，按鈕再說一遍是重複；每次換一個動詞的話，作者反而要先讀按鈕才敢點。
  */
-export const PROCEED_ACTION = '确认';
-export const SKIP_ACTION = '跳过';
+export const PROCEED_ACTION = '確認';
+export const SKIP_ACTION = '跳過';
 
 type GateMessage = Extract<OutMessage, { type: 'gate' }>;
 
 /**
- * 一次询问能有的结论。**卡片上只有前两颗按钮**，`cancelled` 是没人回答
- * （这一轮被取消、换了会话）时替作者记下的那一笔——它对调用方等于「停止」。
+ * 一次詢問能有的結論。**卡片上只有前兩顆按鈕**，`cancelled` 是沒人回答
+ * （這一輪被取消、換了會話）時替作者記下的那一筆——它對呼叫方等於「停止」。
  */
 export type GateSettlement = 'proceed' | 'skip' | 'cancelled';
 
-/** 一次还没答的询问。`msg` 留着是为了重连时能原样再推一遍。 */
+/** 一次還沒答的詢問。`msg` 留著是為了重連時能原樣再推一遍。 */
 export interface PendingGate {
   readonly msg: GateMessage;
   /**
-   * 结算这一次询问。**只有第一次算数**（作者点了，同时这一轮又被取消）。`remember` 是卡片带
-   * 理由输入框时作者填的那一句（见 {@link GateAsk.remember}）。
+   * 結算這一次詢問。**只有第一次算數**（作者點了，同時這一輪又被取消）。`remember` 是卡片帶
+   * 理由輸入框時作者填的那一句（見 {@link GateAsk.remember}）。
    */
   settle(verdict: GateSettlement, remember?: string): void;
 }
 
 /**
- * 询问 id。与 `makeTurnId` 同一套理由：同一毫秒里连着问两次也不能撞，
- * 而这个 id 是前端那张卡片的身份。
+ * 詢問 id。與 `makeTurnId` 同一套理由：同一毫秒裡連著問兩次也不能撞，
+ * 而這個 id 是前端那張卡片的身份。
  */
 let counter = 0;
 function nextRequestId(): string {
@@ -86,40 +86,40 @@ function nextRequestId(): string {
 }
 
 export interface GateAsk {
-  /** 哪一轮在问。卡片本身在输入框上方，这个 id 是给**答完那一行记录**用的。 */
+  /** 哪一輪在問。卡片本身在輸入框上方，這個 id 是給**答完那一行記錄**用的。 */
   turnId: string;
-  /** 这一问对应的工具调用。产物落盘那一问来自单步创作时没有。 */
+  /** 這一問對應的工具呼叫。產物落盤那一問來自單步創作時沒有。 */
   callId?: string;
   name: string;
-  /** 已经带着主语的那句话（「Agent 要写入设定「北境」」）。前端照原样画。 */
+  /** 已經帶著主語的那句話（「Agent 要寫入設定「北境」」）。前端照原樣畫。 */
   title: string;
   detail?: string;
-  /** 模型这一次填的参数（已截断的 JSON 文本）。卡片里折叠着，点开才看。 */
+  /** 模型這一次填的引數（已截斷的 JSON 文字）。卡片裡摺疊著，點開才看。 */
   argsText?: string;
-  /** 同意那颗按钮上的字。缺省是「确认」。 */
+  /** 同意那顆按鈕上的字。預設是「確認」。 */
   proceed?: string;
-  /** 拒绝那颗按钮上的字。缺省是「跳过」。 */
+  /** 拒絕那顆按鈕上的字。預設是「跳過」。 */
   skip?: string;
-  /** 红色块里的那一句（见协议 `gate.danger`）。 */
+  /** 紅色塊裡的那一句（見協議 `gate.danger`）。 */
   danger?: string;
-  /** 给了就要点两下才算同意，第二下按钮上是这几个字（见协议 `gate.confirm`）。 */
+  /** 給了就要點兩下才算同意，第二下按鈕上是這幾個字（見協議 `gate.confirm`）。 */
   confirm?: string;
-  /** 给了就多一格理由输入框与第三颗按钮（见协议 `gate.remember`）。理由经 {@link askGateNoted} 拿回来。 */
+  /** 給了就多一格理由輸入框與第三顆按鈕（見協議 `gate.remember`）。理由經 {@link askGateNoted} 拿回來。 */
   remember?: { label: string; placeholder: string };
 }
 
 /**
- * 在对话页里问一句，等作者点。
+ * 在對話頁裡問一句，等作者點。
  *
- * 关掉页面不算回答——那种情况下这条询问会随重连再推一遍。真正的「没人回答」
- * 只有取消一种，按**停止**处理（他被问「要不要动你的磁盘」而没有回答，不该
- * 替他答「继续」）。
+ * 關掉頁面不算回答——那種情況下這條詢問會隨重連再推一遍。真正的「沒人回答」
+ * 只有取消一種，按**停止**處理（他被問「要不要動你的磁碟」而沒有回答，不該
+ * 替他答「繼續」）。
  */
 export async function askGate(c: ChatController, ask: GateAsk, signal?: AbortSignal): Promise<GateVerdict> {
   return (await askGateNoted(c, ask, signal)).verdict;
 }
 
-/** 同 {@link askGate}，另把作者在理由输入框里填的那一句带回来（卡片带 `remember` 时才可能有）。 */
+/** 同 {@link askGate}，另把作者在理由輸入框裡填的那一句帶回來（卡片帶 `remember` 時才可能有）。 */
 export function askGateNoted(
   c: ChatController,
   ask: GateAsk,
@@ -135,8 +135,8 @@ export function askGateNoted(
     title: ask.title,
     detail: ask.detail,
     argsText: ask.argsText,
-    // 按钮上的字都从后端来：与调用方判定用的是同一份常量，前端自己写一遍的
-    // 话，改了文案就对不上了。
+    // 按鈕上的字都從後端來：與呼叫方判定用的是同一份常量，前端自己寫一遍的
+    // 話，改了文案就對不上了。
     proceed: ask.proceed ?? PROCEED_ACTION,
     skip: ask.skip ?? SKIP_ACTION,
     ...(ask.danger ? { danger: ask.danger } : {}),
@@ -147,7 +147,7 @@ export function askGateNoted(
   return new Promise<{ verdict: GateVerdict; remember?: string }>((resolve) => {
     const onAbort = () => c.gates.get(requestId)?.settle('cancelled');
     const settle = (verdict: GateSettlement, remember?: string) => {
-      // 先从表里摘掉：这既是「只结算一次」的判据，也让重连不再推它。
+      // 先從表裡摘掉：這既是「只結算一次」的判據，也讓重連不再推它。
       if (!c.gates.delete(requestId)) {
         return;
       }
@@ -160,8 +160,8 @@ export function askGateNoted(
     c.gates.set(requestId, { msg, settle });
     c.post(msg);
 
-    // 没有 signal 的（单步创作那条路：生成已经结束，锁也放了）只能靠作者点，
-    // 或者被 `cancelGates` 收掉——换会话、开下一轮时那张卡就作废了。
+    // 沒有 signal 的（單步創作那條路：生成已經結束，鎖也放了）只能靠作者點，
+    // 或者被 `cancelGates` 收掉——換會話、開下一輪時那張卡就作廢了。
     if (!signal) {
       return;
     }
@@ -174,21 +174,21 @@ export function askGateNoted(
 }
 
 /**
- * 作者点了卡片上的某一颗按钮。
+ * 作者點了卡片上的某一顆按鈕。
  *
- * **认不出的 requestId 静默丢弃**：重连之后前端可能还留着一张早就结束了的
- * 卡片（另一个视图上答过了），为它报错只会让作者莫名其妙。
+ * **認不出的 requestId 靜默丟棄**：重連之後前端可能還留著一張早就結束了的
+ * 卡片（另一個檢視上答過了），為它報錯只會讓作者莫名其妙。
  */
 export function resolveGate(c: ChatController, requestId: string, verdict: 'proceed' | 'skip', remember?: string): void {
   c.gates.get(requestId)?.settle(verdict, remember);
 }
 
 /**
- * 把还没答的全收掉（按「取消」结算）。
+ * 把還沒答的全收掉（按「取消」結算）。
  *
- * 单步创作那条路的落盘卡片没有 signal——生成早结束了、锁也放了。作者要是
- * 不理它、直接开了下一轮或换了会话，那张卡就不该再留着：它问的是上一条气泡
- * 里的东西，点下去写的是一份作者早已翻篇的产物。
+ * 單步創作那條路的落盤卡片沒有 signal——生成早結束了、鎖也放了。作者要是
+ * 不理它、直接開了下一輪或換了會話，那張卡就不該再留著：它問的是上一條氣泡
+ * 裡的東西，點下去寫的是一份作者早已翻篇的產物。
  */
 export function cancelGates(c: ChatController): void {
   for (const gate of [...c.gates.values()]) {
@@ -196,7 +196,7 @@ export function cancelGates(c: ChatController): void {
   }
 }
 
-/** 重连/重建时把还没答的那几张卡重新推一遍。前端无状态，全靠这一下。 */
+/** 重連/重建時把還沒答的那幾張卡重新推一遍。前端無狀態，全靠這一下。 */
 export function resendGates(c: ChatController): void {
   for (const gate of c.gates.values()) {
     c.post(gate.msg);

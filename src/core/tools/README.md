@@ -1,136 +1,136 @@
-# core/tools — 工具层
+# core/tools — 工具層
 
-**「能对这个工程做什么」的那一份清单，与「谁拿着它做事」无关。**
+**「能對這個工程做什麼」的那一份清單，與「誰拿著它做事」無關。**
 
-拿着它做事的是**外部 agent**（Claude Code 之类），经 [mcp/](../mcp/README.md) 接进来；本项目自己没有对话循环。
+拿著它做事的是**外部 agent**（Claude Code 之類），經 [mcp/](../mcp/README.md) 接進來；本專案自己沒有對話迴圈。
 
-**这一层管「做那件事」，调用方管「什么时候做、要不要先问、花了多少」。**
+**這一層管「做那件事」，呼叫方管「什麼時候做、要不要先問、花了多少」。**
 
-| 文件 | 职责 |
+| 檔案 | 職責 |
 |---|---|
-| [types.ts](types.ts) | ★ 契约。`ToolDef` / `ToolSpec` / `ToolContext` / `ToolResult` / `ToolIntent` / `ToolInvoker` |
-| [schema.ts](schema.ts) | 参数 schema 的写法与校验（描述怎么写、为什么必须扁平） |
-| [registry.ts](registry.ts) | ★ 一组 `ToolDef` + 一份环境 = 一个能被调用的工具集。执行、兜异常、记日志；`specOf` 给出对外的声明 |
-| [novel/](novel/index.ts) | Novelwarden 这套：读三件、`generate`、`write` / `edit`，以及六个工程动作工具（`actions.ts` 把一张动作表变成一个工具） |
+| [types.ts](types.ts) | ★ 契約。`ToolDef` / `ToolSpec` / `ToolContext` / `ToolResult` / `ToolIntent` / `ToolInvoker` |
+| [schema.ts](schema.ts) | 引數 schema 的寫法與校驗（描述怎麼寫、為什麼必須扁平） |
+| [registry.ts](registry.ts) | ★ 一組 `ToolDef` + 一份環境 = 一個能被呼叫的工具集。執行、兜異常、記日誌；`specOf` 給出對外的宣告 |
+| [novel/](novel/index.ts) | Novelwarden 這套：讀三件、`generate`、`write` / `edit`，以及六個工程動作工具（`actions.ts` 把一張動作表變成一個工具） |
 
-## 谁绑、谁跑
+## 誰綁、誰跑
 
 ```
 mcp/server.ts ──McpBackend──▶ controller/mcp.ts   createNovelTools({project, workspace, drafts, sessionId})
-（只懂协议）                  （生成锁、两问）                    │
+（只懂協議）                  （生成鎖、兩問）                    │
                                    └──────────invoke──────────▶ ToolRegistry ──run──▶ workspace / generation / features
 ```
 
-`mcp/` 只认 `ToolSpec` 与 `NOVEL_TOOLS`，绑环境、占生成锁、在对话页问那两句都在 `controller/mcp.ts`。
-反过来，**`tools/` 一行都不 import `mcp/` 与 `controller/`**。由
-[tests/contract/layerBoundary.test.js](../../../tests/contract/layerBoundary.test.js) 守着。
+`mcp/` 只認 `ToolSpec` 與 `NOVEL_TOOLS`，綁環境、佔生成鎖、在對話頁問那兩句都在 `controller/mcp.ts`。
+反過來，**`tools/` 一行都不 import `mcp/` 與 `controller/`**。由
+[tests/contract/layerBoundary.test.js](../../../tests/contract/layerBoundary.test.js) 守著。
 
-## 三个约定
+## 三個約定
 
-### 1. 工具报数，调用方记账
+### 1. 工具報數，呼叫方記賬
 
-工具**不知道上限是多少**，它只会说「我调了 2 次模型」：
+工具**不知道上限是多少**，它只會說「我調了 2 次模型」：
 
 ```ts
-ctx.usage.record(1);   // 发请求之前就记——请求发出去钱就花了，抛异常也一样
+ctx.usage.record(1);   // 發請求之前就記——請求發出去錢就花了，拋異常也一樣
 ```
 
-账记在哪、要不要设上限是调用方的事（MCP 那条路只记日志：外部 agent 的花销由它自己的宿主管，
-`generate` 内部那次调用的次数在落盘卡片上照报）。
+賬記在哪、要不要設上限是呼叫方的事（MCP 那條路只記日誌：外部 agent 的花銷由它自己的宿主管，
+`generate` 內部那次呼叫的次數在落盤卡片上照報）。
 
-### 2. 工具自报意图，不自己弹框
+### 2. 工具自報意圖，不自己彈框
 
-确认框是**宿主**的事：同一个 `write`，在面板里该问作者一句，在一条无人值守的
-远端会话里问谁？所以工具只描述这一步是什么性质、要问的话该怎么说：
+確認框是**宿主**的事：同一個 `write`，在面板裡該問作者一句，在一條無人值守的
+遠端會話裡問誰？所以工具只描述這一步是什麼性質、要問的話該怎麼說：
 
 ```ts
 intent: (args, project) => ({
-  gate: 'mutating',                       // 五档之一，见 types.ts
-  title: `写入「${describePath(...)}」`,  // 动词短语，主语由调用方加
+  gate: 'mutating',                       // 五檔之一，見 types.ts
+  title: `寫入「${describePath(...)}」`,  // 動詞短語，主語由呼叫方加
   detail: `${target}（新建）`,
-  proceed: '写入',
+  proceed: '寫入',
 })
 ```
 
-`gate` 五档（`auto` / `costly` / `mutating` / `reviewed` / `always`）在 MCP 那条路上只分三种处理
-（[controller/mcp.ts](../controller/mcp.ts)）：`auto` 直接跑、不进对话页；`always` 动手前在对话页问一句；
-其余占生成锁、挂在对话页上，问不问交给宿主自己的权限设置。**哪个工具归哪一档由工具自己说**——只有它
-知道自己随后会不会走覆盖审阅（`reviewed`）、下游会不会 diff（`always` 就是「不会，所以这一句确认就是
+`gate` 五檔（`auto` / `costly` / `mutating` / `reviewed` / `always`）在 MCP 那條路上只分三種處理
+（[controller/mcp.ts](../controller/mcp.ts)）：`auto` 直接跑、不進對話頁；`always` 動手前在對話頁問一句；
+其餘佔生成鎖、掛在對話頁上，問不問交給宿主自己的許可權設定。**哪個工具歸哪一檔由工具自己說**——只有它
+知道自己隨後會不會走覆蓋審閱（`reviewed`）、下游會不會 diff（`always` 就是「不會，所以這一句確認就是
 它的 diff」）。
 
-### 3. 保护不在这一层
+### 3. 保護不在這一層
 
-越界、回收站、保护目录、大小上限、同名不覆盖、覆盖前审阅、乐观锁——**八条守卫
-全在 `workspace/guard.ts`**。工具体里一行路径检查都没有；哪天要在这里写一段，
-说明绕过了网关，停下来重想（AGENTS 第 7 / 25 条）。
+越界、回收站、保護目錄、大小上限、同名不覆蓋、覆蓋前審閱、樂觀鎖——**八條守衛
+全在 `workspace/guard.ts`**。工具體裡一行路徑檢查都沒有；哪天要在這裡寫一段，
+說明繞過了閘道器，停下來重想（AGENTS 第 7 / 25 條）。
 
-**唯一的例外是 `skills install`**：它写的是工程外的我的技能库（`~/.novelwarden/skills/`），没有网关可走。
-所以路径不由 agent 给（固定落在 `<技能库>/<frontmatter 的 name>/SKILL.md`，名字过 `isSkillName`），
-只装检查过、重新下载核对过 hash 的那一份，闸门是 `always`——动手前先问。见 [skills/README.md](../skills/README.md)。
+**唯一的例外是 `skills install`**：它寫的是工程外的我的技能庫（`~/.novelwarden/skills/`），沒有閘道器可走。
+所以路徑不由 agent 給（固定落在 `<技能库>/<frontmatter 的 name>/SKILL.md`，名字過 `isSkillName`），
+只裝檢查過、重新下載核對過 hash 的那一份，閘門是 `always`——動手前先問。見 [skills/README.md](../skills/README.md)。
 
-## 十三个工具
+## 十三個工具
 
-| 工具 | 动作 / 用法 | 参数 |
+| 工具 | 動作 / 用法 | 引數 |
 |---|---|---|
-| `list` / `read` / `search` | 看目录、读文件、全文搜 | 各自的 |
-| `generate` | 为一份产物调一次创作模型；产出当场问作者落不落盘 | `target` `capability` `ask` `targetWords` `writeMode` |
-| `write` / `edit` | 写一份文件 / 改一段文字 | 各自的 |
+| `list` / `read` / `search` | 看目錄、讀檔案、全文搜 | 各自的 |
+| `generate` | 為一份產物調一次創作模型；產出當場問作者落不落盤 | `target` `capability` `ask` `targetWords` `writeMode` |
+| `write` / `edit` | 寫一份檔案 / 改一段文字 | 各自的 |
 | `pipeline` | `completeSettings` `batchPlots` `batchManuscripts` `newPlot` | `from` `to` `mode` `review` |
-| `summary` | 定稿与全文大纲：`finalize`（照正文反向更新那一章的细纲，再更新角色状态、认这一章在叙事线上发生了什么：事件、当前进度、新长出来的线）`sync`（没定稿、或定稿后正文又改过的章逐章定稿：细纲、角色状态、叙事线）`rebuildGlobal`（从定稿过的细纲重建全文大纲） | `path` |
+| `summary` | 定稿與全文大綱：`finalize`（照正文反向更新那一章的細綱，再更新角色狀態、認這一章在敘事線上發生了什麼：事件、當前進度、新長出來的線）`sync`（沒定稿、或定稿後正文又改過的章逐章定稿：細綱、角色狀態、敘事線）`rebuildGlobal`（從定稿過的細綱重建全文大綱） | `path` |
 | `characters` | `extract` `create` `createAll` `update` `rebuild` `updateAll` `rebuildAll` `cleanAliases` `mergeDuplicates` `reviewState` | `path` `name` |
-| `lore` | 设定名录：`record`（单独记一章 / 补记还没记过的定稿章，只换细纲「设定」一节）`build`（给出现过、还没有条目的建条目）`integrate`（把定稿里的新内容并进条目）。**没有「按目录整理」**：它会搬文件，移动不给外部 agent（第 25 条） | `path` `name` |
-| `extract` | `style` `threads`（从情节大纲排出叙事线，与工程页「叙事线」页签的「从大纲排出」同一个函数，确认框照弹）`threadsFromText`（从已写正文补记叙事线：定稿过、叙事线还没判的章逐章认事件，一条线都没有时先排线；与工程页「从正文补记」同一个函数，确认框照弹，报回实际次数） | — |
+| `lore` | 設定名錄：`record`（單獨記一章 / 補記還沒記過的定稿章，只換細綱「設定」一節）`build`（給出現過、還沒有條目的建條目）`integrate`（把定稿裡的新內容並進條目）。**沒有「按目錄整理」**：它會搬檔案，移動不給外部 agent（第 25 條） | `path` `name` |
+| `extract` | `style` `threads`（從情節大綱排出敘事線，與工程頁「敘事線」頁籤的「從大綱排出」同一個函式，確認框照彈）`threadsFromText`（從已寫正文補記敘事線：定稿過、敘事線還沒判的章逐章認事件，一條線都沒有時先排線；與工程頁「從正文補記」同一個函式，確認框照彈，報回實際次數） | — |
 | `book` | `import` `derive` `learn` | `path` |
 | `skills` | `list` `inspect` `install` `bind` | `url` `id` `stage` |
 
-**怎么分**：一个工具的参数就是它的全部用法——每个参数都对这个工具的大多数动作有意义，模型不必记
-「哪个动作认哪个参数」；工具之间按作者心里的那几块分，与工程页按钮的分组一致。每个动作声明自己认
-哪几个参数（`uses`）、哪几个必填（`requires`），给了不认的当场报错（[novel/actions.ts](novel/actions.ts)）。
+**怎麼分**：一個工具的引數就是它的全部用法——每個引數都對這個工具的大多數動作有意義，模型不必記
+「哪個動作認哪個引數」；工具之間按作者心裡的那幾塊分，與工程頁按鈕的分組一致。每個動作宣告自己認
+哪幾個引數（`uses`）、哪幾個必填（`requires`），給了不認的當場報錯（[novel/actions.ts](novel/actions.ts)）。
 
-后七个都是工程页按钮背后的同一个函数，确认框照弹，**没有为外部 agent 加任何一条绕过它的路**。
-大多数 feature 报回计划调用次数（`countedBy`），角色卡、设定条目与全文大纲那几个不报，只回一句「交出去了」
-（`handed`），次数以确认框为准。
+後七個都是工程頁按鈕背後的同一個函式，確認框照彈，**沒有為外部 agent 加任何一條繞過它的路**。
+大多數 feature 報回計劃呼叫次數（`countedBy`），角色卡、設定條目與全文大綱那幾個不報，只回一句「交出去了」
+（`handed`），次數以確認框為準。
 
-### `generate` 的写法
+### `generate` 的寫法
 
-正文层这一章已经有字时，`writeMode` 说清是接着写（`continue`，落盘追加在末尾）还是整章重写（`rewrite`，
-缺省；落盘覆盖、先逐行对比）。修稿只从审稿报告卡进来，这里不给；审稿由作者自己在对话页发起。
+正文層這一章已經有字時，`writeMode` 說清是接著寫（`continue`，落盤追加在末尾）還是整章重寫（`rewrite`，
+預設；落盤覆蓋、先逐行對比）。修稿只從審稿報告卡進來，這裡不給；審稿由作者自己在對話頁發起。
 
-`target` 给一条设定条目的路径（`.novelwarden/lore/` 下的 `.md`）就是**展开那一条**（完善设定，2026-10-19）：
-`kindOfPath` 直接给出单条设定目标，不用特判；走「故事架构」档（与设定清单同一档），写 1 次、转写模型照抄成 JSON 1 次，
-转写不合格重转一次（`LORE_EXPAND_CALLS`）。设定目录本身仍是整批设定清单；角色目录本身（`.novelwarden/characters`）同理是角色图谱——这两个目录只在 `generate` 里认（`settingDirPath`），网关的种类表照旧把它们当 `other`。还没定的问题只上作者的落盘卡片，不回给 agent。
+`target` 給一條設定條目的路徑（`.novelwarden/lore/` 下的 `.md`）就是**展開那一條**（完善設定，2026-10-19）：
+`kindOfPath` 直接給出單條設定目標，不用特判；走「故事架構」檔（與設定清單同一檔），寫 1 次、轉寫模型照抄成 JSON 1 次，
+轉寫不合格重轉一次（`LORE_EXPAND_CALLS`）。設定目錄本身仍是整批設定清單；角色目錄本身（`.novelwarden/characters`）同理是角色圖譜——這兩個目錄只在 `generate` 裡認（`settingDirPath`），閘道器的種類表照舊把它們當 `other`。還沒定的問題只上作者的落盤卡片，不回給 agent。
 
-`settle` 一律不给：落定细纲、落定设定（完善设定二期，设定目录上的 `settle`）要沉淀的都是作者刚才的讨论，agent
-那边的历史永远是空的，喂空历史只会凭空编一份「结论」。报错指路对话页的 `/落定细纲`、`/落定设定`；描述里架构那一层
-不列 `settle`，「这一层可用」也不列 `settle` / `review`。
+`settle` 一律不給：落定細綱、落定設定（完善設定二期，設定目錄上的 `settle`）要沉澱的都是作者剛才的討論，agent
+那邊的歷史永遠是空的，喂空歷史只會憑空編一份「結論」。報錯指路對話頁的 `/落定细纲`、`/落定设定`；描述裡架構那一層
+不列 `settle`，「這一層可用」也不列 `settle` / `review`。
 
-### 拆书
+### 拆書
 
-`import` 会新建章节文件——与不给的「新建章节文件」不同，建的是作者那本 txt 里的章，切分结果先给作者看，
-同名不覆盖。要 `path` 的两个只认工程里的 txt（`features/bookText.ts` 的清单）：章节文件、隐藏目录、
-工程外的路径当场报错，不花钱。
+`import` 會新建章節檔案——與不給的「新建章節檔案」不同，建的是作者那本 txt 裡的章，切分結果先給作者看，
+同名不覆蓋。要 `path` 的兩個只認工程裡的 txt（`features/bookText.ts` 的清單）：章節檔案、隱藏目錄、
+工程外的路徑當場報錯，不花錢。
 
-### 写作技能
+### 寫作技能
 
-移植自 AI-Novel-Writer 的三个工具（`inspect_writing_skill` / `install_writing_skill` / `bind_writing_skill`），
-合成一个 `skills`——四件事共用 `url` / `id` / `stage`。多了一个 `list`：上游的模型在工具列表里就看得见
-内置技能，这里得有个地方查 id。
+移植自 AI-Novel-Writer 的三個工具（`inspect_writing_skill` / `install_writing_skill` / `bind_writing_skill`），
+合成一個 `skills`——四件事共用 `url` / `id` / `stage`。多了一個 `list`：上游的模型在工具列表裡就看得見
+內建技能，這裡得有個地方查 id。
 
-| action | gate | 做什么 |
+| action | gate | 做什麼 |
 |---|---|---|
-| `list` | `auto` | 内置 / 我的技能库 / 本工程的技能，一份一行，外加本工程每个阶段绑了哪份 |
-| `inspect` | `auto` | 下载来看，不安装、不写文件。回话里说清「元数据来自不受信任的第三方文档」 |
-| `install` | `always` | 装检查过的那一份。确认框写明是哪一份、说明、正文开头 200 字 |
-| `bind` | `always` | 绑到本工程的某个阶段。改的是往后每一次生成的提示词，下游没有 diff |
+| `list` | `auto` | 內建 / 我的技能庫 / 本工程的技能，一份一行，外加本工程每個階段綁了哪份 |
+| `inspect` | `auto` | 下載來看，不安裝、不寫檔案。回話裡說清「後設資料來自不受信任的第三方文件」 |
+| `install` | `always` | 裝檢查過的那一份。確認框寫明是哪一份、說明、正文開頭 200 字 |
+| `bind` | `always` | 綁到本工程的某個階段。改的是往後每一次生成的提示詞，下游沒有 diff |
 
-`write` 新建 / 追加 `.novelwarden/skills/**` 或 `skills.json` 也报 `always`（覆盖照旧走 diff）——不然 agent 用
-`write` 新建一份 `skills.json`，就绕过了 `bind` 那一问。
+`write` 新建 / 追加 `.novelwarden/skills/**` 或 `skills.json` 也報 `always`（覆蓋照舊走 diff）——不然 agent 用
+`write` 新建一份 `skills.json`，就繞過了 `bind` 那一問。
 
-## 与 MCP 的对应
+## 與 MCP 的對應
 
-| 这里 | MCP |
+| 這裡 | MCP |
 |---|---|
-| `ToolDef.name` / `description` / `parameters` | `tools/list` 的一条（`inputSchema`） |
-| `ToolInvoker.invoke` → `ToolInvocation` | `tools/call` 的请求与结果（`error` → `isError`） |
+| `ToolDef.name` / `description` / `parameters` | `tools/list` 的一條（`inputSchema`） |
+| `ToolInvoker.invoke` → `ToolInvocation` | `tools/call` 的請求與結果（`error` → `isError`） |
 | `ToolDef.mutating` / `costly` | `destructiveHint` / `readOnlyHint` |
-| `ToolIntent` | 没有对应物——**确认是宿主的事**，Novelwarden 自己那两问在 `controller/mcp.ts` |
+| `ToolIntent` | 沒有對應物——**確認是宿主的事**，Novelwarden 自己那兩問在 `controller/mcp.ts` |

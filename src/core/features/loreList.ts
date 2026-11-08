@@ -1,26 +1,27 @@
+import { traditionalLabel } from '../model/labels';
 /**
- * 设定清单（架构第五件，设定名录）的两段式解码：先是一张**清单**（本书的分类目录树 + 每条的名字、
- * 分类、关键词、一句话），再按冻结的清单每批 6 条补**正文**，最后拼成一条条设定条目。
+ * 設定清單（架構第五件，設定名錄）的兩段式解碼：先是一張**清單**（本書的分類目錄樹 + 每條的名字、
+ * 分類、關鍵詞、一句話），再按凍結的清單每批 6 條補**正文**，最後拼成一條條設定條目。
  *
- * **纯函数、绝不抛**。路子与角色图谱（features/roster.ts）一样：
+ * **純函式、絕不拋**。路子與角色圖譜（features/roster.ts）一樣：
  *
- * ## 为什么分两步
+ * ## 為什麼分兩步
  *
- * 一次要三十条设定的全部正文，输出长到一定会被截断；而且分类、名字在长输出里前后不一（前面叫
- * 「青云宗」、后面叫「青云门」）。先冻结一张清单——分类与名字只在清单里定一次——详情那一步**不许**
- * 增删条目、改名换分类，只补每一条自己的正文。
+ * 一次要三十條設定的全部正文，輸出長到一定會被截斷；而且分類、名字在長輸出裡前後不一（前面叫
+ * 「青雲宗」、後面叫「青雲門」）。先凍結一張清單——分類與名字只在清單裡定一次——詳情那一步**不許**
+ * 增刪條目、改名換分類，只補每一條自己的正文。
  *
- * ## 分类是这本书自己的目录树
+ * ## 分類是這本書自己的目錄樹
  *
- * 没有固定的分类表（作者定案）：清单第一步按题材排出 `categories`，落盘时建成 `lore/` 下的目录（空的
- * 也建，作者看得到分类表）。本书已经有目录的，提示词要求照用、只补缺的。条目的 `category` 不在
- * `categories` 里的照收、补进目录树并说明；是空的放根目录（未分类）。
+ * 沒有固定的分類表（作者定案）：清單第一步按題材排出 `categories`，落盤時建成 `lore/` 下的目錄（空的
+ * 也建，作者看得到分類表）。本書已經有目錄的，提示詞要求照用、只補缺的。條目的 `category` 不在
+ * `categories` 裡的照收、補進目錄樹並說明；是空的放根目錄（未分類）。
  *
- * ## 比合同宽松的地方
+ * ## 比合同寬鬆的地方
  *
- * 只有「清单里一条能用的都没有」才算失败。条数不在 12–30、分类不在表里、某条正文没出来、超长——都照收
- * 并写进 `warnings`，落盘卡片上列出来。超过 30 条只留前 30 条：调用次数是按 30 条报给作者的（第 4 条）。
- * 人名不是设定：清单里撞上角色卡上的名字或别称的丢掉（提示词说一遍，这里再过一遍）。
+ * 只有「清單裡一條能用的都沒有」才算失敗。條數不在 12–30、分類不在表裡、某條正文沒出來、超長——都照收
+ * 並寫進 `warnings`，落盤卡片上列出來。超過 30 條只留前 30 條：呼叫次數是按 30 條報給作者的（第 4 條）。
+ * 人名不是設定：清單裡撞上角色卡上的名字或別稱的丟掉（提示詞說一遍，這裡再過一遍）。
  */
 import { sanitizeFileName } from '../model/fs';
 import { hasContent, pickSections } from '../model/markdown';
@@ -37,21 +38,21 @@ import { LORE_LIST_MAX } from '../model/pipeline';
 import type { LoreEntry } from '../model/types';
 import { parseJson, singleJsonObject } from './structuredJson';
 
-/** 设定清单里的一条。落盘时变成一条设定条目。 */
+/** 設定清單裡的一條。落盤時變成一條設定條目。 */
 export interface LoreListEntry {
   title: string;
-  /** 分类路径（`宗门/正道`），根目录（未分类）是空串。 */
+  /** 分類路徑（`宗門/正道`），根目錄（未分類）是空串。 */
   category: string;
   keywords: string[];
   brief: string;
-  /** 正文三节（`## 概要` / `## 规则与边界` / `## 现状`）。没生成出来是空串。 */
+  /** 正文三節（`## 概要` / `## 規則與邊界` / `## 現狀`）。沒生成出來是空串。 */
   body: string;
 }
 
-/** 清单里的一条（还没有正文）。 */
+/** 清單裡的一條（還沒有正文）。 */
 export type LoreListSlot = Omit<LoreListEntry, 'body'>;
 
-/** 解码要对照的已有东西：本书的目录树、已有条目（照抄名字）、角色卡上的人（不进设定）。 */
+/** 解碼要對照的已有東西：本書的目錄樹、已有條目（照抄名字）、角色卡上的人（不進設定）。 */
 export interface LoreListKnown {
   categories: readonly string[];
   entries: readonly LoreEntry[];
@@ -62,9 +63,9 @@ export type LoreManifestDecode =
   | { ok: true; categories: string[]; slots: LoreListSlot[]; warnings: string[] }
   | { ok: false; message: string };
 
-/** 分类目录最多几层（与「按目录整理」同一个数）。 */
+/** 分類目錄最多幾層（與「按目錄整理」同一個數）。 */
 const CATEGORY_DEPTH = 3;
-/** 一条最多几个关键词。 */
+/** 一條最多幾個關鍵詞。 */
 const KEYWORDS_MAX = 8;
 
 function str(v: unknown): string {
@@ -93,8 +94,8 @@ function clip(value: string, max: number): string {
 }
 
 /**
- * 分类写法规范成能当目录用的路径：`/` 分段、每段是合法的文件夹名、最多 {@link CATEGORY_DEPTH} 层。
- * 全是非法字符的段丢掉；「未分类」与空串都是根目录。
+ * 分類寫法規範成能當目錄用的路徑：`/` 分段、每段是合法的資料夾名、最多 {@link CATEGORY_DEPTH} 層。
+ * 全是非法字元的段丟掉；「未分類」與空串都是根目錄。
  */
 export function loreFolderOf(value: string): string {
   return normalizeLoreCategory(value)
@@ -107,18 +108,18 @@ export function loreFolderOf(value: string): string {
 }
 
 /**
- * 清单 `{"categories":[…],"entries":[{title,category,keywords,brief}]}`。
+ * 清單 `{"categories":[…],"entries":[{title,category,keywords,brief}]}`。
  *
- * - `categories` 规范成目录路径，重复的去掉；本书已有的照收（不另报）。一级分类不在 3–8 个时说一声。
- * - 已有条目（按标题、再按关键词认）的名字换成条目的标题、分类换成它实际所在的目录——已建条目以
- *   实际目录为准。
- * - 同一个名字只收第一条；撞上角色卡上的人的丢掉；超过 {@link LORE_LIST_MAX} 条只留前面的。
+ * - `categories` 規範成目錄路徑，重複的去掉；本書已有的照收（不另報）。一級分類不在 3–8 個時說一聲。
+ * - 已有條目（按標題、再按關鍵詞認）的名字換成條目的標題、分類換成它實際所在的目錄——已建條目以
+ *   實際目錄為準。
+ * - 同一個名字只收第一條；撞上角色卡上的人的丟掉；超過 {@link LORE_LIST_MAX} 條只留前面的。
  */
 export function decodeLoreManifest(text: string, known: LoreListKnown): LoreManifestDecode {
   const obj = objectOf(text);
   const rows = obj?.entries ?? obj?.settings ?? obj?.lore ?? (Array.isArray(parseJson(text)) ? parseJson(text) : undefined);
   if (!Array.isArray(rows)) {
-    return { ok: false, message: '设定清单不是 {"categories":[…],"entries":[…]} 的形状' };
+    return { ok: false, message: '設定清單不是 {"categories":[…],"entries":[…]} 的形狀' };
   }
   const warnings: string[] = [];
   const categories: string[] = [];
@@ -130,7 +131,7 @@ export function decodeLoreManifest(text: string, known: LoreListKnown): LoreMani
   for (const raw of strings(obj?.categories ?? obj?.分类)) {
     const folder = loreFolderOf(raw);
     if (!folder) {
-      warnings.push(`分类「${raw}」当不了目录名，丢掉`);
+      warnings.push(`分類「${raw}」當不了目錄名，丟掉`);
       continue;
     }
     addCategory(folder);
@@ -146,22 +147,22 @@ export function decodeLoreManifest(text: string, known: LoreListKnown): LoreMani
     const name = clip(str(o?.title ?? o?.name ?? o?.名称), LORE_LINE_LIMITS.name);
     const key = normalizeLoreName(name);
     if (!o || !key) {
-      warnings.push(`设定清单第 ${i + 1} 项没有名字，跳过`);
+      warnings.push(`設定清單第 ${i + 1} 項沒有名字，跳過`);
       continue;
     }
     if (people.has(key)) {
-      warnings.push(`「${name}」是角色卡上的人，人不是设定，丢掉`);
+      warnings.push(`「${name}」是角色卡上的人，人不是設定，丟掉`);
       continue;
     }
     const entry = lookup.find(name);
     const title = entry?.title ?? name;
     const dedupe = normalizeLoreName(title);
     if (seen.has(dedupe)) {
-      warnings.push(`设定清单里「${title}」出现了不止一次，只收第一条`);
+      warnings.push(`設定清單裡「${title}」出現了不止一次，只收第一條`);
       continue;
     }
     if (slots.length >= LORE_LIST_MAX) {
-      warnings.push(`设定清单超过 ${LORE_LIST_MAX} 条，「${title}」及之后的没收`);
+      warnings.push(`設定清單超過 ${LORE_LIST_MAX} 條，「${title}」及之後的沒收`);
       break;
     }
     seen.add(dedupe);
@@ -172,15 +173,15 @@ export function decodeLoreManifest(text: string, known: LoreListKnown): LoreMani
       const rawCategory = str(o.category ?? o.分类);
       category = loreFolderOf(rawCategory);
       if (!category) {
-        warnings.push(`「${title}」没写分类，放在设定根目录（未分类）`);
+        warnings.push(`「${title}」沒寫分類，放在設定根目錄（未分類）`);
       } else if (!categories.includes(category) && !existing.has(category)) {
-        warnings.push(`「${title}」的分类「${category}」不在 categories 里，按新目录建`);
+        warnings.push(`「${title}」的分類「${category}」不在 categories 裡，按新目錄建`);
         addCategory(category);
       }
     }
     const brief = str(o.brief ?? o.一句话 ?? o.简介);
     if (Array.from(brief).length > LORE_ENTRY_LIMITS.brief) {
-      warnings.push(`「${title}」的一句话超过 ${LORE_ENTRY_LIMITS.brief} 字，已截断`);
+      warnings.push(`「${title}」的一句話超過 ${LORE_ENTRY_LIMITS.brief} 字，已截斷`);
     }
     const keywords = [
       ...new Set(
@@ -192,20 +193,20 @@ export function decodeLoreManifest(text: string, known: LoreListKnown): LoreMani
     slots.push({ title, category, keywords, brief: clip(brief, LORE_ENTRY_LIMITS.brief) });
   }
   if (slots.length === 0) {
-    return { ok: false, message: '设定清单里一条能用的都没有' };
+    return { ok: false, message: '設定清單裡一條能用的都沒有' };
   }
-  // 一级分类按本书已有的加上这一次新排的数：已有目录的书，模型照合同只补缺的那几个。
+  // 一級分類按本書已有的加上這一次新排的數：已有目錄的書，模型照合同只補缺的那幾個。
   const top = new Set([...known.categories, ...categories].map((c) => c.split('/')[0]));
   if (top.size < 3 || top.size > 8) {
-    warnings.push(`一级分类有 ${top.size} 个，合同要求 3–8 个`);
+    warnings.push(`一級分類有 ${top.size} 個，合同要求 3–8 個`);
   }
   if (slots.length < 12) {
-    warnings.push(`设定清单有 ${slots.length} 条，合同要求 12–${LORE_LIST_MAX} 条`);
+    warnings.push(`設定清單有 ${slots.length} 條，合同要求 12–${LORE_LIST_MAX} 條`);
   }
   return { ok: true, categories, slots, warnings };
 }
 
-/** 一条的正文（详情那一步交回来的）。 */
+/** 一條的正文（詳情那一步交回來的）。 */
 export interface LoreDetail {
   title: string;
   body: string;
@@ -216,17 +217,17 @@ export type LoreDetailsDecode =
   | { ok: false; message: string };
 
 /**
- * 一批详情 `{"entries":[{title, body}]}`。
+ * 一批詳情 `{"entries":[{title, body}]}`。
  *
- * 只认这一批该有的名字（归一后对上），清单外的丢掉并说明（清单是冻结的，详情那一步不许加条目）。
- * `body` 给成三节 Markdown 或 `{概要, 规则与边界, 现状}` 对象都收，规范成三节、超长截断
- * （{@link normalizeLoreBody}）。整段解不出来才算失败——交给生成链拆半重试。
+ * 只認這一批該有的名字（歸一後對上），清單外的丟掉並說明（清單是凍結的，詳情那一步不許加條目）。
+ * `body` 給成三節 Markdown 或 `{概要, 規則與邊界, 現狀}` 物件都收，規範成三節、超長截斷
+ * （{@link normalizeLoreBody}）。整段解不出來才算失敗——交給生成鏈拆半重試。
  */
 export function decodeLoreDetails(text: string, batch: readonly LoreListSlot[]): LoreDetailsDecode {
   const obj = objectOf(text);
   const rows = obj?.entries ?? obj?.settings;
   if (!Array.isArray(rows)) {
-    return { ok: false, message: '设定详情不是 {"entries":[…]} 的形状' };
+    return { ok: false, message: '設定詳情不是 {"entries":[…]} 的形狀' };
   }
   const warnings: string[] = [];
   const wanted = new Map(batch.map((s) => [normalizeLoreName(s.title), s]));
@@ -239,7 +240,7 @@ export function decodeLoreDetails(text: string, batch: readonly LoreListSlot[]):
     const name = str(o.title ?? o.name);
     const slot = wanted.get(normalizeLoreName(name));
     if (!slot) {
-      warnings.push(`详情里多出一条清单外的「${name || '（没有名字）'}」，丢掉`);
+      warnings.push(`詳情裡多出一條清單外的「${name || '（沒有名字）'}」，丟掉`);
       continue;
     }
     if (items.some((d) => d.title === slot.title)) {
@@ -248,7 +249,7 @@ export function decodeLoreDetails(text: string, batch: readonly LoreListSlot[]):
     const { body, clipped } = normalizeLoreBody(o.body ?? o.content ?? pickBodyFields(o));
     if (clipped) {
       warnings.push(
-        `「${slot.title}」的正文超长，已截断（每节不超过 ${LORE_BODY_KEYS.map((k) => LORE_ENTRY_LIMITS[k]).join(' / ')} 字，合计不超过 ${LORE_LIST_BODY_MAX} 字）`
+        `「${slot.title}」的正文超長，已截斷（每節不超過 ${LORE_BODY_KEYS.map((k) => LORE_ENTRY_LIMITS[k]).join(' / ')} 字，合計不超過 ${LORE_LIST_BODY_MAX} 字）`
       );
     }
     if (body) {
@@ -258,17 +259,17 @@ export function decodeLoreDetails(text: string, batch: readonly LoreListSlot[]):
   return { ok: true, items, warnings };
 }
 
-/** 模型没包一层 `body`、直接把三节写成字段时（`{title, 概要, 规则与边界, 现状}`）。 */
+/** 模型沒包一層 `body`、直接把三節寫成欄位時（`{title, 概要, 規則與邊界, 現狀}`）。 */
 function pickBodyFields(o: Record<string, unknown>): Record<string, unknown> | undefined {
   return LORE_BODY_KEYS.some((k) => o[k] !== undefined) ? o : undefined;
 }
 
 /**
- * 正文规范成三节：`## 概要` / `## 规则与边界` / `## 现状`。给成对象按键取，给成 Markdown 按小节取，
- * 一个小节都认不出的整段当「概要」。每节不超过条目的上限（{@link LORE_ENTRY_LIMITS}），三节合计不超过
- * `max` 字（缺省 {@link LORE_LIST_BODY_MAX}，设定清单起步时的数；展开一条设定给 `LORE_ENTRY_LIMITS.body`）——
- * 超了从超出的那一节起截掉。空着的节写「（未交代）」：起步时不必写满，节在，作者一眼看得出这里还没东西。
- * 三节全空就是空串。
+ * 正文規範成三節：`## 概要` / `## 規則與邊界` / `## 現狀`。給成物件按鍵取，給成 Markdown 按小節取，
+ * 一個小節都認不出的整段當「概要」。每節不超過條目的上限（{@link LORE_ENTRY_LIMITS}），三節合計不超過
+ * `max` 字（預設 {@link LORE_LIST_BODY_MAX}，設定清單起步時的數；展開一條設定給 `LORE_ENTRY_LIMITS.body`）——
+ * 超了從超出的那一節起截掉。空著的節寫「（未交代）」：起步時不必寫滿，節在，作者一眼看得出這裡還沒東西。
+ * 三節全空就是空串。
  */
 export function normalizeLoreBody(value: unknown, max: number = LORE_LIST_BODY_MAX): { body: string; clipped: boolean } {
   const sections: Record<string, string> = {};
@@ -298,14 +299,14 @@ export function normalizeLoreBody(value: unknown, max: number = LORE_LIST_BODY_M
     }
     const kept = chars.slice(0, Math.max(0, max)).join('').trim();
     left -= Array.from(kept).length;
-    return `## ${key}\n${kept || '（未交代）'}`;
+    return `## ${traditionalLabel(key)}\n${kept || '（未交代）'}`;
   });
   return { body: parts.join('\n\n'), clipped };
 }
 
 /**
- * 清单 + 详情 → 条目。详情缺席的条目照样建（只有一句话），并记一条 warning——与角色图谱
- * 「某人详情没出来照样按清单建卡」同一个口径。
+ * 清單 + 詳情 → 條目。詳情缺席的條目照樣建（只有一句話），並記一條 warning——與角色圖譜
+ * 「某人詳情沒出來照樣按清單建卡」同一個口徑。
  */
 export function assembleLoreList(
   slots: readonly LoreListSlot[],
@@ -316,7 +317,7 @@ export function assembleLoreList(
   const entries = slots.map((slot) => {
     const body = byTitle.get(slot.title) ?? '';
     if (!body) {
-      warnings.push(`「${slot.title}」的正文没有生成出来，只按清单建条目（一句话），写到了再整合`);
+      warnings.push(`「${slot.title}」的正文沒有生成出來，只按清單建條目（一句話），寫到了再整合`);
     }
     return { ...slot, body };
   });
@@ -324,8 +325,8 @@ export function assembleLoreList(
 }
 
 /**
- * 规范化输出：`{"categories":[…],"entries":[{title,category,keywords,brief,body}]}`。生成链最后交给气泡的
- * 那一份，也是采纳时重新解析的那一份（artifact.ts 的 `parseLoreList` 认得它）。
+ * 規範化輸出：`{"categories":[…],"entries":[{title,category,keywords,brief,body}]}`。生成鏈最後交給氣泡的
+ * 那一份，也是採納時重新解析的那一份（artifact.ts 的 `parseLoreList` 認得它）。
  */
 export function renderLoreList(categories: readonly string[], entries: readonly LoreListEntry[]): string {
   return JSON.stringify(
@@ -345,9 +346,9 @@ export function renderLoreList(categories: readonly string[], entries: readonly 
 }
 
 /**
- * 采纳时读回来（规范化输出，或者模型第一次调用的原样清单——agent 那条路、老会话）。宽松收：
- * 没写 `categories` 就从条目的分类里收；同名只留第一条；正文按 {@link normalizeLoreBody} 规范。
- * 认不出就是空的。
+ * 採納時讀回來（規範化輸出，或者模型第一次呼叫的原樣清單——agent 那條路、老會話）。寬鬆收：
+ * 沒寫 `categories` 就從條目的分類裡收；同名只留第一條；正文按 {@link normalizeLoreBody} 規範。
+ * 認不出就是空的。
  */
 export function parseLoreList(text: string): { categories: string[]; entries: LoreListEntry[] } {
   const obj = objectOf(text);

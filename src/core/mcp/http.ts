@@ -1,26 +1,26 @@
 /**
- * MCP 的 Streamable HTTP 传输。**只用标准的 `Request` / `Response`**，Bun 与 Node 都跑得动。
+ * MCP 的 Streamable HTTP 傳輸。**只用標準的 `Request` / `Response`**，Bun 與 Node 都跑得動。
  *
- * 实现的是规范里最小的那一截：
+ * 實現的是規範裡最小的那一截：
  *
- * - `POST` 一条（或一批）JSON-RPC 消息 → 有请求就回 `application/json`（`tools/call` 见下），只有通知回 202；
- * - `initialize` 的响应带 `Mcp-Session-Id`，之后的请求带着它来；认不出的 id 回 404，
- *   客户端据此重新 `initialize`（服务重启过就是这样）；
- * - `DELETE` 结束会话；
- * - `GET`（服务端主动推的那条 SSE 流）回 405——我们从不主动推东西。
+ * - `POST` 一條（或一批）JSON-RPC 訊息 → 有請求就回 `application/json`（`tools/call` 見下），只有通知回 202；
+ * - `initialize` 的響應帶 `Mcp-Session-Id`，之後的請求帶著它來；認不出的 id 回 404，
+ *   客戶端據此重新 `initialize`（服務重啟過就是這樣）；
+ * - `DELETE` 結束會話；
+ * - `GET`（服務端主動推的那條 SSE 流）回 405——我們從不主動推東西。
  *
- * 带 `tools/call` 的请求、客户端又收 `text/event-stream` 时回 SSE：一次调用可能跑几分钟（写一章、
- * 等作者点确认），而客户端等响应头有上限（Claude Code 缺省 60 秒，到点报「The operation timed out.」），
- * 等结果还有空闲上限（HTTP 缺省 5 分钟，收到 progress 通知才重新计时）。所以先回响应头，跑的期间
- * 每隔 `HEARTBEAT_MS` 发一条 `notifications/progress`（请求没带 progressToken 就发一行 SSE 注释），
- * 跑完把回复当事件发出去、关流。其余请求照旧回整份 JSON。
- * 连接上的空闲超时由壳关掉（`server.ts` 的 `server.timeout(req, 0)`）。
+ * 帶 `tools/call` 的請求、客戶端又收 `text/event-stream` 時回 SSE：一次呼叫可能跑幾分鐘（寫一章、
+ * 等作者點確認），而客戶端等響應頭有上限（Claude Code 預設 60 秒，到點報「The operation timed out.」），
+ * 等結果還有空閒上限（HTTP 預設 5 分鐘，收到 progress 通知才重新計時）。所以先回響應頭，跑的期間
+ * 每隔 `HEARTBEAT_MS` 發一條 `notifications/progress`（請求沒帶 progressToken 就發一行 SSE 註釋），
+ * 跑完把回覆當事件發出去、關流。其餘請求照舊回整份 JSON。
+ * 連線上的空閒超時由殼關掉（`server.ts` 的 `server.timeout(req, 0)`）。
  *
- * 地址上可以带 `?project=<工程目录>` 指定落到哪个工程（独立版能同时开几个）；不带由壳决定。
+ * 地址上可以帶 `?project=<工程目錄>` 指定落到哪個工程（獨立版能同時開幾個）；不帶由殼決定。
  *
- * 鉴权归壳管，这里只管 `Origin`：浏览器会带它，认不认由壳给的 `allowOrigin` 定（独立版缺省只放
- * 本机同端口，配了令牌再放同源）——挡掉恶意网页借浏览器打本机端口（DNS rebinding）。
- * 命令行客户端不带 `Origin`，放过。
+ * 鑑權歸殼管，這裡只管 `Origin`：瀏覽器會帶它，認不認由殼給的 `allowOrigin` 定（獨立版預設只放
+ * 本機同埠，配了令牌再放同源）——擋掉惡意網頁借瀏覽器打本機埠（DNS rebinding）。
+ * 命令列客戶端不帶 `Origin`，放過。
  */
 import { randomUUID } from 'node:crypto';
 import { scoped } from '../runtime/logger';
@@ -38,13 +38,13 @@ const log = scoped('MCP');
 
 const SESSION_HEADER = 'mcp-session-id';
 
-/** SSE 上多久发一次保活：远小于客户端的空闲上限（HTTP 缺省 5 分钟）。 */
+/** SSE 上多久發一次保活：遠小於客戶端的空閒上限（HTTP 預設 5 分鐘）。 */
 export const HEARTBEAT_MS = 15_000;
 
 export interface McpHttpOptions {
-  /** 浏览器发来的 `Origin` 认不认（`req` 给壳比对 `Host` 用）。不给就一律放过（测试用）。 */
+  /** 瀏覽器發來的 `Origin` 認不認（`req` 給殼比對 `Host` 用）。不給就一律放過（測試用）。 */
   allowOrigin?(origin: string | null, req: Request): boolean;
-  /** SSE 保活间隔，缺省 `HEARTBEAT_MS`（测试调小）。 */
+  /** SSE 保活間隔，預設 `HEARTBEAT_MS`（測試調小）。 */
   heartbeatMs?: number;
 }
 
@@ -55,7 +55,7 @@ export class McpHttpHandler {
 
   async handle(req: Request): Promise<Response> {
     if (this.opts.allowOrigin && !this.opts.allowOrigin(req.headers.get('origin'), req)) {
-      log.warn('拒绝了一个跨源 MCP 请求', `Origin: ${req.headers.get('origin')}`);
+      log.warn('拒絕了一個跨源 MCP 請求', `Origin: ${req.headers.get('origin')}`);
       return new Response('Forbidden origin', { status: 403 });
     }
     switch (req.method) {
@@ -68,7 +68,7 @@ export class McpHttpHandler {
     }
   }
 
-  /** 服务停掉时调：还在跑的调用全中断。 */
+  /** 服務停掉時調：還在跑的呼叫全中斷。 */
   closeAll(): void {
     for (const s of this.sessions.values()) {
       s.close();
@@ -81,12 +81,12 @@ export class McpHttpHandler {
     try {
       body = JSON.parse(await req.text());
     } catch {
-      return json(rpcError(null, RPC.parseError, '请求体不是合法的 JSON。'), 400);
+      return json(rpcError(null, RPC.parseError, '請求體不是合法的 JSON。'), 400);
     }
     const batch = Array.isArray(body);
     const messages = (batch ? body : [body]) as JsonRpcMessage[];
     if (messages.length === 0) {
-      return json(rpcError(null, RPC.invalidRequest, '空的批量请求。'), 400);
+      return json(rpcError(null, RPC.invalidRequest, '空的批次請求。'), 400);
     }
 
     const initializing = messages.some((m) => m?.method === 'initialize');
@@ -98,15 +98,15 @@ export class McpHttpHandler {
     } else if (sid) {
       const found = this.sessions.get(sid);
       if (!found) {
-        // 规范：认不出的会话回 404，客户端会重新 initialize。
-        return json(rpcError(null, RPC.invalidRequest, '会话不存在或已过期，请重新 initialize。'), 404);
+        // 規範：認不出的會話回 404，客戶端會重新 initialize。
+        return json(rpcError(null, RPC.invalidRequest, '會話不存在或已過期，請重新 initialize。'), 404);
       }
       session = found;
     } else {
-      // 不带会话 id 的客户端也放过：只是没法按会话省掉重复的状态简报。
+      // 不帶會話 id 的客戶端也放過：只是沒法按會話省掉重複的狀態簡報。
       session = new McpSession('');
     }
-    // 地址上的 `?project=` 跟着每次请求走：客户端配置里改了地址、不必重新 initialize。
+    // 地址上的 `?project=` 跟著每次請求走：客戶端配置裡改了地址、不必重新 initialize。
     session.project = new URL(req.url).searchParams.get('project')?.trim() || undefined;
 
     const headers: Record<string, string> = session.id ? { 'Mcp-Session-Id': session.id } : {};
@@ -125,7 +125,7 @@ export class McpHttpHandler {
     return json(batch ? replies : replies[0], 200, headers);
   }
 
-  /** 先回响应头，跑的期间发保活，跑完一条回复一个事件。 */
+  /** 先回響應頭，跑的期間發保活，跑完一條回覆一個事件。 */
   private stream(
     messages: JsonRpcMessage[],
     session: McpSession,
@@ -136,7 +136,7 @@ export class McpHttpHandler {
       .map((m) => (m?.params?._meta as { progressToken?: unknown } | undefined)?.progressToken)
       .filter((t): t is string | number => typeof t === 'string' || typeof t === 'number');
     const encoder = new TextEncoder();
-    // 客户端断开时流会被 cancel：与 req.signal 一起当取消信号，哪个先到都中断那次调用。
+    // 客戶端斷開時流會被 cancel：與 req.signal 一起當取消訊號，哪個先到都中斷那次呼叫。
     const gone = new AbortController();
     let timer: ReturnType<typeof setInterval> | undefined;
     const body = new ReadableStream<Uint8Array>({
@@ -146,7 +146,7 @@ export class McpHttpHandler {
             controller.enqueue(encoder.encode(chunk));
           }
         };
-        // Bun 等到第一块正文才把响应头发出去：先发一行注释，响应头当场就到。
+        // Bun 等到第一塊正文才把響應頭發出去：先發一行註釋，響應頭當場就到。
         send(': open\n\n');
         let beat = 0;
         timer = setInterval(() => {
@@ -155,7 +155,7 @@ export class McpHttpHandler {
             send(': running\n\n');
           }
           for (const progressToken of tokens) {
-            send(event({ jsonrpc: '2.0', method: 'notifications/progress', params: { progressToken, progress: beat, message: '仍在运行' } }));
+            send(event({ jsonrpc: '2.0', method: 'notifications/progress', params: { progressToken, progress: beat, message: '仍在執行' } }));
           }
         }, this.opts.heartbeatMs ?? HEARTBEAT_MS);
         try {
@@ -193,7 +193,7 @@ export class McpHttpHandler {
     }
     session.close();
     this.sessions.delete(session.id);
-    log.info(`MCP 会话结束${session.clientName ? `：${session.clientName}` : ''}`);
+    log.info(`MCP 會話結束${session.clientName ? `：${session.clientName}` : ''}`);
     return new Response(null, { status: 200 });
   }
 }

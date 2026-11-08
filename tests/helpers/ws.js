@@ -1,25 +1,25 @@
 /**
- * WebSocket 测试客户端（**ESM，只给 Bun 侧的 e2e 用**）。
+ * WebSocket 測試客戶端（**ESM，只給 Bun 側的 e2e 用**）。
  *
- * 独立版的 e2e（tests/e2e/standalone/）跑在 Bun 下：ESM、顶层 await、全局
- * WebSocket。Node 侧的测试一律 CommonJS，用不到这份 helper，也 require 不进去。
+ * 獨立版的 e2e（tests/e2e/standalone/）跑在 Bun 下：ESM、頂層 await、全域
+ * WebSocket。Node 側的測試一律 CommonJS，用不到這份 helper，也 require 不進去。
  *
- * 协议是「发一条、等一条」：服务端会主动推状态（连上就来一轮全量），
- * 所以不能假设下一条消息就是自己要的那条——收到的一律先进 inbox，
- * 由 waitFor 按谓词挑走。已经躺在 inbox 里的旧消息也能被挑中，
- * 于是「先 send 后 waitFor」和「消息先到」两种时序都成立。
+ * 協議是「發一條、等一條」：服務端會主動推狀態（連上就來一輪全量），
+ * 所以不能假設下一條訊息就是自己要的那條——收到的一律先進 inbox，
+ * 由 waitFor 按謂詞挑走。已經躺在 inbox 裡的舊訊息也能被挑中，
+ * 於是「先 send 後 waitFor」和「訊息先到」兩種時序都成立。
  *
- * 迁自 scripts/smoke-server.js 的 connect()。
+ * 遷自 scripts/smoke-server.js 的 connect()。
  */
 
 const TIMEOUT_MS = 5000;
 
 /**
- * 开一条 WS，把收到的消息按谓词分发给等待者，其余排进 inbox。
+ * 開一條 WS，把收到的訊息按謂詞分發給等待者，其餘排進 inbox。
  *
- * @param {number} port 服务端口
- * @param {string} [project] 窗口网址上的 `?project=`（独立版一个窗口开一个工程）
- * @param {Record<string, string>} [headers] 握手时多带的请求头
+ * @param {number} port 服務埠
+ * @param {string} [project] 視窗網址上的 `?project=`（獨立版一個視窗開一個工程）
+ * @param {Record<string, string>} [headers] 握手時多帶的請求頭
  * @returns {{
  *   ws: WebSocket,
  *   ready: Promise<void>,
@@ -30,7 +30,7 @@ const TIMEOUT_MS = 5000;
  */
 export function connect(port, project, headers) {
   const query = project ? `?project=${encodeURIComponent(project)}` : '';
-  // `headers` 是 Bun 的 WebSocket 扩展（浏览器没有）：鉴权用例拿它带登录换来的 cookie。
+  // `headers` 是 Bun 的 WebSocket 擴充套件（瀏覽器沒有）：鑑權用例拿它帶登入換來的 cookie。
   const ws = new WebSocket(`ws://127.0.0.1:${port}/ws${query}`, headers ? { headers } : undefined);
   const inbox = [];
   const waiters = [];
@@ -47,12 +47,12 @@ export function connect(port, project, headers) {
 
   const ready = new Promise((resolve, reject) => {
     ws.onopen = () => resolve();
-    setTimeout(() => reject(new Error('WS 连不上')), TIMEOUT_MS);
+    setTimeout(() => reject(new Error('WS 連不上')), TIMEOUT_MS);
   });
 
   const waitFor = (match, label) =>
     new Promise((resolve, reject) => {
-      // 先翻 inbox：想等的那条可能在 send 之前就到了。
+      // 先翻 inbox：想等的那條可能在 send 之前就到了。
       const idx = inbox.findIndex(match);
       if (idx >= 0) {
         resolve(inbox.splice(idx, 1)[0]);
@@ -73,9 +73,9 @@ export function connect(port, project, headers) {
     ready,
     waitFor,
     send: (m) => ws.send(JSON.stringify(m)),
-    /** 丢掉堆积的旧消息——切目标前必须清，否则 waitFor 会立刻拿到上一轮的。 */
+    /** 丟掉堆積的舊訊息——切目標前必須清，否則 waitFor 會立刻拿到上一輪的。 */
     drain: () => (inbox.length = 0),
-    /** inbox 里是否已有匹配的消息（不等待）。用来断言「没有 init」。 */
+    /** inbox 裡是否已有匹配的訊息（不等待）。用來斷言「沒有 init」。 */
     has: (match) => inbox.some(match),
   };
 }

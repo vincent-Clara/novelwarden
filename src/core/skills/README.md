@@ -1,111 +1,111 @@
-# core/skills — 写作技能
+# core/skills — 寫作技能
 
-按创作阶段给工程绑一份**补充的写作方法**（一个常规的技能目录：`SKILL.md` 加它引用的附带文件），这个阶段往后的每一次生成都把它放在提示词最前面。移植自 AI-Novel-Writer（GPL-3.0）的「写作 Skill」（上游 ADR 0015「写作 Skill 是按阶段冻结的补充指导」），设计与取舍见 [docs/design/plans/2026-10-02-writing-skills.md](../../../docs/design/plans/2026-10-02-writing-skills.md)；改成认常规技能格式（YAML frontmatter、附带文件、内置改成目录）见 [2026-10-21-skill-dirs.md](../../../docs/design/plans/2026-10-21-skill-dirs.md)。
+按創作階段給工程綁一份**補充的寫作方法**（一個常規的技能目錄：`SKILL.md` 加它引用的附帶檔案），這個階段往後的每一次生成都把它放在提示詞最前面。移植自 AI-Novel-Writer（GPL-3.0）的「寫作 Skill」（上游 ADR 0015「寫作 Skill 是按階段凍結的補充指導」），設計與取捨見 [docs/design/plans/2026-10-02-writing-skills.md](../../../docs/design/plans/2026-10-02-writing-skills.md)；改成認常規技能格式（YAML frontmatter、附帶檔案、內建改成目錄）見 [2026-10-21-skill-dirs.md](../../../docs/design/plans/2026-10-21-skill-dirs.md)。
 
-## 文件
+## 檔案
 
-| 文件 | 职责 |
+| 檔案 | 職責 |
 |---|---|
-| [library.ts](library.ts) | 三个来源怎么读（内置 / 我的技能库 / 本工程），附带文件按引用一层层读进来（`collectSkillFiles`，GitHub 也用它），我的技能库怎么装与卸。**每次都读盘**；不跟链接 |
-| [github.ts](github.ts) | 从 GitHub 装：**先检查、再确认安装**，`SKILL.md` 连同引用到的附带文件一起下；两步之间整份清单变了不装 |
-| [bindings.ts](bindings.ts) | 工程的阶段绑定（`.novelwarden/skills.json`）：读、改、装配器问的那一句 `boundSkillFor` |
-| [builtin/](builtin/README.md) | 内置技能，**一个目录一份**（常规技能格式，与其余来源走同一条读法），现在只有一份去 AI 味。构建时由 `scripts/embed-skills.js` 内嵌成 `builtin/embedded.ts`（生成文件，不入库） |
+| [library.ts](library.ts) | 三個來源怎麼讀（內建 / 我的技能庫 / 本工程），附帶檔案按引用一層層讀進來（`collectSkillFiles`，GitHub 也用它），我的技能庫怎麼裝與卸。**每次都讀盤**；不跟連結 |
+| [github.ts](github.ts) | 從 GitHub 裝：**先檢查、再確認安裝**，`SKILL.md` 連同引用到的附帶檔案一起下；兩步之間整份清單變了不裝 |
+| [bindings.ts](bindings.ts) | 工程的階段繫結（`.novelwarden/skills.json`）：讀、改、裝配器問的那一句 `boundSkillFor` |
+| [builtin/](builtin/README.md) | 內建技能，**一個目錄一份**（常規技能格式，與其餘來源走同一條讀法），現在只有一份去 AI 味。構建時由 `scripts/embed-skills.js` 內嵌成 `builtin/embedded.ts`（生成檔案，不入庫） |
 
-纯函数（解析 `SKILL.md`、兼容检查、绑定文件的格式、一次装配算哪个阶段、GitHub 地址）在 [model/writingSkill.ts](../model/writingSkill.ts)：它零运行时 import，前端直接用里面的阶段名与来源名。
+純函式（解析 `SKILL.md`、相容檢查、繫結檔案的格式、一次裝配算哪個階段、GitHub 地址）在 [model/writingSkill.ts](../model/writingSkill.ts)：它零執行時 import，前端直接用裡面的階段名與來源名。
 
 ## 一份技能
 
-**常规的技能目录**：一份 `SKILL.md`，YAML frontmatter（只读顶层的 `name` / `display_name` / `description` / `version` / `stage`；`allowed-tools`、`metadata` 这类别的键读得过去、不碍事）加正文；旁边可以有它引用的文本文件（`references/*.md` 这类，叫**附带文件**）。
+**常規的技能目錄**：一份 `SKILL.md`，YAML frontmatter（只讀頂層的 `name` / `display_name` / `description` / `version` / `stage`；`allowed-tools`、`metadata` 這類別的鍵讀得過去、不礙事）加正文；旁邊可以有它引用的文字檔案（`references/*.md` 這類，叫**附帶檔案**）。
 
-**附带文件一起带**：这里的生成是一次调用，模型没有读文件的工具，没法「按需去读 references/x.md」。所以正文（与附带文件）里引用到的 `.md` / `.markdown` / `.txt` 一层层找出来，整份接在正文后面、标上路径，与正文算一整块（预算、64 KiB 都按合计）。目录里没被引用的（README、CHANGELOG、LICENSE）不读、不带。
+**附帶檔案一起帶**：這裡的生成是一次呼叫，模型沒有讀檔案的工具，沒法「按需去讀 references/x.md」。所以正文（與附帶檔案）裡引用到的 `.md` / `.markdown` / `.txt` 一層層找出來，整份接在正文後面、標上路徑，與正文算一整塊（預算、64 KiB 都按合計）。目錄裡沒被引用的（README、CHANGELOG、LICENSE）不讀、不帶。
 
-**只收纯提示词**——命中下面任何一条就判「不兼容」，装不进来、也绑不上（规则照搬上游，前两条为常规格式放宽过）：
+**只收純提示詞**——命中下面任何一條就判「不相容」，裝不進來、也綁不上（規則照搬上游，前兩條為常規格式放寬過）：
 
-| 原因 | 什么样算 |
+| 原因 | 什麼樣算 |
 |---|---|
-| 包含相对引用 | 明确引用旁边的文件（`./`、`../`、`references/…`、`assets/…`）却带不上：找不到、越出技能目录、不是文本；或 `${SKILL_DIR}`。普通的 `[例子](a.md)` 找不到只是不带 |
-| 依赖脚本 | `scripts/…`、「运行……脚本」、run the script |
-| 依赖 hook | `hooks/…`、「安装……钩子」 |
-| 依赖子代理 | sub-agent、「子代理」 |
-| 依赖工具调用 | frontmatter 顶层声明了 `hooks` / `mcp` / `scripts` / `sub-agents` 一类键，或正文「调用……工具」。`allowed-tools` / `tools` 不算：那是给 Claude Code 一类 agent 预先放行的权限 |
-| 内容超过 64 KiB | 整份 `SKILL.md`（含 frontmatter）加附带文件 |
+| 包含相對引用 | 明確引用旁邊的檔案（`./`、`../`、`references/…`、`assets/…`）卻帶不上：找不到、越出技能目錄、不是文字；或 `${SKILL_DIR}`。普通的 `[例子](a.md)` 找不到只是不帶 |
+| 依賴指令碼 | `scripts/…`、「執行……指令碼」、run the script |
+| 依賴 hook | `hooks/…`、「安裝……鉤子」 |
+| 依賴子代理 | sub-agent、「子代理」 |
+| 依賴工具呼叫 | frontmatter 頂層宣告瞭 `hooks` / `mcp` / `scripts` / `sub-agents` 一類鍵，或正文「呼叫……工具」。`allowed-tools` / `tools` 不算：那是給 Claude Code 一類 agent 預先放行的許可權 |
+| 內容超過 64 KiB | 整份 `SKILL.md`（含 frontmatter）加附帶檔案 |
 
-内容类的几条（脚本、hook、子代理、工具）在附带文件上也查：它们一样进提示词。
+內容類的幾條（指令碼、hook、子代理、工具）在附帶檔案上也查：它們一樣進提示詞。
 
-## 三个来源
+## 三個來源
 
-| 来源 | id | 在哪 | 怎么进来 |
+| 來源 | id | 在哪 | 怎麼進來 |
 |---|---|---|---|
-| 内置 | `builtin:<目录名>` | 仓库里的 [builtin/<名字>/](builtin/README.md)，构建时内嵌进程序 | 随应用发布，删不掉，不自动绑 |
-| 我的技能库 | `user:<目录名>` | `~/.novelwarden/skills/<名字>/SKILL.md`，所有工程共用 | 设置页「技能」或外部 agent 的 `skills install` 从 GitHub 装；也可以手放 |
-| 本工程 | `project:<目录名>` | `.novelwarden/skills/<名字>/SKILL.md`，跟着工程走、可进 Git | 作者手放 |
+| 內建 | `builtin:<目錄名>` | 倉庫裡的 [builtin/<名字>/](builtin/README.md)，構建時內嵌程序序 | 隨應用釋出，刪不掉，不自動綁 |
+| 我的技能庫 | `user:<目錄名>` | `~/.novelwarden/skills/<名字>/SKILL.md`，所有工程共用 | 設定頁「技能」或外部 agent 的 `skills install` 從 GitHub 裝；也可以手放 |
+| 本工程 | `project:<目錄名>` | `.novelwarden/skills/<名字>/SKILL.md`，跟著工程走、可進 Git | 作者手放 |
 
-**三个来源的身份都是目录名**，frontmatter 的 `name` 只用来显示（上游以 frontmatter 为准，手放的技能目录名与它不一样时，卸载删了个空）。名字可以是中文：字母或数字开头，其后可以有 `.` `_` `-`，最长 64。
+**三個來源的身份都是目錄名**，frontmatter 的 `name` 只用來顯示（上游以 frontmatter 為準，手放的技能目錄名與它不一樣時，解除安裝刪了個空）。名字可以是中文：字母或數字開頭，其後可以有 `.` `_` `-`，最長 64。
 
-## 从 GitHub 装
+## 從 GitHub 裝
 
-照搬上游的两步：
+照搬上游的兩步：
 
-1. **检查**：认四种地址（仓库首页 / `tree` 目录 / `blob` 文件 / `raw`），只要公开的 https；仓库首页先问一次默认分支。下载 `SKILL.md`，再按引用把附带文件一份份下下来（同一个分支、相对 `SKILL.md` 所在目录；404 当作没有，引用了却没有就判带不上），每份 10 秒超时、不跟重定向、合计 64 KiB 封顶；跑兼容检查，对整份清单（路径 + 内容）算 sha256，记在进程里那张表上。**不写任何文件**。检查结果带**正文**给作者看（上游装之前看不到），还会先说清装不装得了（不兼容、名字不能当目录名、同名的已经装了）。
-2. **安装**：没检查过不装；**重新下载**，hash 与落点都要与检查时一致；不兼容不装；同名不覆盖（要换新版先卸载旧的）；然后原样写进 `~/.novelwarden/skills/<name>/`：`SKILL.md` 与引用到的附带文件。
+1. **檢查**：認四種地址（倉庫首頁 / `tree` 目錄 / `blob` 檔案 / `raw`），只要公開的 https；倉庫首頁先問一次預設分支。下載 `SKILL.md`，再按引用把附帶檔案一份份下下來（同一個分支、相對 `SKILL.md` 所在目錄；404 當作沒有，引用了卻沒有就判帶不上），每份 10 秒超時、不跟重定向、合計 64 KiB 封頂；跑相容檢查，對整份清單（路徑 + 內容）算 sha256，記在程序裡那張表上。**不寫任何檔案**。檢查結果帶**正文**給作者看（上游裝之前看不到），還會先說清裝不裝得了（不相容、名字不能當目錄名、同名的已經裝了）。
+2. **安裝**：沒檢查過不裝；**重新下載**，hash 與落點都要與檢查時一致；不相容不裝；同名不覆蓋（要換新版先解除安裝舊的）；然後原樣寫進 `~/.novelwarden/skills/<name>/`：`SKILL.md` 與引用到的附帶檔案。
 
-设置页与 agent 共用那张检查表；两边装之前都先问作者（设置页的确认框 / `skills install` 的 `always` 闸门）。
+設定頁與 agent 共用那張檢查表；兩邊裝之前都先問作者（設定頁的確認框 / `skills install` 的 `always` 閘門）。
 
-**卸载**只认我的技能库：整个目录挪进 `~/.novelwarden/.trash/skills/`（同名加 `-2`），不真删（第 6 条的精神；上游是直接删）。本工程绑了它的阶段一起解绑；别的工程里绑了它的，下次生成在明细里写「找不到」后不带。
+**解除安裝**只認我的技能庫：整個目錄挪進 `~/.novelwarden/.trash/skills/`（同名加 `-2`），不真刪（第 6 條的精神；上游是直接刪）。本工程綁了它的階段一起解綁；別的工程裡綁了它的，下次生成在明細裡寫「找不到」後不帶。
 
-**仓库里备的预设**：[skills/writing/](../../../skills/writing/README.md) 有 32 份改编自 jarvis-write（Apache-2.0）的预设（16 份文风绑写正文，8 份故事味道、8 份故事骨架绑规划），另有 1 份本仓库自己写的对峙场面去 AI 味（绑写正文）。它们**不进内置**，作者照那份 README 里的地址从 GitHub 装进我的技能库；[tests/contract/skillPresets.test.js](../../../tests/contract/skillPresets.test.js) 拿安装时同一个 `inspectSkillMarkdown` 把每份过一遍。
+**倉庫裡備的預設**：[skills/writing/](../../../skills/writing/README.md) 有 32 份改編自 jarvis-write（Apache-2.0）的預設（16 份文風綁寫正文，8 份故事味道、8 份故事骨架綁規劃），另有 1 份本倉庫自己寫的對峙場面去 AI 味（綁寫正文）。它們**不進內建**，作者照那份 README 裡的地址從 GitHub 裝進我的技能庫；[tests/contract/skillPresets.test.js](../../../tests/contract/skillPresets.test.js) 拿安裝時同一個 `inspectSkillMarkdown` 把每份過一遍。
 
-## 阶段绑定
+## 階段繫結
 
-`.novelwarden/skills.json`：`{ "version": 1, "bindings": { "drafting": "user:scene-craft" } }`。每个阶段最多一份，同一份可以绑几个阶段；没绑就什么都不带。写盘走 `Workspace.writeSkillBindings`（第 7 条）。
+`.novelwarden/skills.json`：`{ "version": 1, "bindings": { "drafting": "user:scene-craft" } }`。每個階段最多一份，同一份可以綁幾個階段；沒綁就什麼都不帶。寫盤走 `Workspace.writeSkillBindings`（第 7 條）。
 
-| 阶段 | 对应 novelForge 的哪几次装配（`skillStageOf`） |
+| 階段 | 對應 novelForge 的哪幾次裝配（`skillStageOf`） |
 |---|---|
-| `planning` 规划 | 架构、大纲、细纲三层的生成与沉淀（含补齐架构、批量拆细纲、角色图谱第二步与细纲紧凑重建） |
-| `drafting` 写正文 | 写、接着写、重写与它们的续写那几轮（含批量写章） |
-| `review` 审稿 | 审稿与它的重来一次 |
-| `refinement` 修稿 | 按勾选修稿与它被截断之后的续写 |
+| `planning` 規劃 | 架構、大綱、細綱三層的生成與沉澱（含補齊架構、批次拆細綱、角色圖譜第二步與細綱緊湊重建） |
+| `drafting` 寫正文 | 寫、接著寫、重寫與它們的續寫那幾輪（含批次寫章） |
+| `review` 審稿 | 審稿與它的重來一次 |
+| `refinement` 修稿 | 按勾選修稿與它被截斷之後的續寫 |
 
-**不带**：讨论（作者在聊，不是一次产出）；定稿（照正文更新细纲）、全文大纲、文风提取、角色卡这些不经 `buildContext` 的调用。上游的 AI 助手对话、定稿与文风分析同样不带。
+**不帶**：討論（作者在聊，不是一次產出）；定稿（照正文更新細綱）、全文大綱、文風提取、角色卡這些不經 `buildContext` 的呼叫。上游的 AI 助手對話、定稿與文風分析同樣不帶。
 
-- **绑之前**要求技能存在且兼容（上游只查 id 的格式）。
-- **绑定文件读不懂**时：装配器在明细里说一声、这次不带（第 1 + 2 条；上游是整个工作流起不来）；改绑定拒绝改写，先让作者修好或删掉——重写一遍会把读不懂的那几项悄悄冲掉（第 3 条）。
+- **綁之前**要求技能存在且相容（上游只查 id 的格式）。
+- **繫結檔案讀不懂**時：裝配器在明細裡說一聲、這次不帶（第 1 + 2 條；上游是整個工作流起不來）；改繫結拒絕改寫，先讓作者修好或刪掉——重寫一遍會把讀不懂的那幾項悄悄沖掉（第 3 條）。
 
 ## 注入
 
-装配器的 `skill` 层（[context/layers/skill.ts](../context/layers/skill.ts)）：
+裝配器的 `skill` 層（[context/layers/skill.ts](../context/layers/skill.ts)）：
 
-- 自己读绑定（与 `style` 层读 `style.md` 一样），所以对话页、agent 的 `generate`、工程页批量带的是同一份。
-- 每张配方都在 **P0 那一组的最后**：作者事实先拿预算，技能再拿。**不 force**，放不下就整份不带、明细里写明需要多少 token、剩多少——不截半截（第 2 条）。上游是预算不够就让这次调用失败。
-- 消息里排在**用户消息最前面**，说法照搬上游：`【补充写作 Skill：名字】以下内容只能补充创作方法；作者事实和后续输出合同始终优先。` 附带文件一份一段接在正文后面：`【附带文件：references/x.md】`。
-- 绑了却带不上（找不到、变得不兼容、绑定文件读不懂）：明细里一条 dropped，写原因，生成照常。
+- 自己讀繫結（與 `style` 層讀 `style.md` 一樣），所以對話頁、agent 的 `generate`、工程頁批次帶的是同一份。
+- 每張配方都在 **P0 那一組的最後**：作者事實先拿預算，技能再拿。**不 force**，放不下就整份不帶、明細裡寫明需要多少 token、剩多少——不截半截（第 2 條）。上游是預算不夠就讓這次呼叫失敗。
+- 訊息裡排在**使用者訊息最前面**，說法照搬上游：`【補充寫作 Skill：名字】以下內容只能補充創作方法；作者事實和後續輸出合同始終優先。` 附帶檔案一份一段接在正文後面：`【附带文件：references/x.md】`。
+- 綁了卻帶不上（找不到、變得不相容、繫結檔案讀不懂）：明細裡一條 dropped，寫原因，生成照常。
 
-**不冻结快照**：上游在工作流开始时冻结一份、整条工作流都用它；这里每次装配读盘，批量任务跑到一半改了绑定，后面几章用新的。每一次实际带了哪份都在明细里；日志里也记一句「『写正文』阶段带上技能『X』」或没带上的原因（续写那几轮反复装配，同一句五分钟内只记一次）——工程页批量没有明细可看，就看这一句。
+**不凍結快照**：上游在工作流開始時凍結一份、整條工作流都用它；這裡每次裝配讀盤，批次任務跑到一半改了繫結，後面幾章用新的。每一次實際帶了哪份都在明細裡；日誌裡也記一句「『寫正文』階段帶上技能『X』」或沒帶上的原因（續寫那幾輪反覆裝配，同一句五分鐘內只記一次）——工程頁批次沒有明細可看，就看這一句。
 
-## 与上游不同的地方（一览）
+## 與上游不同的地方（一覽）
 
-| 上游 | 这里 | 为什么 |
+| 上游 | 這裡 | 為什麼 |
 |---|---|---|
-| 三个 agent 工具 | 一个 `skills` 工具的四个动作（多一个 `list`） | 四件事共用 `url` / `id` / `stage` 三个参数，合成一个工具比三个更好选（[tools/novel/index.ts](../tools/novel/index.ts)） |
-| 对话里 `/技能名` 手动调用 | 不做 | `/` 已经是阶段命令面板；上游这条路还绕过兼容检查与预算 |
-| 七个内置 | 一份去 AI 味，上游的一个都没留 | 其余五个是上游 AI 助手对话用的，正文让模型调它自己的工具；搬来的两个各一句话，没什么用，2026-10-23 删了 |
-| 内置写死在代码里 | 仓库里的技能目录，构建时内嵌 | 上游原样的技能放进来就能用，改一份不用碰代码 |
-| frontmatter 一行一个键 | 按 YAML 读顶层键 | 常规技能的 `allowed-tools:` 列表、`metadata:` 嵌套块从前会被拍平，嵌套的 `name` 盖掉真的那个 |
-| 引用旁边的文件就不兼容 | 引用到的附带文件一起带 | 常规技能的 `references/` 是正文的一部分，只是拆开放 |
-| 声明 `allowed-tools` 就算依赖工具 | 不算 | 那是给 agent 的权限，不是这份技能要调的东西 |
-| 名字只认 ASCII | 可以是中文 | 作者给自己的方法起中文名再自然不过 |
-| 身份取 frontmatter 的 name | 取目录名 | 只有一个名字，卸载不会删了个空 |
-| 装之前看不到正文 | 检查结果带正文 | 往后每一次生成都会带上它 |
-| 绑了不存在的技能，工作流起不来 | 明细里说一声、这次不带 | 一份技能不该把生成拦住 |
-| 卸载直接删 | 挪进回收站 | 第 6 条 |
-| 中英双语 | 只有中文 | novelForge 只写中文 |
+| 三個 agent 工具 | 一個 `skills` 工具的四個動作（多一個 `list`） | 四件事共用 `url` / `id` / `stage` 三個引數，合成一個工具比三個更好選（[tools/novel/index.ts](../tools/novel/index.ts)） |
+| 對話裡 `/技能名` 手動呼叫 | 不做 | `/` 已經是階段命令面板；上游這條路還繞過相容檢查與預算 |
+| 七個內建 | 一份去 AI 味，上游的一個都沒留 | 其餘五個是上游 AI 助手對話用的，正文讓模型調它自己的工具；搬來的兩個各一句話，沒什麼用，2026-10-23 刪了 |
+| 內建寫死在程式碼裡 | 倉庫裡的技能目錄，構建時內嵌 | 上游原樣的技能放進來就能用，改一份不用碰程式碼 |
+| frontmatter 一行一個鍵 | 按 YAML 讀頂層鍵 | 常規技能的 `allowed-tools:` 列表、`metadata:` 巢狀塊從前會被拍平，巢狀的 `name` 蓋掉真的那個 |
+| 引用旁邊的檔案就不相容 | 引用到的附帶檔案一起帶 | 常規技能的 `references/` 是正文的一部分，只是拆開放 |
+| 宣告 `allowed-tools` 就算依賴工具 | 不算 | 那是給 agent 的許可權，不是這份技能要調的東西 |
+| 名字只認 ASCII | 可以是中文 | 作者給自己的方法起中文名再自然不過 |
+| 身份取 frontmatter 的 name | 取目錄名 | 只有一個名字，解除安裝不會刪了個空 |
+| 裝之前看不到正文 | 檢查結果帶正文 | 往後每一次生成都會帶上它 |
+| 綁了不存在的技能，工作流起不來 | 明細裡說一聲、這次不帶 | 一份技能不該把生成攔住 |
+| 解除安裝直接刪 | 挪進回收站 | 第 6 條 |
+| 中英雙語 | 只有中文 | novelForge 只寫中文 |
 
-## 内置的去 AI 味
+## 內建的去 AI 味
 
-`builtin:plain-prose`（写正文）十六条规矩，每条带一句例子，外加三组改前改后：修饰（名词前堆形容词、动词前挂程度副词、「带着／透着」）、情绪别直说、三种装腔的句式、场面写经过。
+`builtin:plain-prose`（寫正文）十六條規矩，每條帶一句例子，外加三組改前改後：修飾（名詞前堆形容詞、動詞前掛程度副詞、「帶著／透著」）、情緒別直說、三種裝腔的句式、場面寫經過。
 
-修饰那几条是这边自己数出来的。flash-lite 上实测**单绑几乎没用**（修饰密度与不绑持平，删掉系统提示里三处反向要求之后「那／这＋定语」降三成，程度副词不动）：管住修饰靠的是写完之后那一轮只许删的删修饰（[generation/trim.ts](../generation/trim.ts)，设置里的「写完正文删修饰」），不是技能。它留着当提示词那一层的配合。
+修飾那幾條是這邊自己數出來的。flash-lite 上實測**單綁幾乎沒用**（修飾密度與不綁持平，刪掉系統提示裡三處反向要求之後「那／這＋定語」降三成，程度副詞不動）：管住修飾靠的是寫完之後那一輪只許刪的刪修飾（[generation/trim.ts](../generation/trim.ts)，設定裡的「寫完正文刪修飾」），不是技能。它留著當提示詞那一層的配合。
 
-句式与场面那几条改写自两份 MIT 的公开技能：[Humanizer-zh](https://github.com/op7418/Humanizer-zh)（f4518a8）与 [fiction-humanizer-zh](https://github.com/deedeekong07-alt/fiction-humanizer-zh)（859a3fd）。这两份 2026-10-21 曾原样内置过：前者是给文章、文档用的，挂在修稿又被修稿合同「清单没指到的段落一字不改」压住，几乎不起作用；后者的工作流与输出说明是按「用户叫你改稿」写的。两份合计约 3.8 万字节，现在只挑对小说有用的几条并进这一份，**并进来的这几条还没在真实模型上比过**。取舍见 [2026-10-03-plain-prose.md](../../../docs/design/plans/2026-10-03-plain-prose.md) 末尾。
+句式與場面那幾條改寫自兩份 MIT 的公開技能：[Humanizer-zh](https://github.com/op7418/Humanizer-zh)（f4518a8）與 [fiction-humanizer-zh](https://github.com/deedeekong07-alt/fiction-humanizer-zh)（859a3fd）。這兩份 2026-10-21 曾原樣內建過：前者是給文章、文件用的，掛在修稿又被修稿合同「清單沒指到的段落一字不改」壓住，幾乎不起作用；後者的工作流與輸出說明是按「使用者叫你改稿」寫的。兩份合計約 3.8 萬位元組，現在只挑對小說有用的幾條並進這一份，**並進來的這幾條還沒在真實模型上比過**。取捨見 [2026-10-03-plain-prose.md](../../../docs/design/plans/2026-10-03-plain-prose.md) 末尾。
 
-从前的三份去 AI 味（写正文 / 审稿 / 修稿，共用一张十条的句式清单）实测基本无效，已撤下，原文归档在 [docs/design/archive/less-ai-tone/](../../../docs/design/archive/less-ai-tone/)，要用可以手动装进本工程。数据见 [2026-10-02-less-ai-tone.md](../../../docs/design/plans/2026-10-02-less-ai-tone.md) 与 [2026-10-03-plain-prose.md](../../../docs/design/plans/2026-10-03-plain-prose.md)。
+從前的三份去 AI 味（寫正文 / 審稿 / 修稿，共用一張十條的句式清單）實測基本無效，已撤下，原文歸檔在 [docs/design/archive/less-ai-tone/](../../../docs/design/archive/less-ai-tone/)，要用可以手動裝進本工程。資料見 [2026-10-02-less-ai-tone.md](../../../docs/design/plans/2026-10-02-less-ai-tone.md) 與 [2026-10-03-plain-prose.md](../../../docs/design/plans/2026-10-03-plain-prose.md)。

@@ -1,35 +1,35 @@
 /**
- * 「转到…」：`Ctrl+P`（Mac 上 `Cmd+P`）或标题栏「文件 → 转到…」，页面顶部居中一个输入框 + 候选列表，
- * 按章号、标题、角色名 / 别名、设定标题、路径找一章或一个文件打开。只在独立版（editor.js 只在那儿加载，
- * `editor/index.ts` 探测不到 `#wbEditor` 就整个不装）。
+ * 「轉到…」：`Ctrl+P`（Mac 上 `Cmd+P`）或標題欄「檔案 → 轉到…」，頁面頂部居中一個輸入框 + 候選列表，
+ * 按章號、標題、角色名 / 別名、設定標題、路徑找一章或一個檔案開啟。只在獨立版（editor.js 只在那兒載入，
+ * `editor/index.ts` 探測不到 `#wbEditor` 就整個不裝）。
  *
- * ## 数据
+ * ## 資料
  *
- * 打开时发 `requestQuickOpen`（带 requestId），后端回 `quickOpenIndex`（`core/views/quickOpen.ts`）。**按需要**，
- * 不常驻推送；面板开着时工程变了不刷新，下次打开再要。上一次的索引留着：再打开时先拿它画（几百章也是当场出），
- * 新的一到就换掉。匹配与排序全在零 DOM 的 `quickOpenCore.ts`。
+ * 開啟時發 `requestQuickOpen`（帶 requestId），後端回 `quickOpenIndex`（`core/views/quickOpen.ts`）。**按需要**，
+ * 不常駐推送；面板開著時工程變了不重新整理，下次開啟再要。上一次的索引留著：再開啟時先拿它畫（幾百章也是當場出），
+ * 新的一到就換掉。匹配與排序全在零 DOM 的 `quickOpenCore.ts`。
  *
- * ## 键盘（照 `/` 命令面板的教训）
+ * ## 鍵盤（照 `/` 命令面板的教訓）
  *
- * - 过滤串**从输入框的值算**，重算挂在 `input` 事件上（组字中途的不算，`compositionend` 再算一次），不在 keydown
- *   里攒字——输入法打的中文、退格、粘贴全都自动对。
- * - 输入框只接管 ↑↓ / Enter / Ctrl+Enter / Esc（Tab 留在面板里）；组字中途一个都不拦（`isImeComposing`）。
- * - `Ctrl+P` 在焦点落在编辑区之外的输入框 / 文本框（左侧对话输入框之类）时照样能用——这个键在那些地方没有别的用处；
- *   Chrome 允许页面拦下「打印」。没开工程时不开面板，只说一句（也不弹打印）。页内对话框、弹窗开着时不开。
+ * - 過濾串**從輸入框的值算**，重算掛在 `input` 事件上（組字中途的不算，`compositionend` 再算一次），不在 keydown
+ *   裡攢字——輸入法打的中文、退格、貼上全都自動對。
+ * - 輸入框只接管 ↑↓ / Enter / Ctrl+Enter / Esc（Tab 留在面板裡）；組字中途一個都不攔（`isImeComposing`）。
+ * - `Ctrl+P` 在焦點落在編輯區之外的輸入框 / 文字框（左側對話輸入框之類）時照樣能用——這個鍵在那些地方沒有別的用處；
+ *   Chrome 允許頁面攔下「列印」。沒開工程時不開面板，只說一句（也不彈列印）。頁內對話方塊、彈窗開著時不開。
  *
- * ## 打开什么
+ * ## 開啟什麼
  *
- * - 章节：Enter 与工程页点章节行**同一个动作**（`openChapter`：正文进主区，有细纲时并排开细纲；没有正文开细纲）；
- *   Ctrl+Enter 把正文（没有正文时是细纲）开在第二块编辑区。
- * - 角色卡、设定、架构几件、草稿：打开那个文件（Ctrl+Enter 开在第二块）。
- * - 打开后焦点进编辑区：等那份文件的 `editorOpen` 到了，把焦点放进拥有它的那一块（章节并排的细纲随后才到，
- *   到了也把焦点留在正文那一块）。
+ * - 章節：Enter 與工程頁點章節行**同一個動作**（`openChapter`：正文進主區，有細綱時並排開細綱；沒有正文開細綱）；
+ *   Ctrl+Enter 把正文（沒有正文時是細綱）開在第二塊編輯區。
+ * - 角色卡、設定、架構幾件、草稿：開啟那個檔案（Ctrl+Enter 開在第二塊）。
+ * - 開啟後焦點進編輯區：等那份檔案的 `editorOpen` 到了，把焦點放進擁有它的那一塊（章節並排的細綱隨後才到，
+ *   到了也把焦點留在正文那一塊）。
  *
- * ## 最近打开的
+ * ## 最近開啟的
  *
- * 编辑器里每激活一份文件（`nf-editor-active`，不论从哪打开的）记一笔，按工程记在 localStorage
- * （`novelforge.quickopen.recent@<工程>`），记不进去就算了。空输入时列出来（按路径认回条目：同一章的正文与细纲
- * 算一条，删了的、不在索引里的跳过），后面接前几章。
+ * 編輯器裡每啟用一份檔案（`nf-editor-active`，不論從哪開啟的）記一筆，按工程記在 localStorage
+ * （`novelforge.quickopen.recent@<工程>`），記不進去就算了。空輸入時列出來（按路徑認回條目：同一章的正文與細綱
+ * 算一條，刪了的、不在索引裡的跳過），後面接前幾章。
  */
 import { clear, el } from '../dom';
 import { projectStorageKey, toast } from '../globals';
@@ -52,9 +52,9 @@ import { shortcutLabel } from './shortcuts';
 import { announceActive, paneOwning, setActivePane } from './store';
 
 const RECENT_KEY = 'novelforge.quickopen.recent';
-/** 打开之后等那份文件的 `editorOpen` 多久（之后到的不再抢焦点）。 */
+/** 開啟之後等那份檔案的 `editorOpen` 多久（之後到的不再搶焦點）。 */
 const FOCUS_WAIT_MS = 3000;
-const NO_WORKSPACE = '先打开一个工程，才能转到章节或文件。';
+const NO_WORKSPACE = '先開啟一個工程，才能轉到章節或檔案。';
 
 interface PanelDom {
   root: HTMLElement;
@@ -65,18 +65,18 @@ interface PanelDom {
 
 let post: (msg: InMessage) => void = () => {};
 let panel: PanelDom | null = null;
-/** 最近一份索引（切好的）。换工程时作废。 */
+/** 最近一份索引（切好的）。換工程時作廢。 */
 let catalog: QuickOpenCatalog | null = null;
-/** 正在等的那一次请求。 */
+/** 正在等的那一次請求。 */
 let waiting: string | null = null;
 let hits: QuickOpenHit[] = [];
 let active = 0;
-/** 打开面板之前焦点在哪（Esc 关掉时还回去）。 */
+/** 開啟面板之前焦點在哪（Esc 關掉時還回去）。 */
 let returnFocus: HTMLElement | null = null;
-/** 打开之后焦点要落进哪份文件所在的那一块，以及还在等哪几份的 `editorOpen`。 */
+/** 開啟之後焦點要落進哪份檔案所在的那一塊，以及還在等哪幾份的 `editorOpen`。 */
 let focusAfter: { path: string; expect: Set<string>; until: number } | null = null;
 
-// ---------------------------------------------------------------- 最近打开的
+// ---------------------------------------------------------------- 最近開啟的
 
 function loadRecent(): string[] {
   try {
@@ -95,22 +95,22 @@ function rememberOpened(path: string): void {
     }
     localStorage.setItem(projectStorageKey(RECENT_KEY), JSON.stringify(pushRecent(list, path)));
   } catch {
-    /* 隐私模式下写不进去：没有「最近打开的」，别的照常 */
+    /* 隱私模式下寫不進去：沒有「最近開啟的」，別的照常 */
   }
 }
 
-// ---------------------------------------------------------------- 开关
+// ---------------------------------------------------------------- 開關
 
 function workspaceOpen(): boolean {
   return !document.body.classList.contains('no-workspace');
 }
 
-/** 页内对话框、弹窗（表单、合并视图、目录选择器）开着时不开面板——那时作者在答别的问题。 */
+/** 頁內對話方塊、彈窗（表單、合併檢視、目錄選擇器）開著時不開面板——那時作者在答別的問題。 */
 function blocked(): boolean {
   return isDialogOpen() || !!document.querySelector('.modal-overlay:not(.hidden)');
 }
 
-/** 打开「转到」面板。已经开着就把输入框里的字全选上。 */
+/** 開啟「轉到」面板。已經開著就把輸入框裡的字全選上。 */
 export function openQuickOpen(): void {
   if (panel) {
     panel.input.focus();
@@ -134,7 +134,7 @@ export function openQuickOpen(): void {
   render();
 }
 
-/** 关掉面板。`restoreFocus`：焦点还回打开之前的地方（Esc）；打开了某一项时不还（焦点要进编辑区）。 */
+/** 關掉面板。`restoreFocus`：焦點還回開啟之前的地方（Esc）；開啟了某一項時不還（焦點要進編輯區）。 */
 export function closeQuickOpen(restoreFocus = false): void {
   if (!panel) {
     return;
@@ -150,7 +150,7 @@ export function closeQuickOpen(restoreFocus = false): void {
   returnFocus = null;
 }
 
-/** 点在面板外面：关掉（不还焦点——点到哪儿焦点就该去哪儿）。 */
+/** 點在面板外面：關掉（不還焦點——點到哪兒焦點就該去哪兒）。 */
 function onOutside(e: MouseEvent): void {
   if (panel && !panel.root.contains(e.target as Node)) {
     closeQuickOpen(false);
@@ -162,10 +162,10 @@ function onOutside(e: MouseEvent): void {
 function buildPanel(): PanelDom {
   const root = el('div', 'qo-panel');
   root.setAttribute('role', 'dialog');
-  root.setAttribute('aria-label', '转到');
+  root.setAttribute('aria-label', '轉到');
   const input = el('input', 'qo-input');
   input.type = 'text';
-  input.placeholder = '转到：章号（12、第十二章）、标题、角色名、设定或路径';
+  input.placeholder = '轉到：章號（12、第十二章）、標題、角色名、設定或路徑';
   input.spellcheck = false;
   input.autocomplete = 'off';
   input.setAttribute('role', 'combobox');
@@ -177,11 +177,11 @@ function buildPanel(): PanelDom {
   input.setAttribute('aria-controls', list.id);
   const note = el('div', 'qo-note hidden');
   note.setAttribute('aria-live', 'polite');
-  const foot = el('div', 'qo-foot', `↑↓ 选择 · Enter 打开 · ${shortcutLabel('quickOpenBeside')} 开在另一块编辑区 · Esc 关闭`);
+  const foot = el('div', 'qo-foot', `↑↓ 選擇 · Enter 開啟 · ${shortcutLabel('quickOpenBeside')} 開在另一塊編輯區 · Esc 關閉`);
   root.append(input, list, note, foot);
 
   input.addEventListener('input', (e) => {
-    // 组字中途（拼音还没上屏）不重算：compositionend 之后那一下再算。
+    // 組字中途（拼音還沒上屏）不重算：compositionend 之後那一下再算。
     if ((e as InputEvent).isComposing) {
       return;
     }
@@ -217,19 +217,19 @@ function onKey(e: KeyboardEvent): void {
     }
     case 'Escape':
       e.preventDefault();
-      // 别让标题栏、查找条那几个 document 上的 Esc 再处理一遍。
+      // 別讓標題欄、查詢條那幾個 document 上的 Esc 再處理一遍。
       e.stopPropagation();
       closeQuickOpen(true);
       return;
     case 'Tab':
-      // 焦点留在面板里：Tab 出去等于面板还开着、键盘却不归它了。
+      // 焦點留在面板裡：Tab 出去等於面板還開著、鍵盤卻不歸它了。
       e.preventDefault();
       return;
   }
 }
 
 /**
- * 按输入框的值重算、重画。输入变了选中回到第一条；`keepActive`（新索引到了、输入没变）时尽量停在原来那一条上。
+ * 按輸入框的值重算、重畫。輸入變了選中回到第一條；`keepActive`（新索引到了、輸入沒變）時儘量停在原來那一條上。
  */
 function render(keepActive = false): void {
   if (!panel) {
@@ -247,7 +247,7 @@ function render(keepActive = false): void {
   hits.forEach((hit, i) => {
     if (hit.group && hit.group !== group) {
       group = hit.group;
-      panel!.list.appendChild(el('div', 'qo-section', group === 'recent' ? '最近打开的' : '章节'));
+      panel!.list.appendChild(el('div', 'qo-section', group === 'recent' ? '最近開啟的' : '章節'));
     }
     panel!.list.appendChild(buildRow(hit, i));
   });
@@ -257,19 +257,19 @@ function render(keepActive = false): void {
 
 function noteFor(query: string, total: number): string {
   if (!catalog) {
-    return '正在读取这本书的章节与文件…';
+    return '正在讀取這本書的章節與檔案…';
   }
   if (!catalog.initialized) {
-    return '这个文件夹还不是小说工程，没有可转到的章节。';
+    return '這個資料夾還不是小說工程，沒有可轉到的章節。';
   }
   if (query.trim() === '') {
-    return hits.length === 0 ? '还没有章节，也没有最近打开过的文件。' : '';
+    return hits.length === 0 ? '還沒有章節，也沒有最近開啟過的檔案。' : '';
   }
   if (total === 0) {
-    return '没有匹配的章节、角色、设定或文件。';
+    return '沒有匹配的章節、角色、設定或檔案。';
   }
   if (total > hits.length) {
-    return `只列出前 ${hits.length} 条（一共 ${total} 条），多打几个字缩小范围。`;
+    return `只列出前 ${hits.length} 條（一共 ${total} 條），多打幾個字縮小範圍。`;
   }
   return '';
 }
@@ -296,13 +296,13 @@ function buildRow(hit: QuickOpenHit, i: number): HTMLElement {
   text.appendChild(highlighted('qo-detail', hit.detail, hit.detailHits));
   row.appendChild(text);
 
-  // 点一下不该把焦点从输入框拿走（拿走了 ↑↓ 就不归面板了）。
+  // 點一下不該把焦點從輸入框拿走（拿走了 ↑↓ 就不歸面板了）。
   row.addEventListener('mousedown', (e) => e.preventDefault());
   row.addEventListener('click', (e) => openEntry(entry, e.ctrlKey || e.metaKey));
   return row;
 }
 
-/** 一段字，命中的字包进 `<mark>`。不拼 HTML：一截一截 textContent。 */
+/** 一段字，命中的字包進 `<mark>`。不拼 HTML：一截一截 textContent。 */
 function highlighted(cls: string, text: string, hitsAt: readonly number[]): HTMLElement {
   const node = el('span', cls);
   for (const seg of highlightSegments(text, hitsAt)) {
@@ -332,18 +332,18 @@ function markActive(): void {
   }
 }
 
-// ---------------------------------------------------------------- 打开
+// ---------------------------------------------------------------- 開啟
 
 /**
- * 打开一条。`other`：开在第二块编辑区（Ctrl+Enter / Ctrl+点击）。
+ * 開啟一條。`other`：開在第二塊編輯區（Ctrl+Enter / Ctrl+點選）。
  *
- * 不带「临时标签」那一类标记：从这里打开是作者明确要去的地方，开成正常的标签。
+ * 不帶「臨時標籤」那一類標記：從這裡開啟是作者明確要去的地方，開成正常的標籤。
  */
 function openEntry(entry: QuickOpenEntry, other: boolean): void {
   closeQuickOpen(false);
   let expect: string[];
   if (entry.kind === 'chapter' && !other) {
-    // 与工程页点章节行同一个动作：后端按宿主能力开正文与并排的细纲。
+    // 與工程頁點章節行同一個動作：後端按宿主能力開正文與並排的細綱。
     post(openChapterMessage(entry.path));
     expect = [entry.chapterPath, entry.plotPath].filter((p): p is string => !!p);
   } else {
@@ -353,7 +353,7 @@ function openEntry(entry: QuickOpenEntry, other: boolean): void {
   focusAfter = { path: entry.path, expect: new Set(expect), until: Date.now() + FOCUS_WAIT_MS };
 }
 
-/** 打开的那份文件到了：焦点放进拥有它的那一块。章节并排的细纲随后才到，到了也把焦点留在正文那一块。 */
+/** 開啟的那份檔案到了：焦點放進擁有它的那一塊。章節並排的細綱隨後才到，到了也把焦點留在正文那一塊。 */
 function settleFocus(path: string): void {
   if (!focusAfter) {
     return;
@@ -376,7 +376,7 @@ function settleFocus(path: string): void {
   }
 }
 
-// ---------------------------------------------------------------- 装配
+// ---------------------------------------------------------------- 裝配
 
 function onIndex(msg: Extract<OutMessage, { type: 'quickOpenIndex' }>): void {
   if (!claimRequest(msg.requestId) || msg.requestId !== waiting) {
@@ -390,8 +390,8 @@ function onIndex(msg: Extract<OutMessage, { type: 'quickOpenIndex' }>): void {
 let installed = false;
 
 /**
- * 装上 Ctrl+P、「文件 → 转到…」、索引与 `editorOpen` 的接收、最近打开的记录。`editor/index.ts` 调一次，
- * **要在它自己的 `onMessage` 之后**：`editorOpen` 先让编辑区收下文件，这里才找得到拥有它的那一块。
+ * 裝上 Ctrl+P、「檔案 → 轉到…」、索引與 `editorOpen` 的接收、最近開啟的記錄。`editor/index.ts` 調一次，
+ * **要在它自己的 `onMessage` 之後**：`editorOpen` 先讓編輯區收下檔案，這裡才找得到擁有它的那一塊。
  */
 export function installQuickOpen(postMessage: (msg: InMessage) => void): void {
   if (installed) {
@@ -407,7 +407,7 @@ export function installQuickOpen(postMessage: (msg: InMessage) => void): void {
     if (e.key !== 'p' && e.key !== 'P' && e.code !== 'KeyP') {
       return;
     }
-    // 浏览器的「打印」在这里没有用处（Chrome 允许页面拦下它）。
+    // 瀏覽器的「列印」在這裡沒有用處（Chrome 允許頁面攔下它）。
     e.preventDefault();
     openQuickOpen();
   });

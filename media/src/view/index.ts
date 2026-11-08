@@ -1,14 +1,14 @@
 /**
- * 面板的前端入口。插件与独立版共用同一份，差异全靠**能力探测**
- * （`#wbEditor` 在不在），不判断环境字符串。
+ * 面板的前端入口。外掛與獨立版共用同一份，差異全靠**能力探測**
+ * （`#wbEditor` 在不在），不判斷環境字串。
  *
- * **前端无状态**：一切数据来自 `ViewState` / `ProjectTree` 的全量推送，
- * webview 销毁重建后一条 `ready` 就能完整恢复；展开/折叠等纯 UI 状态
- * 留在前端各自的模块里。
+ * **前端無狀態**：一切資料來自 `ViewState` / `ProjectTree` 的全量推送，
+ * webview 銷燬重建後一條 `ready` 就能完整恢復；展開/摺疊等純 UI 狀態
+ * 留在前端各自的模組裡。
  *
- * 消息契约是 [core/protocol](../../../src/core/protocol/index.ts) 的
- * `InMessage` / `OutMessage`，经 src/protocol.ts 引进来——改协议这边
- * 对不上会直接编译不过。
+ * 訊息契約是 [core/protocol](../../../src/core/protocol/index.ts) 的
+ * `InMessage` / `OutMessage`，經 src/protocol.ts 引進來——改協議這邊
+ * 對不上會直接編譯不過。
  */
 import { el as mk } from '../dom';
 import { installComposer, payload, renderChips, runNextStep, setPendingCommand } from './composer';
@@ -65,8 +65,8 @@ installTabs();
 installComposer();
 installMessages();
 bindPayload(payload);
-// 主按钮走 composer 的发送路径（它管附件、草稿、busy）；`/` 面板挑中的命令
-// 变成待执行 chip。两条线都不在各自模块里另起一套发送逻辑。
+// 主按鈕走 composer 的傳送路徑（它管附件、草稿、busy）；`/` 面板挑中的命令
+// 變成待執行 chip。兩條線都不在各自模組裡另起一套傳送邏輯。
 bindNextStepRunner(runNextStep);
 installNewSession();
 installRenamePlot();
@@ -103,9 +103,9 @@ onMessage((msg) => {
       break;
 
     case 'project':
-      // 后端推树 = 磁盘上有东西变了（可能正是某一章的正文或细纲）。
-      // 细纲缓存一律作废，宁可再取一次也不拿旧细纲糊弄人。折叠文件夹走的是
-      // rerenderProject()，不经这里，缓存留着。
+      // 後端推樹 = 磁碟上有東西變了（可能正是某一章的正文或細綱）。
+      // 細綱快取一律作廢，寧可再取一次也不拿舊細綱糊弄人。摺疊資料夾走的是
+      // rerenderProject()，不經這裡，快取留著。
       invalidateSummaries();
       renderProject(msg.tree);
       break;
@@ -137,7 +137,7 @@ onMessage((msg) => {
       appendReasoning(msg.turnId, msg.text);
       break;
 
-    // ---- 写正文：气泡顶上的进度（W7），与丢弃一轮时的退回
+    // ---- 寫正文：氣泡頂上的進度（W7），與丟棄一輪時的退回
     case 'writeProgress':
       showWriteProgress(msg.turnId, msg.round, msg.words, msg.target);
       break;
@@ -154,31 +154,31 @@ onMessage((msg) => {
       settleToolCall(msg.turnId, msg);
       break;
 
-    // ---- 动手之前那一句问：卡片固定在输入框上方，不弹全局模态框
+    // ---- 動手之前那一句問：卡片固定在輸入框上方，不彈全域模態框
     case 'gate':
-      // 位置在 gate.ts 里定：**不在消息流里**——循环正卡在这一问上，一张跟着
-      // 内容滚出视野的卡片等于没人看见。
+      // 位置在 gate.ts 裡定：**不在訊息流裡**——迴圈正卡在這一問上，一張跟著
+      // 內容滾出視野的卡片等於沒人看見。
       showGate(msg);
-      // 顺手把消息流滚到底：作者要判断的依据（它刚读了什么、刚生成了什么）
-      // 就在最后那几行上。
+      // 順手把訊息流滾到底：作者要判斷的依據（它剛讀了什麼、剛生成了什麼）
+      // 就在最後那幾行上。
       scrollToBottom();
-      // 人在别的页签上时那一格看不见，而循环正卡在这里等他——喊一声。
-      // 不替他切页：他多半正是去工程页翻那个文件，好决定点不点头。
+      // 人在別的頁簽上時那一格看不見，而迴圈正卡在這裡等他——喊一聲。
+      // 不替他切頁：他多半正是去工程頁翻那個檔案，好決定點不點頭。
       if (!isTabActive('chat')) {
-        toast('有一件事在等你点头，去对话页看看。');
+        toast('有一件事在等你點頭，去對話頁看看。');
       }
       break;
 
     case 'gateDone':
-      // 另一个视图上答了，或者这一轮被取消了。两处的卡片都要收。
+      // 另一個檢視上答了，或者這一輪被取消了。兩處的卡片都要收。
       settleGate(msg.requestId, msg.verdict);
       break;
 
     case 'turnDone':
-      // 生成开始时控制器先插一条空回复，后续 delta 都挂在它上面。
-      // 必须在这一刻就标成 streaming：否则气泡会以「可编辑」建出来，
-      // 用户在生成途中的改动会被随后的 delta 追加和收尾重建冲掉。
-      // 收尾的那次 turnDone 带着完整内容、busy 已为 false，于是解锁。
+      // 生成開始時控制器先插一條空回覆，後續 delta 都掛在它上面。
+      // 必須在這一刻就標成 streaming：否則氣泡會以「可編輯」建出來，
+      // 使用者在生成途中的改動會被隨後的 delta 追加和收尾重建沖掉。
+      // 收尾的那次 turnDone 帶著完整內容、busy 已為 false，於是解鎖。
       store.streamingId =
         store.busy && msg.turn.role === 'assistant' && !msg.turn.content && !msg.turn.error
           ? msg.turn.id
@@ -218,8 +218,8 @@ onMessage((msg) => {
       renderTasks(msg.tasks);
       break;
 
-    // 长任务说完了那一句（D24）：带「打开第 N 章」时点了就开那一章（W6 章节工作台那一条）；
-    // 批量审稿带的是「打开审稿报告」——开那个会话（五期补遗 §4）。
+    // 長任務說完了那一句（D24）：帶「開啟第 N 章」時點了就開那一章（W6 章節工作臺那一條）；
+    // 批次審稿帶的是「開啟審稿報告」——開那個會話（五期補遺 §4）。
     case 'taskDone': {
       const open = msg.open;
       toast(
@@ -258,7 +258,7 @@ onMessage((msg) => {
       renderPrompt(msg);
       break;
 
-    // 工程页「存档点…」弹窗（view/checkpoints.ts）：没开着时不认。
+    // 工程頁「存檔點…」彈窗（view/checkpoints.ts）：沒開著時不認。
     case 'checkpoints':
       renderCheckpoints(msg);
       break;
@@ -271,7 +271,7 @@ onMessage((msg) => {
       applyWorkspaces(msg);
       break;
 
-    // 欢迎页「新建一本书」「导入写好的书」（view/welcome.ts）。
+    // 歡迎頁「新建一本書」「匯入寫好的書」（view/welcome.ts）。
     case 'projectCreated':
       applyProjectCreated(msg);
       break;
@@ -283,8 +283,8 @@ onMessage((msg) => {
 });
 
 /**
- * 思考增量：气泡里没有折叠块就建一个（默认收起），有就往里追加。
- * **就地追加而不是重建节点**——重建会把用户展开的状态和滚动位置弄丢。
+ * 思考增量：氣泡裡沒有摺疊塊就建一個（預設收起），有就往裡追加。
+ * **就地追加而不是重建節點**——重建會把使用者展開的狀態和滾動位置弄丟。
  */
 function appendReasoning(turnId: string, text: string): void {
   const node = bubbleOf(turnId);
@@ -296,8 +296,8 @@ function appendReasoning(turnId: string, text: string): void {
   let det = node.querySelector<HTMLDetailsElement>('details.reasoning');
   if (!det) {
     det = buildReasoningDetails('');
-    // 排在**段区之前**：它是正文迟迟不来时的进度反馈，不是流水账里的一条。
-    // 段区可能以工具条或 generate 卡开头（不一定有正文块），所以三样一起找。
+    // 排在**段區之前**：它是正文遲遲不來時的進度反饋，不是流水賬裡的一條。
+    // 段區可能以工具條或 generate 卡開頭（不一定有正文塊），所以三樣一起找。
     node.insertBefore(det, node.querySelector('.msg-body, .tools, .gen') ?? segmentAnchor(node));
   }
   const box = det.querySelector<HTMLElement>('.reasoning-body');
@@ -305,9 +305,9 @@ function appendReasoning(turnId: string, text: string): void {
     box.textContent += text;
     const summary = det.querySelector('summary');
     if (summary) {
-      summary.textContent = `思考过程 · ${countWords(box.textContent ?? '')} 字`;
+      summary.textContent = `思考過程 · ${countWords(box.textContent ?? '')} 字`;
     }
-    // 展开着看的时候，让它跟着滚到最新。
+    // 展開著看的時候，讓它跟著滾到最新。
     if (det.open) {
       box.scrollTop = box.scrollHeight;
     }
@@ -316,11 +316,11 @@ function appendReasoning(turnId: string, text: string): void {
 }
 
 /**
- * 写正文的进度：「第 2 轮 · 已写 1860 / 目标 3000 字」+ 一条进度条（W7）。
+ * 寫正文的進度：「第 2 輪 · 已寫 1860 / 目標 3000 字」+ 一條進度條（W7）。
  *
- * 挂在气泡顶上、正文之前（与思考折叠块同一个位置）：正文在往下涨，进度得待在
- * 一眼看得到的地方。**就地更新**——重建节点会冲掉正在流的正文。收尾的 turnDone
- * 会整条重建气泡，进度条随之消失，那时落盘卡片上已经写着最后的字数。
+ * 掛在氣泡頂上、正文之前（與思考摺疊塊同一個位置）：正文在往下漲，進度得待在
+ * 一眼看得到的地方。**就地更新**——重建節點會沖掉正在流的正文。收尾的 turnDone
+ * 會整條重建氣泡，進度條隨之消失，那時落盤卡片上已經寫著最後的字數。
  */
 function showWriteProgress(turnId: string, round: number, words: number, target?: number): void {
   const node = bubbleOf(turnId);
@@ -338,19 +338,19 @@ function showWriteProgress(turnId: string, round: number, words: number, target?
     node.insertBefore(made, node.querySelector('details.reasoning, .msg-body, .tools, .gen') ?? segmentAnchor(node));
     box = made;
   }
-  const phase = round > 0 ? `续写第 ${round} 轮` : '正在写';
+  const phase = round > 0 ? `續寫第 ${round} 輪` : '正在寫';
   const label = box.querySelector<HTMLElement>('.write-progress-label')!;
-  label.textContent = target ? `${phase} · 已写 ${words} / 目标 ${target} 字` : `${phase} · 已写 ${words} 字`;
+  label.textContent = target ? `${phase} · 已寫 ${words} / 目標 ${target} 字` : `${phase} · 已寫 ${words} 字`;
   const fill = box.querySelector<HTMLElement>('.write-progress-fill')!;
   fill.style.width = `${target ? Math.min(100, Math.round((words / target) * 100)) : 100}%`;
-  // 到了八成就算写够（与后端 MANUSCRIPT_DONE_RATIO 同一个比例）：颜色换一档。
+  // 到了八成就算寫夠（與後端 MANUSCRIPT_DONE_RATIO 同一個比例）：顏色換一檔。
   box.classList.toggle('reached', !!target && words >= target * 0.8);
   box.classList.toggle('indeterminate', !target);
 }
 
 /**
- * 气泡里的正文退回到这一份：续写丢弃了一轮，那一轮已经流进来了。只动文字块，
- * 进度条与思考折叠块不动。
+ * 氣泡裡的正文退回到這一份：續寫丟棄了一輪，那一輪已經流進來了。只動文字塊，
+ * 進度條與思考摺疊塊不動。
  */
 function resetStreamText(turnId: string, text: string): void {
   const node = bubbleOf(turnId);
@@ -369,11 +369,11 @@ function resetStreamText(turnId: string, text: string): void {
 }
 
 /**
- * 模型说的话又来了一段：追加到**最后那一块文字**上，没有就新开一块。
+ * 模型說的話又來了一段：追加到**最後那一塊文字**上，沒有就新開一塊。
  *
- * 「没有就新开」正是交替：上一段是工具调用（或 generate 卡）时，这句话是新的
- * 一块，接到前一块上就等于把顺序抹平——那是从前所有话挤进同一个文本节点的
- * 由来。就地追加而不重建气泡：重建会冲掉正在流的内容。
+ * 「沒有就新開」正是交替：上一段是工具呼叫（或 generate 卡）時，這句話是新的
+ * 一塊，接到前一塊上就等於把順序抹平——那是從前所有話擠進同一個文字節點的
+ * 由來。就地追加而不重建氣泡：重建會沖掉正在流的內容。
  */
 function appendText(turnId: string, text: string): void {
   const node = bubbleOf(turnId);
@@ -383,7 +383,7 @@ function appendText(turnId: string, text: string): void {
   node.classList.add('streaming');
   const blocks = node.querySelectorAll<HTMLElement>('.msg-body[data-seg="text"]');
   const last = blocks[blocks.length - 1];
-  // 末尾那一块才接得上；它后面已经排了工具条或卡片的话，得另开一块。
+  // 末尾那一塊才接得上；它後面已經排了工具條或卡片的話，得另開一塊。
   if (last && last === lastSegment(node)) {
     last.textContent += text;
   } else {
@@ -394,10 +394,10 @@ function appendText(turnId: string, text: string): void {
 }
 
 /**
- * `generate` 流出来的正文又来了一段：进它那一张卡。
+ * `generate` 流出來的正文又來了一段：進它那一張卡。
  *
- * **卡内滚动，不动整条对话**：这几千字正在往下涨，要是让它把消息流一路往下顶，
- * 作者连上面刚说的那句话都看不成了。
+ * **卡內滾動，不動整條對話**：這幾千字正在往下漲，要是讓它把訊息流一路往下頂，
+ * 作者連上面剛說的那句話都看不成了。
  */
 function appendGenerated(turnId: string, callId: string, text: string): void {
   const body = bubbleOf(turnId)?.querySelector<HTMLElement>(`.gen[data-call="${callId}"] .gen-body`);
@@ -409,9 +409,9 @@ function appendGenerated(turnId: string, callId: string, text: string): void {
 }
 
 /**
- * 工具调用开始：在气泡里挂一条「进行中…」的行，或者给 generate 开一张卡。
+ * 工具呼叫開始：在氣泡裡掛一條「進行中…」的行，或者給 generate 開一張卡。
  *
- * **就地追加而不是重建气泡**：重建会把正在流的内容冲掉（文字块是纯文本节点，
+ * **就地追加而不是重建氣泡**：重建會把正在流的內容沖掉（文字塊是純文字節點，
  * delta 靠 `textContent +=` 追加）。
  */
 function appendToolCall(
@@ -426,10 +426,10 @@ function appendToolCall(
   if (!node) {
     return;
   }
-  // 一轮刚开始留的那块空正文（给「它在想」留的位）到这里就没意义了。
+  // 一輪剛開始留的那塊空正文（給「它在想」留的位）到這裡就沒意義了。
   dropEmptyText(node);
   if (name === 'generate') {
-    // 卡片当场就建：正文马上要顺着 `toolDelta` 流进来，晚一步就没地方放。
+    // 卡片當場就建：正文馬上要順著 `toolDelta` 流進來，晚一步就沒地方放。
     node.insertBefore(
       buildGenCard({ callId, name, title, ok: true, summary: '', elapsedMs: -1, argsText, output: '' }),
       segmentAnchor(node)
@@ -446,14 +446,14 @@ function appendToolCall(
 }
 
 /**
- * 工具跑完了：把那一行（或那张卡）换成带耗时与结果摘要的最终形态。
+ * 工具跑完了：把那一行（或那張卡）換成帶耗時與結果摘要的最終形態。
  *
- * **展开状态要跟过去**：作者点开这一条是想盯着它看，整条重建时把它合回去，
- * 等于每次有结果就把他刚翻开的东西合上。
+ * **展開狀態要跟過去**：作者點開這一條是想盯著它看，整條重建時把它合回去，
+ * 等於每次有結果就把他剛翻開的東西合上。
  *
- * generate 那张卡还有一件事：**正文不能丢**。它是顺着 `toolDelta` 一段段攒在
- * 卡里的，而这条 `toolResult` 里根本没有它——重建时得把卡里当下那份带过去。
- * （落盘的结论随后还会重推一次同样的 `toolResult`，那时同样不能把正文抹掉。）
+ * generate 那張卡還有一件事：**正文不能丟**。它是順著 `toolDelta` 一段段攢在
+ * 卡裡的，而這條 `toolResult` 里根本沒有它——重建時得把卡裡當下那份帶過去。
+ * （落盤的結論隨後還會重推一次同樣的 `toolResult`，那時同樣不能把正文抹掉。）
  */
 function settleToolCall(
   turnId: string,

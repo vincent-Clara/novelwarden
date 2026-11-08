@@ -1,57 +1,57 @@
 /**
- * 页面骨架：**所有 pane 的 DOM 只在这里定义一次**。
+ * 頁面骨架：**所有 pane 的 DOM 只在這裡定義一次**。
  *
- * 从前插件壳的 webviewHtml.ts 与独立版的 html.ts 各存了一份，约 200 行逐字
- * 重复，AGENTS.md 里还专门立过一条「加按钮要同时改两处」的规矩——那是给重复
- * 打的补丁。现在两个壳都从这里取，各自只保留布局外壳与 head/CSP/资源 URL。
+ * 從前外掛殼的 webviewHtml.ts 與獨立版的 html.ts 各存了一份，約 200 行逐字
+ * 重複，AGENTS.md 裡還專門立過一條「加按鈕要同時改兩處」的規矩——那是給重複
+ * 打的補丁。現在兩個殼都從這裡取，各自只保留佈局外殼與 head/CSP/資源 URL。
  *
- * 三条约束（见 ../README.md 的壳契约）：
- * - **零 import**：不碰 `vscode`、不碰 `node:`、不碰 `bun:`。任何壳都要能用它，
- *   包括将来跑在别的运行时里的壳。由 tests/contract/shellPurity.test.js 守着。
- * - **差异用选项表达，不判断「我是哪个壳」**：宿主有没有某个能力，就传不传那个选项。
- * - **只有一个壳用到的 pane 也放这里**（`filesPane`），这样第四个壳想装配它时
- *   不必去另一个壳里抄。
+ * 三條約束（見 ../README.md 的殼契約）：
+ * - **零 import**：不碰 `vscode`、不碰 `node:`、不碰 `bun:`。任何殼都要能用它，
+ *   包括將來跑在別的執行時裡的殼。由 tests/contract/shellPurity.test.js 守著。
+ * - **差異用選項表達，不判斷「我是哪個殼」**：宿主有沒有某個能力，就傳不傳那個選項。
+ * - **只有一個殼用到的 pane 也放這裡**（`filesPane`），這樣第四個殼想裝配它時
+ *   不必去另一個殼裡抄。
  *
- * 缩进在这里是统一的一套，与两个壳原来各自的缩进无关——jsdom 只认结构与 id。
+ * 縮排在這裡是統一的一套，與兩個殼原來各自的縮排無關——jsdom 只認結構與 id。
  */
 
 export interface PaneOptions {
   /**
-   * 宿主自带内置编辑器（独立版的工作台右半边）。
-   * 影响的只是空状态里多给一句「右侧是内置编辑器」的指路。
+   * 宿主自帶內建編輯器（獨立版的工作臺右半邊）。
+   * 影響的只是空狀態裡多給一句「右側是內建編輯器」的指路。
    */
   builtinEditor?: boolean;
   /**
-   * 宿主能取到**原生编辑器的选区**（插件壳）。取不到的宿主（独立版）由前端问内置编辑器要选区，
-   * 没选中时弹粘贴框，title 因此多说一句。
+   * 宿主能取到**原生編輯器的選區**（外掛殼）。取不到的宿主（獨立版）由前端問內建編輯器要選區，
+   * 沒選中時彈貼上框，title 因此多說一句。
    */
   selectionFromEditor?: boolean;
   /**
-   * 宿主有原生设置界面可跳（只有 VS Code 有）。
-   * 没有这个能力时按钮**根本不渲染**——不是渲染出来再让前端 hidden 掉。
+   * 宿主有原生設定介面可跳（只有 VS Code 有）。
+   * 沒有這個能力時按鈕**根本不渲染**——不是渲染出來再讓前端 hidden 掉。
    */
   nativeSettings?: boolean;
   /**
-   * 宿主能同时开几个工程、每个窗口一个（独立版）。设置页因此多一页「通用」，
-   * 放「新窗口中打开项目」。插件一个窗口就是一个 VS Code 工作区，没有这一项。
+   * 宿主能同時開幾個工程、每個視窗一個（獨立版）。設定頁因此多一頁「通用」，
+   * 放「新視窗中開啟專案」。外掛一個視窗就是一個 VS Code 工作區，沒有這一項。
    */
   multiWindow?: boolean;
 }
 
-/** 活动栏/标签栏的一项。 */
+/** 活動欄/標籤欄的一項。 */
 export interface TabItem {
-  /** `data-tab` 的值，前端按它切页。 */
+  /** `data-tab` 的值，前端按它切頁。 */
   tab: string;
   label: string;
-  /** 活动栏形态的图标字符；插件的横向标签栏不带图标。 */
+  /** 活動欄形態的圖示字元；外掛的橫向標籤欄不帶圖示。 */
   icon?: string;
-  /** 右上角小圆点的 id（如 `projectStaleDot`）。 */
+  /** 右上角小圓點的 id（如 `projectStaleDot`）。 */
   dotId?: string;
-  /** 圆点的额外 class（如 `err`）。 */
+  /** 圓點的額外 class（如 `err`）。 */
   dotClass?: string;
   /**
-   * 不是一页，是窄屏底栏上的一颗导航键（独立版的「正文」「更多」）：写成 `data-nav` 而不是 `data-tab`，
-   * 页签切换不认它，由 `media/src/view/mobileNav.ts` 接手。
+   * 不是一頁，是窄屏底欄上的一顆導航鍵（獨立版的「正文」「更多」）：寫成 `data-nav` 而不是 `data-tab`，
+   * 頁籤切換不認它，由 `media/src/view/mobileNav.ts` 接手。
    */
   nav?: boolean;
 }
@@ -74,10 +74,10 @@ export function escapeHtml(text: string): string {
 }
 
 /**
- * 标签栏 / 活动栏。第一项默认选中。
+ * 標籤欄 / 活動欄。第一項預設選中。
  *
- * 两个壳的观感差别（横向文字标签 vs 纵向图标）全在 CSS 里，这里只管
- * `data-tab` 与圆点——前端认的就是这些。
+ * 兩個殼的觀感差別（橫向文字標籤 vs 縱向圖示）全在 CSS 裡，這裡只管
+ * `data-tab` 與圓點——前端認的就是這些。
  */
 export function tabbar(items: TabItem[]): string {
   const buttons = items
@@ -94,54 +94,54 @@ export function tabbar(items: TabItem[]): string {
   return `<nav class="tabbar" id="tabbar">\n${buttons}\n</nav>`;
 }
 
-/** 对话页：流水线条 + 消息流 + 下一步 + 输入区。 */
+/** 對話頁：流水線條 + 訊息流 + 下一步 + 輸入區。 */
 export function chatPane(opts: PaneOptions = {}): string {
   const editorHint = opts.builtinEditor
-    ? '\n      <p>在「工程」页点任意文件即可在内置编辑器里打开编辑<span class="kbd-hint">，<kbd>Ctrl</kbd>+<kbd>S</kbd> 保存</span>。</p>'
+    ? '\n      <p>在「工程」頁點任意檔案即可在內建編輯器裡開啟編輯<span class="kbd-hint">，<kbd>Ctrl</kbd>+<kbd>S</kbd> 儲存</span>。</p>'
     : '';
   const selTitle = opts.selectionFromEditor
-    ? '把编辑器中选中的文字加入上下文'
-    : '把编辑器中选中的文字加入上下文（没有选中时粘贴一段原文）';
+    ? '把編輯器中選中的文字加入上下文'
+    : '把編輯器中選中的文字加入上下文（沒有選中時貼上一段原文）';
   return `<section class="pane active" id="pane-chat">
-  <!-- 没同步的横幅只长在工程页（那边还带进度条与分母）。对话页从前也挂着
-       一份纯文字版，说的是同一句话，却常年占着本就不宽裕的消息流；这里要提示
-       的那件事本身也只能在工程页上处理。活动栏「工程」上的小圆点负责在别的
-       页面上留个记号。 -->
+  <!-- 沒同步的橫幅只長在工程頁（那邊還帶進度條與分母）。對話頁從前也掛著
+       一份純文字版，說的是同一句話，卻常年佔著本就不寬裕的訊息流；這裡要提示
+       的那件事本身也只能在工程頁上處理。活動欄「工程」上的小圓點負責在別的
+       頁面上留個記號。 -->
 
-  <!-- 流水线条：这一章走到哪一步了。点大纲 / 细纲 / 正文那一格切到那一层（大纲那一格回到全书那一层）。
-       目标是架构或大纲时只剩面包屑，下面那一行隐藏。 -->
+  <!-- 流水線條：這一章走到哪一步了。點大綱 / 細綱 / 正文那一格切到那一層（大綱那一格回到全書那一層）。
+       目標是架構或大綱時只剩麵包屑，下面那一行隱藏。 -->
   <div class="pipeline" id="pipeline">
     <div class="pipeline-top" id="pipelineTop">
       <div class="pipeline-crumb" id="pipelineCrumb"></div>
-      <!-- 给当前这一章的细纲起名 / 改名。手工新建的细纲是纯序号名（标题要等
-           细纲排完才定得下来），所以命名得有个常驻入口。
-           目标是架构或大纲时前端把它藏起来。 -->
-      <button class="pipeline-new hidden" id="renamePlotBtn" title="重命名当前章节" aria-label="重命名当前章节">✎</button>
-      <button class="pipeline-new" id="newSessionBtn" title="开始新对话" aria-label="开始新对话">＋</button>
+      <!-- 給當前這一章的細綱起名 / 改名。手工新建的細綱是純序號名（標題要等
+           細綱排完才定得下來），所以命名得有個常駐入口。
+           目標是架構或大綱時前端把它藏起來。 -->
+      <button class="pipeline-new hidden" id="renamePlotBtn" title="重新命名當前章節" aria-label="重新命名當前章節">✎</button>
+      <button class="pipeline-new" id="newSessionBtn" title="開始新對話" aria-label="開始新對話">＋</button>
     </div>
-    <!-- 大纲 / 细纲 / 正文三格（可点）与同步状态（只读）。内容由 view/pipeline.ts 画。 -->
+    <!-- 大綱 / 細綱 / 正文三格（可點）與同步狀態（只讀）。內容由 view/pipeline.ts 畫。 -->
     <div class="pipeline-stages" id="pipelineStages"></div>
-    <!-- 「当前产物」的入口：一行标题。悬停浮出这一层的产物，点击钉住。
-         从前它是消息流顶部一张 sticky 卡片——关不掉、藏不起来，还长期占着
-         半屏对话。现在与工程页那三只浮窗同一套路子。 -->
+    <!-- 「當前產物」的入口：一行標題。懸停浮出這一層的產物，點選釘住。
+         從前它是訊息流頂部一張 sticky 卡片——關不掉、藏不起來，還長期佔著
+         半屏對話。現在與工程頁那三隻浮窗同一套路子。 -->
     <button class="wb-entry hidden" id="workbench"></button>
   </div>
 
   <div class="messages" id="messages">
     <div class="empty" id="emptyHint">
-      <p><strong>跟着输入框上方的主按钮走：它永远是这本书现在该做的那一步</strong></p>
-      <p>从一句话开始：先生成小说配置、故事前提、角色图谱、世界观与设定清单，再排情节大纲、拆细纲，最后一章一章写正文。想接着写某一章，在「工程」页右键（手机上长按）「进入这一章」，或用下面的下拉框选它；下拉框最上面的「全书」回到架构与大纲那一层。</p>
-      <p>用 <kbd>@</kbd> 引用正文、角色卡或任意文件；在输入框里打 <kbd>/</kbd> 可以挑其它命令，「/续写大纲」在哪一层都能用。</p>${editorHint}
+      <p><strong>跟著輸入框上方的主按鈕走：它永遠是這本書現在該做的那一步</strong></p>
+      <p>從一句話開始：先生成小說配置、故事前提、角色圖譜、世界觀與設定清單，再排情節大綱、拆細綱，最後一章一章寫正文。想接著寫某一章，在「工程」頁右鍵（手機上長按）「進入這一章」，或用下面的下拉框選它；下拉框最上面的「全書」回到架構與大綱那一層。</p>
+      <p>用 <kbd>@</kbd> 引用正文、角色卡或任意檔案；在輸入框裡打 <kbd>/</kbd> 可以挑其它命令，「/續寫大綱」在哪一層都能用。</p>${editorHint}
     </div>
-    <!-- 打开的文件夹还不是小说工程：消息区只放这一块（W12）。由 #messages 上的 uninit 类切换。 -->
+    <!-- 開啟的資料夾還不是小說工程：訊息區只放這一塊（W12）。由 #messages 上的 uninit 類切換。 -->
     <div class="empty" id="initHint">
-      <p><strong>下一步：把这个文件夹初始化成小说工程</strong></p>
-      <p>会创建 chapters/ 与 .novelwarden/ 目录及模板文件。</p>
-      <p><button class="primary" id="initProjectBtn">初始化小说工程</button></p>
+      <p><strong>下一步：把這個資料夾初始化成小說工程</strong></p>
+      <p>會建立 chapters/ 與 .novelwarden/ 目錄及模板檔案。</p>
+      <p><button class="primary" id="initProjectBtn">初始化小說工程</button></p>
     </div>
   </div>
 
-  <!-- 下一步：状态机算出来的那一个动作。点了就跑，不必先输入什么。 -->
+  <!-- 下一步：狀態機算出來的那一個動作。點了就跑，不必先輸入什麼。 -->
   <div class="nextstep hidden" id="nextStep">
     <div class="nextstep-text">
       <span class="nextstep-label" id="nextStepHint"></span>
@@ -149,31 +149,31 @@ export function chatPane(opts: PaneOptions = {}): string {
     <button class="primary nextstep-go" id="nextStepBtn"></button>
   </div>
 
-  <!-- 输入区。「/」命令面板由前端挂进 #composerInput（它是 position: relative），
-       从输入框上沿浮出来——命令本身留在输入框里当普通文字，与 Cursor 一致。 -->
+  <!-- 輸入區。「/」命令面板由前端掛進 #composerInput（它是 position: relative），
+       從輸入框上沿浮出來——命令本身留在輸入框裡當普通文字，與 Cursor 一致。 -->
   <div class="composer" id="composer">
-    <!-- 动手之前那一句问。**固定在输入框上方**，不跟着消息流滚：循环正卡在这里
-         等回答，一张会滚出视野的卡片等于没人看见（Cursor 那一套）。答完卡片就
-         走，只在消息流里留一行「已跳过/已允许」当记录。 -->
+    <!-- 動手之前那一句問。**固定在輸入框上方**，不跟著訊息流滾：迴圈正卡在這裡
+         等回答，一張會滾出視野的卡片等於沒人看見（Cursor 那一套）。答完卡片就
+         走，只在訊息流裡留一行「已跳過/已允許」當記錄。 -->
     <div class="gate-dock hidden" id="gateDock"></div>
     <div class="chips" id="chips"></div>
     <div class="composer-input" id="composerInput">
-      <!-- 已挑好、待执行的命令。它长在输入框**里面**，发送时用它，不用状态机那一个。 -->
+      <!-- 已挑好、待執行的命令。它長在輸入框**裡面**，傳送時用它，不用狀態機那一個。 -->
       <div class="pending-cmd hidden" id="pendingCmd"></div>
-      <textarea id="input" rows="3" placeholder="补充要求（可留空）…（Enter 发送，Shift+Enter 换行）"></textarea>
+      <textarea id="input" rows="3" placeholder="補充要求（可留空）…（Enter 傳送，Shift+Enter 換行）"></textarea>
     </div>
-    <!-- 这一行常年挤着九个控件，侧栏一窄就折成两三行。@ 与 / 在输入框里直接打效果一样，
-         这两颗因此只留那一个键（文字在 title 与 aria-label 里），省出宽度给三个下拉框。 -->
+    <!-- 這一行常年擠著九個控制元件，側欄一窄就折成兩三行。@ 與 / 在輸入框裡直接打效果一樣，
+         這兩顆因此只留那一個鍵（文字在 title 與 aria-label 裡），省出寬度給三個下拉框。 -->
     <div class="composer-bar">
-      <button class="composer-tool key-only" id="atBtn" title="引用文件或正文（在输入框里打 @ 也一样）" aria-label="引用文件或正文"><span class="tool-key">@</span></button>
-      <button class="composer-tool" id="selBtn" title="${selTitle}">加入选区</button>
-      <button class="composer-tool key-only" id="cmdBtn" title="其它命令（在输入框里直接打 / 也一样）" aria-label="其它命令"><span class="tool-key">/</span></button>
-      <select id="modelSelect" title="使用哪个模型"></select>
-      <!-- 思考深度：跟着**会话**走，不是设置项（见 core/model/session.ts）。 -->
-      <select id="thinkSelect" title="让模型想多深"></select>
-      <select id="targetSelect" title="当前创作目标"></select>
+      <button class="composer-tool key-only" id="atBtn" title="引用檔案或正文（在輸入框裡打 @ 也一樣）" aria-label="引用檔案或正文"><span class="tool-key">@</span></button>
+      <button class="composer-tool" id="selBtn" title="${selTitle}">加入選區</button>
+      <button class="composer-tool key-only" id="cmdBtn" title="其它命令（在輸入框裡直接打 / 也一樣）" aria-label="其它命令"><span class="tool-key">/</span></button>
+      <select id="modelSelect" title="使用哪個模型"></select>
+      <!-- 思考深度：跟著**會話**走，不是設定項（見 core/model/session.ts）。 -->
+      <select id="thinkSelect" title="讓模型想多深"></select>
+      <select id="targetSelect" title="當前創作目標"></select>
       <span class="spacer"></span>
-      <button class="primary" id="sendBtn">发送</button>
+      <button class="primary" id="sendBtn">傳送</button>
       <button class="danger hidden" id="stopBtn">停止</button>
     </div>
     <div class="composer-meta" id="providerMeta"></div>
@@ -182,117 +182,117 @@ export function chatPane(opts: PaneOptions = {}): string {
 }
 
 /**
- * 页头的长任务条（W8、D24）：正在跑的长任务（批量写章、定稿、同步细纲……）。**所有页签都看得见**
- * ——从前它长在工程页里，从对话页点的定稿、批量跑起来之后切回对话页就什么都看不见了。
- * 没有任务时整块隐藏。两个壳各自把它放在页签之上的那一处（插件在标签栏下面，独立版在侧栏顶上）。
+ * 頁頭的長任務條（W8、D24）：正在跑的長任務（批次寫章、定稿、同步細綱……）。**所有頁籤都看得見**
+ * ——從前它長在工程頁裡，從對話頁點的定稿、批次跑起來之後切回對話頁就什麼都看不見了。
+ * 沒有任務時整塊隱藏。兩個殼各自把它放在頁籤之上的那一處（外掛在標籤欄下面，獨立版在側欄頂上）。
  */
 export function taskBar(): string {
   return '<div class="tasks hidden" id="taskList"></div>';
 }
 
-/** 工程页：页签条 + 各页的分组。 */
+/** 工程頁：頁籤條 + 各頁的分組。 */
 export function projectPane(): string {
   return `<section class="pane" id="pane-project">
-  <div class="project-tabs" id="projectTabs" role="tablist" aria-label="工程分类">
-    <!-- 五个页签：章节、角色、设定、叙事线各占一页，其余（故事架构、文风与摘要）留在「概览」。各页的内容由
-         view/project/index.ts 装进 #projectBody 里对应的 .project-panel。从前这一行是五颗按钮（补齐架构、
-         拆细纲、批量写章、＋ 角色卡、＋ 设定），每一颗在对应分组的右键里都有，拿掉了。
-         右边刷新的左边是存档点（⚑，2026-10-20）：整本书存一版、看改了什么、整本或单份退回，不调模型；
-         弹窗在 media/src/view/checkpoints.ts。只放一个图标，与刷新并排（独立版的「文件」菜单里另有一项「存档点…」）。 -->
-    <button class="project-tab active" id="projectTab-overview" data-project-tab="overview" role="tab" aria-selected="true">概览</button>
-    <button class="project-tab" id="projectTab-chapters" data-project-tab="chapters" role="tab" aria-selected="false" tabindex="-1">章节</button>
+  <div class="project-tabs" id="projectTabs" role="tablist" aria-label="工程分類">
+    <!-- 五個頁籤：章節、角色、設定、敘事線各佔一頁，其餘（故事架構、文風與摘要）留在「概覽」。各頁的內容由
+         view/project/index.ts 裝進 #projectBody 裡對應的 .project-panel。從前這一行是五顆按鈕（補齊架構、
+         拆細綱、批次寫章、＋ 角色卡、＋ 設定），每一顆在對應分組的右鍵裡都有，拿掉了。
+         右邊重新整理的左邊是存檔點（⚑，2026-10-20）：整本書存一版、看改了什麼、整本或單份退回，不調模型；
+         彈窗在 media/src/view/checkpoints.ts。只放一個圖示，與重新整理並排（獨立版的「檔案」選單裡另有一項「存檔點…」）。 -->
+    <button class="project-tab active" id="projectTab-overview" data-project-tab="overview" role="tab" aria-selected="true">概覽</button>
+    <button class="project-tab" id="projectTab-chapters" data-project-tab="chapters" role="tab" aria-selected="false" tabindex="-1">章節</button>
     <button class="project-tab" id="projectTab-characters" data-project-tab="characters" role="tab" aria-selected="false" tabindex="-1">角色</button>
-    <button class="project-tab" id="projectTab-lore" data-project-tab="lore" role="tab" aria-selected="false" tabindex="-1">设定</button>
-    <button class="project-tab" id="projectTab-threads" data-project-tab="threads" role="tab" aria-selected="false" tabindex="-1">叙事线</button>
+    <button class="project-tab" id="projectTab-lore" data-project-tab="lore" role="tab" aria-selected="false" tabindex="-1">設定</button>
+    <button class="project-tab" id="projectTab-threads" data-project-tab="threads" role="tab" aria-selected="false" tabindex="-1">敘事線</button>
     <span class="spacer"></span>
-    <button class="icon-btn" data-form="checkpoints" aria-label="存档点" title="存档点：整本书存一版、看之后改了哪几份，整本或单份退回去（不调模型）。批量写章、全书替换这类批量动作之前会自动存一个">⚑</button>
-    <button class="icon-btn" data-action="refresh" title="刷新">⟳</button>
+    <button class="icon-btn" data-form="checkpoints" aria-label="存檔點" title="存檔點：整本書存一版、看之後改了哪幾份，整本或單份退回去（不調模型）。批次寫章、全書替換這類批次動作之前會自動存一個">⚑</button>
+    <button class="icon-btn" data-action="refresh" title="重新整理">⟳</button>
   </div>
   <div class="project-body" id="projectBody"></div>
 </section>`;
 }
 
 /**
- * 文件页：磁盘上真实的目录结构，含 `.novelwarden/` 等点开头的文件夹。
+ * 檔案頁：磁碟上真實的目錄結構，含 `.novelwarden/` 等點開頭的資料夾。
  *
- * 目前只有独立版装配它——插件形态由 VS Code 自己的资源管理器承担这件事。
- * 放在这里而不是放进独立版壳，是为了第四个壳想要它时直接装配，不必去抄。
+ * 目前只有獨立版裝配它——外掛形態由 VS Code 自己的資源管理器承擔這件事。
+ * 放在這裡而不是放進獨立版殼，是為了第四個殼想要它時直接裝配，不必去抄。
  */
 export function filesPane(): string {
   return `<section class="pane" id="pane-files">
   <div class="fx-toolbar">
-    <span class="fx-title">资源管理器</span>
+    <span class="fx-title">資源管理器</span>
     <span class="spacer"></span>
-    <button class="icon-btn" id="filesReveal" title="定位编辑器里当前的文件">◎</button>
-    <button class="icon-btn" id="filesCollapse" title="全部折叠">⌃</button>
-    <button class="icon-btn" id="filesRefresh" title="刷新">⟳</button>
+    <button class="icon-btn" id="filesReveal" title="定位編輯器裡當前的檔案">◎</button>
+    <button class="icon-btn" id="filesCollapse" title="全部摺疊">⌃</button>
+    <button class="icon-btn" id="filesRefresh" title="重新整理">⟳</button>
   </div>
   <div class="fx-body" id="filesBody"></div>
-  <div class="hint fx-foot">这里是工程目录的原样结构，含 <code>.novelwarden/</code> 等点开头的文件夹。文本文件在内置编辑器里打开，其余交系统程序。</div>
+  <div class="hint fx-foot">這裡是工程目錄的原樣結構，含 <code>.novelwarden/</code> 等點開頭的資料夾。文字檔案在內建編輯器裡開啟，其餘交系統程式。</div>
 </section>`;
 }
 
 /**
- * 版本页（只有独立版装配：内容由 editor.js 的 `editor/versions.ts` 画）：上面全书改动（跟一个存档点比改过的文件），下面编辑区
- * 当前那份文件的时间线（还没保存的改动、快照、存档点里的样子），点一行在编辑区开对比标签。
+ * 版本頁（只有獨立版裝配：內容由 editor.js 的 `editor/versions.ts` 畫）：上面全書改動（跟一個存檔點比改過的檔案），下面編輯區
+ * 當前那份檔案的時間線（還沒儲存的改動、快照、存檔點裡的樣子），點一行在編輯區開對比標籤。
  */
 export function versionsPane(): string {
   return `<section class="pane" id="pane-versions">
   <div class="vs-toolbar">
     <span class="vs-title">版本</span>
     <span class="spacer"></span>
-    <button class="icon-btn" id="versionsSave" title="现在存一版：把磁盘上现在这一份存下来（编辑器里没保存的修改不在里面）">＋</button>
-    <button class="icon-btn" id="versionsRefresh" title="刷新">⟳</button>
+    <button class="icon-btn" id="versionsSave" title="現在存一版：把磁碟上現在這一份存下來（編輯器裡沒儲存的修改不在裡面）">＋</button>
+    <button class="icon-btn" id="versionsRefresh" title="重新整理">⟳</button>
   </div>
   <div class="vs-body" id="versionsBody"></div>
   <div class="hint vs-foot" id="versionsFoot"></div>
 </section>`;
 }
 
-/** 历史页：会话列表。 */
+/** 歷史頁：會話列表。 */
 export function historyPane(): string {
   return `<section class="pane" id="pane-history">
   <div class="pane-head">
-    <span>对话历史</span>
+    <span>對話歷史</span>
     <span class="meta" id="historyMeta"></span>
   </div>
-  <div class="hint">会话保存在 <code>.novelwarden/sessions/</code>，可随工程一起提交。</div>
+  <div class="hint">會話儲存在 <code>.novelwarden/sessions/</code>，可隨工程一起提交。</div>
   <ul class="sessions" id="sessionList"></ul>
 </section>`;
 }
 
-/** 日志页：过滤工具栏 + 日志体。 */
+/** 日誌頁：過濾工具欄 + 日誌體。 */
 export function logsPane(): string {
   return `<section class="pane" id="pane-logs">
   <div class="log-toolbar">
-    <select id="logLevel" title="只显示这一级别以上的日志">
-      <option value="debug">全部（含调试）</option>
-      <option value="info" selected>信息及以上</option>
+    <select id="logLevel" title="只顯示這一級別以上的日誌">
+      <option value="debug">全部（含除錯）</option>
+      <option value="info" selected>資訊及以上</option>
       <option value="warn">警告及以上</option>
-      <option value="error">仅错误</option>
+      <option value="error">僅錯誤</option>
     </select>
-    <input type="search" id="logFilter" placeholder="过滤关键字…">
-    <label class="log-follow"><input type="checkbox" id="logFollow" checked>自动滚动</label>
+    <input type="search" id="logFilter" placeholder="過濾關鍵字…">
+    <label class="log-follow"><input type="checkbox" id="logFollow" checked>自動滾動</label>
     <span class="spacer"></span>
     <span class="meta" id="logMeta"></span>
-    <button class="chip-btn" id="logEarlierBtn" title="从工程数据库里读更早的日志（重启前的也在）">加载更早</button>
-    <button class="chip-btn" id="logCopyBtn" title="复制当前筛选出的日志">复制</button>
-    <button class="chip-btn" id="logClearBtn" title="清空日志缓冲">清空</button>
+    <button class="chip-btn" id="logEarlierBtn" title="從工程資料庫裡讀更早的日誌（重啟前的也在）">載入更早</button>
+    <button class="chip-btn" id="logCopyBtn" title="複製當前篩選出的日誌">複製</button>
+    <button class="chip-btn" id="logClearBtn" title="清空日誌緩衝">清空</button>
   </div>
   <div class="log-body" id="logBody"></div>
 </section>`;
 }
 
 /**
- * 设置页：服务商与模型、默认模型、高级设置（分档 / 任务档位 / 请求调度）、上下文管理。
+ * 設定頁：服務商與模型、預設模型、高階設定（分檔 / 任務檔位 / 請求排程）、上下文管理。
  *
- * 存储说明对两个壳是同一句话——插件壳在迁移之后也用 `FileConfigStore`
- * （`~/.novelwarden/config.json`）。这里**不再按壳分叉**：从前那句「设置写入工作区
- * settings.json」只在独立版才被前端改掉，于是插件形态长期显示着一句不成立的话。
+ * 儲存說明對兩個殼是同一句話——外掛殼在遷移之後也用 `FileConfigStore`
+ * （`~/.novelwarden/config.json`）。這裡**不再按殼分叉**：從前那句「設定寫入工作區
+ * settings.json」只在獨立版才被前端改掉，於是外掛形態長期顯示著一句不成立的話。
  */
 export function settingsPane(opts: PaneOptions = {}): string {
   const nativeBtn = opts.nativeSettings
-    ? '\n    <button class="link" id="nativeSettingsBtn">在 VS Code 设置中打开</button>'
+    ? '\n    <button class="link" id="nativeSettingsBtn">在 VS Code 設定中開啟</button>'
     : '';
   const generalTab = opts.multiWindow
     ? '\n    <button class="settings-subtab" id="settingsTabGeneral" data-settings-tab="general" role="tab" aria-selected="false" aria-controls="settingsPanelGeneral">通用</button>'
@@ -301,19 +301,19 @@ export function settingsPane(opts: PaneOptions = {}): string {
     ? `
 
   <div class="settings-panel" id="settingsPanelGeneral" data-settings-panel="general" role="tabpanel" aria-labelledby="settingsTabGeneral">
-    <div class="pane-head"><span>窗口</span></div>
+    <div class="pane-head"><span>視窗</span></div>
     <div class="hint">
-      每个浏览器窗口各开一个工程，互不干扰。开着这一项时，在已经开着工程的窗口里再打开别的工程（打开文件夹、新建工程、最近打开），
-      会开一个新窗口，当前窗口不动；关掉则换掉当前窗口里的工程。空窗口里打开总是用当前窗口。
-      外部 Agent 经 MCP 调用时，地址带 <code>?project=&lt;工程目录&gt;</code> 就落到那个工程，不带就落到最近操作的那个窗口。
+      每個瀏覽器視窗各開一個工程，互不干擾。開著這一項時，在已經開著工程的視窗裡再開啟別的工程（開啟資料夾、新建工程、最近開啟），
+      會開一個新視窗，當前視窗不動；關掉則換掉當前視窗裡的工程。空視窗裡開啟總是用當前視窗。
+      外部 Agent 經 MCP 呼叫時，地址帶 <code>?project=&lt;工程目錄&gt;</code> 就落到那個工程，不帶就落到最近操作的那個視窗。
     </div>
     <div class="grid">
-      <label class="field"><span>新窗口中打开项目</span><input type="checkbox" id="setOpenInNewWindow"></label>
+      <label class="field"><span>新視窗中開啟專案</span><input type="checkbox" id="setOpenInNewWindow"></label>
     </div>
   </div>`
     : '';
   return `<section class="pane" id="pane-settings">
-  <div class="settings-subtabs" role="tablist" aria-label="设置分类">
+  <div class="settings-subtabs" role="tablist" aria-label="設定分類">
     <button class="settings-subtab active" id="settingsTabModels" data-settings-tab="models" role="tab" aria-selected="true" aria-controls="settingsPanelModels">模型配置</button>
     <button class="settings-subtab" id="settingsTabContext" data-settings-tab="context" role="tab" aria-selected="false" aria-controls="settingsPanelContext">上下文管理</button>${generalTab}
     <button class="settings-subtab" id="settingsTabSkills" data-settings-tab="skills" role="tab" aria-selected="false" aria-controls="settingsPanelSkills">技能</button>
@@ -321,133 +321,133 @@ export function settingsPane(opts: PaneOptions = {}): string {
 
   <div class="settings-panel active" id="settingsPanelModels" data-settings-panel="models" role="tabpanel" aria-labelledby="settingsTabModels">
     <div class="pane-head">
-      <span>服务商与模型</span>
+      <span>服務商與模型</span>
       <span class="meta" id="providerCount"></span>
     </div>
     <div class="hint">
-      模型用「前缀/模型名」引用，前缀是服务商 id。同一个模型走不同渠道就是两条：
-      <code>glm/glm-4-plus</code> 与 <code>openrouter/z-ai/glm-4.6</code>。
-      模型名本身可以带斜杠，只在第一个斜杠处切分。窗口与输出上限在每个模型里单独配置。
+      模型用「字首/模型名」引用，字首是服務商 id。同一個模型走不同渠道就是兩條：
+      <code>glm/glm-4-plus</code> 與 <code>openrouter/z-ai/glm-4.6</code>。
+      模型名本身可以帶斜槓，只在第一個斜槓處切分。視窗與輸出上限在每個模型裡單獨配置。
     </div>
 
     <div id="providerList"></div>
 
     <div class="actions">
-      <button class="secondary" id="addProviderBtn">＋ 添加服务商</button>
+      <button class="secondary" id="addProviderBtn">＋ 新增服務商</button>
     </div>
 
-    <div class="pane-head"><span>默认模型</span></div>
+    <div class="pane-head"><span>預設模型</span></div>
     <div class="hint">
-      工程页的同步、提取角色卡、生成设定、提取文风等操作用这份列表：<b>串行时用第一个</b>，失败会自动换用后面的重试；
-      <b>并发时在列表里轮转</b>做负载均衡。对话页随时可在输入框旁的下拉框里切换——切换等于把那个模型提到列表首位。
+      工程頁的同步、提取角色卡、生成設定、提取文風等操作用這份列表：<b>序列時用第一個</b>，失敗會自動換用後面的重試；
+      <b>併發時在列表裡輪轉</b>做負載均衡。對話頁隨時可在輸入框旁的下拉框裡切換——切換等於把那個模型提到列表首位。
     </div>
     <div id="defaultModelList"></div>
 
     <button type="button" class="settings-advanced-toggle" id="settingsAdvancedToggle" aria-expanded="false" aria-controls="settingsAdvanced">
       <span class="caret">▸</span>
-      <span class="settings-advanced-title">高级设置</span>
-      <span class="meta">模型分档 · 任务档位 · 请求与调度</span>
+      <span class="settings-advanced-title">高階設定</span>
+      <span class="meta">模型分檔 · 任務檔位 · 請求與排程</span>
     </button>
     <div id="settingsAdvanced" hidden>
-      <div class="pane-head"><span>模型分档</span></div>
+      <div class="pane-head"><span>模型分檔</span></div>
       <div class="hint">
-        简单大量的活交给便宜模型，困难的活交给聪明模型。<b>每档留空就沿用上面的「默认模型」</b>——
-        三档都不配，行为和不分档时完全一样。每档也是一份有序清单：串行用第一个，失败自动换用<b>同档</b>其余模型，
-        并发时在档内轮转。<b>换人只在档内发生</b>，快速档失败不会偷偷升级到精标档去烧贵 token。
-        对话页续写不受分档影响，始终用你在输入框旁选的那个模型。
+        簡單大量的活交給便宜模型，困難的活交給聰明模型。<b>每檔留空就沿用上面的「預設模型」</b>——
+        三檔都不配，行為和不分檔時完全一樣。每檔也是一份有序清單：序列用第一個，失敗自動換用<b>同檔</b>其餘模型，
+        併發時在檔內輪轉。<b>換人只在檔內發生</b>，快速檔失敗不會偷偷升級到精標檔去燒貴 token。
+        對話頁續寫不受分檔影響，始終用你在輸入框旁選的那個模型。
       </div>
       <div class="tier-grid">
         <div class="tier-block">
-          <div class="tier-head"><span class="tier-name">快速档</span><span class="tier-hint">便宜、快，用于量大而单次简单的活</span></div>
+          <div class="tier-head"><span class="tier-name">快速檔</span><span class="tier-hint">便宜、快，用於量大而單次簡單的活</span></div>
           <div id="tierModelList-fast"></div>
         </div>
         <div class="tier-block">
-          <div class="tier-head"><span class="tier-name">均衡档</span><span class="tier-hint">折中，用于量不小但质量也要紧的活</span></div>
+          <div class="tier-head"><span class="tier-name">均衡檔</span><span class="tier-hint">折中，用於量不小但質量也要緊的活</span></div>
           <div id="tierModelList-balanced"></div>
         </div>
         <div class="tier-block">
-          <div class="tier-head"><span class="tier-name">精标档</span><span class="tier-hint">最聪明的模型，用于一次定调、错了代价大的活</span></div>
+          <div class="tier-head"><span class="tier-name">精標檔</span><span class="tier-hint">最聰明的模型，用於一次定調、錯了代價大的活</span></div>
           <div id="tierModelList-quality"></div>
         </div>
       </div>
 
-      <div class="pane-head"><span>任务档位</span></div>
-      <div class="hint">每项工程页任务归在哪一档。标「默认」的是内置推荐值，按调用次数与单次难度定的。</div>
+      <div class="pane-head"><span>任務檔位</span></div>
+      <div class="hint">每項工程頁任務歸在哪一檔。標「預設」的是內建推薦值，按呼叫次數與單次難度定的。</div>
       <div id="taskTierTable"></div>
 
-      <div class="pane-head"><span>请求与调度</span></div>
-      <div class="hint">并发与重试只作用于工程页批量任务；对话页续写始终单请求、严格使用当前选中的模型。超时按「多久没收到数据」计，流式输出期间不会触发。</div>
+      <div class="pane-head"><span>請求與排程</span></div>
+      <div class="hint">併發與重試只作用於工程頁批次任務；對話頁續寫始終單請求、嚴格使用當前選中的模型。超時按「多久沒收到資料」計，流式輸出期間不會觸發。</div>
       <div class="grid">
-        <label class="field"><span>温度</span><input type="number" id="setTemperature" min="0" max="2" step="0.1"></label>
-        <label class="field"><span>请求超时（毫秒）</span><input type="number" id="setRequestTimeoutMs" min="10000" step="10000"></label>
-        <label class="field"><span>并发请求数</span><input type="number" id="setConcurrency" min="1" max="16"></label>
-        <label class="field"><span>换模型重试次数</span><input type="number" id="setFallbackAttempts" min="0" max="5"></label>
+        <label class="field"><span>溫度</span><input type="number" id="setTemperature" min="0" max="2" step="0.1"></label>
+        <label class="field"><span>請求超時（毫秒）</span><input type="number" id="setRequestTimeoutMs" min="10000" step="10000"></label>
+        <label class="field"><span>併發請求數</span><input type="number" id="setConcurrency" min="1" max="16"></label>
+        <label class="field"><span>換模型重試次數</span><input type="number" id="setFallbackAttempts" min="0" max="5"></label>
       </div>
     </div>
   </div>
 
   <div class="settings-panel" id="settingsPanelContext" data-settings-panel="context" role="tabpanel" aria-labelledby="settingsTabContext">
-    <div class="pane-head"><span>上下文详细度</span></div>
-    <div class="hint">每一次调用带多少前文与设定：写架构、大纲、细纲、正文、审稿、修稿，以及提取文风与角色、排叙事线、同步判线、写前冲突检查都按它。级别越高带得越多、越贵；任何一级都不改调用次数。预算不足时仍会按明细中说明的顺序降级或省略。</div>
+    <div class="pane-head"><span>上下文詳細度</span></div>
+    <div class="hint">每一次呼叫帶多少前文與設定：寫架構、大綱、細綱、正文、審稿、修稿，以及提取文風與角色、排敘事線、同步判線、寫前衝突檢查都按它。級別越高帶得越多、越貴；任何一級都不改呼叫次數。預算不足時仍會按明細中說明的順序降級或省略。</div>
     <div class="grid">
-      <label class="field"><span>上下文详细度</span><select id="setContextDetail"></select></label>
+      <label class="field"><span>上下文詳細度</span><select id="setContextDetail"></select></label>
     </div>
     <div class="hint" id="contextDetailHint"></div>
 
-    <div class="pane-head"><span>删修饰</span></div>
-    <div class="hint">写完一章正文之后，让同一个模型再过一遍，只删名词前堆的形容词、动词前的程度副词这类多余修饰，不加字、不动对白；删坏的段落自动退回原文。每章多调 1 次模型。对话页写入前可以逐段把删改退回原文。</div>
+    <div class="pane-head"><span>刪修飾</span></div>
+    <div class="hint">寫完一章正文之後，讓同一個模型再過一遍，只刪名詞前堆的形容詞、動詞前的程度副詞這類多餘修飾，不加字、不動對白；刪壞的段落自動退回原文。每章多調 1 次模型。對話頁寫入前可以逐段把刪改退回原文。</div>
     <div class="grid">
-      <label class="field"><span>写完正文删修饰</span><input type="checkbox" id="setTrimModifiers"></label>
+      <label class="field"><span>寫完正文刪修飾</span><input type="checkbox" id="setTrimModifiers"></label>
     </div>
 
-    <div class="pane-head"><span>全文大纲</span></div>
-    <div class="hint">重建全文大纲时，同步过的各章细纲先按此数量分批汇总，再合并成全文大纲。</div>
+    <div class="pane-head"><span>全文大綱</span></div>
+    <div class="hint">重建全文大綱時，同步過的各章細綱先按此數量分批匯總，再合併成全文大綱。</div>
     <div class="grid">
-      <label class="field"><span>每批章数</span><input type="number" id="setSummaryBatchSize" min="3"></label>
+      <label class="field"><span>每批章數</span><input type="number" id="setSummaryBatchSize" min="3"></label>
     </div>
   </div>${generalPanel}
 
   <div class="settings-panel" id="settingsPanelSkills" data-settings-panel="skills" role="tabpanel" aria-labelledby="settingsTabSkills">
     <div class="hint">
-      写作技能是一份<b>补充的写作方法</b>（一个目录里一份 <code>SKILL.md</code>，可以带它引用的 <code>references/</code> 这类文件）。给本工程的某个阶段绑上一份，
-      这个阶段往后的每一次生成都会把它放在提示词最前面——对话页、外部 Agent 经 MCP 生成、工程页批量都一样。
-      它只能补充写法：<b>作者事实和输出格式始终优先</b>。讨论与同步不带。这一页的改动当场生效，不用点「保存设置」。
+      寫作技能是一份<b>補充的寫作方法</b>（一個目錄裡一份 <code>SKILL.md</code>，可以帶它引用的 <code>references/</code> 這類檔案）。給本工程的某個階段綁上一份，
+      這個階段往後的每一次生成都會把它放在提示詞最前面——對話頁、外部 Agent 經 MCP 生成、工程頁批次都一樣。
+      它只能補充寫法：<b>作者事實和輸出格式始終優先</b>。討論與同步不帶。這一頁的改動當場生效，不用點「儲存設定」。
     </div>
 
-    <div class="pane-head"><span>本工程的阶段绑定</span></div>
+    <div class="pane-head"><span>本工程的階段繫結</span></div>
     <div class="hint" id="skillBindingHint"></div>
     <div class="grid" id="skillBindings"></div>
 
-    <div class="pane-head"><span>从 GitHub 安装</span></div>
+    <div class="pane-head"><span>從 GitHub 安裝</span></div>
     <div class="hint">
-      只收纯提示词的技能：要跑脚本、装 hook、派子代理、调工具的，都装不了。<code>SKILL.md</code> 引用的文本文件（<code>references/*.md</code> 这类）会一起下载、生成时接在正文后面一起带；引用了却下不到的也装不了。
-      先检查（只下载来看，不写任何文件），看过正文再确认安装；安装时会重新下载，与检查时那一份核对一致才装。
+      只收純提示詞的技能：要跑指令碼、裝 hook、派子代理、調工具的，都裝不了。<code>SKILL.md</code> 引用的文字檔案（<code>references/*.md</code> 這類）會一起下載、生成時接在正文後面一起帶；引用了卻下不到的也裝不了。
+      先檢查（只下載來看，不寫任何檔案），看過正文再確認安裝；安裝時會重新下載，與檢查時那一份核對一致才裝。
     </div>
     <div class="skill-install">
       <input type="url" id="skillUrl" placeholder="https://github.com/owner/repo/tree/main/skills/xxx" aria-label="技能的 GitHub 地址">
-      <button class="secondary" id="inspectSkillBtn">检查</button>
+      <button class="secondary" id="inspectSkillBtn">檢查</button>
     </div>
     <div id="skillInspection"></div>
 
-    <div class="pane-head"><span>技能库</span><span class="meta" id="skillCount"></span></div>
+    <div class="pane-head"><span>技能庫</span><span class="meta" id="skillCount"></span></div>
     <div class="hint" id="skillLibraryHint"></div>
     <div id="skillList"></div>
   </div>
 
   <div class="actions" id="settingsSaveRow">
-    <button class="primary" id="saveSettingsBtn">保存设置</button>${nativeBtn}
+    <button class="primary" id="saveSettingsBtn">儲存設定</button>${nativeBtn}
   </div>
-  <div class="hint" id="settingsStorageHint">设置写入 <code>~/.novelwarden/config.json</code>；API Key 存在 <code>~/.novelwarden/secrets.json</code>，不进配置文件。</div>
+  <div class="hint" id="settingsStorageHint">設定寫入 <code>~/.novelwarden/config.json</code>；API Key 存在 <code>~/.novelwarden/secrets.json</code>，不進配置檔案。</div>
 </section>`;
 }
 
-/** 服务商配置的模态框（设置页用）。 */
+/** 服務商配置的模態框（設定頁用）。 */
 export function providerModal(): string {
   return `<div class="modal-overlay hidden" id="providerModal">
   <div class="modal">
     <div class="modal-head">
       <span class="modal-title" id="providerModalTitle">配置</span>
-      <button class="icon-btn" id="providerModalClose" title="关闭">×</button>
+      <button class="icon-btn" id="providerModalClose" title="關閉">×</button>
     </div>
     <div class="modal-body" id="providerModalBody"></div>
   </div>
@@ -455,30 +455,30 @@ export function providerModal(): string {
 }
 
 /**
- * 覆盖审阅的段级 diff / 合并视图（五期 W11，只有独立版放它：插件用 VS Code 自己的 diff 编辑器）。
- * 内容由 media/src/view/merge.ts 按 `prompt kind: 'merge'` 填。
+ * 覆蓋審閱的段級 diff / 合併檢視（五期 W11，只有獨立版放它：外掛用 VS Code 自己的 diff 編輯器）。
+ * 內容由 media/src/view/merge.ts 按 `prompt kind: 'merge'` 填。
  */
 export function mergeModal(): string {
   return `<div class="modal-overlay merge-overlay hidden" id="mergeModal">
   <div class="modal merge-modal" role="dialog" aria-labelledby="mergeTitle">
     <div class="modal-head">
-      <span class="modal-title" id="mergeTitle">对比</span>
+      <span class="modal-title" id="mergeTitle">對比</span>
       <span class="merge-progress" id="mergeProgress"></span>
       <button class="secondary small" id="mergeAllOld">全部保留原文</button>
-      <button class="secondary small" id="mergeAllNew">全部采用新版</button>
+      <button class="secondary small" id="mergeAllNew">全部採用新版</button>
     </div>
     <div class="hint merge-path" id="mergePath"></div>
     <div class="modal-body merge-body" id="mergeBody"></div>
     <div class="actions merge-foot">
       <span class="hint merge-foot-hint" id="mergeHint"></span>
-      <button class="secondary" id="mergeDiscard">放弃</button>
-      <button class="primary" id="mergeApply">写入合并结果</button>
+      <button class="secondary" id="mergeDiscard">放棄</button>
+      <button class="primary" id="mergeApply">寫入合併結果</button>
     </div>
   </div>
 </div>`;
 }
 
-/** toast 的落点。前端往里填内容。 */
+/** toast 的落點。前端往裡填內容。 */
 export function toastSlot(): string {
   return '<div class="toast hidden" id="toast"></div>';
 }

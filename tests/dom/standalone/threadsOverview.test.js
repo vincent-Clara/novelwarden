@@ -1,23 +1,23 @@
 /**
- * 编辑区「叙事线总览」标签（`media/src/editor/threadsOverview.ts`，叙事线重做三期）与它的两个入口（工程页「叙事线」页签标题旁
- * 的「总览」、行右键「在总览里看」）。矩阵由后端推来（`threadsOverview`），这里按消息造；后端怎么算在
- * tests/unit/views/threadsOverview.test.js 与 tests/integration/views/threadsOverview.test.js。
+ * 編輯區「敘事線總覽」標籤（`media/src/editor/threadsOverview.ts`，敘事線重做三期）與它的兩個入口（工程頁「敘事線」頁籤標題旁
+ * 的「總覽」、行右鍵「在總覽裡看」）。矩陣由後端推來（`threadsOverview`），這裡按訊息造；後端怎麼算在
+ * tests/unit/views/threadsOverview.test.js 與 tests/integration/views/threadsOverview.test.js。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 能力探测 | 插件的 webview 只有 view.js：「总览」「在总览里看」「打开叙事线总览」都不画；独立版有；一条线都没有不给 |
- * | 标签 | 标签条上一个不对应文件的特殊标签（排在文件前面）；切到文件就藏起覆盖层、切回来再露出来；× / Ctrl+W 关掉回到原来那份文件；「▾」里也有它 |
- * | 矩阵 | 列头的章号、卷名、定稿状态，「定稿到第 N 章」那条竖线；按种类分组、线下面是伏笔、最后是「未归属的伏笔」 |
- * | 叙事线判到哪（四期） | 落后于定稿时头上说判到第几章、另一条虚竖线；定稿了还没判的列头另标，悬停说这一章的计划不算偏差 |
- * | 四种格子 | ○ 只有计划、● 只有实际、◉ 计划也发生了、红圈偏差；计划区间一条淡底 |
- * | 伏笔连线 | 收了的实线、埋了没收的虚线（逾期标红）、还没埋的淡虚线；回收章一道竖线；埋 ● 收 ◆ 弃 ✕，计划的空心 |
- * | 点击 | 点格子 / 列头发 `openChapter`（有正文给正文路径，只有细纲给细纲路径，都没有说一句不发）；点线名、伏笔名、「未归属的伏笔」发 `openEditor` |
- * | 触屏与右键 | 手指点格子 / 列头只弹浮窗、不发 `openChapter`（兼容鼠标事件不收它，点别处收）；鼠标照旧打开；右键（长按）格子给「打开第 N 章」 |
- * | 悬停 | 那一格的计划与实际事件、证据、偏差说一句 |
- * | 定位 | 右键「在总览里看」打开并标出那一行 |
- * | 数据 | 按需要（requestId）；别人的 requestId 不认；显示着收到 `state` 停一下再要；藏着时不要，切回来再要 |
- * | 刷新恢复 | 记着、恢复时先开总览，陆续回来的文件不把它换下去；记坏了的不认、不崩；没在显示的恢复成背景标签 |
- * | 换工程 | 标签关掉 |
+ * | 能力探測 | 外掛的 webview 只有 view.js：「總覽」「在總覽裡看」「開啟敘事線總覽」都不畫；獨立版有；一條線都沒有不給 |
+ * | 標籤 | 標籤條上一個不對應檔案的特殊標籤（排在檔案前面）；切到檔案就藏起覆蓋層、切回來再露出來；× / Ctrl+W 關掉回到原來那份檔案；「▾」裡也有它 |
+ * | 矩陣 | 列頭的章號、卷名、定稿狀態，「定稿到第 N 章」那條豎線；按種類分組、線下面是伏筆、最後是「未歸屬的伏筆」 |
+ * | 敘事線判到哪（四期） | 落後於定稿時頭上說判到第幾章、另一條虛豎線；定稿了還沒判的列頭另標，懸停說這一章的計劃不算偏差 |
+ * | 四種格子 | ○ 只有計劃、● 只有實際、◉ 計劃也發生了、紅圈偏差；計劃區間一條淡底 |
+ * | 伏筆連線 | 收了的實線、埋了沒收的虛線（逾期標紅）、還沒埋的淡虛線；回收章一道豎線；埋 ● 收 ◆ 棄 ✕，計劃的空心 |
+ * | 點選 | 點格子 / 列頭髮 `openChapter`（有正文給正文路徑，只有細綱給細綱路徑，都沒有說一句不發）；點線名、伏筆名、「未歸屬的伏筆」發 `openEditor` |
+ * | 觸屏與右鍵 | 手指點格子 / 列頭只彈浮窗、不發 `openChapter`（相容滑鼠事件不收它，點別處收）；滑鼠照舊開啟；右鍵（長按）格子給「開啟第 N 章」 |
+ * | 懸停 | 那一格的計劃與實際事件、證據、偏差說一句 |
+ * | 定位 | 右鍵「在總覽裡看」開啟並標出那一行 |
+ * | 資料 | 按需要（requestId）；別人的 requestId 不認；顯示著收到 `state` 停一下再要；藏著時不要，切回來再要 |
+ * | 重新整理恢復 | 記著、恢復時先開總覽，陸續回來的檔案不把它換下去；記壞了的不認、不崩；沒在顯示的恢復成背景標籤 |
+ * | 換工程 | 標籤關掉 |
  */
 const { describe, test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
@@ -36,8 +36,8 @@ const ev = (type, what, evidence, foreshadowing) => ({
 const cell = (chapter, planned, actual, deviation = false) => ({ chapter, planned, actual, deviation });
 
 /**
- * 一份矩阵：第 1–3 章定稿了（根下）、第 4 章写了没定稿、第 5 章只有细纲、第 6 章什么都没有（第二卷）；「现在」第 3 章。
- * 主线一条（四种格子各一格）、感情线一条（两条伏笔：收了的、计划埋却没埋的）；「未归属的伏笔」两条（逾期的、弃了的）。
+ * 一份矩陣：第 1–3 章定稿了（根下）、第 4 章寫了沒定稿、第 5 章只有細綱、第 6 章什麼都沒有（第二卷）；「現在」第 3 章。
+ * 主線一條（四種格子各一格）、感情線一條（兩條伏筆：收了的、計劃埋卻沒埋的）；「未歸屬的伏筆」兩條（逾期的、棄了的）。
  */
 function overview(extra = {}) {
   const ch = (no, state, title, volume, paths) => ({ no, title, volume, state, ...paths });
@@ -48,8 +48,8 @@ function overview(extra = {}) {
     volumes: true,
     chapters: [
       ch(1, 'finalized', '楔子', '', { chapterPath: 'chapters/001-楔子.md', plotPath: '.novelwarden/summaries/001-楔子.md' }),
-      ch(2, 'finalized', '入镇', '', { chapterPath: 'chapters/002-入镇.md', plotPath: '.novelwarden/summaries/002-入镇.md' }),
-      ch(3, 'finalized', '夜访', '', { chapterPath: 'chapters/003-夜访.md', plotPath: '.novelwarden/summaries/003-夜访.md' }),
+      ch(2, 'finalized', '入鎮', '', { chapterPath: 'chapters/002-入鎮.md', plotPath: '.novelwarden/summaries/002-入鎮.md' }),
+      ch(3, 'finalized', '夜訪', '', { chapterPath: 'chapters/003-夜訪.md', plotPath: '.novelwarden/summaries/003-夜訪.md' }),
       ch(4, 'written', '北行', '第二卷', { chapterPath: 'chapters/第二卷/004-北行.md' }),
       ch(5, 'planned', '赤星', '第二卷', { plotPath: '.novelwarden/summaries/第二卷/005-赤星.md' }),
       ch(6, 'none', '', '第二卷', {}),
@@ -59,19 +59,19 @@ function overview(extra = {}) {
         kind: '主线',
         lines: [
           {
-            name: '青崖旧案',
-            relPath: T('青崖旧案'),
+            name: '青崖舊案',
+            relPath: T('青崖舊案'),
             kind: '主线',
             status: '进行中',
             from: 1,
             to: 6,
-            detail: '主线 · 进行中 · 最近第 3 章',
+            detail: '主線 · 進行中 · 最近第 3 章',
             warnings: [],
-            tip: '意图：查清七年前那场火',
+            tip: '意圖：查清七年前那場火',
             cells: [
               cell(1, [], [ev('推进', '回到青崖', '雨下了三天')]),
-              cell(2, [ev('推进', '打听名册')], [], true),
-              cell(3, [ev('推进', '找到空匣')], [ev('推进', '夜访旧宅，找到空匣', '匣子是空的')]),
+              cell(2, [ev('推进', '打聽名冊')], [], true),
+              cell(3, [ev('推进', '找到空匣')], [ev('推进', '夜訪舊宅，找到空匣', '匣子是空的')]),
               cell(5, [ev('推进', '北上')], []),
             ],
             foreshadowing: [],
@@ -82,18 +82,18 @@ function overview(extra = {}) {
         kind: '感情线',
         lines: [
           {
-            name: '林昭与沈氏',
-            relPath: T('林昭与沈氏'),
+            name: '林昭與沈氏',
+            relPath: T('林昭與沈氏'),
             kind: '感情线',
             status: '进行中',
-            detail: '感情线 · 进行中 · 最近第 3 章 · 1 条伏笔没收',
-            warnings: ['1 条伏笔逾期'],
+            detail: '感情線 · 進行中 · 最近第 3 章 · 1 條伏筆沒收',
+            warnings: ['1 條伏筆逾期'],
             tip: '',
-            cells: [cell(2, [], [ev('关系', '猜忌 → 结盟', '你的仇就是我的仇')])],
+            cells: [cell(2, [], [ev('关系', '猜忌 → 結盟', '你的仇就是我的仇')])],
             foreshadowing: [
               {
-                name: '玉佩的来历',
-                what: '林昭的玉佩是沈家旧物',
+                name: '玉佩的來歷',
+                what: '林昭的玉佩是沈家舊物',
                 status: '已收',
                 plant: 1,
                 resolve: 3,
@@ -101,22 +101,22 @@ function overview(extra = {}) {
                 closedAt: 3,
                 overdue: false,
                 span: { from: 1, to: 3, kind: 'done' },
-                tip: '林昭的玉佩是沈家旧物\n计划第 1 章埋、第 3 章前收\n第 3 章收了',
+                tip: '林昭的玉佩是沈家舊物\n計劃第 1 章埋、第 3 章前收\n第 3 章收了',
                 cells: [
-                  cell(1, [], [ev('埋', '玉佩露面', '他摸了摸怀里的玉佩', '玉佩的来历')]),
-                  cell(3, [ev('收', '认出云纹', undefined, '玉佩的来历')], [ev('收', '认出云纹', '这是沈家的云纹', '玉佩的来历')]),
+                  cell(1, [], [ev('埋', '玉佩露面', '他摸了摸懷裡的玉佩', '玉佩的來歷')]),
+                  cell(3, [ev('收', '認出雲紋', undefined, '玉佩的來歷')], [ev('收', '認出雲紋', '這是沈家的雲紋', '玉佩的來歷')]),
                 ],
               },
               {
-                name: '沈氏的旧伤',
+                name: '沈氏的舊傷',
                 what: '左臂的刀疤',
                 status: '计划',
                 plant: 2,
                 resolve: 6,
                 overdue: false,
                 span: { from: 2, to: 6, kind: 'planned' },
-                tip: '左臂的刀疤\n计划第 2 章埋、第 6 章前收\n还没埋',
-                cells: [cell(2, [ev('埋', '换药时露出刀疤', undefined, '沈氏的旧伤')], [], true)],
+                tip: '左臂的刀疤\n計劃第 2 章埋、第 6 章前收\n還沒埋',
+                cells: [cell(2, [ev('埋', '換藥時露出刀疤', undefined, '沈氏的舊傷')], [], true)],
               },
             ],
           },
@@ -127,24 +127,24 @@ function overview(extra = {}) {
       relPath: UNFILED,
       foreshadowing: [
         {
-          name: '断剑',
-          what: '剑上刻着青崖二字',
+          name: '斷劍',
+          what: '劍上刻著青崖二字',
           status: '已埋',
           resolve: 2,
           plantedAt: 1,
           overdue: true,
           span: { from: 1, to: 3, kind: 'open' },
-          tip: '剑上刻着青崖二字\n第 2 章前收\n第 1 章埋下，还没收，过了第 2 章（逾期）',
-          cells: [cell(1, [], [ev('埋', '断剑出土', '半截断剑', '断剑')])],
+          tip: '劍上刻著青崖二字\n第 2 章前收\n第 1 章埋下，還沒收，過了第 2 章（逾期）',
+          cells: [cell(1, [], [ev('埋', '斷劍出土', '半截斷劍', '斷劍')])],
         },
         {
-          name: '火折子',
+          name: '火摺子',
           what: '',
           status: '已弃',
           closedAt: 2,
           overdue: false,
-          tip: '第 2 章弃了',
-          cells: [cell(2, [], [ev('弃', '扔进河里', '扑通一声', '火折子')])],
+          tip: '第 2 章棄了',
+          cells: [cell(2, [], [ev('弃', '扔進河裡', '撲通一聲', '火摺子')])],
         },
       ],
     },
@@ -152,7 +152,7 @@ function overview(extra = {}) {
   };
 }
 
-/** 独立版：view.js + editor.js，推一条 state 与工程树。 */
+/** 獨立版：view.js + editor.js，推一條 state 與工程樹。 */
 function harness(opts = {}) {
   const ui = mount({ body: 'standalone', scripts: ['view.js', 'editor.js'], shims: ['scrollIntoView', 'clipboard', ...(opts.shims ?? [])], ...opts });
   const toasts = [];
@@ -185,11 +185,11 @@ function harness(opts = {}) {
     },
     respond(o = overview()) {
       const req = ui.last('requestThreadsOverview');
-      assert.ok(req, '没发 requestThreadsOverview');
+      assert.ok(req, '沒發 requestThreadsOverview');
       ui.post({ type: 'threadsOverview', requestId: req.requestId, overview: o });
     },
     openFile(path) {
-      ui.post({ type: 'editorOpen', file: file(path, `${path} 的内容`) });
+      ui.post({ type: 'editorOpen', file: file(path, `${path} 的內容`) });
     },
     count: (type) => ui.sent.filter((m) => m.type === type).length,
     sentAfter: (n) => JSON.parse(JSON.stringify(ui.sent.slice(n))),
@@ -197,82 +197,82 @@ function harness(opts = {}) {
   return h;
 }
 
-describe('叙事线总览 · 能力探测（VS Code 插件没有内置编辑器）', { skip: JSDOM_SKIP }, () => {
-  test('插件的 webview（只有 view.js）：标题旁没有「总览」，右键没有「在总览里看」「打开叙事线总览」', () => {
+describe('敘事線總覽 · 能力探測（VS Code 外掛沒有內建編輯器）', { skip: JSDOM_SKIP }, () => {
+  test('外掛的 webview（只有 view.js）：標題旁沒有「總覽」，右鍵沒有「在總覽裡看」「開啟敘事線總覽」', () => {
     const ui = mount();
     ui.post({ type: 'project', tree: sampleTree() });
     const panel = ui.doc.querySelector('#projectBody [data-project-panel="threads"]');
-    assert.ok(panel.querySelector('.threads-head'), '标题旁那一截还在（「从大纲补充」）');
+    assert.ok(panel.querySelector('.threads-head'), '標題旁那一截還在（「從大綱補充」）');
     assert.equal(panel.querySelector('.threads-overview-btn'), null);
-    assert.ok(![...panel.querySelectorAll('.threads-head button')].some((b) => b.textContent === '总览'));
-    const row = [...panel.querySelectorAll('.row-thread')].find((r) => r.textContent.includes('青崖旧案'));
+    assert.ok(![...panel.querySelectorAll('.threads-head button')].some((b) => b.textContent === '總覽'));
+    const row = [...panel.querySelectorAll('.row-thread')].find((r) => r.textContent.includes('青崖舊案'));
     const items = ui.itemsOf(ui.rightClick(row));
-    assert.ok(items.includes('打开') && !items.includes('在总览里看'), JSON.stringify(items));
+    assert.ok(items.includes('開啟') && !items.includes('在總覽裡看'), JSON.stringify(items));
     ui.closeMenu();
     const groupItems = ui.itemsOf(ui.rightClick(panel.querySelector('.group-head')));
-    assert.ok(!groupItems.includes('打开叙事线总览'), JSON.stringify(groupItems));
+    assert.ok(!groupItems.includes('開啟敘事線總覽'), JSON.stringify(groupItems));
     ui.closeMenu();
   });
 
-  test('独立版：标题旁有「总览」，行右键有「在总览里看」，组标题右键有「打开叙事线总览」', () => {
+  test('獨立版：標題旁有「總覽」，行右鍵有「在總覽裡看」，組標題右鍵有「開啟敘事線總覽」', () => {
     const h = harness();
-    assert.equal(h.overviewBtn()?.textContent, '总览');
-    const items = h.ui.itemsOf(h.ui.rightClick(h.projectRow('青崖旧案')));
-    assert.deepEqual(items.slice(0, 2), ['打开', '在总览里看']);
+    assert.equal(h.overviewBtn()?.textContent, '總覽');
+    const items = h.ui.itemsOf(h.ui.rightClick(h.projectRow('青崖舊案')));
+    assert.deepEqual(items.slice(0, 2), ['開啟', '在總覽裡看']);
     h.ui.closeMenu();
-    const unfiled = h.ui.itemsOf(h.ui.rightClick(h.projectRow('未归属的伏笔')));
-    assert.ok(unfiled.includes('在总览里看'), JSON.stringify(unfiled));
+    const unfiled = h.ui.itemsOf(h.ui.rightClick(h.projectRow('未歸屬的伏筆')));
+    assert.ok(unfiled.includes('在總覽裡看'), JSON.stringify(unfiled));
     h.ui.closeMenu();
     const group = h.ui.itemsOf(h.ui.rightClick(h.threadsPanel().querySelector('.group-head')));
-    assert.ok(group.includes('打开叙事线总览'), JSON.stringify(group));
+    assert.ok(group.includes('開啟敘事線總覽'), JSON.stringify(group));
     h.ui.closeMenu();
   });
 
-  test('一条线、一条未归属的伏笔都没有：不给「总览」（打开了也是空的）', () => {
+  test('一條線、一條未歸屬的伏筆都沒有：不給「總覽」（開啟了也是空的）', () => {
     const h = harness({ tree: { ...sampleTree(), threads: { lines: [], current: 0, watch: { lines: [], foreshadowing: [] } } } });
     assert.equal(h.overviewBtn(), null);
-    assert.ok(h.threadsPanel().querySelector('.threads-head'), '「从大纲排出」还在');
+    assert.ok(h.threadsPanel().querySelector('.threads-head'), '「從大綱排出」還在');
   });
 });
 
-describe('叙事线总览 · 特殊标签', { skip: JSDOM_SKIP }, () => {
+describe('敘事線總覽 · 特殊標籤', { skip: JSDOM_SKIP }, () => {
   let h;
   beforeEach(() => {
     h = harness();
   });
 
-  test('点「总览」：主区标签条上多一个不对应文件的「叙事线总览」，覆盖层挂在 .ed-stage 上；要数据、先说在读', () => {
+  test('點「總覽」：主區標籤條上多一個不對應檔案的「敘事線總覽」，覆蓋層掛在 .ed-stage 上；要資料、先說在讀', () => {
     const before = h.count('requestThreadsOverview');
     h.open();
-    assert.ok(h.specialTab(), '没有特殊标签');
+    assert.ok(h.specialTab(), '沒有特殊標籤');
     assert.equal(h.specialTab().dataset.special, 'threads-overview');
     assert.ok(h.specialTab().classList.contains('active'));
-    assert.deepEqual(h.tabs(), ['叙事线总览']);
-    assert.equal(h.specialTab().querySelector('.ed-tab-dirty'), null, '没有脏标记');
-    assert.ok(h.tov().closest('.wb-editor') === h.doc.getElementById('wbEditor'), '在主区');
+    assert.deepEqual(h.tabs(), ['敘事線總覽']);
+    assert.equal(h.specialTab().querySelector('.ed-tab-dirty'), null, '沒有髒標記');
+    assert.ok(h.tov().closest('.wb-editor') === h.doc.getElementById('wbEditor'), '在主區');
     assert.ok(h.shown());
-    assert.ok(h.doc.getElementById('edWelcome').classList.contains('hidden'), '欢迎页藏起来');
+    assert.ok(h.doc.getElementById('edWelcome').classList.contains('hidden'), '歡迎頁藏起來');
     assert.equal(h.count('requestThreadsOverview'), before + 1);
     assert.match(h.ui.last('requestThreadsOverview').requestId, /^threads-/);
-    assert.match(h.note(), /正在读取/);
-    // 不对应文件：工具栏藏着、没有「当前文件」。
+    assert.match(h.note(), /正在讀取/);
+    // 不對應檔案：工具欄藏著、沒有「當前檔案」。
     assert.ok(h.doc.getElementById('edToolbar').classList.contains('hidden'));
   });
 
-  test('已经开着再点「总览」：不开第二个，切过去并再要一次', () => {
+  test('已經開著再點「總覽」：不開第二個，切過去並再要一次', () => {
     h.open();
     h.respond();
     h.openFile('chapters/001-楔子.md');
     const before = h.count('requestThreadsOverview');
     h.open();
     assert.equal(h.doc.querySelectorAll('.ed-tab-special').length, 1);
-    assert.deepEqual(h.tabs(), ['叙事线总览', '001-楔子.md']);
-    assert.equal(h.activeTab(), '叙事线总览');
+    assert.deepEqual(h.tabs(), ['敘事線總覽', '001-楔子.md']);
+    assert.equal(h.activeTab(), '敘事線總覽');
     assert.ok(h.shown());
     assert.equal(h.count('requestThreadsOverview'), before + 1);
   });
 
-  test('切到一份文件：覆盖层藏起来；点特殊标签再露出来；文件标签排在它后面', () => {
+  test('切到一份檔案：覆蓋層藏起來；點特殊標籤再露出來；檔案標籤排在它後面', () => {
     h.open();
     h.respond();
     h.openFile('chapters/001-楔子.md');
@@ -280,15 +280,15 @@ describe('叙事线总览 · 特殊标签', { skip: JSDOM_SKIP }, () => {
     assert.equal(h.shown(), false);
     assert.equal(h.doc.getElementById('edArea').classList.contains('hidden'), false);
     h.ui.clickEl(h.specialTab());
-    assert.equal(h.activeTab(), '叙事线总览');
+    assert.equal(h.activeTab(), '敘事線總覽');
     assert.ok(h.shown());
-    assert.ok(h.doc.getElementById('edArea').classList.contains('hidden'), '正文区藏着');
-    // 点文件标签切回去。
+    assert.ok(h.doc.getElementById('edArea').classList.contains('hidden'), '正文區藏著');
+    // 點檔案標籤切回去。
     h.ui.clickEl([...h.doc.querySelectorAll('#edTabs .ed-tab')].find((t) => t.dataset.path === 'chapters/001-楔子.md'));
     assert.equal(h.shown(), false);
   });
 
-  test('× 关掉：回到切过去之前的那份文件；没有文件时回到欢迎页', () => {
+  test('× 關掉：回到切過去之前的那份檔案；沒有檔案時回到歡迎頁', () => {
     h.openFile('a.md');
     h.openFile('b.md');
     h.ui.clickEl([...h.doc.querySelectorAll('#edTabs .ed-tab')].find((t) => t.dataset.path === 'a.md'));
@@ -296,7 +296,7 @@ describe('叙事线总览 · 特殊标签', { skip: JSDOM_SKIP }, () => {
     h.respond();
     h.ui.clickEl(h.specialTab().querySelector('.ed-tab-close'));
     assert.equal(h.specialTab(), null);
-    assert.equal(h.activeTab(), 'a.md', '回到切过去之前的 a.md，不是最后一份');
+    assert.equal(h.activeTab(), 'a.md', '回到切過去之前的 a.md，不是最後一份');
     assert.equal(h.shown(), false);
 
     const g = harness();
@@ -307,13 +307,13 @@ describe('叙事线总览 · 特殊标签', { skip: JSDOM_SKIP }, () => {
     assert.equal(g.doc.getElementById('edTabs').classList.contains('hidden'), true);
   });
 
-  test('Ctrl+W 关掉正显示着的特殊标签；标签右键「关闭」「刷新」', () => {
+  test('Ctrl+W 關掉正顯示著的特殊標籤；標籤右鍵「關閉」「重新整理」', () => {
     h.open();
     h.respond();
     const menu = h.ui.itemsOf(h.ui.rightClick(h.specialTab()));
-    assert.deepEqual(menu, ['关闭', '刷新']);
+    assert.deepEqual(menu, ['關閉', '重新整理']);
     const before = h.count('requestThreadsOverview');
-    h.ui.pick(h.doc.querySelector('.ctx-menu'), '刷新');
+    h.ui.pick(h.doc.querySelector('.ctx-menu'), '重新整理');
     assert.equal(h.count('requestThreadsOverview'), before + 1);
     const e = new h.window.KeyboardEvent('keydown', { key: 'w', ctrlKey: true, bubbles: true, cancelable: true });
     h.doc.body.dispatchEvent(e);
@@ -321,20 +321,20 @@ describe('叙事线总览 · 特殊标签', { skip: JSDOM_SKIP }, () => {
     assert.equal(h.specialTab(), null);
   });
 
-  test('「▾」列表里也有它，点了切过去', () => {
+  test('「▾」列表裡也有它，點了切過去', () => {
     h.open();
     h.respond();
     h.openFile('a.md');
     h.ui.clickEl(h.doc.querySelector('#edTabs .ed-tabs-more'));
     const items = [...h.doc.querySelectorAll('.ctx-menu button')].map((b) => b.textContent.trim());
-    assert.ok(items.some((x) => x.endsWith('叙事线总览')), JSON.stringify(items));
-    [...h.doc.querySelectorAll('.ctx-menu button')].find((b) => b.textContent.trim().endsWith('叙事线总览')).click();
-    assert.equal(h.activeTab(), '叙事线总览');
+    assert.ok(items.some((x) => x.endsWith('敘事線總覽')), JSON.stringify(items));
+    [...h.doc.querySelectorAll('.ctx-menu button')].find((b) => b.textContent.trim().endsWith('敘事線總覽')).click();
+    assert.equal(h.activeTab(), '敘事線總覽');
     assert.ok(h.shown());
   });
 });
 
-describe('叙事线总览 · 矩阵', { skip: JSDOM_SKIP }, () => {
+describe('敘事線總覽 · 矩陣', { skip: JSDOM_SKIP }, () => {
   let h;
   beforeEach(() => {
     h = harness();
@@ -342,16 +342,16 @@ describe('叙事线总览 · 矩阵', { skip: JSDOM_SKIP }, () => {
     h.respond();
   });
 
-  test('头上一行：定稿到第几章、几条线、几条伏笔；图例', () => {
-    assert.equal(h.doc.querySelector('.tov-meta').textContent, '同步到第 3 章 · 2 条线 · 4 条伏笔');
+  test('頭上一行：定稿到第幾章、幾條線、幾條伏筆；圖例', () => {
+    assert.equal(h.doc.querySelector('.tov-meta').textContent, '同步到第 3 章 · 2 條線 · 4 條伏筆');
     const legend = h.doc.querySelector('.tov-legend').textContent;
-    for (const word of ['只有计划', '只有实际', '计划也发生了', '计划了、同步了却没发生', '埋', '收', '弃']) {
+    for (const word of ['只有計劃', '只有實際', '計劃也發生了', '計劃了、同步了卻沒發生', '埋', '收', '棄']) {
       assert.ok(legend.includes(word), legend);
     }
     assert.equal(h.note(), '');
   });
 
-  test('列头：一章一列、章号、定稿状态；分卷的书多一行卷名', () => {
+  test('列頭：一章一列、章號、定稿狀態；分卷的書多一行卷名', () => {
     const cols = [...h.doc.querySelectorAll('.tov-nums .tov-col')];
     assert.deepEqual(cols.map((c) => c.textContent), ['1', '2', '3', '4', '5', '6']);
     assert.deepEqual(
@@ -361,8 +361,8 @@ describe('叙事线总览 · 矩阵', { skip: JSDOM_SKIP }, () => {
     assert.ok(cols[2].classList.contains('tov-col-now'));
     assert.equal(cols[3].style.left, '72px');
     assert.match(cols[0].title, /第 1 章《楔子》 · 已同步/);
-    assert.match(cols[3].title, /写了，还没同步/);
-    assert.match(cols[5].title, /还没有细纲/);
+    assert.match(cols[3].title, /寫了，還沒同步/);
+    assert.match(cols[5].title, /還沒有細綱/);
     const vols = [...h.doc.querySelectorAll('.tov-vols .tov-vol')];
     assert.deepEqual(vols.map((v) => [v.textContent, v.style.left, v.style.width]), [
       ['', '0px', '72px'],
@@ -370,7 +370,7 @@ describe('叙事线总览 · 矩阵', { skip: JSDOM_SKIP }, () => {
     ]);
   });
 
-  test('「定稿到第 3 章」：一条竖线画在第 3 章右边；叙事线跟上了定稿，不另画', () => {
+  test('「定稿到第 3 章」：一條豎線畫在第 3 章右邊；敘事線跟上了定稿，不另畫', () => {
     const now = h.doc.querySelector('.tov-grid .tov-now');
     assert.ok(now);
     assert.equal(now.style.left, `${220 + 3 * 24}px`);
@@ -378,79 +378,79 @@ describe('叙事线总览 · 矩阵', { skip: JSDOM_SKIP }, () => {
     assert.equal(h.doc.querySelector('.tov-grid .tov-judged'), null);
   });
 
-  // 四期：定稿到第 3 章、叙事线只判到第 1 章——第 2、3 章定稿了还没判。
-  test('叙事线落后于定稿：头上说判到第几章；另一条虚竖线画在第 1 章右边；还没判的列头另标、悬停说计划不算偏差', () => {
+  // 四期：定稿到第 3 章、敘事線只判到第 1 章——第 2、3 章定稿了還沒判。
+  test('敘事線落後於定稿：頭上說判到第幾章；另一條虛豎線畫在第 1 章右邊；還沒判的列頭另標、懸停說計劃不算偏差', () => {
     const o = overview({ through: 1 });
     o.chapters = o.chapters.map((c) => (c.no === 2 || c.no === 3 ? { ...c, unjudged: true } : c));
-    // 点「总览」总是再要一次。
+    // 點「總覽」總是再要一次。
     h.open();
     h.respond(o);
-    assert.equal(h.doc.querySelector('.tov-meta').textContent, '同步到第 3 章 · 叙事线判到第 1 章 · 2 条线 · 4 条伏笔');
+    assert.equal(h.doc.querySelector('.tov-meta').textContent, '同步到第 3 章 · 敘事線判到第 1 章 · 2 條線 · 4 條伏筆');
     const judged = h.doc.querySelector('.tov-grid .tov-judged');
     assert.ok(judged);
     assert.equal(judged.style.left, `${220 + 1 * 24}px`);
-    assert.match(judged.title, /^叙事线判到第 1 章/);
+    assert.match(judged.title, /^敘事線判到第 1 章/);
     assert.equal(h.doc.querySelector('.tov-grid .tov-now').style.left, `${220 + 3 * 24}px`);
     const cols = [...h.doc.querySelectorAll('.tov-nums .tov-col')];
     assert.deepEqual(cols.map((c) => c.classList.contains('tov-col-unjudged')), [false, true, true, false, false, false]);
-    assert.match(cols[1].title, /已同步，叙事线还没判（这一章的计划不算偏差）/);
-    assert.match(h.doc.querySelector('.tov-corner').title, /虚线：叙事线判到第 1 章/);
+    assert.match(cols[1].title, /已同步，敘事線還沒判（這一章的計劃不算偏差）/);
+    assert.match(h.doc.querySelector('.tov-corner').title, /虛線：敘事線判到第 1 章/);
   });
 
-  test('一章都没判过：头上说「叙事线还没判过」，不画虚线', () => {
+  test('一章都沒判過：頭上說「敘事線還沒判過」，不畫虛線', () => {
     const o = overview({ through: 0 });
     h.open();
     h.respond(o);
-    assert.equal(h.doc.querySelector('.tov-meta').textContent, '同步到第 3 章 · 叙事线还没判过 · 2 条线 · 4 条伏笔');
+    assert.equal(h.doc.querySelector('.tov-meta').textContent, '同步到第 3 章 · 敘事線還沒判過 · 2 條線 · 4 條伏筆');
     assert.equal(h.doc.querySelector('.tov-grid .tov-judged'), null);
   });
 
-  test('行：按种类分组，每条线下面是它的伏笔，最后是「未归属的伏笔」', () => {
+  test('行：按種類分組，每條線下面是它的伏筆，最後是「未歸屬的伏筆」', () => {
     const rows = [...h.doc.querySelectorAll('.tov-grid .tov-row')].map((r) => {
       const kind = ['group', 'line', 'fore'].find((k) => r.classList.contains(`tov-row-${k}`));
       return `${kind}:${r.querySelector('.tov-name').firstElementChild.textContent === '●' ? r.querySelector('.tov-link').textContent : r.querySelector('.tov-name').textContent}`;
     });
     assert.deepEqual(rows, [
-      'group:主线1 条',
-      'line:青崖旧案',
-      'group:感情线1 条',
-      'line:林昭与沈氏',
-      'fore:玉佩的来历',
-      'fore:沈氏的旧伤',
-      'group:未归属的伏笔2 条',
-      'fore:断剑⚠',
-      'fore:火折子',
+      'group:主線1 條',
+      'line:青崖舊案',
+      'group:感情線1 條',
+      'line:林昭與沈氏',
+      'fore:玉佩的來歷',
+      'fore:沈氏的舊傷',
+      'group:未歸屬的伏筆2 條',
+      'fore:斷劍⚠',
+      'fore:火摺子',
     ]);
-    // 线名悬停看说法、⚠、意图；有 ⚠ 的挂一个 ⚠。
-    const line = h.row(T('林昭与沈氏'));
-    assert.match(line.querySelector('.tov-link').title, /感情线 · 进行中[\s\S]*⚠ 1 条伏笔逾期/);
+    // 線名懸停看說法、⚠、意圖；有 ⚠ 的掛一個 ⚠。
+    const line = h.row(T('林昭與沈氏'));
+    assert.match(line.querySelector('.tov-link').title, /感情線 · 進行中[\s\S]*⚠ 1 條伏筆逾期/);
     assert.ok(line.querySelector('.tov-warn'));
-    assert.match(h.row(T('青崖旧案')).querySelector('.tov-link').title, /意图：查清七年前那场火/);
+    assert.match(h.row(T('青崖舊案')).querySelector('.tov-link').title, /意圖：查清七年前那場火/);
   });
 
-  test('还在读、不是小说工程、一条线都没有、列被截了：各说一句', () => {
+  test('還在讀、不是小說工程、一條線都沒有、列被截了：各說一句', () => {
     const g = harness();
     g.open();
-    assert.match(g.note(), /正在读取/);
+    assert.match(g.note(), /正在讀取/);
     g.respond(overview({ initialized: false, chapters: [], groups: [], unfiled: undefined, current: 0 }));
-    assert.match(g.note(), /还不是小说工程/);
+    assert.match(g.note(), /還不是小說工程/);
     g.ui.clickEl(g.overviewBtn());
     g.respond(overview({ groups: [], unfiled: undefined }));
-    assert.match(g.note(), /还没有叙事线/);
+    assert.match(g.note(), /還沒有敘事線/);
     assert.equal(g.doc.querySelector('.tov-grid'), null);
     g.ui.clickEl(g.overviewBtn());
     g.respond(overview({ clippedFrom: 30000 }));
-    assert.match(g.note(), /第 30000 章，太远了，只画到第 6 章/);
+    assert.match(g.note(), /第 30000 章，太遠了，只畫到第 6 章/);
     assert.ok(g.doc.querySelector('.tov-grid'));
   });
 });
 
-describe('叙事线总览 · 线的四种格子', { skip: JSDOM_SKIP }, () => {
-  test('○ 只有计划、● 只有实际、◉ 计划也发生了、红圈偏差；只画有事件的章', () => {
+describe('敘事線總覽 · 線的四種格子', { skip: JSDOM_SKIP }, () => {
+  test('○ 只有計劃、● 只有實際、◉ 計劃也發生了、紅圈偏差；只畫有事件的章', () => {
     const h = harness();
     h.open();
     h.respond();
-    const row = h.row(T('青崖旧案'));
+    const row = h.row(T('青崖舊案'));
     const kind = (no) => ['plan', 'actual', 'both', 'dev'].find((k) => h.cellOf(row, no).querySelector(`.tov-mark-${k}`));
     assert.equal(kind(1), 'actual');
     assert.equal(kind(2), 'dev');
@@ -458,7 +458,7 @@ describe('叙事线总览 · 线的四种格子', { skip: JSDOM_SKIP }, () => {
     assert.equal(kind(5), 'plan');
     assert.equal(h.cellOf(row, 4), null);
     assert.equal(h.cellOf(row, 6), null);
-    // 圆点借流水线条的 pstage-mark：实际的实心（done），计划的空心。
+    // 圓點借流水線條的 pstage-mark：實際的實心（done），計劃的空心。
     assert.ok(h.cellOf(row, 1).querySelector('.pstage-mark.done'));
     assert.ok(h.cellOf(row, 3).querySelector('.pstage-mark.done'));
     assert.ok(!h.cellOf(row, 5).querySelector('.pstage-mark').classList.contains('done'));
@@ -466,17 +466,17 @@ describe('叙事线总览 · 线的四种格子', { skip: JSDOM_SKIP }, () => {
     assert.equal(h.cellOf(row, 3).style.left, '48px');
   });
 
-  test('计划区间一条淡底', () => {
+  test('計劃區間一條淡底', () => {
     const h = harness();
     h.open();
     h.respond();
-    const band = h.row(T('青崖旧案')).querySelector('.tov-band');
-    assert.deepEqual([band.style.left, band.style.width, band.title], ['0px', '144px', '计划第 1–6 章']);
-    assert.equal(h.row(T('林昭与沈氏')).querySelector('.tov-band'), null);
+    const band = h.row(T('青崖舊案')).querySelector('.tov-band');
+    assert.deepEqual([band.style.left, band.style.width, band.title], ['0px', '144px', '計劃第 1–6 章']);
+    assert.equal(h.row(T('林昭與沈氏')).querySelector('.tov-band'), null);
   });
 });
 
-describe('叙事线总览 · 伏笔连线', { skip: JSDOM_SKIP }, () => {
+describe('敘事線總覽 · 伏筆連線', { skip: JSDOM_SKIP }, () => {
   let h;
   beforeEach(() => {
     h = harness();
@@ -484,33 +484,33 @@ describe('叙事线总览 · 伏笔连线', { skip: JSDOM_SKIP }, () => {
     h.respond();
   });
 
-  test('收了的：埋 ● 到收 ◆ 一条实线', () => {
-    const row = h.foreRow('玉佩的来历');
+  test('收了的：埋 ● 到收 ◆ 一條實線', () => {
+    const row = h.foreRow('玉佩的來歷');
     const span = row.querySelector('.tov-span');
     assert.ok(span.classList.contains('tov-span-done'));
     assert.deepEqual([span.style.left, span.style.width], ['12px', '48px']);
     assert.ok(h.cellOf(row, 1).querySelector('.tov-fmark-plant.done'));
     const resolve = h.cellOf(row, 3).querySelector('.tov-fmark-resolve');
-    assert.ok(resolve && !resolve.classList.contains('tov-fmark-plan'), '实际收了画实心 ◆');
-    assert.equal(row.querySelector('.tov-due'), null, '收了的不画回收章');
+    assert.ok(resolve && !resolve.classList.contains('tov-fmark-plan'), '實際收了畫實心 ◆');
+    assert.equal(row.querySelector('.tov-due'), null, '收了的不畫回收章');
     assert.ok(row.classList.contains('tov-row-closed'));
   });
 
-  test('埋了没收、逾期：虚线标红，回收章那一格一道红竖线，名字标红挂 ⚠', () => {
-    const row = h.foreRow('断剑');
+  test('埋了沒收、逾期：虛線標紅，回收章那一格一道紅豎線，名字標紅掛 ⚠', () => {
+    const row = h.foreRow('斷劍');
     const span = row.querySelector('.tov-span');
     assert.ok(span.classList.contains('tov-span-open') && span.classList.contains('tov-overdue'));
     assert.deepEqual([span.style.left, span.style.width], ['12px', '48px']);
     const due = row.querySelector('.tov-due');
     assert.ok(due.classList.contains('tov-overdue'));
     assert.equal(due.style.left, `${24 + 12}px`);
-    assert.match(due.title, /计划第 2 章前收——叙事线判到第 3 章，逾期/);
+    assert.match(due.title, /計劃第 2 章前收——敘事線判到第 3 章，逾期/);
     assert.ok(row.classList.contains('tov-row-overdue'));
     assert.ok(row.querySelector('.tov-warn'));
   });
 
-  test('还没埋：按计划画淡虚线到回收章；计划埋的那一章定稿了却没埋，空心记号标红', () => {
-    const row = h.foreRow('沈氏的旧伤');
+  test('還沒埋：按計劃畫淡虛線到回收章；計劃埋的那一章定稿了卻沒埋，空心記號標紅', () => {
+    const row = h.foreRow('沈氏的舊傷');
     const span = row.querySelector('.tov-span');
     assert.ok(span.classList.contains('tov-span-planned'));
     assert.ok(!span.classList.contains('tov-overdue'));
@@ -520,14 +520,14 @@ describe('叙事线总览 · 伏笔连线', { skip: JSDOM_SKIP }, () => {
     assert.ok(!mark.classList.contains('done'));
   });
 
-  test('弃了的画 ✕，没有连线', () => {
-    const row = h.foreRow('火折子');
+  test('棄了的畫 ✕，沒有連線', () => {
+    const row = h.foreRow('火摺子');
     assert.equal(h.cellOf(row, 2).querySelector('.tov-fmark-drop').textContent, '✕');
     assert.equal(row.querySelector('.tov-span'), null);
   });
 });
 
-describe('叙事线总览 · 点击', { skip: JSDOM_SKIP }, () => {
+describe('敘事線總覽 · 點選', { skip: JSDOM_SKIP }, () => {
   let h;
   beforeEach(() => {
     h = harness();
@@ -535,47 +535,47 @@ describe('叙事线总览 · 点击', { skip: JSDOM_SKIP }, () => {
     h.respond();
   });
 
-  test('点格子打开那一章（openChapter：正文进主区、细纲并排）', () => {
+  test('點格子開啟那一章（openChapter：正文進主區、細綱並排）', () => {
     const n = h.ui.sent.length;
-    h.ui.clickEl(h.cellOf(h.row(T('青崖旧案')), 1).querySelector('.tov-mark'));
+    h.ui.clickEl(h.cellOf(h.row(T('青崖舊案')), 1).querySelector('.tov-mark'));
     assert.deepEqual(h.sentAfter(n), [{ type: 'openChapter', plotRelPath: 'chapters/001-楔子.md' }]);
     const m = h.ui.sent.length;
-    h.ui.clickEl(h.cellOf(h.foreRow('沈氏的旧伤'), 2));
-    assert.deepEqual(h.sentAfter(m), [{ type: 'openChapter', plotRelPath: 'chapters/002-入镇.md' }]);
+    h.ui.clickEl(h.cellOf(h.foreRow('沈氏的舊傷'), 2));
+    assert.deepEqual(h.sentAfter(m), [{ type: 'openChapter', plotRelPath: 'chapters/002-入鎮.md' }]);
   });
 
-  test('还没写的打开细纲；细纲正文都没有的说一句、不发', () => {
+  test('還沒寫的開啟細綱；細綱正文都沒有的說一句、不發', () => {
     const n = h.ui.sent.length;
-    h.ui.clickEl(h.cellOf(h.row(T('青崖旧案')), 5));
+    h.ui.clickEl(h.cellOf(h.row(T('青崖舊案')), 5));
     assert.deepEqual(h.sentAfter(n), [{ type: 'openChapter', plotRelPath: '.novelwarden/summaries/第二卷/005-赤星.md' }]);
     const m = h.ui.sent.length;
     h.ui.clickEl(h.doc.querySelector('.tov-nums .tov-col[data-ch="6"]'));
     assert.deepEqual(h.sentAfter(m), []);
-    assert.match(h.toasts.at(-1), /第 6 章还没有细纲，也没有正文/);
+    assert.match(h.toasts.at(-1), /第 6 章還沒有細綱，也沒有正文/);
   });
 
-  test('点列头打开那一章', () => {
+  test('點列頭開啟那一章', () => {
     const n = h.ui.sent.length;
     h.ui.clickEl(h.doc.querySelector('.tov-nums .tov-col[data-ch="4"]'));
     assert.deepEqual(h.sentAfter(n), [{ type: 'openChapter', plotRelPath: 'chapters/第二卷/004-北行.md' }]);
   });
 
-  test('点线名打开那条线的文件；点伏笔名打开它所在的文件；点「未归属的伏笔」打开那份文件——开在总览所在的这一块', () => {
+  test('點線名開啟那條線的檔案；點伏筆名開啟它所在的檔案；點「未歸屬的伏筆」開啟那份檔案——開在總覽所在的這一塊', () => {
     const n = h.ui.sent.length;
-    h.ui.clickEl(h.row(T('林昭与沈氏')).querySelector('.tov-link'));
-    h.ui.clickEl(h.foreRow('玉佩的来历').querySelector('.tov-link'));
+    h.ui.clickEl(h.row(T('林昭與沈氏')).querySelector('.tov-link'));
+    h.ui.clickEl(h.foreRow('玉佩的來歷').querySelector('.tov-link'));
     h.ui.clickEl(h.row(UNFILED).querySelector('.tov-link'));
-    h.ui.clickEl(h.foreRow('断剑').querySelector('.tov-link'));
+    h.ui.clickEl(h.foreRow('斷劍').querySelector('.tov-link'));
     assert.deepEqual(h.sentAfter(n), [
-      { type: 'openEditor', path: T('林昭与沈氏'), pane: 'main' },
-      { type: 'openEditor', path: T('林昭与沈氏'), pane: 'main' },
+      { type: 'openEditor', path: T('林昭與沈氏'), pane: 'main' },
+      { type: 'openEditor', path: T('林昭與沈氏'), pane: 'main' },
       { type: 'openEditor', path: UNFILED, pane: 'main' },
       { type: 'openEditor', path: UNFILED, pane: 'main' },
     ]);
   });
 
-  test('打开的那一章到了：它成了当前标签，总览藏起来、标签还在', () => {
-    h.ui.clickEl(h.cellOf(h.row(T('青崖旧案')), 1));
+  test('開啟的那一章到了：它成了當前標籤，總覽藏起來、標籤還在', () => {
+    h.ui.clickEl(h.cellOf(h.row(T('青崖舊案')), 1));
     h.openFile('chapters/001-楔子.md');
     assert.equal(h.activeTab(), '001-楔子.md');
     assert.equal(h.shown(), false);
@@ -583,8 +583,8 @@ describe('叙事线总览 · 点击', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('叙事线总览 · 悬停', { skip: JSDOM_SKIP }, () => {
-  test('悬停一格：第几章、哪一行、计划与实际的事件与证据；偏差说一句；移开就收', () => {
+describe('敘事線總覽 · 懸停', { skip: JSDOM_SKIP }, () => {
+  test('懸停一格：第幾章、哪一行、計劃與實際的事件與證據；偏差說一句；移開就收', () => {
     const h = harness();
     h.open();
     h.respond();
@@ -592,36 +592,36 @@ describe('叙事线总览 · 悬停', { skip: JSDOM_SKIP }, () => {
     const over = (node) => node.dispatchEvent(new h.window.MouseEvent('mouseover', { bubbles: true }));
     const out = (node) => node.dispatchEvent(new h.window.MouseEvent('mouseout', { bubbles: true, relatedTarget: h.doc.body }));
 
-    const dev = h.cellOf(h.row(T('青崖旧案')), 2);
+    const dev = h.cellOf(h.row(T('青崖舊案')), 2);
     over(dev.querySelector('.tov-mark'));
     assert.equal(tip().classList.contains('hidden'), false);
-    assert.equal(tip().querySelector('.tov-tip-head').textContent, '第 2 章《入镇》 · 已同步');
-    assert.equal(tip().querySelector('.tov-tip-row-name').textContent, '青崖旧案');
-    assert.deepEqual([...tip().querySelectorAll('.tov-tip-ev')].map((n) => n.textContent), ['计划 · 推进：打听名册']);
-    assert.match(tip().querySelector('.tov-tip-dev').textContent, /计划了，这一章也同步了，却没有发生/);
+    assert.equal(tip().querySelector('.tov-tip-head').textContent, '第 2 章《入鎮》 · 已同步');
+    assert.equal(tip().querySelector('.tov-tip-row-name').textContent, '青崖舊案');
+    assert.deepEqual([...tip().querySelectorAll('.tov-tip-ev')].map((n) => n.textContent), ['計劃 · 推進：打聽名冊']);
+    assert.match(tip().querySelector('.tov-tip-dev').textContent, /計劃了，這一章也同步了，卻沒有發生/);
     out(dev);
     assert.equal(tip().classList.contains('hidden'), true);
 
-    over(h.cellOf(h.row(T('青崖旧案')), 3));
+    over(h.cellOf(h.row(T('青崖舊案')), 3));
     assert.deepEqual([...tip().querySelectorAll('.tov-tip-ev')].map((n) => n.textContent), [
-      '计划 · 推进：找到空匣',
-      '推进：夜访旧宅，找到空匣「匣子是空的」',
+      '計劃 · 推進：找到空匣',
+      '推進：夜訪舊宅，找到空匣「匣子是空的」',
     ]);
     assert.equal(tip().querySelector('.tov-tip-evidence').textContent, '「匣子是空的」');
     assert.equal(tip().querySelector('.tov-tip-dev'), null);
 
-    over(h.cellOf(h.foreRow('玉佩的来历'), 1));
-    assert.equal(tip().querySelector('.tov-tip-ev').textContent, '埋〈玉佩的来历〉：玉佩露面「他摸了摸怀里的玉佩」');
-    // 用户内容一律 textContent：证据里的尖括号原样是字。
+    over(h.cellOf(h.foreRow('玉佩的來歷'), 1));
+    assert.equal(tip().querySelector('.tov-tip-ev').textContent, '埋〈玉佩的來歷〉：玉佩露面「他摸了摸懷裡的玉佩」');
+    // 使用者內容一律 textContent：證據裡的尖括號原樣是字。
     h.doc.querySelector('.tov').dispatchEvent(new h.window.Event('scroll'));
   });
 });
 
-describe('叙事线总览 · 触屏与右键', { skip: JSDOM_SKIP }, () => {
+describe('敘事線總覽 · 觸屏與右鍵', { skip: JSDOM_SKIP }, () => {
   let h;
   const tip = () => h.doc.querySelector('.tov .tov-tip');
   const shownTip = () => !tip().classList.contains('hidden');
-  /** 手指按下（Chromium 在手指点一下之后才补发 click；`touch.ts` 认最近一次指针是不是手指）。 */
+  /** 手指按下（Chromium 在手指點一下之後才補發 click；`touch.ts` 認最近一次指標是不是手指）。 */
   const finger = (node) => node.dispatchEvent(new h.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
   const mouse = (node) => node.dispatchEvent(new h.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' }));
   beforeEach(() => {
@@ -630,25 +630,25 @@ describe('叙事线总览 · 触屏与右键', { skip: JSDOM_SKIP }, () => {
     h.respond();
   });
 
-  test('手指点一格：弹浮窗看这一格本身，不打开那一章；点别处收起', () => {
-    const cell = h.cellOf(h.row(T('青崖旧案')), 2);
+  test('手指點一格：彈浮窗看這一格本身，不開啟那一章；點別處收起', () => {
+    const cell = h.cellOf(h.row(T('青崖舊案')), 2);
     const n = h.ui.sent.length;
     finger(cell);
     h.ui.clickEl(cell.querySelector('.tov-mark') ?? cell);
     assert.deepEqual(h.sentAfter(n), []);
     assert.equal(shownTip(), true);
-    assert.equal(tip().querySelector('.tov-tip-head').textContent, '第 2 章《入镇》 · 已同步');
-    // 兼容鼠标事件（手指点完补发的 mouseout）不收它
+    assert.equal(tip().querySelector('.tov-tip-head').textContent, '第 2 章《入鎮》 · 已同步');
+    // 相容滑鼠事件（手指點完補發的 mouseout）不收它
     cell.dispatchEvent(new h.window.MouseEvent('mouseout', { bubbles: true, relatedTarget: h.doc.body }));
     assert.equal(shownTip(), true);
-    // 点表格里别处：收起
+    // 點表格裡別處：收起
     const scroll = h.doc.querySelector('.tov-scroll');
     finger(scroll);
     h.ui.clickEl(scroll);
     assert.equal(shownTip(), false);
   });
 
-  test('手指点列头：浮窗里写这一章的说明，「点击打开」换成「长按打开」；不发 openChapter', () => {
+  test('手指點列頭：浮窗裡寫這一章的說明，「點選開啟」換成「長按開啟」；不發 openChapter', () => {
     const col = h.doc.querySelector('.tov-nums .tov-col[data-ch="4"]');
     const n = h.ui.sent.length;
     finger(col);
@@ -656,81 +656,81 @@ describe('叙事线总览 · 触屏与右键', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual(h.sentAfter(n), []);
     assert.equal(shownTip(), true);
     assert.match(tip().querySelector('.tov-tip-head').textContent, /^第 4 章/);
-    assert.ok([...tip().querySelectorAll('.tov-tip-row-name')].some((r) => r.textContent === '长按打开这一章'));
+    assert.ok([...tip().querySelectorAll('.tov-tip-row-name')].some((r) => r.textContent === '長按開啟這一章'));
   });
 
-  test('鼠标点格子照旧打开那一章（桌面不变）', () => {
-    const cell = h.cellOf(h.row(T('青崖旧案')), 1);
+  test('滑鼠點格子照舊開啟那一章（桌面不變）', () => {
+    const cell = h.cellOf(h.row(T('青崖舊案')), 1);
     const n = h.ui.sent.length;
     mouse(cell);
     h.ui.clickEl(cell);
     assert.deepEqual(h.sentAfter(n), [{ type: 'openChapter', plotRelPath: 'chapters/001-楔子.md' }]);
   });
 
-  test('右键（长按）格子：「打开第 N 章」与「刷新」；还没写的写「打开第 N 章的细纲」；空白处只有刷新', () => {
-    finger(h.cellOf(h.row(T('青崖旧案')), 1));
-    let menu = h.ui.rightClick(h.cellOf(h.row(T('青崖旧案')), 1));
-    assert.deepEqual(h.ui.itemsOf(menu), ['打开第 1 章', '刷新']);
+  test('右鍵（長按）格子：「開啟第 N 章」與「重新整理」；還沒寫的寫「開啟第 N 章的細綱」；空白處只有重新整理', () => {
+    finger(h.cellOf(h.row(T('青崖舊案')), 1));
+    let menu = h.ui.rightClick(h.cellOf(h.row(T('青崖舊案')), 1));
+    assert.deepEqual(h.ui.itemsOf(menu), ['開啟第 1 章', '重新整理']);
     const n = h.ui.sent.length;
-    h.ui.pick(menu, '打开第 1 章');
+    h.ui.pick(menu, '開啟第 1 章');
     assert.deepEqual(h.sentAfter(n), [{ type: 'openChapter', plotRelPath: 'chapters/001-楔子.md' }]);
-    menu = h.ui.rightClick(h.cellOf(h.row(T('青崖旧案')), 5));
-    assert.deepEqual(h.ui.itemsOf(menu), ['打开第 5 章的细纲', '刷新']);
+    menu = h.ui.rightClick(h.cellOf(h.row(T('青崖舊案')), 5));
+    assert.deepEqual(h.ui.itemsOf(menu), ['開啟第 5 章的細綱', '重新整理']);
     h.ui.closeMenu();
     menu = h.ui.rightClick(h.doc.querySelector('.tov-scroll'));
-    assert.deepEqual(h.ui.itemsOf(menu), ['刷新']);
+    assert.deepEqual(h.ui.itemsOf(menu), ['重新整理']);
     h.ui.closeMenu();
   });
 });
 
-describe('叙事线总览 · 在总览里看', { skip: JSDOM_SKIP }, () => {
-  test('工程页行右键「在总览里看」：打开总览，数据到了标出那一行', () => {
+describe('敘事線總覽 · 在總覽裡看', { skip: JSDOM_SKIP }, () => {
+  test('工程頁行右鍵「在總覽裡看」：開啟總覽，資料到了標出那一行', () => {
     const h = harness();
-    h.ui.pick(h.ui.rightClick(h.projectRow('林昭与沈氏')), '在总览里看');
+    h.ui.pick(h.ui.rightClick(h.projectRow('林昭與沈氏')), '在總覽裡看');
     assert.ok(h.shown());
     h.respond();
-    assert.ok(h.row(T('林昭与沈氏')).classList.contains('tov-focus'));
-    assert.equal(h.row(T('青崖旧案')).classList.contains('tov-focus'), false);
-    // 换一行定位：标记跟着走；已经有数据时当场标出来。
-    h.ui.pick(h.ui.rightClick(h.projectRow('未归属的伏笔')), '在总览里看');
+    assert.ok(h.row(T('林昭與沈氏')).classList.contains('tov-focus'));
+    assert.equal(h.row(T('青崖舊案')).classList.contains('tov-focus'), false);
+    // 換一行定位：標記跟著走；已經有資料時當場標出來。
+    h.ui.pick(h.ui.rightClick(h.projectRow('未歸屬的伏筆')), '在總覽裡看');
     assert.ok(h.row(UNFILED).classList.contains('tov-focus'));
-    assert.equal(h.row(T('林昭与沈氏')).classList.contains('tov-focus'), false);
-    // 新数据到了重画，标记还在。
+    assert.equal(h.row(T('林昭與沈氏')).classList.contains('tov-focus'), false);
+    // 新資料到了重畫，標記還在。
     h.respond();
     assert.ok(h.row(UNFILED).classList.contains('tov-focus'));
   });
 });
 
-describe('叙事线总览 · 数据', { skip: JSDOM_SKIP }, () => {
-  test('别的页面的 requestId 不认', () => {
+describe('敘事線總覽 · 資料', { skip: JSDOM_SKIP }, () => {
+  test('別的頁面的 requestId 不認', () => {
     const h = harness();
     h.open();
-    h.ui.post({ type: 'threadsOverview', requestId: 'threads-别人的', overview: overview() });
+    h.ui.post({ type: 'threadsOverview', requestId: 'threads-別人的', overview: overview() });
     assert.equal(h.doc.querySelector('.tov-grid'), null);
-    assert.match(h.note(), /正在读取/);
+    assert.match(h.note(), /正在讀取/);
     h.respond();
     assert.ok(h.doc.querySelector('.tov-grid'));
   });
 
-  test('显示着收到 state（磁盘上变过）：停一下再要一次；藏着时不要，切回来再要', () => {
+  test('顯示著收到 state（磁碟上變過）：停一下再要一次；藏著時不要，切回來再要', () => {
     const h = harness({ shims: ['fakeTimers'] });
     h.open();
     h.respond();
     const n = h.count('requestThreadsOverview');
     h.ui.post({ type: 'state', state: viewState() });
     h.ui.post({ type: 'state', state: viewState() });
-    assert.equal(h.count('requestThreadsOverview'), n, '还在等');
+    assert.equal(h.count('requestThreadsOverview'), n, '還在等');
     h.window.__clock.tick(700);
-    assert.equal(h.count('requestThreadsOverview'), n + 1, '连着两条只要一次');
+    assert.equal(h.count('requestThreadsOverview'), n + 1, '連著兩條只要一次');
     h.respond();
 
     h.openFile('a.md');
     h.ui.post({ type: 'state', state: viewState() });
     h.window.__clock.tick(700);
-    assert.equal(h.count('requestThreadsOverview'), n + 1, '藏着时不要');
+    assert.equal(h.count('requestThreadsOverview'), n + 1, '藏著時不要');
     h.ui.clickEl(h.specialTab());
-    assert.equal(h.count('requestThreadsOverview'), n + 2, '切回来再要');
-    // 没变过：切走再切回来不再要。
+    assert.equal(h.count('requestThreadsOverview'), n + 2, '切回來再要');
+    // 沒變過：切走再切回來不再要。
     h.respond();
     h.ui.clickEl([...h.doc.querySelectorAll('#edTabs .ed-tab')].find((t) => t.dataset.path === 'a.md'));
     h.ui.clickEl(h.specialTab());
@@ -738,10 +738,10 @@ describe('叙事线总览 · 数据', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('叙事线总览 · 刷新恢复', { skip: JSDOM_SKIP }, () => {
+describe('敘事線總覽 · 重新整理恢復', { skip: JSDOM_SKIP }, () => {
   const SHIMS = ['scrollIntoView', 'clipboard'];
 
-  test('记着：刷新之后先开总览，陆续回来的文件不把它换下去；关掉它回到存下来的那一份', () => {
+  test('記著：重新整理之後先開總覽，陸續回來的檔案不把它換下去；關掉它回到存下來的那一份', () => {
     const first = harness({ storage: {} });
     first.openFile('a.md');
     first.openFile('b.md');
@@ -752,23 +752,23 @@ describe('叙事线总览 · 刷新恢复', { skip: JSDOM_SKIP }, () => {
     const data = JSON.parse(saved);
     assert.deepEqual(data.panes.main.specials, ['threads-overview']);
     assert.equal(data.panes.main.special, 'threads-overview');
-    assert.equal(data.panes.main.active, 'a.md', '记的是切过去之前的那一份');
+    assert.equal(data.panes.main.active, 'a.md', '記的是切過去之前的那一份');
 
     const second = mount({ body: 'standalone', scripts: ['view.js', 'editor.js'], shims: SHIMS, storage: { [STORE_KEY]: saved } });
     const tab = () => second.doc.querySelector('#edTabs .ed-tab-special');
     const shown = () => !second.doc.querySelector('.tov').classList.contains('hidden');
-    assert.ok(tab()?.classList.contains('active'), '总览先开、正显示着');
-    assert.ok(second.last('requestThreadsOverview'), '要了数据');
+    assert.ok(tab()?.classList.contains('active'), '總覽先開、正顯示著');
+    assert.ok(second.last('requestThreadsOverview'), '要了資料');
     assert.deepEqual(second.sent.filter((m) => m.type === 'openEditor').map((m) => m.path), ['a.md', 'b.md']);
     second.post({ type: 'editorOpen', file: file('a.md', 'a') });
     second.post({ type: 'editorOpen', file: file('b.md', 'b') });
-    assert.ok(tab().classList.contains('active'), '回来的文件没把它换下去');
+    assert.ok(tab().classList.contains('active'), '回來的檔案沒把它換下去');
     assert.ok(shown());
     second.clickEl(tab().querySelector('.ed-tab-close'));
     assert.equal(second.doc.querySelector('#edTabs .ed-tab.active').dataset.path, 'a.md');
   });
 
-  test('没在显示的总览：恢复成标签条上的一个标签，当前的还是那份文件', () => {
+  test('沒在顯示的總覽：恢復成標籤條上的一個標籤，當前的還是那份檔案', () => {
     const first = harness({ storage: {} });
     first.open();
     first.respond();
@@ -781,11 +781,11 @@ describe('叙事线总览 · 刷新恢复', { skip: JSDOM_SKIP }, () => {
     const tabs = [...second.doc.querySelectorAll('#edTabs .ed-tab')];
     assert.deepEqual(tabs.map((t) => t.dataset.special ?? t.dataset.path), ['threads-overview', 'a.md']);
     assert.ok(tabs[1].classList.contains('active'));
-    assert.equal(second.doc.querySelector('.tov'), null, '没显示就不画');
-    assert.equal(second.last('requestThreadsOverview'), undefined, '没显示就不要数据');
+    assert.equal(second.doc.querySelector('.tov'), null, '沒顯示就不畫');
+    assert.equal(second.last('requestThreadsOverview'), undefined, '沒顯示就不要資料');
   });
 
-  test('只开着总览、没有文件也恢复；记坏了的（认不出的标签、形状不对）不认、不崩，文件照样回来', () => {
+  test('只開著總覽、沒有檔案也恢復；記壞了的（認不出的標籤、形狀不對）不認、不崩，檔案照樣回來', () => {
     const onlyOverview = JSON.stringify({ v: 2, panes: { main: { open: [], active: null, specials: ['threads-overview'], special: 'threads-overview' } }, activePane: 'main' });
     const a = mount({ body: 'standalone', scripts: ['view.js', 'editor.js'], shims: SHIMS, storage: { [STORE_KEY]: onlyOverview } });
     assert.ok(a.doc.querySelector('#edTabs .ed-tab-special.active'));
@@ -793,7 +793,7 @@ describe('叙事线总览 · 刷新恢复', { skip: JSDOM_SKIP }, () => {
     const broken = JSON.stringify({
       v: 2,
       panes: {
-        main: { open: [{ path: 'a.md', hash: 'h-a.md' }], active: 'a.md', specials: ['不认得的', 3, null], special: '不认得的' },
+        main: { open: [{ path: 'a.md', hash: 'h-a.md' }], active: 'a.md', specials: ['不認得的', 3, null], special: '不認得的' },
         draft: { open: [], specials: 'threads-overview' },
       },
       activePane: 'main',
@@ -806,8 +806,8 @@ describe('叙事线总览 · 刷新恢复', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('叙事线总览 · 换工程', { skip: JSDOM_SKIP }, () => {
-  test('换工程：标签关掉，覆盖层藏起来', () => {
+describe('敘事線總覽 · 換工程', { skip: JSDOM_SKIP }, () => {
+  test('換工程：標籤關掉，覆蓋層藏起來', () => {
     const h = harness();
     h.open();
     h.respond();
@@ -817,13 +817,13 @@ describe('叙事线总览 · 换工程', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-// 故事时间（2026-10-24）：同日「时间线总览」——「时间线」一组与月份带挪去时间线总览（tests/dom/standalone/timelineOverview.test.js），
-// 叙事线总览只在悬停里带一句「这一章是哪天」。
-describe('叙事线总览 · 故事时间', { skip: JSDOM_SKIP }, () => {
-  /** 第 1 章三月初七傍晚，第 2 章回忆；其余没有时间。 */
+// 故事時間（2026-10-24）：同日「時間線總覽」——「時間線」一組與月份帶挪去時間線總覽（tests/dom/standalone/timelineOverview.test.js），
+// 敘事線總覽只在懸停裡帶一句「這一章是哪天」。
+describe('敘事線總覽 · 故事時間', { skip: JSDOM_SKIP }, () => {
+  /** 第 1 章三月初七傍晚，第 2 章回憶；其餘沒有時間。 */
   function withTime() {
     const o = overview();
-    const times = ['大衍三年三月初七 傍晚', '回忆（约二十年前）'];
+    const times = ['大衍三年三月初七 傍晚', '回憶（約二十年前）'];
     o.chapters = o.chapters.map((c, i) => (times[i] ? { ...c, time: times[i] } : c));
     return o;
   }
@@ -834,16 +834,16 @@ describe('叙事线总览 · 故事时间', { skip: JSDOM_SKIP }, () => {
     h.respond(withTime());
   });
 
-  test('没有「时间线」一组、「故事时间」那一行与月份带', () => {
+  test('沒有「時間線」一組、「故事時間」那一行與月份帶', () => {
     assert.equal(h.doc.querySelector('.tov-row-time'), null);
     assert.equal(h.doc.querySelector('.tov-months'), null);
-    assert.ok(![...h.doc.querySelectorAll('.tov-row-group')].some((r) => r.textContent.startsWith('时间线')));
+    assert.ok(![...h.doc.querySelectorAll('.tov-row-group')].some((r) => r.textContent.startsWith('時間線')));
   });
 
-  test('列头与线格子的悬停带上那一章的日期', () => {
+  test('列頭與線格子的懸停帶上那一章的日期', () => {
     const col = h.doc.querySelector('.tov-nums .tov-col');
     assert.match(col.title, /^第 1 章《楔子》 · 大衍三年三月初七 傍晚 · 已同步/);
-    const node = h.cellOf(h.row(T('青崖旧案')), 1);
+    const node = h.cellOf(h.row(T('青崖舊案')), 1);
     node.dispatchEvent(new h.window.MouseEvent('mouseover', { bubbles: true }));
     assert.match(h.doc.querySelector('.tov-tip .tov-tip-head').textContent, /大衍三年三月初七 傍晚/);
   });

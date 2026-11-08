@@ -1,10 +1,10 @@
 /**
- * `extract` —— 从已写的东西里提炼：文风指南、叙事线。
+ * `extract` —— 從已寫的東西里提煉：文風指南、敘事線。
  *
- * 都是工程页上的按钮背后的同一个函数。叙事线从情节大纲排，由机器**只追加**（第 19 条）：
- * 一条线一个新文件（`.novelwarden/threads/`），同名跳过，作者写的字一个都不动。从已写正文补记叙事线（四期）同样只追加：
- * 定稿过、叙事线还没判的章逐章认事件（带原文证据）、新线、新伏笔，当前进度作者改过的不写。设定条目从前也在这里（通读全书生成），
- * 那一套删了，换成 `lore` 工具（定稿时顺手记、按名录建条目与整合）。
+ * 都是工程頁上的按鈕背後的同一個函式。敘事線從情節大綱排，由機器**只追加**（第 19 條）：
+ * 一條線一個新檔案（`.novelwarden/threads/`），同名跳過，作者寫的字一個都不動。從已寫正文補記敘事線（四期）同樣只追加：
+ * 定稿過、敘事線還沒判的章逐章認事件（帶原文證據）、新線、新伏筆，當前進度作者改過的不寫。設定條目從前也在這裡（通讀全書生成），
+ * 那一套刪了，換成 `lore` 工具（定稿時順手記、按名錄建條目與整合）。
  */
 import { countedBy, defineActionTool } from './actions';
 import { extractStyle } from '../../features/style';
@@ -13,35 +13,35 @@ import { backfillThreads } from '../../features/threadsBackfill';
 
 export const extractTool = defineActionTool({
   name: 'extract',
-  summary: '从已写的正文或情节大纲里提炼一份参考材料。',
+  summary: '從已寫的正文或情節大綱裡提煉一份參考材料。',
 
   params: {},
 
   actions: {
     style: {
-      label: '从已写的正文里提取文风指南（写进 style.md，覆盖前会先问作者）',
+      label: '從已寫的正文裡提取文風指南（寫進 style.md，覆蓋前會先問作者）',
       costly: true,
       async run(ctx) {
         await extractStyle(ctx.project);
         return {
-          text: '文风指南已交给 Novelwarden 执行（覆盖前会先问作者）。要看结果用 read 读 .novelwarden/style.md。',
+          text: '文風指南已交給 Novelwarden 執行（覆蓋前會先問作者）。要看結果用 read 讀 .novelwarden/style.md。',
           calls: 0,
         };
       },
     },
     threads: {
-      label: '从情节大纲排出叙事线（剧情线，伏笔挂在线下；一条线一个文件，写进 .novelwarden/threads/；已有的不动、同名跳过）',
+      label: '從情節大綱排出敘事線（劇情線，伏筆掛線上下；一條線一個檔案，寫進 .novelwarden/threads/；已有的不動、同名跳過）',
       costly: true,
       async run(ctx) {
-        return countedBy(await generateThreads(ctx.project), '排叙事线', '情节大纲还是空的，没有可排的');
+        return countedBy(await generateThreads(ctx.project), '排敘事線', '情節大綱還是空的，沒有可排的');
       },
     },
     threadsFromText: {
       label:
-        '从已写正文补记叙事线：同步过、叙事线还没判的章按章号逐章认这一章在叙事线上发生了什么（每章写 1–3 次、每次写完转写 1 次；一条线都没有时先从情节大纲排一次），只往 .novelwarden/threads/ 里追加',
+        '從已寫正文補記敘事線：同步過、敘事線還沒判的章按章號逐章認這一章在敘事線上發生了什麼（每章寫 1–3 次、每次寫完轉寫 1 次；一條線都沒有時先從情節大綱排一次），只往 .novelwarden/threads/ 裡追加',
       costly: true,
       async run(ctx) {
-        return countedBy(await backfillThreads(ctx.project), '补记叙事线', '没有要补记的章（叙事线已经跟上同步进度，或还没有同步过的章）');
+        return countedBy(await backfillThreads(ctx.project), '補記敘事線', '沒有要補記的章（敘事線已經跟上同步進度，或還沒有同步過的章）');
       },
     },
   },

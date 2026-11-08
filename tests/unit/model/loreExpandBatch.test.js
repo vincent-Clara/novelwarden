@@ -1,10 +1,10 @@
 /**
- * 完善设定三期的两个纯函数（model/pipeline.ts）：批量展开的调用次数与写前提醒那一句。
+ * 完善設定三期的兩個純函式（model/pipeline.ts）：批次展開的呼叫次數與寫前提醒那一句。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 批量展开每条 2 次、最多 4 次（2026-10-25 起写完转写），n 条乘 n；原因写明「重转一次、重写一次，两样不叠加」 | 第 4 条：工程页菜单、确认框报的是同一个数 |
- * | 写前提醒：本章 / 区间里两种说法，名字最多列 5 个、多了写总数；区间里那句写明不拦 | 工作台、批量写章弹窗与确认框同一句（零调用、不拦） |
+ * | 批次展開每條 2 次、最多 4 次（2026-10-25 起寫完轉寫），n 條乘 n；原因寫明「重轉一次、重寫一次，兩樣不疊加」 | 第 4 條：工程頁選單、確認框報的是同一個數 |
+ * | 寫前提醒：本章 / 區間裡兩種說法，名字最多列 5 個、多了寫總數；區間裡那句寫明不攔 | 工作臺、批次寫章彈窗與確認框同一句（零呼叫、不攔） |
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -12,38 +12,38 @@ const { loadModule } = require('../../helpers/load');
 
 const pipeline = loadModule('src/core/model/pipeline.ts');
 
-describe('批量展开的调用次数', () => {
-  test('每条 2 次（写 1、转写 1）、最多 4 次', () => {
+describe('批次展開的呼叫次數', () => {
+  test('每條 2 次（寫 1、轉寫 1）、最多 4 次', () => {
     const { low, high, max } = pipeline.LORE_EXPAND_BATCH_CALLS;
     assert.deepEqual([low, high, max], [2, 2, 4]);
   });
 
-  test('n 条乘 n，原因照抄', () => {
+  test('n 條乘 n，原因照抄', () => {
     assert.equal(
       pipeline.describeCalls(pipeline.loreExpandCalls(3)),
-      '预计 6 次调用，最多 12 次（写 1 次、转写 1 次；转写不合格重转 1 次，或者整理不出来时这一条重写、再转写 1 次，两样不叠加）'
+      '預計 6 次呼叫，最多 12 次（寫 1 次、轉寫 1 次；轉寫不合格重轉 1 次，或者整理不出來時這一條重寫、再轉寫 1 次，兩樣不疊加）'
     );
   });
 });
 
-describe('写前提醒那一句', () => {
+describe('寫前提醒那一句', () => {
   test('本章', () => {
     assert.equal(
-      pipeline.describeThinLore('本章', ['天机阁', '九层楼']),
-      '本章要用的 天机阁、九层楼 还只有一句话，写之前可以先展开（在工程页「待完善」里右键「展开…」）。'
+      pipeline.describeThinLore('本章', ['天機閣', '九層樓']),
+      '本章要用的 天機閣、九層樓 還只有一句話，寫之前可以先展開（在工程頁「待完善」裡右鍵「展開…」）。'
     );
   });
 
-  test('区间里：写总数、写明不拦', () => {
+  test('區間裡：寫總數、寫明不攔', () => {
     assert.equal(
-      pipeline.describeThinLore('区间里', ['天机阁']),
-      '区间里 1 条要用到的设定还只有一句话（天机阁），写之前可以先在工程页「待完善」里展开；不展开也照写。'
+      pipeline.describeThinLore('区间里', ['天機閣']),
+      '區間裡 1 條要用到的設定還只有一句話（天機閣），寫之前可以先在工程頁「待完善」裡展開；不展開也照寫。'
     );
   });
 
-  test('名字最多列 5 个，多了写总数', () => {
+  test('名字最多列 5 個，多了寫總數', () => {
     const names = ['甲', '乙', '丙', '丁', '戊', '己', '庚'];
-    assert.ok(pipeline.describeThinLore('区间里', names).includes('（甲、乙、丙、丁、戊 等 7 条）'));
-    assert.ok(pipeline.describeThinLore('本章', names).startsWith('本章要用的 甲、乙、丙、丁、戊 等 7 条 还只有一句话'));
+    assert.ok(pipeline.describeThinLore('区间里', names).includes('（甲、乙、丙、丁、戊 等 7 條）'));
+    assert.ok(pipeline.describeThinLore('本章', names).startsWith('本章要用的 甲、乙、丙、丁、戊 等 7 條 還只有一句話'));
   });
 });

@@ -1,8 +1,8 @@
 /**
- * 三个具体的弹窗：一句话（W4）、拆细纲（W5）与批量写章（W9）。表单本身在 form.ts。
+ * 三個具體的彈窗：一句話（W4）、拆細綱（W5）與批次寫章（W9）。表單本身在 form.ts。
  *
- * 它们的「预计调用几次」都来自 core 的纯函数（`describeCalls` / `planPlotBatches` /
- * `planWriteBatch`），与后端确认框同源——弹窗写着 3 次、实际调了 4 次，正是第 4 条要防的事。
+ * 它們的「預計呼叫幾次」都來自 core 的純函式（`describeCalls` / `planPlotBatches` /
+ * `planWriteBatch`），與後端確認框同源——彈窗寫著 3 次、實際調了 4 次，正是第 4 條要防的事。
  */
 import {
   CONFIG_CALLS,
@@ -27,60 +27,60 @@ import { setBusy } from './state';
 import { store, vscode } from './store';
 import { showTab } from './tabs';
 
-/** 一句话弹窗的默认规模（与后端「补齐架构」没写规模时的默认一致）。 */
+/** 一句話彈窗的預設規模（與後端「補齊架構」沒寫規模時的預設一致）。 */
 const DEFAULT_TOTAL = 100;
 const DEFAULT_WORDS = 3000;
 
 /**
- * 批量表单末尾的两个下拉框：这一次用哪个模型、带多少上下文（缺省按分档、设置页那一级）。提交时作为 `call` 带给后端——
- * 带了就是表单已经问过，后端不再弹第二个确认框。
+ * 批次表單末尾的兩個下拉框：這一次用哪個模型、帶多少上下文（預設按分檔、設定頁那一級）。提交時作為 `call` 帶給後端——
+ * 帶了就是表單已經問過，後端不再彈第二個確認框。
  */
 function batchCallFields(): FormField[] {
   return callFields(store.state?.models ?? [], store.state?.contextDetail ?? DEFAULT_CONTEXT_DETAIL);
 }
 
-/** 「30 万字」「4.5 万字」「8000 字」。 */
+/** 「30 萬字」「4.5 萬字」「8000 字」。 */
 function totalWords(n: number): string {
-  return n >= 10000 ? `${Number((n / 10000).toFixed(1))} 万字` : `${n} 字`;
+  return n >= 10000 ? `${Number((n / 10000).toFixed(1))} 萬字` : `${n} 字`;
 }
 
 /**
- * 「从一句话生成小说配置」。
+ * 「從一句話生成小說配置」。
  *
- * 提交就是一次普通的创作发送（架构层 · 生成 · 小说配置），外加 `setup`：规模以这里为准，
- * 作者这句话写进「一句话」那一节。`config.md` 已经写过东西时明说「保留原文，追加生成」
- * ——后端就是这么合的（generation/structured.ts 的 `completeConfig`）。
+ * 提交就是一次普通的創作傳送（架構層 · 生成 · 小說配置），外加 `setup`：規模以這裡為準，
+ * 作者這句話寫進「一句話」那一節。`config.md` 已經寫過東西時明說「保留原文，追加生成」
+ * ——後端就是這麼合的（generation/structured.ts 的 `completeConfig`）。
  *
- * 已经写了正文（`writtenThrough`）时是「照已写正文生成」：后端装配时自动带上已写正文
- * （context/builder.ts 的 `settingFromText`），那句话变成可留空的补充要求。
+ * 已經寫了正文（`writtenThrough`）時是「照已寫正文生成」：後端裝配時自動帶上已寫正文
+ * （context/builder.ts 的 `settingFromText`），那句話變成可留空的補充要求。
  */
 export function openIdeaForm(defaults?: IdeaDefaults): void {
   const written = defaults?.writtenThrough ?? 0;
-  const keep = defaults?.configHasContent ? '小说配置里已经写了东西：保留原文，生成的追加在后；你选过的类型、结构、视角不改。' : '';
+  const keep = defaults?.configHasContent ? '小說配置裡已經寫了東西：保留原文，生成的追加在後；你選過的型別、結構、視角不改。' : '';
   openForm({
-    title: written > 0 ? '照已写正文生成小说配置' : '从一句话生成小说配置',
+    title: written > 0 ? '照已寫正文生成小說配置' : '從一句話生成小說配置',
     lead:
       written > 0
-        ? `已经写了第 1–${written} 章：AI 照正文归纳类型、卖点、主角、金手指与跨章的全局要求，不另编正文里没有的设定。${keep}`
-        : keep || '写下你的脑洞，AI 把它展开成一份小说配置：类型、卖点、主角、金手指、跨章的全局要求。',
+        ? `已經寫了第 1–${written} 章：AI 照正文歸納型別、賣點、主角、金手指與跨章的全域要求，不另編正文裡沒有的設定。${keep}`
+        : keep || '寫下你的腦洞，AI 把它展開成一份小說配置：型別、賣點、主角、金手指、跨章的全域要求。',
     fields: [
       {
         kind: 'textarea',
         key: 'idea',
-        label: written > 0 ? '补充要求（可留空）' : '一句话 / 脑洞',
+        label: written > 0 ? '補充要求（可留空）' : '一句話 / 腦洞',
         value: defaults?.idea ?? '',
         rows: 5,
         required: written === 0,
         placeholder:
           written > 0
-            ? '比如：卖点多写主角的反差；后面打算转向校园之外的大世界。'
-            : '比如：一个从火里活下来的人回到起火的地方，发现幸存者不止他一个。',
+            ? '比如：賣點多寫主角的反差；後面打算轉向校園之外的大世界。'
+            : '比如：一個從火裡活下來的人回到起火的地方，發現倖存者不止他一個。',
       },
       {
         kind: 'number',
         key: 'totalChapters',
-        label: '总章数',
-        // 已经写了正文时与「从已写正文补齐」问总章数的缺省同一个算法（model/importText.ts 的 defaultTotalChapters）。
+        label: '總章數',
+        // 已經寫了正文時與「從已寫正文補齊」問總章數的預設同一個演算法（model/importText.ts 的 defaultTotalChapters）。
         value: defaults?.totalChapters ?? Math.max(DEFAULT_TOTAL, Math.ceil((written * 2) / 50) * 50),
         min: Math.max(1, written),
         max: 5000,
@@ -88,7 +88,7 @@ export function openIdeaForm(defaults?: IdeaDefaults): void {
       {
         kind: 'number',
         key: 'wordsPerChapter',
-        label: '每章字数',
+        label: '每章字數',
         value: defaults?.wordsPerChapter ?? DEFAULT_WORDS,
         min: 200,
         max: 30000,
@@ -96,10 +96,10 @@ export function openIdeaForm(defaults?: IdeaDefaults): void {
       },
     ],
     note: (v) => ({
-      // 原因（写 1 次、转写 1 次……）太长，这一行只报数；主按钮的提示里有全句。
-      text: `全书约 ${totalWords(Number(v.totalChapters) * Number(v.wordsPerChapter))} · ${describeCalls(CONFIG_CALLS).replace(/（.*）$/, '')} · Ctrl+Enter 提交`,
+      // 原因（寫 1 次、轉寫 1 次……）太長，這一行只報數；主按鈕的提示裡有全句。
+      text: `全書約 ${totalWords(Number(v.totalChapters) * Number(v.wordsPerChapter))} · ${describeCalls(CONFIG_CALLS).replace(/（.*）$/, '')} · Ctrl+Enter 提交`,
     }),
-    submitLabel: '生成小说配置',
+    submitLabel: '生成小說配置',
     onSubmit: (v) => {
       if (store.busy) {
         return;
@@ -125,14 +125,14 @@ export function openIdeaForm(defaults?: IdeaDefaults): void {
 }
 
 /**
- * 「批量拆细纲」：选一段章号，已有细纲的章跳过。
+ * 「批次拆細綱」：選一段章號，已有細綱的章跳過。
  *
- * 缺省是下一可写章起 {@link PLOT_BATCH} 章，不越过大纲的覆盖与总章数。实时说明写出
- * 这一段要拆几章、跳过几章、分几批、预计与最多调用几次——提交时带上 `call`（这一次的模型与详细度），
- * 后端不再弹第二个确认框（不叠弹窗）。
+ * 預設是下一可寫章起 {@link PLOT_BATCH} 章，不越過大綱的覆蓋與總章數。實時說明寫出
+ * 這一段要拆幾章、跳過幾章、分幾批、預計與最多呼叫幾次——提交時帶上 `call`（這一次的模型與詳細度），
+ * 後端不再彈第二個確認框（不疊彈窗）。
  *
- * 「拆完展开本批新设定」（完善设定三期，缺省「否」）：拆完把这一次顺带新建的设定空条目批量展开。新设定有几条要拆完才知道，
- * 所以这里不报那几次，后端拆完再问一次（同批量写章补建角色卡那一问，第 4 条）。
+ * 「拆完展開本批新設定」（完善設定三期，預設「否」）：拆完把這一次順帶新建的設定空條目批次展開。新設定有幾條要拆完才知道，
+ * 所以這裡不報那幾次，後端拆完再問一次（同批次寫章補建角色卡那一問，第 4 條）。
  */
 export function openPlotBatchForm(tree: ProjectTree): void {
   const { book } = tree;
@@ -141,19 +141,19 @@ export function openPlotBatchForm(tree: ProjectTree): void {
   const from = tree.nextChapterNo;
   const to = Math.max(from, Math.min(from + PLOT_BATCH - 1, cap));
   openForm({
-    title: '批量拆细纲',
-    lead: '从情节大纲里把这一段章节拆成一章一份的细纲。已经排过细纲的章跳过，不会被改动；每批写完就落盘，一批失败就停。',
+    title: '批次拆細綱',
+    lead: '從情節大綱裡把這一段章節拆成一章一份的細綱。已經排過細綱的章跳過，不會被改動；每批寫完就落盤，一批失敗就停。',
     fields: [
-      { kind: 'number', key: 'from', label: '从第几章', value: from, min: 1, max: 99999 },
-      { kind: 'number', key: 'to', label: '到第几章', value: to, min: 1, max: 99999 },
+      { kind: 'number', key: 'from', label: '從第幾章', value: from, min: 1, max: 99999 },
+      { kind: 'number', key: 'to', label: '到第幾章', value: to, min: 1, max: 99999 },
       {
         kind: 'select',
         key: 'expandLore',
-        label: '拆完展开本批新设定',
+        label: '拆完展開本批新設定',
         value: 'off',
         options: [
           { value: 'off', label: '否' },
-          { value: 'on', label: '是（拆完再报次数、再问一次）' },
+          { value: 'on', label: '是（拆完再報次數、再問一次）' },
         ],
       },
       ...batchCallFields(),
@@ -162,37 +162,37 @@ export function openPlotBatchForm(tree: ProjectTree): void {
       const a = Number(v.from);
       const b = Number(v.to);
       if (!outlineFilled) {
-        return { text: '情节大纲还没写。先生成大纲，细纲才有依据。', ok: false };
+        return { text: '情節大綱還沒寫。先生成大綱，細綱才有依據。', ok: false };
       }
       if (b < a) {
-        return { text: '区间写反了。', ok: false };
+        return { text: '區間寫反了。', ok: false };
       }
       if (b > cap) {
         return {
           text: Number.isFinite(book.outlineCoverage ?? Infinity) && b > (book.outlineCoverage ?? Infinity)
-            ? `情节大纲只覆盖到第 ${book.outlineCoverage} 章，先续写大纲。`
-            : `全书只有 ${book.totalChapters} 章。`,
+            ? `情節大綱只覆蓋到第 ${book.outlineCoverage} 章，先續寫大綱。`
+            : `全書只有 ${book.totalChapters} 章。`,
           ok: false,
         };
       }
-      // 一条叙事线都还没有：后端开拆之前先从情节大纲排一次（同一个 `planPlotBatches`，排 1 次、转写 1 次）。
+      // 一條敘事線都還沒有：後端開拆之前先從情節大綱排一次（同一個 `planPlotBatches`，排 1 次、轉寫 1 次）。
       const planThreads = tree.threads.lines.length === 0;
       const plan = planPlotBatches({ from: a, to: b, filledNos: book.plotFilledNos, planThreads });
       if (plan.batches.length === 0) {
-        return { text: '这一段都已经排过细纲了。', ok: false };
+        return { text: '這一段都已經排過細綱了。', ok: false };
       }
       return {
         text:
           `要拆 ${plan.chapters.length} 章，分 ${plan.batches.length} 批（每批最多 ${PLOT_BATCH} 章）` +
-          `${plan.skipped.length > 0 ? `，跳过已有细纲的 ${plan.skipped.length} 章` : ''}。` +
-          `${describeCalls(plan.calls)}（每批写 1 次、转写模型照抄成 JSON 1 次；被截断或转写不成时自动拆小重试）。` +
-          (planThreads ? '还没有叙事线：开拆之前先从情节大纲排一次（排 1 次、转写 1 次，算在里面）。' : '') +
+          `${plan.skipped.length > 0 ? `，跳過已有細綱的 ${plan.skipped.length} 章` : ''}。` +
+          `${describeCalls(plan.calls)}（每批寫 1 次、轉寫模型照抄成 JSON 1 次；被截斷或轉寫不成時自動拆小重試）。` +
+          (planThreads ? '還沒有敘事線：開拆之前先從情節大綱排一次（排 1 次、轉寫 1 次，算在裡面）。' : '') +
           (v.expandLore === 'on'
-            ? '拆完展开本批新设定：每条 1 次，有几条要拆完才知道，到时再报次数、再问一次；不在这里的数里。'
+            ? '拆完展開本批新設定：每條 1 次，有幾條要拆完才知道，到時再報次數、再問一次；不在這裡的數裡。'
             : ''),
       };
     },
-    submitLabel: '开始拆细纲',
+    submitLabel: '開始拆細綱',
     onSubmit: (v) => {
       vscode.postMessage({
         type: 'projectAction',
@@ -211,17 +211,17 @@ function span(from: number, to: number): string {
 }
 
 /**
- * 「批量写章」（W9）：选一段章号与模式，一章一章串行写。
+ * 「批次寫章」（W9）：選一段章號與模式，一章一章序列寫。
  *
- * 缺省从下一可写章起 {@link WRITE_BATCH_DEFAULT} 章，一次最多 {@link WRITE_BATCH_MAX} 章。实时说明
- * 写出这一段要写几章、跳过几章、在哪收住、调用次数上限——提交时带上 `call`（这一次的模型与详细度），后端不再弹
- * 第二个确认框（有角色卡要补建时除外，缺省是这里的选择）。「写完即定稿」「写完即审稿」会自动多花那几次调用（D17、五期补遗 §4），提交键要点两下。
- * 要写的几章用到、却还只有一句话的设定（工程树上的「待完善」）在说明末尾提一句，不拦（完善设定三期 · 写前提醒）。
+ * 預設從下一可寫章起 {@link WRITE_BATCH_DEFAULT} 章，一次最多 {@link WRITE_BATCH_MAX} 章。實時說明
+ * 寫出這一段要寫幾章、跳過幾章、在哪收住、呼叫次數上限——提交時帶上 `call`（這一次的模型與詳細度），後端不再彈
+ * 第二個確認框（有角色卡要補建時除外，預設是這裡的選擇）。「寫完即定稿」「寫完即審稿」會自動多花那幾次呼叫（D17、五期補遺 §4），提交鍵要點兩下。
+ * 要寫的幾章用到、卻還只有一句話的設定（工程樹上的「待完善」）在說明末尾提一句，不攔（完善設定三期 · 寫前提醒）。
  */
 export function openWriteBatchForm(tree: ProjectTree): void {
   const writtenNos = tree.plots.filter((p) => p.chapterPath && p.wordCount > 0).map((p) => p.no);
   const plotFilledNos = tree.book.plotFilledNos;
-  // 大纲覆盖缺席就是还没写大纲（或一条章标题都认不出）。
+  // 大綱覆蓋缺席就是還沒寫大綱（或一條章標題都認不出）。
   const outlineCoverage = Math.min(tree.book.outlineCoverage ?? 0, tree.book.totalChapters ?? Infinity);
   const from = tree.nextChapterNo;
   const plan = (v: FormValues) =>
@@ -236,31 +236,31 @@ export function openWriteBatchForm(tree: ProjectTree): void {
       globalSummaryThrough: tree.globalSummaryThrough,
     });
   openForm({
-    title: '批量写章',
+    title: '批次寫章',
     lead:
-      '从这一章起一章一章写正文，后一章接着前一章的结尾写。已经有正文的章跳过，不会被改动；' +
-      '一章写不出来就停；写出来但开头重演了上一章、把后面几章的人提前写了进来、或没写够八成，也写进去然后停下，等你看过再继续。',
+      '從這一章起一章一章寫正文，後一章接著前一章的結尾寫。已經有正文的章跳過，不會被改動；' +
+      '一章寫不出來就停；寫出來但開頭重演了上一章、把後面幾章的人提前寫了進來、或沒寫夠八成，也寫進去然後停下，等你看過再繼續。',
     fields: [
-      { kind: 'number', key: 'from', label: '从第几章', value: from, min: 1, max: 99999 },
-      { kind: 'number', key: 'to', label: '到第几章', value: from + WRITE_BATCH_DEFAULT - 1, min: 1, max: 99999 },
+      { kind: 'number', key: 'from', label: '從第幾章', value: from, min: 1, max: 99999 },
+      { kind: 'number', key: 'to', label: '到第幾章', value: from + WRITE_BATCH_DEFAULT - 1, min: 1, max: 99999 },
       {
         kind: 'select',
         key: 'mode',
         label: '模式',
         value: 'draft',
         options: [
-          { value: 'draft', label: '只写正文' },
-          { value: 'finalize', label: '写完即同步（每写完一章就同步）' },
+          { value: 'draft', label: '只寫正文' },
+          { value: 'finalize', label: '寫完即同步（每寫完一章就同步）' },
         ],
       },
       {
         kind: 'select',
         key: 'review',
-        label: '审稿',
+        label: '審稿',
         value: 'off',
         options: [
-          { value: 'off', label: '不审' },
-          { value: 'on', label: '写完即审稿（每写完一章审一遍，报告放进一个新会话）' },
+          { value: 'off', label: '不審' },
+          { value: 'on', label: '寫完即審稿（每寫完一章審一遍，報告放進一個新會話）' },
         ],
       },
       ...batchCallFields(),
@@ -269,25 +269,25 @@ export function openWriteBatchForm(tree: ProjectTree): void {
       const a = Number(v.from);
       const b = Number(v.to);
       if (b < a) {
-        return { text: '区间写反了。', ok: false };
+        return { text: '區間寫反了。', ok: false };
       }
       if (b - a + 1 > WRITE_BATCH_MAX) {
-        return { text: `一次最多写 ${WRITE_BATCH_MAX} 章。`, ok: false };
+        return { text: `一次最多寫 ${WRITE_BATCH_MAX} 章。`, ok: false };
       }
       const p = plan(v);
       if (p.chapters.length === 0) {
         return {
-          text: p.stopAt !== undefined ? `第 ${p.stopAt} 章还没有细纲，情节大纲也没覆盖到它。先续写大纲。` : '这一段都已经写过正文了。',
+          text: p.stopAt !== undefined ? `第 ${p.stopAt} 章還沒有細綱，情節大綱也沒覆蓋到它。先續寫大綱。` : '這一段都已經寫過正文了。',
           ok: false,
         };
       }
       const first = p.chapters[0];
       const last = p.chapters[p.chapters.length - 1];
-      // 写前提醒（完善设定三期，零调用、不拦）：要写的这几章用到、却还只有一句话的设定——就是「待完善」里要用到它们的那几条。
+      // 寫前提醒（完善設定三期，零呼叫、不攔）：要寫的這幾章用到、卻還只有一句話的設定——就是「待完善」裡要用到它們的那幾條。
       const writing = new Set(p.chapters);
       const thin = (tree.loreThin ?? []).filter((t) => t.chapters.some((no) => writing.has(no)));
-      // 叙事线提醒（二期，零调用、不拦）：区间里写到哪一章就过了回收章、断了几章，区间里的计划又都没安排的。与后端确认框
-      // 同一个 `threadRemindersFor`，数据是工程页「叙事线」那一份（按现在算）；「还没记上」的那几章按叙事线判到哪（四期）。
+      // 敘事線提醒（二期，零呼叫、不攔）：區間裡寫到哪一章就過了回收章、斷了幾章，區間裡的計劃又都沒安排的。與後端確認框
+      // 同一個 `threadRemindersFor`，資料是工程頁「敘事線」那一份（按現在算）；「還沒記上」的那幾章按敘事線判到哪（四期）。
       const threadNote = describeThreadReminders(
         '区间里',
         threadRemindersFor(tree.threads?.watch, p.chapters),
@@ -295,26 +295,26 @@ export function openWriteBatchForm(tree: ProjectTree): void {
       );
       return {
         text:
-          `要写 ${p.chapters.length} 章（${span(first, last)}）` +
-          `${p.skipped.length > 0 ? `，跳过已有正文的 ${p.skipped.length} 章` : ''}` +
-          `${p.stopAt !== undefined ? `；第 ${p.stopAt} 章还没有细纲、大纲也没覆盖到，写到它前面为止` : ''}。` +
+          `要寫 ${p.chapters.length} 章（${span(first, last)}）` +
+          `${p.skipped.length > 0 ? `，跳過已有正文的 ${p.skipped.length} 章` : ''}` +
+          `${p.stopAt !== undefined ? `；第 ${p.stopAt} 章還沒有細綱、大綱也沒覆蓋到，寫到它前面為止` : ''}。` +
           (p.plotBatches.length > 0
-            ? `${p.plotBatches.map((b) => span(b[0], b[b.length - 1])).join('、')}还没有细纲，写到时先拆（拆的时候看得见前面同步下来的事实）。`
+            ? `${p.plotBatches.map((b) => span(b[0], b[b.length - 1])).join('、')}還沒有細綱，寫到時先拆（拆的時候看得見前面同步下來的事實）。`
             : '') +
-          `${describeCalls(p.calls)}（没写够时自动续写、开着删修饰时写完再删一次、每章写前比对一次细纲与既成事实，比对与审稿的结果由转写模型照抄成 JSON，都算在上限里）。` +
-          (p.review ? '每写完一章先审一遍，报告放进一个新会话「批量审稿」，在对话页逐章勾选修稿；审出问题不停。' : '') +
+          `${describeCalls(p.calls)}（沒寫夠時自動續寫、開著刪修飾時寫完再刪一次、每章寫前比對一次細綱與既成事實，比對與審稿的結果由轉寫模型照抄成 JSON，都算在上限裡）。` +
+          (p.review ? '每寫完一章先審一遍，報告放進一個新會話「批次審稿」，在對話頁逐章勾選修稿；審出問題不停。' : '') +
           (p.mode === 'finalize'
-            ? '每写完一章就同步：照正文更新细纲与连续性事实，再更新出场角色的当前状态、认这一章在叙事线上发生了什么（带原文证据记下事件、更新各条线的当前进度，正文里新长出来的线也认出来）、推这一章的故事时间；同步的每一次写完都由转写模型照抄成 JSON（算在上限里）。'
-            : '只写正文，之后在主按钮上逐章同步。') +
+            ? '每寫完一章就同步：照正文更新細綱與連續性事實，再更新出場角色的當前狀態、認這一章在敘事線上發生了什麼（帶原文證據記下事件、更新各條線的當前進度，正文裡新長出來的線也認出來）、推這一章的故事時間；同步的每一次寫完都由轉寫模型照抄成 JSON（算在上限裡）。'
+            : '只寫正文，之後在主按鈕上逐章同步。') +
           (thin.length > 0 ? describeThinLore('区间里', thin.map((t) => t.name)) : '') +
           threadNote,
       };
     },
-    submitLabel: '开始写章',
+    submitLabel: '開始寫章',
     confirm: (v) => {
       const p = plan(v);
-      const extra = [p.review ? '写完即审稿' : '', p.mode === 'finalize' ? '写完即同步' : ''].filter(Boolean).join('、');
-      return extra ? `再点一下：${extra} ${p.chapters.length} 章` : undefined;
+      const extra = [p.review ? '寫完即審稿' : '', p.mode === 'finalize' ? '寫完即同步' : ''].filter(Boolean).join('、');
+      return extra ? `再點一下：${extra} ${p.chapters.length} 章` : undefined;
     },
     onSubmit: (v) => {
       const mode: WriteBatchMode = v.mode === 'finalize' ? 'finalize' : 'draft';

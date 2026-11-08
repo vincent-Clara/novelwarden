@@ -1,12 +1,12 @@
 /**
- * 独立版的弹窗（仅独立版）。
+ * 獨立版的彈窗（僅獨立版）。
  *
- * 插件形态里 `host.input/confirm/pick` 走 VS Code 原生的 QuickPick / InputBox；
- * 浏览器里没有那些，后端改推一条 `prompt`，由这里变成一个 modal，
- * 用户提交后回 `promptResult`。
+ * 外掛形態裡 `host.input/confirm/pick` 走 VS Code 原生的 QuickPick / InputBox；
+ * 瀏覽器裡沒有那些，後端改推一條 `prompt`，由這裡變成一個 modal，
+ * 使用者提交後回 `promptResult`。
  *
- * 复用 providerModal 的遮罩层，body 换成临时内容——两个弹窗不会同时出现
- * （这条消息只在用户触发某个动作后到达），共用一层省一套样式。
+ * 複用 providerModal 的遮罩層，body 換成臨時內容——兩個彈窗不會同時出現
+ * （這條訊息只在使用者觸發某個動作後到達），共用一層省一套樣式。
  */
 import { el as mk, setHidden } from '../dom';
 import type { CallChoice, OutMessage } from '../protocol';
@@ -19,16 +19,16 @@ import { vscode } from './store';
 
 type PromptMessage = Extract<OutMessage, { type: 'prompt' }>;
 
-/** 开着的那个弹窗的「取消」。遮罩上的 ×、Esc 都走它；不是这里开的就是 undefined。 */
+/** 開著的那個彈窗的「取消」。遮罩上的 ×、Esc 都走它；不是這裡開的就是 undefined。 */
 let cancelActive: (() => void) | undefined;
 
 export function renderPrompt(msg: PromptMessage): void {
-  // 覆盖审阅（五期 W11）有它自己的一整块：两个版本并排、逐段挑，塞不进这个小弹窗。
+  // 覆蓋審閱（五期 W11）有它自己的一整塊：兩個版本並排、逐段挑，塞不進這個小彈窗。
   if (msg.kind === 'merge') {
     renderMerge(msg);
     return;
   }
-  // 选本机文件：要逐层翻目录，用的是「打开文件夹」那个选择器，不是这个小弹窗。
+  // 選本機檔案：要逐層翻目錄，用的是「開啟資料夾」那個選擇器，不是這個小彈窗。
   if (msg.kind === 'file') {
     openHostFilePicker(msg.requestId, msg.title, msg.value ?? '', msg.options ?? []);
     return;
@@ -46,7 +46,7 @@ export function renderPrompt(msg: PromptMessage): void {
     body.innerHTML = '';
     vscode.postMessage({ type: 'promptResult', requestId: msg.requestId, value, ...(choice ? { choice } : {}) });
   };
-  // 与「取消」按钮同一个回答：undefined。
+  // 與「取消」按鈕同一個回答：undefined。
   const cancel = () => reply(undefined);
   cancelActive = cancel;
 
@@ -55,17 +55,17 @@ export function renderPrompt(msg: PromptMessage): void {
   }
 
   if (msg.kind === 'confirm') {
-    // 补充说明（Host.confirm 的 detail）：要调几次、看哪几章、会覆盖什么——作者点按钮前要看得见。
+    // 補充說明（Host.confirm 的 detail）：要調幾次、看哪幾章、會覆蓋什麼——作者點按鈕前要看得見。
     for (const line of (msg.value ?? '').split('\n').filter((l) => l.trim())) {
       body.appendChild(mk('p', 'hint prompt-detail', line));
     }
-    // 调模型之前的那一问（Host.confirmCall）：按钮上面多两个下拉框，回答带上作者的选择。
+    // 調模型之前的那一問（Host.confirmCall）：按鈕上面多兩個下拉框，回答帶上作者的選擇。
     const picker = msg.call ? buildCallPicker(msg.call) : undefined;
     if (picker) {
       body.appendChild(picker.element);
     }
-    // 一个 action 一颗按钮（第一颗是主按钮），回的是按钮上的字。
-    const actions = msg.actions?.length ? msg.actions : ['确定'];
+    // 一個 action 一顆按鈕（第一顆是主按鈕），回的是按鈕上的字。
+    const actions = msg.actions?.length ? msg.actions : ['確定'];
     body.appendChild(
       actionRow(
         ...actions.map((a, i) => (i === 0 ? primaryBtn : secondaryBtn)(a, () => reply(a, picker?.choice()))),
@@ -79,7 +79,7 @@ export function renderPrompt(msg: PromptMessage): void {
     const input = buildInput(msg, reply);
     body.appendChild(input);
     body.appendChild(
-      actionRow(primaryBtn('确定', () => reply(input.value)), secondaryBtn('取消', () => reply(undefined)))
+      actionRow(primaryBtn('確定', () => reply(input.value)), secondaryBtn('取消', () => reply(undefined)))
     );
     input.focus();
   }
@@ -88,8 +88,8 @@ export function renderPrompt(msg: PromptMessage): void {
 }
 
 /**
- * 遮罩上的 ×、Esc（点空白不关）：弹窗是这里开的才由这里关，并且照「取消」回后端——
- * 只把遮罩藏起来的话，后端那一头的 confirm / pick 会一直等着。服务商弹窗与表单各有自己的一套。
+ * 遮罩上的 ×、Esc（點空白不關）：彈窗是這裡開的才由這裡關，並且照「取消」回後端——
+ * 只把遮罩藏起來的話，後端那一頭的 confirm / pick 會一直等著。服務商彈窗與表單各有自己的一套。
  */
 export function installPrompt(): void {
   el.providerModalClose.addEventListener('click', () => cancelActive?.());
@@ -124,11 +124,11 @@ function buildInput(
   input.value = msg.value ?? '';
   input.style.width = '100%';
 
-  // 挂在 HTMLElement 上而不是那个联合类型：两种元素的 keydown 事件映射
-  // 各是各的，联合之后 TS 只认得回最宽的 Event。
+  // 掛在 HTMLElement 上而不是那個聯合型別：兩種元素的 keydown 事件對映
+  // 各是各的，聯合之後 TS 只認得回最寬的 Event。
   (input as HTMLElement).addEventListener('keydown', (e) => {
     const key = (e as KeyboardEvent).key;
-    // 多行输入里 Enter 是换行，不能拿去提交。
+    // 多行輸入裡 Enter 是換行，不能拿去提交。
     if (key === 'Enter' && !msg.multiline) {
       e.preventDefault();
       reply(input.value);

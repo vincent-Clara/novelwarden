@@ -1,19 +1,19 @@
 /**
- * 全书替换（`src/core/features/bookReplace.ts`），真临时工程：预览（`views/bookFind.ts` 的 `searchBook`）→ 照预览拼请求 →
- * 替换 → 看磁盘、历史版本、指纹链、派生数据。
+ * 全書替換（`src/core/features/bookReplace.ts`），真臨時工程：預覽（`views/bookFind.ts` 的 `searchBook`）→ 照預覽拼請求 →
+ * 替換 → 看磁碟、歷史版本、指紋鏈、派生資料。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 经网关写 | 勾着的那几处换了、勾掉的没换；不按预览的那几处（文件里对不上）整份不写 |
- * | 历史版本 | 每个改过的文件都在「历史」里留着替换前那一版——**不受节流**（十分钟内的小改动照样存） |
- * | 乐观锁 | 预览之后磁盘上改过的跳过，磁盘上那份一个字不动（不拿旧的盖新的） |
- * | 未保存 | 编辑器里有未保存修改的那几份跳过 |
- * | 范围 | 不在勾着的范围里的路径、内部文件不写 |
- * | 还不是小说工程 | 存不了历史版本，不换 |
- * | 第 18 条 | 细纲与正文都改了、原本对得上的：`writtenFrom` / `sourceHash` 刷成替换后的（不挂 ⟳、不退回待定稿）；只改细纲：正文挂 ⟳；只改正文：回到待定稿；改之前就对不上的不刷；细纲的 `upstreamHash` 退回替换前的判断（挂着的照挂、没记过的照旧不记）；大纲与细纲一起改的对得上、大纲改了细纲没改的挂 ⟳ |
- * | 角色卡改名 | 汇总里提文件名没跟着改；机器记的 `appearsIn` 不动 |
- * | 派生数据 | 替换角色卡、细纲之后出场索引照新的名字认人 |
- * | controller | `bookReplace` 回 `bookReplaceDone` 之后推 `state`；同一时刻只有一次替换 |
+ * | 經閘道器寫 | 勾著的那幾處換了、勾掉的沒換；不按預覽的那幾處（檔案裡對不上）整份不寫 |
+ * | 歷史版本 | 每個改過的檔案都在「歷史」裡留著替換前那一版——**不受節流**（十分鐘內的小改動照樣存） |
+ * | 樂觀鎖 | 預覽之後磁碟上改過的跳過，磁碟上那份一個字不動（不拿舊的蓋新的） |
+ * | 未儲存 | 編輯器裡有未儲存修改的那幾份跳過 |
+ * | 範圍 | 不在勾著的範圍裡的路徑、內部檔案不寫 |
+ * | 還不是小說工程 | 存不了歷史版本，不換 |
+ * | 第 18 條 | 細綱與正文都改了、原本對得上的：`writtenFrom` / `sourceHash` 刷成替換後的（不掛 ⟳、不退回待定稿）；只改細綱：正文掛 ⟳；只改正文：回到待定稿；改之前就對不上的不刷；細綱的 `upstreamHash` 退回替換前的判斷（掛著的照掛、沒記過的照舊不記）；大綱與細綱一起改的對得上、大綱改了細綱沒改的掛 ⟳ |
+ * | 角色卡改名 | 彙總裡提檔名沒跟著改；機器記的 `appearsIn` 不動 |
+ * | 派生資料 | 替換角色卡、細綱之後出場索引照新的名字認人 |
+ * | controller | `bookReplace` 回 `bookReplaceDone` 之後推 `state`；同一時刻只有一次替換 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -52,8 +52,8 @@ after(() => {
 });
 
 /**
- * 一份细纲：`fresh` 时 `writtenFrom` 记的就是这份的内容指纹；`body` 给了就定稿过（`sourceHash` = 正文指纹）。
- * `upstream`：`'fresh'` 记这一章梗概的指纹（梗概就是大纲里这一章那一条），`'none'` 不记，其余原样写进去（对不上的旧指纹）。
+ * 一份細綱：`fresh` 時 `writtenFrom` 記的就是這份的內容指紋；`body` 給了就定稿過（`sourceHash` = 正文指紋）。
+ * `upstream`：`'fresh'` 記這一章梗概的指紋（梗概就是大綱裡這一章那一條），`'none'` 不記，其餘原樣寫進去（對不上的舊指紋）。
  */
 function plotFile(no, title, sections, { upstream = 'fresh', written = 'fresh', body, cast } = {}) {
   const { renderPlotFile, parsePlotFile, plotContentHash, emptyPlotSections } = bundle.plotFile;
@@ -74,34 +74,34 @@ function plotFile(no, title, sections, { upstream = 'fresh', written = 'fresh', 
 /**
  * 六章：
  *
- * | 章 | 正文 | 细纲 | 用来测 |
+ * | 章 | 正文 | 細綱 | 用來測 |
  * |---|---|---|---|
- * | 1 入宗 | 有「林晚」 | 有「林晚」，定稿过、指纹全对得上 | 两头都改了 → 刷新 |
- * | 2 下山 | 有「林晚」 | 有「林晚」，定稿过 | 正文未保存被跳过 → 只改了细纲 |
- * | 3 夜访 | 有「林晚」 | 没有「林晚」，定稿过 | 只改了正文 → 待定稿 |
- * | 4 北行 | — | 有「林晚」，梗概（大纲那一条）早就改过（⟳） | ⟳ 照挂 |
- * | 5 远行 | — | 有「林晚」，手写的、没记过上游指纹 | 照旧不记 |
- * | 6 归来 | 有「林晚」 | 有「林晚」，正文写完之后细纲又改过（⟳），没定稿 | 改之前就对不上的不刷 |
+ * | 1 入宗 | 有「林晚」 | 有「林晚」，定稿過、指紋全對得上 | 兩頭都改了 → 重新整理 |
+ * | 2 下山 | 有「林晚」 | 有「林晚」，定稿過 | 正文未儲存被跳過 → 只改了細綱 |
+ * | 3 夜訪 | 有「林晚」 | 沒有「林晚」，定稿過 | 只改了正文 → 待定稿 |
+ * | 4 北行 | — | 有「林晚」，梗概（大綱那一條）早就改過（⟳） | ⟳ 照掛 |
+ * | 5 遠行 | — | 有「林晚」，手寫的、沒記過上游指紋 | 照舊不記 |
+ * | 6 歸來 | 有「林晚」 | 有「林晚」，正文寫完之後細綱又改過（⟳），沒定稿 | 改之前就對不上的不刷 |
  */
 async function setup(prefix) {
-  const t = await makeTempProject(bundle.project, { prefix: `book-replace-${prefix}`, title: '青云剑录' });
+  const t = await makeTempProject(bundle.project, { prefix: `book-replace-${prefix}`, title: '青雲劍錄' });
   made.push(t);
   const bodies = {
-    1: '# 入宗\n\n林晚推开山门。\n',
+    1: '# 入宗\n\n林晚推開山門。\n',
     2: '# 下山\n\n林晚下山去了。\n',
-    3: '# 夜访\n\n夜里林晚来过。\n',
-    6: '# 归来\n\n林晚回来了。\n',
+    3: '# 夜訪\n\n夜裡林晚來過。\n',
+    6: '# 歸來\n\n林晚回來了。\n',
   };
   t.write('chapters/001-入宗.md', bodies[1]);
-  t.write('.novelwarden/summaries/001-入宗.md', plotFile(1, '入宗', { 梗概: '林晚入宗', 出场人物: '林晚', 关键事件: '- 林晚推开山门' }, { body: bodies[1], cast: [{ name: '林晚', aliases: ['阿晚'] }] }));
+  t.write('.novelwarden/summaries/001-入宗.md', plotFile(1, '入宗', { 梗概: '林晚入宗', 出场人物: '林晚', 关键事件: '- 林晚推開山門' }, { body: bodies[1], cast: [{ name: '林晚', aliases: ['阿晚'] }] }));
   t.write('chapters/002-下山.md', bodies[2]);
   t.write('.novelwarden/summaries/002-下山.md', plotFile(2, '下山', { 梗概: '林晚下山', 关键事件: '- 下山' }, { body: bodies[2], cast: [{ name: '林晚', aliases: [] }] }));
   t.write('chapters/003-夜访.md', bodies[3]);
-  t.write('.novelwarden/summaries/003-夜访.md', plotFile(3, '夜访', { 梗概: '有人夜访', 关键事件: '- 夜访' }, { body: bodies[3] }));
+  t.write('.novelwarden/summaries/003-夜访.md', plotFile(3, '夜訪', { 梗概: '有人夜訪', 关键事件: '- 夜訪' }, { body: bodies[3] }));
   t.write('.novelwarden/summaries/004-北行.md', plotFile(4, '北行', { 梗概: '林晚北行', 关键事件: '- 北行' }, { upstream: 'deadbeef', written: 'none' }));
-  t.write('.novelwarden/summaries/005-远行.md', '---\nno: 5\ntitle: 远行\n---\n\n# 第5章 远行\n\n## 梗概\n林晚远行\n\n## 关键事件\n- 出发\n');
-  t.write('chapters/006-归来.md', bodies[6]);
-  t.write('.novelwarden/summaries/006-归来.md', plotFile(6, '归来', { 梗概: '林晚归来', 关键事件: '- 归来' }, { written: 'old-plot-hash' }));
+  t.write('.novelwarden/summaries/005-遠行.md', '---\nno: 5\ntitle: 遠行\n---\n\n# 第5章 遠行\n\n## 梗概\n林晚遠行\n\n## 關鍵事件\n- 出發\n');
+  t.write('chapters/006-歸來.md', bodies[6]);
+  t.write('.novelwarden/summaries/006-歸來.md', plotFile(6, '歸來', { 梗概: '林晚歸來', 关键事件: '- 歸來' }, { written: 'old-plot-hash' }));
   t.write(
     '.novelwarden/characters/林晚.md',
     '---\nname: 林晚\naliases: [阿晚]\nappearsIn: [1]\n---\n\n# 林晚\n\n## 身份\n林晚是主角。\n'
@@ -110,7 +110,7 @@ async function setup(prefix) {
   return t;
 }
 
-/** 预览一次，照预览拼替换请求（缺省全勾）。`pick(file, hit)` 返回 false 的那几处勾掉。 */
+/** 預覽一次，照預覽拼替換請求（預設全勾）。`pick(file, hit)` 返回 false 的那幾處勾掉。 */
 async function previewAndRequest(t, q, opts = {}) {
   const query = { query: '林晚', replacement: '林婉', ...q };
   const preview = await bundle.bookFind.searchBook(t.project, query);
@@ -122,13 +122,13 @@ async function previewAndRequest(t, q, opts = {}) {
 
 const replace = (t, request) => bundle.bookReplace.replaceInBook(t.project, request);
 
-/** 流水线索引里第 no 章那一行。 */
+/** 流水線索引裡第 no 章那一行。 */
 async function row(t, no) {
   t.project.invalidate();
   return (await bundle.pipe.buildPipelineIndex(t.project)).byNo.get(no);
 }
 
-describe('features/bookReplace › 经网关写、历史版本', () => {
+describe('features/bookReplace › 經閘道器寫、歷史版本', () => {
   let t;
   let summary;
   const originals = {};
@@ -139,37 +139,37 @@ describe('features/bookReplace › 经网关写、历史版本', () => {
     for (const rel of ['chapters/001-入宗.md', 'chapters/003-夜访.md', '.novelwarden/summaries/001-入宗.md']) {
       originals[rel] = t.read(rel);
     }
-    // 先经网关存一次小改动：第一版进了历史，最新快照不到十分钟——按节流，再来一次小改动不会存。
+    // 先經閘道器存一次小改動：第一版進了歷史，最新快照不到十分鐘——按節流，再來一次小改動不會存。
     const ws = new bundle.workspace.Workspace(t.project);
-    await ws.write('chapters/001-入宗.md', { text: '# 入宗\n\n林晚推开山门。山风很冷。\n' }, { mode: 'overwrite', review: false });
+    await ws.write('chapters/001-入宗.md', { text: '# 入宗\n\n林晚推開山門。山風很冷。\n' }, { mode: 'overwrite', review: false });
     beforeReplace = t.read('chapters/001-入宗.md');
     const { request } = await previewAndRequest(t, { scopes: ['chapter', 'plot'] }, {
-      // 第 6 章正文里那一处勾掉。
-      pick: (f) => f.path !== 'chapters/006-归来.md',
+      // 第 6 章正文裡那一處勾掉。
+      pick: (f) => f.path !== 'chapters/006-歸來.md',
     });
     summary = await replace(t, request);
   });
 
-  test('勾着的换了，勾掉的没换', () => {
-    assert.match(t.read('chapters/001-入宗.md'), /林婉推开山门/);
-    assert.match(t.read('chapters/003-夜访.md'), /夜里林婉来过/);
-    assert.match(t.read('chapters/006-归来.md'), /林晚回来了/);
-    assert.match(t.read('.novelwarden/summaries/006-归来.md'), /林婉归来/);
+  test('勾著的換了，勾掉的沒換', () => {
+    assert.match(t.read('chapters/001-入宗.md'), /林婉推開山門/);
+    assert.match(t.read('chapters/003-夜访.md'), /夜裡林婉來過/);
+    assert.match(t.read('chapters/006-歸來.md'), /林晚回來了/);
+    assert.match(t.read('.novelwarden/summaries/006-歸來.md'), /林婉歸來/);
   });
 
-  test('汇总：几个文件几处', () => {
+  test('彙總：幾個檔案幾處', () => {
     assert.equal(summary.error, undefined);
     assert.deepEqual(summary.skipped, []);
     assert.equal(summary.files, summary.replaced.length);
     assert.equal(summary.hits, summary.replaced.reduce((n, r) => n + r.count, 0));
     assert.ok(summary.replaced.some((r) => r.path === 'chapters/001-入宗.md' && r.label === '第 1 章 入宗' && r.count === 1));
-    assert.ok(!summary.replaced.some((r) => r.path === 'chapters/006-归来.md'));
+    assert.ok(!summary.replaced.some((r) => r.path === 'chapters/006-歸來.md'));
   });
 
-  test('每个改过的文件都在「历史」里留着替换前那一版——十分钟内的小改动也存（不受节流）', async () => {
+  test('每個改過的檔案都在「歷史」裡留著替換前那一版——十分鐘內的小改動也存（不受節流）', async () => {
     for (const r of summary.replaced) {
       const snaps = await bundle.history.listSnapshots(t.project, r.path);
-      assert.ok(snaps.length > 0, `${r.path} 没有历史版本`);
+      assert.ok(snaps.length > 0, `${r.path} 沒有歷史版本`);
       const newest = await bundle.history.readSnapshot(t.project, r.path, snaps[0].id);
       const expected = r.path === 'chapters/001-入宗.md' ? beforeReplace : originals[r.path];
       if (expected !== undefined) {
@@ -178,35 +178,35 @@ describe('features/bookReplace › 经网关写、历史版本', () => {
     }
   });
 
-  test('frontmatter 里机器记的账一个字没动', () => {
+  test('frontmatter 裡機器記的賬一個字沒動', () => {
     const plot = bundle.plotFile.parsePlotFile(t.read('.novelwarden/summaries/004-北行.md'), '.novelwarden/summaries/004-北行.md');
     assert.equal(plot.upstreamHash, 'deadbeef');
     assert.equal(plot.no, 4);
   });
 });
 
-describe('features/bookReplace › 乐观锁、未保存、范围、还不是小说工程', () => {
-  test('预览之后磁盘上改过的跳过，磁盘上那份一个字不动', async () => {
+describe('features/bookReplace › 樂觀鎖、未儲存、範圍、還不是小說工程', () => {
+  test('預覽之後磁碟上改過的跳過，磁碟上那份一個字不動', async () => {
     const t = await setup('conflict');
     const { request } = await previewAndRequest(t, { scopes: ['chapter'] });
-    t.write('chapters/001-入宗.md', '# 入宗\n\n林晚在别处改过了。\n');
+    t.write('chapters/001-入宗.md', '# 入宗\n\n林晚在別處改過了。\n');
     const summary = await replace(t, request);
     assert.deepEqual(summary.skipped.map((s) => [s.path, s.reason, s.label]), [['chapters/001-入宗.md', 'changed', '第 1 章 入宗']]);
-    assert.match(summary.skipped[0].message, /重新预览/);
-    assert.equal(t.read('chapters/001-入宗.md'), '# 入宗\n\n林晚在别处改过了。\n');
+    assert.match(summary.skipped[0].message, /重新預覽/);
+    assert.equal(t.read('chapters/001-入宗.md'), '# 入宗\n\n林晚在別處改過了。\n');
     assert.match(t.read('chapters/003-夜访.md'), /林婉/);
   });
 
-  test('编辑器里有未保存修改的跳过（让作者先保存或放弃）', async () => {
+  test('編輯器裡有未儲存修改的跳過（讓作者先儲存或放棄）', async () => {
     const t = await setup('dirty');
     const { request } = await previewAndRequest(t, { scopes: ['chapter'] }, { dirty: ['chapters/002-下山.md'] });
     const summary = await replace(t, request);
     assert.deepEqual(summary.skipped.map((s) => [s.path, s.reason]), [['chapters/002-下山.md', 'dirty']]);
-    assert.match(summary.skipped[0].message, /未保存/);
+    assert.match(summary.skipped[0].message, /未儲存/);
     assert.match(t.read('chapters/002-下山.md'), /林晚下山/);
   });
 
-  test('不在勾着的范围里的、内部文件：不写', async () => {
+  test('不在勾著的範圍裡的、內部檔案：不寫', async () => {
     const t = await setup('scope');
     const { request } = await previewAndRequest(t, { scopes: ['chapter'] });
     const plotRel = '.novelwarden/summaries/001-入宗.md';
@@ -219,12 +219,12 @@ describe('features/bookReplace › 乐观锁、未保存、范围、还不是小
     const summary = await replace(t, { ...request, files: [...request.files, ...extra] });
     assert.deepEqual(summary.skipped.map((s) => [s.path, s.reason]), [[plotRel, 'outOfScope'], ['.novelwarden/project.json', 'outOfScope']]);
     assert.equal(t.read(plotRel), plotBefore);
-    // project.json 会因为正文换了而重算一次章节清单（manifest），但第一个字没被当成「一处」换掉。
+    // project.json 會因為正文換了而重算一次章節清單（manifest），但第一個字沒被當成「一處」換掉。
     assert.doesNotThrow(() => JSON.parse(t.read('.novelwarden/project.json')));
     assert.equal(t.read('.novelwarden/project.json')[0], projectJson[0]);
   });
 
-  test('勾着的那几处对不上（不是一处匹配）：整份不写', async () => {
+  test('勾著的那幾處對不上（不是一處匹配）：整份不寫', async () => {
     const t = await setup('mismatch');
     const { request } = await previewAndRequest(t, { scopes: ['chapter'] });
     const first = request.files[0];
@@ -233,35 +233,35 @@ describe('features/bookReplace › 乐观锁、未保存、范围、还不是小
     assert.match(t.read(first.path), /林晚/);
   });
 
-  test('还不是小说工程（没有 .novelwarden/）：存不了历史版本，不换', async () => {
+  test('還不是小說工程（沒有 .novelwarden/）：存不了歷史版本，不換', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'novelwarden-book-replace-bare-'));
     try {
       fs.mkdirSync(path.join(dir, 'chapters'));
-      fs.writeFileSync(path.join(dir, 'chapters', '001-楔子.md'), '林晚推门。');
+      fs.writeFileSync(path.join(dir, 'chapters', '001-楔子.md'), '林晚推門。');
       const bare = bundle.project.NovelProject.open(dir);
       const preview = await bundle.bookFind.searchBook(bare, { query: '林晚', scopes: ['chapter'], replacement: '林婉' });
-      assert.equal(preview.listed, 1, '没初始化也搜得到');
+      assert.equal(preview.listed, 1, '沒初始化也搜得到');
       const f = preview.files[0];
       const summary = await bundle.bookReplace.replaceInBook(bare, {
         query: '林晚', replacement: '林婉', scopes: ['chapter'], dirty: [],
         files: [{ path: f.path, hash: f.hash, hits: f.hits.map((h) => ({ start: h.start, end: h.end })) }],
       });
       assert.deepEqual(summary.skipped.map((s) => s.reason), ['noHistory']);
-      assert.match(summary.skipped[0].message, /历史版本/);
-      assert.equal(fs.readFileSync(path.join(dir, 'chapters', '001-楔子.md'), 'utf8'), '林晚推门。');
+      assert.match(summary.skipped[0].message, /歷史版本/);
+      assert.equal(fs.readFileSync(path.join(dir, 'chapters', '001-楔子.md'), 'utf8'), '林晚推門。');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test('查找串为空、正则写错：整个不做', async () => {
+  test('查詢串為空、正則寫錯：整個不做', async () => {
     const t = await setup('bad');
     assert.match((await replace(t, { query: '', replacement: 'x', scopes: ['chapter'], files: [], dirty: [] })).error, /空/);
-    assert.match((await replace(t, { query: '(', regex: true, replacement: 'x', scopes: ['chapter'], files: [], dirty: [] })).error, /正则/);
+    assert.match((await replace(t, { query: '(', regex: true, replacement: 'x', scopes: ['chapter'], files: [], dirty: [] })).error, /正則/);
   });
 });
 
-describe('features/bookReplace › 第 18 条：指纹链', () => {
+describe('features/bookReplace › 第 18 條：指紋鏈', () => {
   let t;
   let summary;
   const before18 = {};
@@ -271,12 +271,12 @@ describe('features/bookReplace › 第 18 条：指纹链', () => {
     for (const no of [1, 2, 3, 4, 6]) {
       before18[no] = await row(t, no);
     }
-    // 正文与细纲一起换，第 2 章正文未保存（被跳过）。
+    // 正文與細綱一起換，第 2 章正文未儲存（被跳過）。
     const { request } = await previewAndRequest(t, { scopes: ['chapter', 'plot'] }, { dirty: ['chapters/002-下山.md'] });
     summary = await replace(t, request);
   });
 
-  test('替换之前：1、2、3 章写完且定稿过、对得上；4 章细纲挂 ⟳；6 章正文挂 ⟳', () => {
+  test('替換之前：1、2、3 章寫完且定稿過、對得上；4 章細綱掛 ⟳；6 章正文掛 ⟳', () => {
     assert.equal(before18[1].chapter.upstreamStale, false);
     assert.equal(before18[1].summary.stale, false);
     assert.equal(before18[2].chapter.upstreamStale, false);
@@ -285,47 +285,47 @@ describe('features/bookReplace › 第 18 条：指纹链', () => {
     assert.equal(before18[6].chapter.upstreamStale, true);
   });
 
-  test('细纲与正文都改了、原本对得上：writtenFrom / sourceHash 刷成替换后的，不挂 ⟳、不退回待定稿', async () => {
+  test('細綱與正文都改了、原本對得上：writtenFrom / sourceHash 刷成替換後的，不掛 ⟳、不退回待定稿', async () => {
     const r = await row(t, 1);
     assert.equal(r.chapter.upstreamStale, false);
     assert.equal(r.summary.stale, false);
     assert.equal(r.plot.upstreamStale, false);
     assert.deepEqual(summary.chainKept, ['第 1 章 入宗']);
-    // 定稿那份细纲里的出场（cast）也跟着换了名字。
+    // 定稿那份細綱裡的出場（cast）也跟著換了名字。
     assert.match(t.read('.novelwarden/summaries/001-入宗.md'), /cast: \[林婉\(阿晚\)\]/);
   });
 
-  test('只改了细纲（正文未保存被跳过）：正文挂 ⟳，汇总里说出来', async () => {
+  test('只改了細綱（正文未儲存被跳過）：正文掛 ⟳，彙總裡說出來', async () => {
     const r = await row(t, 2);
     assert.equal(r.chapter.upstreamStale, true);
     assert.deepEqual(summary.plotOnly, ['第 2 章 下山']);
   });
 
-  test('只改了正文（细纲里没有这个名字）：定稿过的回到待定稿，汇总里说出来', async () => {
+  test('只改了正文（細綱裡沒有這個名字）：定稿過的回到待定稿，彙總裡說出來', async () => {
     const r = await row(t, 3);
     assert.equal(r.summary.stale, true);
     assert.equal(r.chapter.upstreamStale, false);
     assert.deepEqual(summary.bodyOnly, ['第 3 章 夜访']);
   });
 
-  test('改之前就对不上的不刷：第 6 章正文照挂 ⟳', async () => {
+  test('改之前就對不上的不刷：第 6 章正文照掛 ⟳', async () => {
     assert.equal((await row(t, 6)).chapter.upstreamStale, true);
-    assert.ok(!summary.chainKept.includes('第 6 章 归来'));
+    assert.ok(!summary.chainKept.includes('第 6 章 歸來'));
   });
 
-  test('细纲的上游：挂着 ⟳ 的照挂（旧指纹原样留着），没记过的照旧不记', async () => {
+  test('細綱的上游：掛著 ⟳ 的照掛（舊指紋原樣留著），沒記過的照舊不記', async () => {
     const r4 = await row(t, 4);
     assert.equal(r4.plot.upstreamStale, true);
     assert.match(t.read('.novelwarden/summaries/004-北行.md'), /upstreamHash: deadbeef/);
     assert.match(t.read('.novelwarden/summaries/004-北行.md'), /林婉北行/);
-    const p5 = t.read('.novelwarden/summaries/005-远行.md');
-    assert.match(p5, /林婉远行/);
+    const p5 = t.read('.novelwarden/summaries/005-遠行.md');
+    assert.match(p5, /林婉遠行/);
     assert.doesNotMatch(p5, /upstreamHash/);
   });
 });
 
-describe('features/bookReplace › 第 18 条：细纲在这一次里却被跳过', () => {
-  test('正文换了、细纲因为未保存被跳过：定稿过的章同样回到待定稿，汇总里说「只改了正文」', async () => {
+describe('features/bookReplace › 第 18 條：細綱在這一次裡卻被跳過', () => {
+  test('正文換了、細綱因為未儲存被跳過：定稿過的章同樣回到待定稿，彙總裡說「只改了正文」', async () => {
     const t = await setup('plot-dirty');
     const { request } = await previewAndRequest(t, { scopes: ['chapter', 'plot'] }, { dirty: ['.novelwarden/summaries/001-入宗.md'] });
     const summary = await replace(t, request);
@@ -336,9 +336,9 @@ describe('features/bookReplace › 第 18 条：细纲在这一次里却被跳�
   });
 });
 
-// 情节大纲没有文件，是各章细纲梗概的汇总（docs/design/plans/2026-10-22-outline-from-plots.md）：不单列，换细纲就换了它。
-describe('features/bookReplace › 第 18 条：情节大纲（各章细纲的梗概）', () => {
-  test('预览里没有 outline.md；梗概与其余几节在同一份细纲里一起换，上游对得上；汇总出来的大纲跟着变', async () => {
+// 情節大綱沒有檔案，是各章細綱梗概的彙總（docs/design/plans/2026-10-22-outline-from-plots.md）：不單列，換細綱就換了它。
+describe('features/bookReplace › 第 18 條：情節大綱（各章細綱的梗概）', () => {
+  test('預覽裡沒有 outline.md；梗概與其餘幾節在同一份細綱裡一起換，上游對得上；彙總出來的大綱跟著變', async () => {
     const t = await setup('outline');
     const { preview, request } = await previewAndRequest(t, { scopes: ['doc', 'plot', 'chapter'] });
     assert.ok(!preview.files.some((f) => f.path.endsWith('outline.md')), JSON.stringify(preview.files.map((f) => f.path)));
@@ -350,7 +350,7 @@ describe('features/bookReplace › 第 18 条：情节大纲（各章细纲的�
   });
 });
 
-describe('features/bookReplace › 角色卡改名与派生数据', () => {
+describe('features/bookReplace › 角色卡改名與派生資料', () => {
   let t;
   const cardRel = '.novelwarden/characters/林晚.md';
   const tree = async () => {
@@ -362,24 +362,24 @@ describe('features/bookReplace › 角色卡改名与派生数据', () => {
     t = await setup('cast');
   });
 
-  test('替换之前：卡叫林晚，第 1、2 章的定稿里认得出她', async () => {
+  test('替換之前：卡叫林晚，第 1、2 章的定稿裡認得出她', async () => {
     const tr = await tree();
     assert.deepEqual(tr.castByCard[cardRel].plots, [1, 2]);
   });
 
-  test('只换角色卡：汇总里提文件名没跟着改；机器记的 appearsIn 不动；定稿里只写了旧名字的那一章暂时认不出她', async () => {
+  test('只換角色卡：彙總裡提檔名沒跟著改；機器記的 appearsIn 不動；定稿裡只寫了舊名字的那一章暫時認不出她', async () => {
     const { request } = await previewAndRequest(t, { scopes: ['character'] });
     const summary = await replace(t, request);
     assert.deepEqual(summary.renamedCards, [{ path: cardRel, label: '角色 · 林晚', name: '林婉', nameChanged: true }]);
-    assert.ok(t.has(cardRel), '文件名没改');
+    assert.ok(t.has(cardRel), '檔名沒改');
     assert.match(t.read(cardRel), /appearsIn: \[1\]/);
     const tr = await tree();
-    // 第 1 章的定稿记着别名「阿晚」，照样认得出；第 2 章只写了「林晚」，成了没建卡的出场人物。
+    // 第 1 章的定稿記著別名「阿晚」，照樣認得出；第 2 章只寫了「林晚」，成了沒建卡的出場人物。
     assert.deepEqual(tr.castByCard[cardRel].plots, [1]);
     assert.ok(tr.cast.some((c) => c.name === '林晚' && c.plots.includes(2)), JSON.stringify(tr.cast));
   });
 
-  test('再把细纲也换了：出场索引照新的名字认回来（派生数据从磁盘现算）', async () => {
+  test('再把細綱也換了：出場索引照新的名字認回來（派生資料從磁碟現算）', async () => {
     const { request } = await previewAndRequest(t, { scopes: ['plot'] });
     await replace(t, request);
     const tr = await tree();
@@ -387,16 +387,16 @@ describe('features/bookReplace › 角色卡改名与派生数据', () => {
     assert.ok(!tr.cast.some((c) => c.name === '林晚'));
   });
 
-  test('只换了别名：也提一句，nameChanged 是 false', async () => {
+  test('只換了別名：也提一句，nameChanged 是 false', async () => {
     const t2 = await setup('alias');
-    const { request } = await previewAndRequest(t2, { query: '阿晚', replacement: '婉儿', scopes: ['character'] });
+    const { request } = await previewAndRequest(t2, { query: '阿晚', replacement: '婉兒', scopes: ['character'] });
     const summary = await replace(t2, request);
     assert.deepEqual(summary.renamedCards.map((c) => [c.name, c.nameChanged]), [['林晚', false]]);
   });
 });
 
 describe('controller › bookReplace', () => {
-  test('回 bookReplaceDone，之后推 state；同一时刻只有一次替换', async () => {
+  test('回 bookReplaceDone，之後推 state；同一時刻只有一次替換', async () => {
     const t = await setup('controller');
     const posted = [];
     const controller = new bundle.controller.ChatController(t.project);
@@ -412,9 +412,9 @@ describe('controller › bookReplace', () => {
       assert.ok(one && two, JSON.stringify(posted.map((m) => m.type)));
       assert.equal(one.summary.error, undefined);
       assert.ok(one.summary.files > 0);
-      assert.match(two.summary.error, /还没换完/);
+      assert.match(two.summary.error, /還沒換完/);
       const doneAt = posted.indexOf(one);
-      assert.ok(posted.slice(doneAt + 1).some((m) => m.type === 'state'), '替换完没推 state');
+      assert.ok(posted.slice(doneAt + 1).some((m) => m.type === 'state'), '替換完沒推 state');
     } finally {
       controller.dispose();
     }

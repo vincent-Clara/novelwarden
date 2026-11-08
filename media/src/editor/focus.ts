@@ -1,18 +1,18 @@
 /**
- * 专注：专注模式、全屏、打字机滚动、段落聚焦。入口是标题栏「视图 → 专注」那一组（菜单那一半在
- * `view/lookMenu.ts`），状态经 `nf-view-query` 回答、开关经 `nf-view-command` 交过来。三个开关记在
- * `novelforge.editor.prefs`（`focusMode` / `typewriter` / `paragraphFocus`，校验在 `lookCore.ts`），全屏不记。
+ * 專注：專注模式、全屏、打字機滾動、段落聚焦。入口是標題欄「檢視 → 專注」那一組（選單那一半在
+ * `view/lookMenu.ts`），狀態經 `nf-view-query` 回答、開關經 `nf-view-command` 交過來。三個開關記在
+ * `novelforge.editor.prefs`（`focusMode` / `typewriter` / `paragraphFocus`，校驗在 `lookCore.ts`），全屏不記。
  *
- * - **专注模式**（快捷键 F8 ⚑，`Esc` 或再按一次退出）：`<body>` 挂 `nf-focus`，`css/standalone/focus.css` 藏起
- *   活动栏、侧栏、标题栏里菜单以外的杂项、标签条、工具栏、章节条，状态栏淡成一行（鼠标移上去才看清；字数那一格照样
- *   点得开码字统计面板）。
- *   **冲突条、查找条、「版本」的对比标签照常显示**——前者是「不丢稿」的提醒，后两样是作者自己打开的。两块编辑区都开着时
- *   只专注当前那一块（`activePane`，根节点挂 `ed-focused`），另一块藏起来；当前那一块换了（从别处打开了另一块里的
- *   文件）就跟过去。F8 选它的理由：浏览器与桌面 WebView 都不占它，编辑器里也没用过；Typora 的专注模式也是 F8。
- *   `Esc` 只在别人都不接时退出：查找条、「转到…」、对话框、外观面板、码字统计面板、标题栏与右键菜单先收。
- * - **全屏**：Fullscreen API，**能力探测**（`document.fullscreenEnabled` 且有 `requestFullscreen`），不支持时菜单项置灰。
- *   全屏的是整个页面（菜单栏还在，退出不靠记快捷键）。F11 是浏览器自己的，不抢。
- * - **打字机滚动**（`typewriter.ts`）与**段落聚焦**（`paragraphFocus.ts`）各自一个模块，这里只管开关。
+ * - **專注模式**（快捷鍵 F8 ⚑，`Esc` 或再按一次退出）：`<body>` 掛 `nf-focus`，`css/standalone/focus.css` 藏起
+ *   活動欄、側欄、標題欄裡選單以外的雜項、標籤條、工具欄、章節條，狀態列淡成一行（滑鼠移上去才看清；字數那一格照樣
+ *   點得開碼字統計面板）。
+ *   **衝突條、查詢條、「版本」的對比標籤照常顯示**——前者是「不丟稿」的提醒，後兩樣是作者自己開啟的。兩塊編輯區都開著時
+ *   只專注當前那一塊（`activePane`，根節點掛 `ed-focused`），另一塊藏起來；當前那一塊換了（從別處開啟了另一塊裡的
+ *   檔案）就跟過去。F8 選它的理由：瀏覽器與桌面 WebView 都不佔它，編輯器裡也沒用過；Typora 的專注模式也是 F8。
+ *   `Esc` 只在別人都不接時退出：查詢條、「轉到…」、對話方塊、外觀面板、碼字統計面板、標題欄與右鍵選單先收。
+ * - **全屏**：Fullscreen API，**能力探測**（`document.fullscreenEnabled` 且有 `requestFullscreen`），不支援時選單項置灰。
+ *   全屏的是整個頁面（選單欄還在，退出不靠記快捷鍵）。F11 是瀏覽器自己的，不搶。
+ * - **打字機滾動**（`typewriter.ts`）與**段落聚焦**（`paragraphFocus.ts`）各自一個模組，這裡只管開關。
  */
 import { toast } from '../globals';
 import type { FocusStatus } from '../globals';
@@ -28,7 +28,7 @@ import { installTypewriter } from './typewriter';
 
 let prefs: FocusPrefs = { focusMode: false, typewriter: false, paragraphFocus: false };
 
-/** 三个开关当前的值。 */
+/** 三個開關當前的值。 */
 export function focusPrefs(): FocusPrefs {
   return prefs;
 }
@@ -41,7 +41,7 @@ function setFocusPref(key: keyof FocusPrefs, on: boolean): void {
 
 // ---------------------------------------------------------------- 全屏
 
-/** 页面能不能全屏：能力探测，不看是哪个浏览器 / 哪个壳。 */
+/** 頁面能不能全屏：能力探測，不看是哪個瀏覽器 / 哪個殼。 */
 export function fullscreenSupported(): boolean {
   return document.fullscreenEnabled === true && typeof document.documentElement.requestFullscreen === 'function';
 }
@@ -52,16 +52,16 @@ function isFullscreen(): boolean {
 
 function toggleFullscreen(): void {
   if (!fullscreenSupported()) {
-    toast('这个浏览器（或窗口）不支持全屏。', true);
+    toast('這個瀏覽器（或視窗）不支援全屏。', true);
     return;
   }
   const done = isFullscreen() ? document.exitFullscreen() : document.documentElement.requestFullscreen();
-  void Promise.resolve(done).catch(() => toast('没能切换全屏（浏览器拒绝了）。', true));
+  void Promise.resolve(done).catch(() => toast('沒能切換全屏（瀏覽器拒絕了）。', true));
 }
 
-// ---------------------------------------------------------------- 专注模式
+// ---------------------------------------------------------------- 專注模式
 
-/** 当前专注的那一块挂 `ed-focused`；不在专注模式时谁都不挂。 */
+/** 當前專注的那一塊掛 `ed-focused`；不在專注模式時誰都不掛。 */
 function syncFocusedPane(): void {
   const on = prefs.focusMode;
   for (const pane of Object.values(panes)) {
@@ -73,7 +73,7 @@ function applyFocusMode(): void {
   document.body.classList.toggle('nf-focus', prefs.focusMode);
   syncFocusedPane();
   if (prefs.focusMode) {
-    // 窄屏下编辑区是覆盖层，得翻上来。
+    // 窄屏下編輯區是覆蓋層，得翻上來。
     revealEditor();
   }
 }
@@ -83,8 +83,8 @@ function toggleFocusMode(): void {
 }
 
 /**
- * 刚进专注模式：焦点原本在被藏起来的地方（左边的对话输入框之类）时放进正文——不然光标落在一个看不见的框里，
- * 打的字不知道去了哪儿。焦点本来就在这一块里（编辑区、查找框）的不动。
+ * 剛進專注模式：焦點原本在被藏起來的地方（左邊的對話輸入框之類）時放進正文——不然游標落在一個看不見的框裡，
+ * 打的字不知道去了哪兒。焦點本來就在這一塊裡（編輯區、查詢框）的不動。
  */
 function keepFocusInside(): void {
   const pane = activePane;
@@ -106,7 +106,7 @@ function status(): FocusStatus {
 
 export function installFocus(): void {
   prefs = normalizeFocus(storedPrefs());
-  // 打字机滚动、段落聚焦各自订阅编辑区的变化，问这里开着没有；开关变了叫它们 `refresh` 一下。
+  // 打字機滾動、段落聚焦各自訂閱編輯區的變化，問這裡開著沒有；開關變了叫它們 `refresh` 一下。
   const typewriter = installTypewriter(() => prefs.typewriter);
   const paragraph = installParagraphFocus(() => prefs.paragraphFocus);
   applyFocusMode();
@@ -134,15 +134,15 @@ export function installFocus(): void {
     }
   });
 
-  // 当前那一块换了（从别处打开了另一块里的文件）：专注跟过去。
+  // 當前那一塊換了（從別處開啟了另一塊裡的檔案）：專注跟過去。
   onEditorChange((ev) => {
     if (ev.type === 'render' && prefs.focusMode) {
       syncFocusedPane();
     }
   });
 
-  // 这一下 Esc 按下去的时候有没有菜单开着（标题栏的下拉、右键菜单）：它们在 document 的冒泡阶段收自己，
-  // 比这里先跑、也不 preventDefault，等轮到这里菜单已经没了——所以在捕获阶段先记一笔。
+  // 這一下 Esc 按下去的時候有沒有選單開著（標題欄的下拉、右鍵選單）：它們在 document 的冒泡階段收自己，
+  // 比這裡先跑、也不 preventDefault，等輪到這裡選單已經沒了——所以在捕獲階段先記一筆。
   let menuWasOpen = false;
   document.addEventListener(
     'keydown',
@@ -158,14 +158,14 @@ export function installFocus(): void {
     if (isImeComposing(e)) {
       return;
     }
-    // 专注模式的键（⚑ F8）登记在 shortcuts.ts。
+    // 專注模式的鍵（⚑ F8）登記在 shortcuts.ts。
     if (matchesShortcut(e, 'focusMode')) {
       e.preventDefault();
       toggleFocusMode();
       return;
     }
-    // Esc 退出专注模式。别人已经接走的 Esc（查找条收起、「转到…」关掉、对话框取消、收菜单）不算——那些先退；
-    // 外观面板、码字统计面板在捕获阶段就吞掉了它，根本到不了这里。
+    // Esc 退出專注模式。別人已經接走的 Esc（查詢條收起、「轉到…」關掉、對話方塊取消、收選單）不算——那些先退；
+    // 外觀面板、碼字統計面板在捕獲階段就吞掉了它，根本到不了這裡。
     if (
       e.key === 'Escape' &&
       prefs.focusMode &&

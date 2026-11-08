@@ -1,8 +1,8 @@
-//! 把旧桌面壳的 `<app_config_dir>/shell.json` 迁到 sidecar 会读的
-//! `~/.novelwarden/window.json`。只迁一次：window.json 已经在就不碰。
+//! 把舊桌面殼的 `<app_config_dir>/shell.json` 遷到 sidecar 會讀的
+//! `~/.novelwarden/window.json`。只遷一次：window.json 已經在就不碰。
 //!
-//! 配置目录改名后仍认旧目录：`~/.novelforge/` 还在、`~/.novelwarden/` 还没建时继续用旧目录
-//! （不搬、不删），否则老用户升级后配置、密钥与「最近工程」会凭空消失。
+//! 配置目錄改名後仍認舊目錄：`~/.novelforge/` 還在、`~/.novelwarden/` 還沒建時繼續用舊目錄
+//! （不搬、不刪），否則老使用者升級後配置、金鑰與「最近工程」會憑空消失。
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -35,7 +35,7 @@ fn shell_path(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app
         .path()
         .app_config_dir()
-        .map_err(|e| format!("取不到配置目录：{e}"))?;
+        .map_err(|e| format!("取不到配置目錄：{e}"))?;
     Ok(dir.join("shell.json"))
 }
 
@@ -44,7 +44,7 @@ fn home() -> Option<PathBuf> {
     Some(PathBuf::from(home))
 }
 
-/// 与 `src/core/stores.ts` 的 `homeDir()` 同一套判定：
+/// 與 `src/core/stores.ts` 的 `homeDir()` 同一套判定：
 /// `NOVELWARDEN_HOME` > `NOVELFORGE_HOME` > 已存在的 ~/.novelwarden >
 /// 已存在的 ~/.novelforge > ~/.novelwarden。
 fn config_dir() -> Option<PathBuf> {
@@ -78,7 +78,7 @@ fn last_project(app: &AppHandle) -> Option<PathBuf> {
     }
 }
 
-/// 若 `window.json` 还不存在，且旧 `shell.json` 里有还在的工程目录，写入一次。
+/// 若 `window.json` 還不存在，且舊 `shell.json` 裡有還在的工程目錄，寫入一次。
 pub fn migrate_shell_json_once(app: &AppHandle) -> Result<(), String> {
     let Some(dir) = config_dir() else {
         return Ok(());
@@ -90,7 +90,7 @@ pub fn migrate_shell_json_once(app: &AppHandle) -> Result<(), String> {
     let Some(root) = last_project(app) else {
         return Ok(());
     };
-    std::fs::create_dir_all(&dir).map_err(|e| format!("建 {} 失败：{e}", dir.display()))?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("建 {} 失敗：{e}", dir.display()))?;
     let root_str = root.to_string_lossy().to_string();
     let name = file_name(&root);
     let opened_at = SystemTime::now()
@@ -106,7 +106,7 @@ pub fn migrate_shell_json_once(app: &AppHandle) -> Result<(), String> {
         }],
     };
     let text = serde_json::to_string_pretty(&state).map_err(|e| e.to_string())?;
-    std::fs::write(&win_path, format!("{text}\n")).map_err(|e| format!("写 window.json 失败：{e}"))
+    std::fs::write(&win_path, format!("{text}\n")).map_err(|e| format!("寫 window.json 失敗：{e}"))
 }
 
 fn file_name(path: &Path) -> String {

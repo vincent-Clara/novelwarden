@@ -4,9 +4,9 @@ import { InMessage, OutMessage } from '../../core/protocol';
 import { htmlFor, localResourceRoots } from './webview';
 
 /**
- * 编辑器宿主：把同一个对话面板作为标签页在编辑器区打开。
+ * 編輯器宿主：把同一個對話面板作為標籤頁在編輯器區開啟。
  *
- * 侧边栏太窄时用这个——两边挂的是同一个 controller，看到的是同一个会话。
+ * 側邊欄太窄時用這個——兩邊掛的是同一個 controller，看到的是同一個會話。
  */
 export class ChatPanel implements ViewHost {
   private static instance: ChatPanel | undefined;

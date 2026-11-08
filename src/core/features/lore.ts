@@ -1,17 +1,17 @@
 /**
- * 设定条目的四件维护（建条目、整合、整理走 `loreSynthesis` 档，批量展开走 `setting` 档）：
+ * 設定條目的四件維護（建條目、整合、整理走 `loreSynthesis` 檔，批次展開走 `setting` 檔）：
  *
- * - 建条目 `buildLoreEntries`：名录里出现过、还没有条目的名字（「全部」只建出现 ≥2 章的）；原料是定稿细纲里
- *   提到它的记录，**不重读正文**；建在分类目录里，记水位与 `bodyHash`。
- * - 整合 `integrateLore`：水位之后的新事实并进条目，水位停在第一处没定稿或定稿后正文又改过的章之前；
- *   机器写的可以直接采纳，作者改过的先对比；关键词只增不减（第 27 条）。
- * - 按目录整理 `organizeLore`：模型出搬家清单，`checkOrganizePlan` 校验，作者看过才搬、只搬不改，不给外部 agent。
- * - 批量展开 `expandLoreEntries`：只写 `loreBatchExpandable` 的（空的、占位的、机器写的薄条目），作者写过的跳过；
- *   没有卡片、写完直接落盘，落盘前按磁盘再认一遍；子条目只建空条目、不接着展开。
+ * - 建條目 `buildLoreEntries`：名錄裡出現過、還沒有條目的名字（「全部」只建出現 ≥2 章的）；原料是定稿細綱裡
+ *   提到它的記錄，**不重讀正文**；建在分類目錄裡，記水位與 `bodyHash`。
+ * - 整合 `integrateLore`：水位之後的新事實並進條目，水位停在第一處沒定稿或定稿後正文又改過的章之前；
+ *   機器寫的可以直接採納，作者改過的先對比；關鍵詞只增不減（第 27 條）。
+ * - 按目錄整理 `organizeLore`：模型出搬家清單，`checkOrganizePlan` 校驗，作者看過才搬、只搬不改，不給外部 agent。
+ * - 批次展開 `expandLoreEntries`：只寫 `loreBatchExpandable` 的（空的、佔位的、機器寫的薄條目），作者寫過的跳過；
+ *   沒有卡片、寫完直接落盤，落盤前按磁碟再認一遍；子條目只建空條目、不接著展開。
  *
- * 都是按格式写、转写那一档照抄成 JSON；整理不出来这一条重写一次再转（`LORE_ENTRY_CALLS`，批量展开合计上限
- * `LORE_EXPAND_BATCH_CALLS`）。原料、水位与「谁写的」在 views/loreMaterial.ts（装配器与名录要同一份，
- * context/、views/ 不依赖 features/）。系统提示词在 lorePrompt.ts。
+ * 都是按格式寫、轉寫那一檔照抄成 JSON；整理不出來這一條重寫一次再轉（`LORE_ENTRY_CALLS`，批次展開合計上限
+ * `LORE_EXPAND_BATCH_CALLS`）。原料、水位與「誰寫的」在 views/loreMaterial.ts（裝配器與名錄要同一份，
+ * context/、views/ 不依賴 features/）。系統提示詞在 lorePrompt.ts。
  */
 import * as path from 'node:path';
 import { readConfig } from '../config';
@@ -65,31 +65,31 @@ import { checkpointBefore } from './checkpoint';
 const log = scoped('设定');
 
 /**
- * 设定条目的四件维护：**建条目**（名录里出现过、还没有条目的名字）、**整合**（条目水位之后的新事实
- * 并进条目）、**批量展开**（「待完善」里还只有一句话的，照已排的细纲往前想细，完善设定三期）、**按目录整理**
- * （作者定案：分类就是目录，让模型出一份搬家清单）。
+ * 設定條目的四件維護：**建條目**（名錄裡出現過、還沒有條目的名字）、**整合**（條目水位之後的新事實
+ * 並進條目）、**批次展開**（「待完善」裡還只有一句話的，照已排的細綱往前想細，完善設定三期）、**按目錄整理**
+ * （作者定案：分類就是目錄，讓模型出一份搬家清單）。
  *
- * 建条目与整合的原料全来自**定稿过的细纲**（「设定」一节、连续性事实、提到它的那几句），**不重读正文**——每章定稿时已经
- * 照正文记过、校验过了（features/loreRecord.ts）。从前这里是「通读全书 → 每条整合」那一套，每跑一次
- * 都从第 1 章扫起（三百章、五百条约 800 次调用），作者定案删掉：相似的东西不留两份。批量展开走的是对话页展开
- * 同一条装配与生成链（单条设定这个目标），只是没有卡片。
+ * 建條目與整合的原料全來自**定稿過的細綱**（「設定」一節、連續性事實、提到它的那幾句），**不重讀正文**——每章定稿時已經
+ * 照正文記過、校驗過了（features/loreRecord.ts）。從前這裡是「通讀全書 → 每條整合」那一套，每跑一次
+ * 都從第 1 章掃起（三百章、五百條約 800 次呼叫），作者定案刪掉：相似的東西不留兩份。批次展開走的是對話頁展開
+ * 同一條裝配與生成鏈（單條設定這個目標），只是沒有卡片。
  *
- * 写回的规矩（第 3 条：不静默覆盖）：
- * - 新条目直接建（不覆盖任何东西）。
- * - 整合时条目正文是机器写的（`bodyHash` 对得上，或正文是空的）：作者在确认框里选「逐条确认」还是
- *   「直接采纳」，同批量更新角色卡；作者改过的一律先给对比。
- * - 整合只并不删作者的字（提示词，第 27 条）；关键词只增不减。
- * - 批量展开只写还只有一句话、又没有作者的字的（`loreBatchExpandable`），作者写过的跳过（第 19 条批量那一面）。
+ * 寫回的規矩（第 3 條：不靜默覆蓋）：
+ * - 新條目直接建（不覆蓋任何東西）。
+ * - 整合時條目正文是機器寫的（`bodyHash` 對得上，或正文是空的）：作者在確認框裡選「逐條確認」還是
+ *   「直接採納」，同批次更新角色卡；作者改過的一律先給對比。
+ * - 整合只並不刪作者的字（提示詞，第 27 條）；關鍵詞只增不減。
+ * - 批次展開只寫還只有一句話、又沒有作者的字的（`loreBatchExpandable`），作者寫過的跳過（第 19 條批次那一面）。
  */
 
-/** 「全部建条目」只建出现至少这么多章的。 */
+/** 「全部建條目」只建出現至少這麼多章的。 */
 export const BUILD_MIN_CHAPTERS = 1;
-/** 按目录整理一次调用最多看几条。 */
+/** 按目錄整理一次呼叫最多看幾條。 */
 const ORGANIZE_BATCH = 80;
-/** 新目录最多几层。 */
+/** 新目錄最多幾層。 */
 const ORGANIZE_DEPTH = 3;
 
-/** 模型交回来的一条。 */
+/** 模型交回來的一條。 */
 interface EntryDraft {
   brief: string;
   keywords: string[];
@@ -97,25 +97,25 @@ interface EntryDraft {
 }
 
 // ---------------------------------------------------------------- 水位
-// 整合能推到第几章（`integrationWatermark`）挪到了 views/loreMaterial.ts：展开一条设定落盘时记同一个水位。
-// 正文是不是机器写的（`loreOwnedByMachine`）也挪了过去：名录算「待完善」时要判批量展开会不会写它。这里转出一份，调用方不用改。
+// 整合能推到第幾章（`integrationWatermark`）挪到了 views/loreMaterial.ts：展開一條設定落盤時記同一個水位。
+// 正文是不是機器寫的（`loreOwnedByMachine`）也挪了過去：名錄算「待完善」時要判批次展開會不會寫它。這裡轉出一份，呼叫方不用改。
 export { loreOwnedByMachine };
 
 // ---------------------------------------------------------------- 原料
-// 一个名字在定稿细纲里的全部记录（`recordsAbout`）也在 views/loreMaterial.ts：装配器展开一条设定时要同一份，
-// 而 context/ 不依赖 features/。
+// 一個名字在定稿細綱裡的全部記錄（`recordsAbout`）也在 views/loreMaterial.ts：裝配器展開一條設定時要同一份，
+// 而 context/ 不依賴 features/。
 
 function renderRecords(records: readonly LoreFact[]): string {
   return takeHead(records.map((f) => `- 第 ${f.no} 章：${f.text}`).join('\n'), MATERIAL_TOKENS);
 }
 
-// ---------------------------------------------------------------- 调模型
+// ---------------------------------------------------------------- 調模型
 
 /**
- * 要一条 `{brief, keywords, body}`。2026-10-25 起改成转写：模型按「一句话 / 关键词 / ## 概要……」写，转写那一档照抄成 JSON
- * （原文本身就是 JSON 的不转），转写不合格重转一次。还整理不出来（没照格式写、重转仍不合格）就这一条重写一次
- * （{@link LORE_ENTRY_ROUNDS} 轮，`LORE_ENTRY_CALLS` 确认框里报过上限），还不行才算失败；转写调用本身失败直接算失败。
- * `onCall` 每调一次记一下（写的与转写的都算）：拆书补齐要报实际调了几次。
+ * 要一條 `{brief, keywords, body}`。2026-10-25 起改成轉寫：模型按「一句話 / 關鍵詞 / ## 概要……」寫，轉寫那一檔照抄成 JSON
+ * （原文字身就是 JSON 的不轉），轉寫不合格重轉一次。還整理不出來（沒照格式寫、重轉仍不合格）就這一條重寫一次
+ * （{@link LORE_ENTRY_ROUNDS} 輪，`LORE_ENTRY_CALLS` 確認框裡報過上限），還不行才算失敗；轉寫呼叫本身失敗直接算失敗。
+ * `onCall` 每調一次記一下（寫的與轉寫的都算）：拆書補齊要報實際調了幾次。
  */
 async function draftEntry(
   pool: ModelPool,
@@ -148,7 +148,7 @@ async function draftEntry(
     const r = await transcribeJson(raw, entrySpec(label), transcribe);
     onCall?.(r.calls);
     if (r.notes.length > 0) {
-      log.info(`${label}：转写 ${r.calls} 次`, r.notes.join('\n'));
+      log.info(`${label}：轉寫 ${r.calls} 次`, r.notes.join('\n'));
     }
     if (r.ok) {
       return r.value;
@@ -157,15 +157,15 @@ async function draftEntry(
       throw new Error(r.message);
     }
     if (attempt >= LORE_ENTRY_ROUNDS || signal.aborted) {
-      throw new Error(`模型返回无法解析（${r.message}；${raw.length} 字${attempt > 1 ? `，重写了 ${attempt - 1} 次` : ''}）`);
+      throw new Error(`模型返回無法解析（${r.message}；${raw.length} 字${attempt > 1 ? `，重寫了 ${attempt - 1} 次` : ''}）`);
     }
-    log.warn(`${label}：模型返回无法解析（${r.message}；${raw.length} 字），这一条重写一次`);
+    log.warn(`${label}：模型返回無法解析（${r.message}；${raw.length} 字），這一條重寫一次`);
   }
 }
 
 /**
- * 建条目与整合转写那一步：合同是 lorePrompt.ts 的 `loreEntryJsonContract`，解码就是 {@link parseEntryDraft}。
- * 原文连「概要」「规则与边界」「现状」都没有的不转。
+ * 建條目與整合轉寫那一步：合同是 lorePrompt.ts 的 `loreEntryJsonContract`，解碼就是 {@link parseEntryDraft}。
+ * 原文連「概要」「規則與邊界」「現狀」都沒有的不轉。
  */
 function entrySpec(label: string): TranscribeSpec<EntryDraft> {
   return {
@@ -173,13 +173,13 @@ function entrySpec(label: string): TranscribeSpec<EntryDraft> {
     contract: loreEntryJsonContract(),
     decode: (json) => {
       const draft = parseEntryDraft(json);
-      return draft ? { ok: true, value: draft } : { ok: false, message: 'body 是空的，或者不是 {brief, keywords, body} 那样的一个对象' };
+      return draft ? { ok: true, value: draft } : { ok: false, message: 'body 是空的，或者不是 {brief, keywords, body} 那樣的一個物件' };
     },
-    looksLike: (source) => /概要|规则与边界|现状/.test(source),
+    looksLike: (source) => /概要|(?:规|規)(?:则|則)(?:与|與)(?:边|邊)界|(?:现|現)(?:状|狀)/.test(source),
   };
 }
 
-/** `{brief, keywords, body}`；正文为空或不是 JSON 返回 undefined。正文里带了一级标题就剥掉。 */
+/** `{brief, keywords, body}`；正文為空或不是 JSON 返回 undefined。正文裡帶了一級標題就剝掉。 */
 export function parseEntryDraft(raw: string): EntryDraft | undefined {
   const obj = jsonObject(raw);
   if (!obj) {
@@ -209,17 +209,17 @@ function jsonObject(raw: string): Record<string, unknown> | undefined {
         return data as Record<string, unknown>;
       }
     } catch {
-      // 下一个写法
+      // 下一個寫法
     }
   }
   return undefined;
 }
 
-// ---------------------------------------------------------------- 建条目
+// ---------------------------------------------------------------- 建條目
 
 /**
- * 给名录里「出现过 · 未建条目」的名字建条目。给了 `names` 就建那几个；没给就建**出现过**的全部。
- * 每条写 1 次、转写 1 次（整理不出来的重写一次，`LORE_ENTRY_CALLS`），原料是定稿细纲里提到它的记录（不重读正文），新文件建在它的分类目录里（不存在就建）。
+ * 給名錄裡「出現過 · 未建條目」的名字建條目。給了 `names` 就建那幾個；沒給就建**出現過**的全部。
+ * 每條寫 1 次、轉寫 1 次（整理不出來的重寫一次，`LORE_ENTRY_CALLS`），原料是定稿細綱裡提到它的記錄（不重讀正文），新檔案建在它的分類目錄裡（不存在就建）。
  */
 export async function buildLoreEntries(project: NovelProject, names?: readonly string[]): Promise<void> {
   const host = getHost();
@@ -231,41 +231,41 @@ export async function buildLoreEntries(project: NovelProject, names?: readonly s
   if (targets.length === 0) {
     host.toast(
       wanted?.length
-        ? '名录里没有这个名字，或者它已经有条目了。'
-        : '没有还没建条目的设定。'
+        ? '名錄裡沒有這個名字，或者它已經有條目了。'
+        : '沒有還沒建條目的設定。'
     );
     return;
   }
   const n = targets.length;
   const lanes = Math.max(1, Math.min(readConfig().concurrency, n));
   const answer = await askCall({
-    message: `建 ${n} 条设定：${describeCalls(loreEntryCalls(n))}。只读同步过的细纲里提到它们的那几行，不重读正文。`,
-    actions: ['开始建'],
+    message: `建 ${n} 條設定：${describeCalls(loreEntryCalls(n))}。只讀同步過的細綱裡提到它們的那幾行，不重讀正文。`,
+    actions: ['開始建'],
     detail: [
-      `要建的：${targets.slice(0, 20).map((u) => u.name).join('、')}${n > 20 ? ` 等 ${n} 条` : ''}`,
-      lanes > 1 ? `最多 ${lanes} 条同时建。` : '一条一条串行建（并发数为 1）。',
+      `要建的：${targets.slice(0, 20).map((u) => u.name).join('、')}${n > 20 ? ` 等 ${n} 條` : ''}`,
+      lanes > 1 ? `最多 ${lanes} 條同時建。` : '一條一條序列建（併發數為 1）。',
     ].join('\n\n'),
     tasks: ['loreSynthesis', 'transcribe'],
     contextDetail: false,
   });
-  if (answer?.action !== '开始建') {
-    log.info('作者取消了建条目');
+  if (answer?.action !== '開始建') {
+    log.info('作者取消了建條目');
     return;
   }
   return withCallChoice(answer.choice, async () => {
     const pool = await createModelPool({ task: 'loreSynthesis', concurrent: lanes > 1 });
     if (!pool) {
-      log.error('没有可用的模型，建条目中止');
+      log.error('沒有可用的模型，建條目中止');
       return;
     }
 
     await runTask(
-      '建设定条目',
+      '建設定條目',
       async ({ signal, report }) => {
         const startedAt = Date.now();
         const { created, failed } = await createLoreEntries(project, targets, { signal, pool, lanes, report });
-        const summary = `新建 ${created} 条设定${failed > 0 ? `，失败 ${failed} 条（详见日志页）` : ''}`;
-        log.info('建条目结束', `${summary}｜总耗时 ${elapsed(startedAt)}`);
+        const summary = `新建 ${created} 條設定${failed > 0 ? `，失敗 ${failed} 條（詳見日誌頁）` : ''}`;
+        log.info('建條目結束', `${summary}｜總耗時 ${elapsed(startedAt)}`);
         host.toast(`${summary}。`);
       },
       { scope: '设定' }
@@ -274,10 +274,10 @@ export async function buildLoreEntries(project: NovelProject, names?: readonly s
 }
 
 /**
- * 建条目本身：**不问、不弹框**，调用方已经把条数与次数报过了（第 4 条）。每条写 1 次、转写 1 次（整理不出来的重写一次），
- * 最多 `lanes` 条同时建；原料是定稿细纲里提到它的记录，水位记到 {@link integrationWatermark}。「建条目」与
- * 拆书「从已写正文补齐」（features/derive.ts）共用。一条失败不连累别的，失败的写日志、计进 `failed`；
- * `calls` 是实际调了几次。
+ * 建條目本身：**不問、不彈框**，呼叫方已經把條數與次數報過了（第 4 條）。每條寫 1 次、轉寫 1 次（整理不出來的重寫一次），
+ * 最多 `lanes` 條同時建；原料是定稿細綱裡提到它的記錄，水位記到 {@link integrationWatermark}。「建條目」與
+ * 拆書「從已寫正文補齊」（features/derive.ts）共用。一條失敗不連累別的，失敗的寫日誌、計進 `failed`；
+ * `calls` 是實際調了幾次。
  */
 export async function createLoreEntries(
   project: NovelProject,
@@ -296,7 +296,7 @@ export async function createLoreEntries(
     integrationWatermark(project),
   ]);
   const plots = finalizedPlots(project.pairPlots(allPlots, chapters));
-  // 名录里另记着的名字都算，不只是这一批：建出来的关键词不收它们（model/loreFile.ts 的 cleanLoreKeywords）。
+  // 名錄裡另記著的名字都算，不只是這一批：建出來的關鍵詞不收它們（model/loreFile.ts 的 cleanLoreKeywords）。
   const { unknown } = await buildLoreIndex(project, { plots: allPlots }, { pending: false });
   const recorded = unique([...targets.map((t) => t.name), ...unknown.map((u) => u.name)]);
   let created = 0;
@@ -313,9 +313,9 @@ export async function createLoreEntries(
         created++;
       } else {
         failed++;
-        log.error(`设定「${u.name}」建条目失败`, describeError(result.reason));
+        log.error(`設定「${u.name}」建條目失敗`, describeError(result.reason));
       }
-      opts.report({ message: `已建 ${done}/${n} 条`, current: done, total: n });
+      opts.report({ message: `已建 ${done}/${n} 條`, current: done, total: n });
     },
   });
   project.invalidate();
@@ -338,24 +338,24 @@ async function buildOne(
   const draft = await draftEntry(
     pool,
     transcribe,
-    `设定「${u.name}」建条目`,
-    `设定：${u.name}\n分类：${category || '未分类'}\n\n定稿细纲里关于它的记录（按章号）：\n${renderRecords(records)}`,
+    `設定「${u.name}」建條目`,
+    `設定：${u.name}\n分類：${category || '未分類'}\n\n定稿細綱裡關於它的記錄（按章號）：\n${renderRecords(records)}`,
     signal,
     onCall
   );
   if (signal.aborted) {
     return;
   }
-  // 等模型的时候作者可能已经手建了一条：撞上了就不建，不覆盖。
+  // 等模型的時候作者可能已經手建了一條：撞上了就不建，不覆蓋。
   const [entries, cards] = await Promise.all([project.listLore(), project.listCharacters()]);
   if (entries.some((e) => normalizeLoreName(e.title) === normalizeLoreName(u.name))) {
-    log.info(`设定「${u.name}」已经有条目了，这一条不建`);
+    log.info(`設定「${u.name}」已經有條目了，這一條不建`);
     return;
   }
   const keywords = cleanLoreKeywords(u.name, draft.keywords, {
     titles: entries.map((e) => e.title),
     people: cards.flatMap((c) => [c.name, ...c.aliases]),
-    // 同一批一起建的、名录里另记着的：这一刻还没有文件，但都是别的东西。
+    // 同一批一起建的、名錄裡另記著的：這一刻還沒有檔案，但都是別的東西。
     recorded,
   });
   const slug = await uniqueSlug(project.loreDir, `${category ? `${category}/` : ''}${slugify(u.name)}`);
@@ -368,21 +368,21 @@ async function buildOne(
     updatedThrough: through,
     bodyHash: hash(draft.body.trim()),
   });
-  log.info(`新建设定「${u.name}」`, `${relPath}｜依据 ${records.length} 条记录｜${draft.body.length} 字`);
+  log.info(`新建設定「${u.name}」`, `${relPath}｜依據 ${records.length} 條記錄｜${draft.body.length} 字`);
 }
 
 // ---------------------------------------------------------------- 整合
 
-/** 一条要整合的：条目与水位之内的新事实。 */
+/** 一條要整合的：條目與水位之內的新事實。 */
 interface IntegratePlan {
   record: LoreRecord;
   facts: LoreFact[];
 }
 
 /**
- * 把条目水位之后、定稿过的新事实并进条目。给了 `relPaths` 就整合那几条；没给就是名录上挂 `＋N` 的全部。
- * 每条写 1 次、转写 1 次（整理不出来的重写一次）。水位推到 {@link integrationWatermark}，更晚的事实留到下次（它们照样作为
- * 尾巴带进上下文）。
+ * 把條目水位之後、定稿過的新事實並進條目。給了 `relPaths` 就整合那幾條；沒給就是名錄上掛 `＋N` 的全部。
+ * 每條寫 1 次、轉寫 1 次（整理不出來的重寫一次）。水位推到 {@link integrationWatermark}，更晚的事實留到下次（它們照樣作為
+ * 尾巴帶進上下文）。
  */
 export async function integrateLore(project: NovelProject, relPaths?: readonly string[]): Promise<void> {
   const host = getHost();
@@ -397,10 +397,10 @@ export async function integrateLore(project: NovelProject, relPaths?: readonly s
     );
     host.toast(
       waiting
-        ? `新内容在第 ${through + 1} 章之后：第 ${through + 1} 章还没同步（或同步之后正文又改过），整合停在它前面。`
+        ? `新內容在第 ${through + 1} 章之後：第 ${through + 1} 章還沒同步（或同步之後正文又改過），整合停在它前面。`
         : relPaths?.length
-          ? '这一条没有新内容要整合。'
-          : '没有要整合的设定：条目都跟上了同步过的章。'
+          ? '這一條沒有新內容要整合。'
+          : '沒有要整合的設定：條目都跟上了同步過的章。'
     );
     return;
   }
@@ -408,12 +408,12 @@ export async function integrateLore(project: NovelProject, relPaths?: readonly s
   const authored = plans.filter((p) => !loreOwnedByMachine(p.record.entry)).length;
   const lanes = Math.max(1, Math.min(readConfig().concurrency, n));
   const answer = await askCall({
-    message: `整合 ${n} 条设定：${describeCalls(loreEntryCalls(n))}。把同步过的章里的新内容并进条目（整合到第 ${through} 章）。`,
-    actions: authored < n ? ['逐条确认后开始', '机器写的直接采纳并开始'] : ['逐条确认后开始'],
+    message: `整合 ${n} 條設定：${describeCalls(loreEntryCalls(n))}。把同步過的章裡的新內容並進條目（整合到第 ${through} 章）。`,
+    actions: authored < n ? ['逐條確認後開始', '機器寫的直接採納並開始'] : ['逐條確認後開始'],
     detail: [
-      `要整合的：${plans.slice(0, 20).map((p) => p.record.entry.title).join('、')}${n > 20 ? ` 等 ${n} 条` : ''}`,
-      authored > 0 ? `其中 ${authored} 条你改过，不管选哪个都会先给你对比再写。` : '',
-      lanes > 1 ? `最多 ${lanes} 条同时整合；逐条确认时，对比按完成顺序一条一条弹出。` : '一条一条串行整合（并发数为 1）。',
+      `要整合的：${plans.slice(0, 20).map((p) => p.record.entry.title).join('、')}${n > 20 ? ` 等 ${n} 條` : ''}`,
+      authored > 0 ? `其中 ${authored} 條你改過，不管選哪個都會先給你對比再寫。` : '',
+      lanes > 1 ? `最多 ${lanes} 條同時整合；逐條確認時，對比按完成順序一條一條彈出。` : '一條一條序列整合（併發數為 1）。',
     ]
       .filter(Boolean)
       .join('\n\n'),
@@ -421,19 +421,19 @@ export async function integrateLore(project: NovelProject, relPaths?: readonly s
     contextDetail: false,
   });
   if (!answer) {
-    log.info('作者取消了整合设定');
+    log.info('作者取消了整合設定');
     return;
   }
-  const autoApply = answer.action === '机器写的直接采纳并开始';
+  const autoApply = answer.action === '機器寫的直接採納並開始';
   return withCallChoice(answer.choice, async () => {
     const pool = await createModelPool({ task: 'loreSynthesis', concurrent: lanes > 1 });
     if (!pool) {
-      log.error('没有可用的模型，整合设定中止');
+      log.error('沒有可用的模型，整合設定中止');
       return;
     }
 
     await runTask(
-      '整合设定',
+      '整合設定',
       async ({ signal, report }) => {
         const startedAt = Date.now();
         let updated = 0;
@@ -452,26 +452,26 @@ export async function integrateLore(project: NovelProject, relPaths?: readonly s
               }
             } else {
               failed++;
-              log.error(`设定「${p.record.entry.title}」整合失败`, describeError(result.reason));
+              log.error(`設定「${p.record.entry.title}」整合失敗`, describeError(result.reason));
               void recordFailure(project, {
                 scope: '设定',
                 targetKind: 'lore',
                 targetKey: p.record.entry.relPath,
                 severity: 'error',
                 op: 'integrateLore',
-                message: `整合失败：${describeError(result.reason)}`,
-                detail: `这一条没有改动｜要并进的是第 ${unique(p.facts.map((f) => String(f.no))).join('、')} 章的新内容`,
+                message: `整合失敗：${describeError(result.reason)}`,
+                detail: `這一條沒有改動｜要並進的是第 ${unique(p.facts.map((f) => String(f.no))).join('、')} 章的新內容`,
               });
             }
-            report({ message: `已整合 ${done}/${n} 条`, current: done, total: n });
+            report({ message: `已整合 ${done}/${n} 條`, current: done, total: n });
           },
         });
         project.invalidate();
         const summary =
-          `更新 ${updated} 条设定` +
-          (skipped > 0 ? `，没采纳 ${skipped} 条` : '') +
-          (failed > 0 ? `，失败 ${failed} 条（详见日志页）` : '');
-        log.info('整合设定结束', `${summary}｜总耗时 ${elapsed(startedAt)}`);
+          `更新 ${updated} 條設定` +
+          (skipped > 0 ? `，沒採納 ${skipped} 條` : '') +
+          (failed > 0 ? `，失敗 ${failed} 條（詳見日誌頁）` : '');
+        log.info('整合設定結束', `${summary}｜總耗時 ${elapsed(startedAt)}`);
         host.toast(`${summary}。`);
       },
       { scope: '设定' }
@@ -479,7 +479,7 @@ export async function integrateLore(project: NovelProject, relPaths?: readonly s
   });
 }
 
-/** 整合一条。返回是否写了。`recorded` 是名录里另记着、还没建条目的名字（新关键词不收）。 */
+/** 整合一條。返回是否寫了。`recorded` 是名錄裡另記著、還沒建條目的名字（新關鍵詞不收）。 */
 async function integrateOne(
   project: NovelProject,
   plan: IntegratePlan,
@@ -492,21 +492,21 @@ async function integrateOne(
 ): Promise<boolean> {
   const { entry } = plan.record;
   const user = [
-    `设定：${entry.title}`,
-    `分类：${entry.category || '未分类'}`,
-    entry.keywords.length > 0 ? `已有关键词：${entry.keywords.join('、')}` : '',
+    `設定：${entry.title}`,
+    `分類：${entry.category || '未分類'}`,
+    entry.keywords.length > 0 ? `已有關鍵詞：${entry.keywords.join('、')}` : '',
     '',
-    `现有条目（作者认可过的内容，记录没有明确推翻的不删）：\n一句话：${entry.brief || '（没写）'}\n${entry.body.trim() || '（还是空的）'}`,
+    `現有條目（作者認可過的內容，記錄沒有明確推翻的不刪）：\n一句話：${entry.brief || '（沒寫）'}\n${entry.body.trim() || '（還是空的）'}`,
     '',
-    `第 ${entry.updatedThrough ?? 0} 章之后定稿细纲里关于它的新记录（按章号）：\n${renderRecords(plan.facts)}`,
+    `第 ${entry.updatedThrough ?? 0} 章之後定稿細綱裡關於它的新記錄（按章號）：\n${renderRecords(plan.facts)}`,
   ]
     .filter((line, i, all) => line !== '' || all[i - 1] !== '')
     .join('\n');
-  const draft = await draftEntry(pool, transcribe, `设定「${entry.title}」整合`, user, signal);
+  const draft = await draftEntry(pool, transcribe, `設定「${entry.title}」整合`, user, signal);
   if (signal.aborted) {
     return false;
   }
-  // 已有的关键词原样留着（只增不减，可能是作者写的）；模型新给的过一遍人名、别的条目的标题与名录里另记着的名字。
+  // 已有的關鍵詞原樣留著（只增不減，可能是作者寫的）；模型新給的過一遍人名、別的條目的標題與名錄裡另記著的名字。
   const [entries, cards] = await Promise.all([project.listLore(), project.listCharacters()]);
   const fresh = cleanLoreKeywords(entry.title, draft.keywords, {
     titles: entries.filter((e) => e.slug !== entry.slug).map((e) => e.title),
@@ -524,56 +524,56 @@ async function integrateOne(
   });
   const abs = project.pathOf(entry.relPath);
   const machine = loreOwnedByMachine(entry);
-  // 原来有暗设、整合完一句都没了：分不清是正文全揭开了还是模型漏了，机器写的也先对比，不直接采纳（第 27 条）。
+  // 原來有暗設、整合完一句都沒了：分不清是正文全揭開了還是模型漏了，機器寫的也先對比，不直接採納（第 27 條）。
   const hiddenGone = splitLoreHidden(entry.body).hidden !== '' && splitLoreHidden(draft.body).hidden === '';
   if (!(machine && autoApply) || hiddenGone) {
     const verdict = await serialize(async () => {
-      // 排到队之前文件可能已被别处改过，进队后再读一次才是当下的真相。
+      // 排到隊之前檔案可能已被別處改過，進隊後再讀一次才是當下的真相。
       const current = await readText(abs);
       const host = getHost();
       if (host.reviewReplace) {
-        return plainVerdict(await host.reviewReplace(`设定「${entry.title}」`, current, proposed, entry.relPath));
+        return plainVerdict(await host.reviewReplace(`設定「${entry.title}」`, current, proposed, entry.relPath));
       }
-      const pick = await host.confirm(`已整合设定「${entry.title}」。采纳？`, ['采纳', '跳过'], { modal: true });
-      return pick === '采纳' ? 'apply' : pick === '跳过' ? 'discard' : undefined;
+      const pick = await host.confirm(`已整合設定「${entry.title}」。採納？`, ['採納', '跳過'], { modal: true });
+      return pick === '採納' ? 'apply' : pick === '跳過' ? 'discard' : undefined;
     });
     if (verdict !== 'apply' || signal.aborted) {
-      log.info(`没采纳设定「${entry.title}」的整合`, verdict === 'discard' ? '作者放弃' : '作者取消');
+      log.info(`沒採納設定「${entry.title}」的整合`, verdict === 'discard' ? '作者放棄' : '作者取消');
       return false;
     }
   }
   await new Workspace(project).write(entry.relPath, { text: proposed }, { mode: 'overwrite', review: false });
   await clearFailures(project, 'lore', entry.relPath, 'integrateLore');
   log.info(
-    `已整合设定「${entry.title}」`,
-    `${entry.relPath}｜并进 ${plan.facts.length} 条新记录｜整合到第 ${through} 章${
-      !machine ? '｜作者改过，对比后采纳' : hiddenGone ? '｜暗设没了，对比后采纳' : ''
+    `已整合設定「${entry.title}」`,
+    `${entry.relPath}｜並進 ${plan.facts.length} 條新記錄｜整合到第 ${through} 章${
+      !machine ? '｜作者改過，對比後採納' : hiddenGone ? '｜暗設沒了，對比後採納' : ''
     }`
   );
   return true;
 }
 
-// ---------------------------------------------------------------- 批量展开（完善设定三期）
+// ---------------------------------------------------------------- 批次展開（完善設定三期）
 
-/** 批量展开一条的结果。 */
+/** 批次展開一條的結果。 */
 type ExpandOutcome =
   | { written: true; children: string[] }
   | { written: false; why: string };
 
 /**
- * 批量展开（完善设定三期，设计稿 §5）：把还只有一句话的设定照已排的细纲往前想细，**写完直接落盘，没有卡片**。
+ * 批次展開（完善設定三期，設計稿 §5）：把還只有一句話的設定照已排的細綱往前想細，**寫完直接落盤，沒有卡片**。
  *
- * - 范围：给了 `relPaths` 就是那几条（批量拆细纲「拆完展开本批新设定」）；没给就是「待完善」里的全部——还没有条目的
- *   先按细纲「设定」一节的分类建空条目（同单条「展开…」与细纲带出新设定，`createPlannedLoreAt`）。
- * - 只写 {@link loreBatchExpandable} 的（空的、占位的、机器写的薄条目）：作者写过的跳过，确认框与完成提示里都说出来
- *   （第 19 条批量那一面：不问、不覆盖）。跑的这几十秒里作者改了某一条，落盘前再认一遍，改过就不写。
- * - 同一份展开合同与装配（对话页单条设定那个目标，`poolIO`），每条写 1 次、转写 1 次（2026-10-25 起改成转写）；转写不合格
- *   重转一次、整理不出来重写一次，两样不叠加，合计上限 4 次（{@link LORE_EXPAND_BATCH_CALLS}）；被输出上限截断不重写。
- *   写下的记作机器写的（`bodyHash`），水位同整合、不往回退。
- * - 建议拆出的子条目照建空条目，**不在同一批里接着展开**；还没定的问题批量没处放，丢掉（要问题就单条展开）。
- * - 模型走「故事架构」档（设计稿 #12：展开是创作，和设定清单同一档），不带思考深度（第 26 条）。失败挂在那一条上（第 16 条）。
+ * - 範圍：給了 `relPaths` 就是那幾條（批次拆細綱「拆完展開本批新設定」）；沒給就是「待完善」裡的全部——還沒有條目的
+ *   先按細綱「設定」一節的分類建空條目（同單條「展開…」與細綱帶出新設定，`createPlannedLoreAt`）。
+ * - 只寫 {@link loreBatchExpandable} 的（空的、佔位的、機器寫的薄條目）：作者寫過的跳過，確認框與完成提示裡都說出來
+ *   （第 19 條批次那一面：不問、不覆蓋）。跑的這幾十秒裡作者改了某一條，落盤前再認一遍，改過就不寫。
+ * - 同一份展開合同與裝配（對話頁單條設定那個目標，`poolIO`），每條寫 1 次、轉寫 1 次（2026-10-25 起改成轉寫）；轉寫不合格
+ *   重轉一次、整理不出來重寫一次，兩樣不疊加，合計上限 4 次（{@link LORE_EXPAND_BATCH_CALLS}）；被輸出上限截斷不重寫。
+ *   寫下的記作機器寫的（`bodyHash`），水位同整合、不往回退。
+ * - 建議拆出的子條目照建空條目，**不在同一批裡接著展開**；還沒定的問題批次沒處放，丟掉（要問題就單條展開）。
+ * - 模型走「故事架構」檔（設計稿 #12：展開是創作，和設定清單同一檔），不帶思考深度（第 26 條）。失敗掛在那一條上（第 16 條）。
  *
- * `opts.lead`：确认框开头那句换成调用方的说法（拆细纲之后「第 1–5 章拆出了 3 条新设定」）。返回实际调了几次模型。
+ * `opts.lead`：確認框開頭那句換成呼叫方的說法（拆細綱之後「第 1–5 章拆出了 3 條新設定」）。返回實際調了幾次模型。
  */
 export async function expandLoreEntries(
   project: NovelProject,
@@ -596,16 +596,16 @@ export async function expandLoreEntries(
   const n = ready.length + missing.length;
   const authoredNote =
     authored.length > 0
-      ? `跳过你写过的 ${authored.length} 条：${authored.slice(0, 10).map((e) => e.title).join('、')}${authored.length > 10 ? ' 等' : ''}` +
-        '（要展开就在那一条上右键「展开…」，先对比再写）。'
+      ? `跳過你寫過的 ${authored.length} 條：${authored.slice(0, 10).map((e) => e.title).join('、')}${authored.length > 10 ? ' 等' : ''}` +
+        '（要展開就在那一條上右鍵「展開…」，先對比再寫）。'
       : '';
   if (n === 0) {
     host.toast(
       authored.length > 0
-        ? `没有能直接展开的设定。${authoredNote}`
+        ? `沒有能直接展開的設定。${authoredNote}`
         : relPaths
-          ? '这几条设定都不在了，或者已经写过内容。'
-          : '「待完善」里没有要展开的设定。'
+          ? '這幾條設定都不在了，或者已經寫過內容。'
+          : '「待完善」裡沒有要展開的設定。'
     );
     return 0;
   }
@@ -613,43 +613,43 @@ export async function expandLoreEntries(
   const lanes = Math.max(1, Math.min(readConfig().concurrency, n));
   const names = [...ready.map((e) => e.title), ...missing.map((m) => m.name)];
   const answer = await askCall({
-    message: `${opts.lead ?? ''}展开 ${n} 条设定：${describeCalls(loreExpandCalls(n))}。照已排的细纲把它们往前想细，写完直接落盘。`,
-    actions: ['开始展开'],
+    message: `${opts.lead ?? ''}展開 ${n} 條設定：${describeCalls(loreExpandCalls(n))}。照已排的細綱把它們往前想細，寫完直接落盤。`,
+    actions: ['開始展開'],
     detail: [
-      `要展开的：${names.slice(0, 20).join('、')}${n > 20 ? ` 等 ${n} 条` : ''}`,
-      missing.length > 0 ? `其中 ${missing.length} 条还没有条目，先按细纲「设定」一节里的分类建空条目。` : '',
-      '只写还只有一句话、没有你的字的条目（空的、占位的、机器写的）；写下的记作机器写的，以后整合可以直接采纳。',
+      `要展開的：${names.slice(0, 20).join('、')}${n > 20 ? ` 等 ${n} 條` : ''}`,
+      missing.length > 0 ? `其中 ${missing.length} 條還沒有條目，先按細綱「設定」一節裡的分類建空條目。` : '',
+      '只寫還只有一句話、沒有你的字的條目（空的、佔位的、機器寫的）；寫下的記作機器寫的，以後整合可以直接採納。',
       authoredNote,
-      '建议拆出的子条目建成空条目，不在这一批里接着展开；还没定的问题批量不留——要看问题就单条展开。',
-      lanes > 1 ? `最多 ${lanes} 条同时展开。` : '一条一条串行展开（并发数为 1）。',
+      '建議拆出的子條目建成空條目，不在這一批裡接著展開；還沒定的問題批次不留——要看問題就單條展開。',
+      lanes > 1 ? `最多 ${lanes} 條同時展開。` : '一條一條序列展開（併發數為 1）。',
     ]
       .filter(Boolean)
       .join('\n\n'),
     tasks: ['setting', 'transcribe'],
     contextDetail: true,
   });
-  if (answer?.action !== '开始展开') {
-    log.info('作者取消了批量展开设定');
+  if (answer?.action !== '開始展開') {
+    log.info('作者取消了批次展開設定');
     return 0;
   }
   return withCallChoice(answer.choice, async () => {
     const config = readConfig();
     const pool = await createModelPool({ task: 'setting', concurrent: lanes > 1 });
     if (!pool) {
-      log.error('没有可用的模型，批量展开设定中止');
+      log.error('沒有可用的模型，批次展開設定中止');
       return 0;
     }
 
     let calls = 0;
     await runTask(
-      '展开设定',
+      '展開設定',
       async ({ signal, report }) => {
-        // 先存一个存档点（features/checkpoint.ts）：没有卡片、写完直接落盘，整本退得回去。
-        await checkpointBefore(project, `展开设定之前（${n} 条）`);
+        // 先存一個存檔點（features/checkpoint.ts）：沒有卡片、寫完直接落盤，整本退得回去。
+        await checkpointBefore(project, `展開設定之前（${n} 條）`);
         const startedAt = Date.now();
         const targets = [...ready.map((e) => e.relPath)];
         if (missing.length > 0) {
-          // 「待完善」里还没有条目的：先建空条目（名字这时已被别的条目或角色卡占了的不建，同细纲带出新设定）。
+          // 「待完善」裡還沒有條目的：先建空條目（名字這時已被別的條目或角色卡佔了的不建，同細綱帶出新設定）。
           const made = await createPlannedLoreAt(
             project,
             new Workspace(project),
@@ -657,7 +657,7 @@ export async function expandLoreEntries(
           );
           targets.push(...made.map((c) => c.relPath));
           if (made.length < missing.length) {
-            log.info(`展开之前有 ${missing.length - made.length} 个名字没建空条目`, '名字已被别的条目或角色卡占了');
+            log.info(`展開之前有 ${missing.length - made.length} 個名字沒建空條目`, '名字已被別的條目或角色卡佔了');
           }
         }
         const total = targets.length;
@@ -665,7 +665,7 @@ export async function expandLoreEntries(
         let failed = 0;
         const skipped: string[] = [];
         const children: string[] = [];
-        /** 失败记账等收尾时一起等完：完成提示出来时，红 ❗ 已经挂在那一条上了。 */
+        /** 失敗記賬等收尾時一起等完：完成提示出來時，紅 ❗ 已經掛在那一條上了。 */
         const records: Promise<void>[] = [];
         await runPool(
           targets,
@@ -686,7 +686,7 @@ export async function expandLoreEntries(
                 }
               } else if (!(result.reason instanceof CancelledError) && !signal.aborted) {
                 failed++;
-                log.error(`设定 ${rel} 展开失败`, describeError(result.reason));
+                log.error(`設定 ${rel} 展開失敗`, describeError(result.reason));
                 records.push(
                   recordFailure(project, {
                     scope: '设定',
@@ -694,28 +694,28 @@ export async function expandLoreEntries(
                     targetKey: rel,
                     severity: 'error',
                     op: 'expandLore',
-                    message: `展开失败：${describeError(result.reason)}`,
-                    detail: '批量展开，这一条没有改动。可以在这一条上右键「展开…」单条再试。',
+                    message: `展開失敗：${describeError(result.reason)}`,
+                    detail: '批次展開，這一條沒有改動。可以在這一條上右鍵「展開…」單條再試。',
                   })
                 );
               }
-              report({ message: `已展开 ${done}/${total} 条`, current: done, total });
+              report({ message: `已展開 ${done}/${total} 條`, current: done, total });
             },
           }
         );
         await Promise.all(records);
         project.invalidate();
         if (signal.aborted) {
-          log.warn(`批量展开设定被取消，已写 ${written} 条`);
+          log.warn(`批次展開設定被取消，已寫 ${written} 條`);
           return;
         }
         const summary =
-          `展开 ${written} 条设定` +
-          (children.length > 0 ? `，新建子条目 ${children.length} 条：${children.join('、')}` : '') +
-          (skipped.length > 0 ? `，没写 ${skipped.length} 条（${skipped.join('；')}）` : '') +
-          (authored.length > 0 ? `，跳过你写过的 ${authored.length} 条` : '') +
-          (failed > 0 ? `，失败 ${failed} 条（详见日志页）` : '');
-        log.info('批量展开设定结束', `${summary}｜调用 ${calls} 次｜总耗时 ${elapsed(startedAt)}`);
+          `展開 ${written} 條設定` +
+          (children.length > 0 ? `，新建子條目 ${children.length} 條：${children.join('、')}` : '') +
+          (skipped.length > 0 ? `，沒寫 ${skipped.length} 條（${skipped.join('；')}）` : '') +
+          (authored.length > 0 ? `，跳過你寫過的 ${authored.length} 條` : '') +
+          (failed > 0 ? `，失敗 ${failed} 條（詳見日誌頁）` : '');
+        log.info('批次展開設定結束', `${summary}｜呼叫 ${calls} 次｜總耗時 ${elapsed(startedAt)}`);
         host.toast(`${summary}。`);
       },
       { scope: '设定' }
@@ -725,8 +725,8 @@ export async function expandLoreEntries(
 }
 
 /**
- * 展开一条并落盘（批量那条路）。对话页那条路是 generation/generate.ts 的单条设定目标 + 卡片 + `acceptLoreEntries`；
- * 这里同一份装配与链，落盘按批量的规矩：落盘前按磁盘再认一遍——不在了、作者在这期间写了字的不写。
+ * 展開一條並落盤（批次那條路）。對話頁那條路是 generation/generate.ts 的單條設定目標 + 卡片 + `acceptLoreEntries`；
+ * 這裡同一份裝配與鏈，落盤按批次的規矩：落盤前按磁碟再認一遍——不在了、作者在這期間寫了字的不寫。
  */
 async function expandOne(
   project: NovelProject,
@@ -738,9 +738,9 @@ async function expandOne(
 ): Promise<ExpandOutcome> {
   const target: CreationTarget = { kind: 'lore', relPath };
   const known = await loreExpandKnown(project, target);
-  const label = `展开设定「${known.title}」`;
+  const label = `展開設定「${known.title}」`;
   const io = poolIO(project, pool, config, signal, { action: { stage: 'setting', capability: 'generate' }, target, ask: '' });
-  // 转写也算一次调用（完成提示报的总数，第 4 条）。
+  // 轉寫也算一次呼叫（完成提示報的總數，第 4 條）。
   const transcribe = io.chain.transcribe!;
   const counted = {
     ...io.chain,
@@ -752,10 +752,10 @@ async function expandOne(
   for (let attempt = 1; !result; attempt++) {
     const first = await counted.call(messages, label);
     try {
-      // 第二次是重写：转写不合格不再重转（LORE_EXPAND_BATCH_CALLS）。
+      // 第二次是重寫：轉寫不合格不再重轉（LORE_EXPAND_BATCH_CALLS）。
       result = await completeLoreExpand(first, { ...counted, messages }, known, { retranscribe: attempt === 1 });
     } catch (err) {
-      // 只重写一次；重写连带转写一次，余量要够两次：第一次已经重转过的不再重写（两样不叠加）。
+      // 只重寫一次；重寫連帶轉寫一次，餘量要夠兩次：第一次已經重轉過的不再重寫（兩樣不疊加）。
       const again =
         attempt === 1 &&
         err instanceof ChainError &&
@@ -765,26 +765,26 @@ async function expandOne(
       if (!again) {
         throw err;
       }
-      log.warn(`${label}：${err.message}这一条重来一次`);
+      log.warn(`${label}：${err.message}這一條重來一次`);
     }
   }
   if (result.notes.length > 0) {
-    log.info(`${label}：${result.notes.length} 处说明`, result.notes.join('\n'));
+    log.info(`${label}：${result.notes.length} 處說明`, result.notes.join('\n'));
   }
   const { entries: drafts } = parseLoreExpansion(result.raw, relPath);
   const [main, ...children] = drafts;
   if (!main || signal.aborted) {
-    throw new Error('展开解析不出来');
+    throw new Error('展開解析不出來');
   }
   return serialize(async () => {
-    // 排到队之前文件可能已被别处改过，进队后再读一次才是当下的真相。
+    // 排到隊之前檔案可能已被別處改過，進隊後再讀一次才是當下的真相。
     const [entries, cards] = await Promise.all([project.listLore(), project.listCharacters()]);
     const { entry, exists: there } = await loreEntryAt(project, relPath, entries);
     if (!there) {
       return { written: false, why: `「${entry.title}」不在了` };
     }
     if (!loreBatchExpandable(entry)) {
-      return { written: false, why: `「${entry.title}」展开期间有人写了内容` };
+      return { written: false, why: `「${entry.title}」展開期間有人寫了內容` };
     }
     const fresh = cleanLoreKeywords(entry.title, main.keywords, {
       titles: [...entries.filter((e) => e.relPath !== relPath).map((e) => e.title), ...children.map((c) => c.title)],
@@ -798,7 +798,7 @@ async function expandOne(
       keywords: unique([...(entry.keywords.length > 0 ? entry.keywords : [entry.title]), ...fresh]),
       brief: main.brief || entry.brief,
       body,
-      // 同单条展开：只往前推不往回退。
+      // 同單條展開：只往前推不往回退。
       updatedThrough: Math.max(entry.updatedThrough ?? 0, await integrationWatermark(project)),
       bodyHash: hash(body),
     });
@@ -812,46 +812,46 @@ async function expandOne(
     await clearFailures(project, 'lore', relPath, 'expandLore');
     await clearFailures(project, 'lore', relPath, 'creation');
     log.info(
-      `已展开设定「${entry.title}」`,
-      `${relPath}｜正文 ${body.length} 字｜批量，直接写${made.length > 0 ? `｜新建子条目 ${made.map((c) => c.name).join('、')}` : ''}`
+      `已展開設定「${entry.title}」`,
+      `${relPath}｜正文 ${body.length} 字｜批次，直接寫${made.length > 0 ? `｜新建子條目 ${made.map((c) => c.name).join('、')}` : ''}`
     );
     return { written: true, children: made.map((c) => c.name) };
   });
 }
 
-// ---------------------------------------------------------------- 按目录整理
+// ---------------------------------------------------------------- 按目錄整理
 
-/** 整理的范围：只整理根目录下（未分类）的，还是全部。 */
+/** 整理的範圍：只整理根目錄下（未分類）的，還是全部。 */
 export type OrganizeScope = 'unfiled' | 'all';
 
-/** 校验过的一次搬家。 */
+/** 校驗過的一次搬家。 */
 export interface LoreMove {
   from: string;
-  /** 现在所在的目录（相对 `lore/`，根目录是空串）。 */
+  /** 現在所在的目錄（相對 `lore/`，根目錄是空串）。 */
   category: string;
-  /** 目标目录（相对 `lore/`，根目录是空串）。 */
+  /** 目標目錄（相對 `lore/`，根目錄是空串）。 */
   to: string;
   title: string;
 }
 
 /**
- * 按目录整理（作者定案）。模型只出一份搬家清单，程序校验，作者看过点了「照这样整理」才搬；
- * 搬家走网关的 `move`（只在设定区里），**条目内容一个字不改**。`scope` 没给就先问。
+ * 按目錄整理（作者定案）。模型只出一份搬家清單，程式校驗，作者看過點了「照這樣整理」才搬；
+ * 搬家走閘道器的 `move`（只在設定區裡），**條目內容一個字不改**。`scope` 沒給就先問。
  */
 export async function organizeLore(project: NovelProject, scope?: OrganizeScope): Promise<void> {
   const host = getHost();
   const entries = await project.listLore();
   if (entries.length === 0) {
-    host.toast('还没有设定条目，没什么可整理的。');
+    host.toast('還沒有設定條目，沒什麼可整理的。');
     return;
   }
   const unfiled = entries.filter((e) => !e.category).length;
   let range = scope;
   if (!range) {
     const ask = await host.confirm(
-      `按目录整理设定：让模型照本书的目录树给条目归类，先出一份搬家清单给你看，你点头了才搬。`,
-      [...(unfiled > 0 ? [`只整理未分类的 ${unfiled} 条`] : []), `全部 ${entries.length} 条都看一遍`],
-      { modal: true, detail: '目录就是分类，可以多层；模型可以提议新目录。只搬文件，条目内容一个字不改。' }
+      `按目錄整理設定：讓模型照本書的目錄樹給條目歸類，先出一份搬家清單給你看，你點頭了才搬。`,
+      [...(unfiled > 0 ? [`只整理未分類的 ${unfiled} 條`] : []), `全部 ${entries.length} 條都看一遍`],
+      { modal: true, detail: '目錄就是分類，可以多層；模型可以提議新目錄。只搬檔案，條目內容一個字不改。' }
     );
     if (!ask) {
       return;
@@ -860,29 +860,29 @@ export async function organizeLore(project: NovelProject, scope?: OrganizeScope)
   }
   const targets = range === 'unfiled' ? entries.filter((e) => !e.category) : entries;
   if (targets.length === 0) {
-    host.toast('根目录下没有未分类的条目。');
+    host.toast('根目錄下沒有未分類的條目。');
     return;
   }
   const batches = chunk(targets, ORGANIZE_BATCH);
   const answer = await askCall({
-    message: `整理 ${targets.length} 条设定：分 ${batches.length} 批，${describeCalls(transcribedCalls(batches.length, '每批'))}，出一份搬家清单。`,
-    actions: ['开始'],
+    message: `整理 ${targets.length} 條設定：分 ${batches.length} 批，${describeCalls(transcribedCalls(batches.length, '每批'))}，出一份搬家清單。`,
+    actions: ['開始'],
     tasks: ['loreSynthesis', 'transcribe'],
     contextDetail: false,
   });
-  if (answer?.action !== '开始') {
+  if (answer?.action !== '開始') {
     return;
   }
   return withCallChoice(answer.choice, async () => {
     const config = readConfig();
     const pool = await createModelPool({ task: 'loreSynthesis', concurrent: false });
     if (!pool) {
-      log.error('没有可用的模型，整理中止');
+      log.error('沒有可用的模型，整理中止');
       return;
     }
 
     await runTask(
-      '按目录整理设定',
+      '按目錄整理設定',
       async ({ signal, report }) => {
         const categories = await project.listLoreCategories();
         const folders = new Set<string>();
@@ -895,7 +895,7 @@ export async function organizeLore(project: NovelProject, scope?: OrganizeScope)
           }
           report({ message: `第 ${i + 1}/${batches.length} 批`, current: i, total: batches.length });
           try {
-            const raw = await pool.run(`整理设定第 ${i + 1} 批`, (llm) =>
+            const raw = await pool.run(`整理設定第 ${i + 1} 批`, (llm) =>
               collectText(
                 llm.stream(
                   [
@@ -906,15 +906,15 @@ export async function organizeLore(project: NovelProject, scope?: OrganizeScope)
                 )
               )
             );
-            // 2026-10-25 起改成转写：按「## 新目录」「## 搬家」写的清单交给转写那一档照抄成 JSON（原文本身就是 JSON 的不转）。
-            // 转写没成同从前解析不了：这一批算失败，别的批照常。
+            // 2026-10-25 起改成轉寫：按「## 新目錄」「## 搬家」寫的清單交給轉寫那一檔照抄成 JSON（原文字身就是 JSON 的不轉）。
+            // 轉寫沒成同從前解析不了：這一批算失敗，別的批照常。
             const known = [...categories, ...folders];
-            const r = await transcribeJson(raw, organizeSpec(`整理设定第 ${i + 1} 批`, batch, known), transcribe);
+            const r = await transcribeJson(raw, organizeSpec(`整理設定第 ${i + 1} 批`, batch, known), transcribe);
             if (r.notes.length > 0) {
-              log.info(`整理设定第 ${i + 1} 批：转写 ${r.calls} 次`, r.notes.join('\n'));
+              log.info(`整理設定第 ${i + 1} 批：轉寫 ${r.calls} 次`, r.notes.join('\n'));
             }
             if (!r.ok) {
-              throw new Error(r.failed ? r.message : `模型返回无法解析（${r.message}；${raw.length} 字）`);
+              throw new Error(r.failed ? r.message : `模型返回無法解析（${r.message}；${raw.length} 字）`);
             }
             const plan = r.value;
             plan.folders.forEach((f) => folders.add(f));
@@ -924,12 +924,12 @@ export async function organizeLore(project: NovelProject, scope?: OrganizeScope)
             if (signal.aborted) {
               return;
             }
-            log.error(`整理设定第 ${i + 1} 批失败`, describeError(err));
-            notes.push(`第 ${i + 1} 批失败：${describeError(err)}`);
+            log.error(`整理設定第 ${i + 1} 批失敗`, describeError(err));
+            notes.push(`第 ${i + 1} 批失敗：${describeError(err)}`);
           }
         }
         if (notes.length > 0) {
-          log.warn(`搬家清单里有 ${notes.length} 处没收`, notes.join('\n'));
+          log.warn(`搬家清單裡有 ${notes.length} 處沒收`, notes.join('\n'));
         }
         const used = new Set(moves.map((m) => m.to));
         const newFolders = [...folders].filter((f) => used.has(f) || moves.some((m) => m.to.startsWith(`${f}/`)));
@@ -937,29 +937,29 @@ export async function organizeLore(project: NovelProject, scope?: OrganizeScope)
           host.toast('都放得好好的，不用搬。');
           return;
         }
-        const listing = moves.slice(0, 60).map((m) => `${m.title}：${m.category || '未分类'} → ${m.to || '未分类'}`);
+        const listing = moves.slice(0, 60).map((m) => `${m.title}：${m.category || '未分類'} → ${m.to || '未分類'}`);
         const ok = await host.confirm(
-          `搬 ${moves.length} 条设定${newFolders.length > 0 ? `，新建 ${newFolders.length} 个目录` : ''}。只搬文件，条目内容一个字不改。`,
-          ['照这样整理'],
+          `搬 ${moves.length} 條設定${newFolders.length > 0 ? `，新建 ${newFolders.length} 個目錄` : ''}。只搬檔案，條目內容一個字不改。`,
+          ['照這樣整理'],
           {
             modal: true,
             detail: [
-              newFolders.length > 0 ? `新目录：${newFolders.join('、')}` : '',
-              listing.join('\n') + (moves.length > 60 ? `\n……还有 ${moves.length - 60} 条` : ''),
-              notes.length > 0 ? `另有 ${notes.length} 处没收（详见日志页）。` : '',
+              newFolders.length > 0 ? `新目錄：${newFolders.join('、')}` : '',
+              listing.join('\n') + (moves.length > 60 ? `\n……還有 ${moves.length - 60} 條` : ''),
+              notes.length > 0 ? `另有 ${notes.length} 處沒收（詳見日誌頁）。` : '',
             ]
               .filter(Boolean)
               .join('\n\n'),
           }
         );
-        if (ok !== '照这样整理') {
-          log.info('作者没采纳搬家清单');
+        if (ok !== '照這樣整理') {
+          log.info('作者沒採納搬家清單');
           return;
         }
-        // 先存一个存档点（features/checkpoint.ts）：一次搬很多条，整本退得回去。
-        await checkpointBefore(project, '按目录整理设定之前');
+        // 先存一個存檔點（features/checkpoint.ts）：一次搬很多條，整本退得回去。
+        await checkpointBefore(project, '按目錄整理設定之前');
         const moved = await applyMoves(project, newFolders, moves);
-        host.toast(`已搬 ${moved} 条设定${moved < moves.length ? `，${moves.length - moved} 条没搬（详见日志页）` : ''}。`);
+        host.toast(`已搬 ${moved} 條設定${moved < moves.length ? `，${moves.length - moved} 條沒搬（詳見日誌頁）` : ''}。`);
       },
       { scope: '设定' }
     );
@@ -968,16 +968,16 @@ export async function organizeLore(project: NovelProject, scope?: OrganizeScope)
 
 function organizePrompt(categories: readonly string[], batch: readonly LoreEntry[]): string {
   return [
-    `本书现有目录：${categories.length > 0 ? categories.join('、') : '（还没有目录）'}`,
+    `本書現有目錄：${categories.length > 0 ? categories.join('、') : '（還沒有目錄）'}`,
     '',
-    '要整理的条目（路径｜标题｜一句话）：',
+    '要整理的條目（路徑｜標題｜一句話）：',
     ...batch.map((e) => `- ${e.slug}｜${e.title}｜${e.brief || e.body.trim().split(/\n/)[0]?.slice(0, LORE_ENTRY_LIMITS.brief) || ''}`),
   ].join('\n');
 }
 
 /**
- * 按目录整理转写那一步：合同是 lorePrompt.ts 的 `loreOrganizeJsonContract`，解码就是 {@link checkOrganizePlan}。
- * 路径都照抄原文，没有按对应关系填的（搬回根目录的 `to` 是空串，不比）；原文连「新目录」「搬家」、一个箭头都没有的不转。
+ * 按目錄整理轉寫那一步：合同是 lorePrompt.ts 的 `loreOrganizeJsonContract`，解碼就是 {@link checkOrganizePlan}。
+ * 路徑都照抄原文，沒有按對應關係填的（搬回根目錄的 `to` 是空串，不比）；原文連「新目錄」「搬家」、一個箭頭都沒有的不轉。
  */
 function organizeSpec(
   label: string,
@@ -994,13 +994,13 @@ function organizeSpec(
         return { ok: false, message: describeError(err) };
       }
     },
-    looksLike: (source) => /新目录|搬家|→/.test(source),
+    looksLike: (source) => /新目(?:录|錄)|搬家|→/.test(source),
   };
 }
 
 /**
- * 校验模型给的搬家清单：`from` 得是这一批里的条目（认路径或标题），`to` 得是已有目录或这次提议的新目录
- * （最多三层、每段是合法的文件名），位置没变的去掉，同一条只搬一次。没收的写进 `dropped`（第 2 条）。
+ * 校驗模型給的搬家清單：`from` 得是這一批裡的條目（認路徑或標題），`to` 得是已有目錄或這次提議的新目錄
+ * （最多三層、每段是合法的檔名），位置沒變的去掉，同一條只搬一次。沒收的寫進 `dropped`（第 2 條）。
  */
 export function checkOrganizePlan(
   raw: string,
@@ -1009,7 +1009,7 @@ export function checkOrganizePlan(
 ): { folders: string[]; moves: LoreMove[]; dropped: string[] } {
   const obj = jsonObject(raw);
   if (!obj) {
-    throw new Error(`模型返回无法解析（${raw.length} 字）`);
+    throw new Error(`模型返回無法解析（${raw.length} 字）`);
   }
   const folders: string[] = [];
   const dropped: string[] = [];
@@ -1017,7 +1017,7 @@ export function checkOrganizePlan(
     const dir = normalizeLoreCategory(f);
     const parts = dir.split('/');
     if (!dir || parts.length > ORGANIZE_DEPTH || parts.some((p) => sanitizeFileName(p) !== p)) {
-      dropped.push(`新目录「${f}」不合规`);
+      dropped.push(`新目錄「${f}」不合規`);
       continue;
     }
     if (!folders.includes(dir) && !categories.includes(dir)) {
@@ -1034,12 +1034,12 @@ export function checkOrganizePlan(
     const from = typeof m.from === 'string' ? m.from.trim().replace(/^\.(?:novelwarden|novelforge|novel)\/lore\//, '').replace(/\.md$/i, '') : '';
     const entry = bySlug.get(from) ?? byTitle.get(normalizeLoreName(from));
     if (!entry) {
-      dropped.push(`「${from}」不是这一批里的条目`);
+      dropped.push(`「${from}」不是這一批裡的條目`);
       continue;
     }
     const to = normalizeLoreCategory(typeof m.to === 'string' ? m.to : '');
     if (!allowed.has(to)) {
-      dropped.push(`「${entry.title}」要去的「${to}」既不是已有目录，也没在 folders 里新建`);
+      dropped.push(`「${entry.title}」要去的「${to}」既不是已有目錄，也沒在 folders 裡新建`);
       continue;
     }
     if (to === entry.category || seen.has(entry.slug)) {
@@ -1052,10 +1052,10 @@ export function checkOrganizePlan(
 }
 
 /**
- * 搬文件。返回搬了几条。目标位置已有同名文件的不搬、说出来。
+ * 搬檔案。返回搬了幾條。目標位置已有同名檔案的不搬、說出來。
  *
- * **新目录不先建**：`ws.move` 落盘前自己补齐父目录（落点过网关的守卫，第 7 条），所以新目录只在真有条目搬进去时出现。
- * 从前这里先直接 `fs.mkdir` 建出清单上的每个新目录（绕过网关）——它唯一的效果是：搬不成的时候留下一个空目录。
+ * **新目錄不先建**：`ws.move` 落盤前自己補齊父目錄（落點過閘道器的守衛，第 7 條），所以新目錄只在真有條目搬進去時出現。
+ * 從前這裡先直接 `fs.mkdir` 建出清單上的每個新目錄（繞過閘道器）——它唯一的效果是：搬不成的時候留下一個空目錄。
  */
 async function applyMoves(project: NovelProject, folders: readonly string[], moves: readonly LoreMove[]): Promise<number> {
   const root = project.relPath(project.loreDir);
@@ -1064,16 +1064,16 @@ async function applyMoves(project: NovelProject, folders: readonly string[], mov
   for (const m of moves) {
     const next = `${root}/${m.to ? `${m.to}/` : ''}${path.posix.basename(m.from)}`;
     if (await exists(project.pathOf(next))) {
-      log.warn(`设定「${m.title}」没搬：目标位置已有同名文件`, `${m.from} → ${next}`);
+      log.warn(`設定「${m.title}」沒搬：目標位置已有同名檔案`, `${m.from} → ${next}`);
       continue;
     }
     try {
       await ws.move(m.from, next);
-      // 失败记录按路径挂，搬了家就挂不住了：一并收掉，下次失败再挂。
+      // 失敗記錄按路徑掛，搬了家就掛不住了：一併收掉，下次失敗再掛。
       await clearFailures(project, 'lore', m.from);
       moved++;
     } catch (err) {
-      log.warn(`设定「${m.title}」没搬：${describeError(err)}`, `${m.from} → ${next}`);
+      log.warn(`設定「${m.title}」沒搬：${describeError(err)}`, `${m.from} → ${next}`);
     }
   }
   project.invalidate();
@@ -1081,7 +1081,7 @@ async function applyMoves(project: NovelProject, folders: readonly string[], mov
   for (const dir of folders) {
     created += (await exists(project.pathOf(`${root}/${dir}`))) ? 1 : 0;
   }
-  log.info('按目录整理设定', `搬了 ${moved}/${moves.length} 条｜新目录 ${created}/${folders.length} 个`);
+  log.info('按目錄整理設定', `搬了 ${moved}/${moves.length} 條｜新目錄 ${created}/${folders.length} 個`);
   return moved;
 }
 

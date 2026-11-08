@@ -1,22 +1,22 @@
 /**
- * 字数统计。**与 view.js 的同名函数口径不同，别合并。**
+ * 字數統計。**與 view.js 的同名函式口徑不同，別合併。**
  *
- * 这里的 `countWords` 与 core 的一致（`src/core/model/fs.ts`）：中文按字（基本区与扩展 A 区的汉字）、
- * 英文按词（连着的 `A-Z a-z 0-9 '` 算一个）、标点与空白不算——编辑器状态栏上的「N 字」要与工程页上
- * 后端算出来的章节字数对得上，两个数字不一样会让人以为有内容没保存。view.js 那边统计的是模型回复的
- * 长度（去空白后的字符数），是另一件事。
+ * 這裡的 `countWords` 與 core 的一致（`src/core/model/fs.ts`）：中文按字（基本區與擴充套件 A 區的漢字）、
+ * 英文按詞（連著的 `A-Z a-z 0-9 '` 算一個）、標點與空白不算——編輯器狀態列上的「N 字」要與工程頁上
+ * 後端算出來的章節字數對得上，兩個數字不一樣會讓人以為有內容沒儲存。view.js 那邊統計的是模型回覆的
+ * 長度（去空白後的字元數），是另一件事。
  *
- * 写法与 core 不同、结果一字不差（`tests/unit/editor/writingStats.test.js` 拿 core 那一份对拍）：core 用
- * 正则先去空白、再把每个汉字 match 成一个数组；这里一趟循环数完，不造中间字符串与数组——编辑器每敲一下
- * 都可能要数一遍几万字（见 `stats.ts`），快三倍左右。
+ * 寫法與 core 不同、結果一字不差（`tests/unit/editor/writingStats.test.js` 拿 core 那一份對拍）：core 用
+ * 正則先去空白、再把每個漢字 match 成一個陣列；這裡一趟迴圈數完，不造中間字串與陣列——編輯器每敲一下
+ * 都可能要數一遍幾萬字（見 `stats.ts`），快三倍左右。
  */
 
-/** 这个 UTF-16 码元是不是算字的汉字（与 core 的 `[一-鿿㐀-䶿]` 同一个范围）。 */
+/** 這個 UTF-16 碼元是不是算字的漢字（與 core 的 `[一-鿿㐀-䶿]` 同一個範圍）。 */
 export function isCjkCode(code: number): boolean {
   return (code >= 0x4e00 && code <= 0x9fff) || (code >= 0x3400 && code <= 0x4dbf);
 }
 
-/** 这个码元是不是英文词里的字符（与 core 的 `[A-Za-z0-9']` 同一个范围）。 */
+/** 這個碼元是不是英文詞裡的字元（與 core 的 `[A-Za-z0-9']` 同一個範圍）。 */
 export function isWordCode(code: number): boolean {
   return (
     (code >= 0x61 && code <= 0x7a) || // a-z
@@ -46,7 +46,7 @@ export function countWords(text: string): number {
   return n;
 }
 
-/** 千分位：3120 → 「3,120」。负数带负号。 */
+/** 千分位：3120 → 「3,120」。負數帶負號。 */
 export function groupDigits(n: number): string {
   const s = String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return n < 0 ? `-${s}` : s;

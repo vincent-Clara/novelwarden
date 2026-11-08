@@ -1,23 +1,23 @@
 /**
- * 失败标记的悬停浮窗。
+ * 失敗標記的懸停浮窗。
  *
- * 工程页的行上挂着一个感叹号（`rows.ts` 建的 `.row-failure`），鼠标移上去
- * 才说清「哪一步失败了、卡有没有被改、下次会不会重来」。
+ * 工程頁的行上掛著一個感嘆號（`rows.ts` 建的 `.row-failure`），滑鼠移上去
+ * 才說清「哪一步失敗了、卡有沒有被改、下次會不會重來」。
  *
- * 为什么不用 `title` 属性了事：原生 tooltip 不换行、延迟不可控、而且**选不中**
- * ——失败信息里常有模型返回的片段，用户要复制它去搜。
+ * 為什麼不用 `title` 屬性了事：原生 tooltip 不換行、延遲不可控、而且**選不中**
+ * ——失敗資訊裡常有模型返回的片段，使用者要複製它去搜。
  *
- * 与另外两只浮窗的取舍：
- * - 不像 `detailTip.ts`（`pointer-events: none`，只复读一行被截断的副标题）：
- *   这里是多行、要能选中复制，所以**鼠标必须进得来**，于是收起要留宽限期
- *   ——从行挪到浮窗要跨一道缝，那一两帧鼠标既不在行上也不在浮窗上。
- * - 不像 `summaryTip.ts` 要向后端单取数据：失败记录已经随 `ProjectTree.failures`
- *   全量推过来了（每条几十字、只有出错的目标才有），直接读缓存即可。
+ * 與另外兩隻浮窗的取捨：
+ * - 不像 `detailTip.ts`（`pointer-events: none`，只復讀一行被截斷的副標題）：
+ *   這裡是多行、要能選中複製，所以**滑鼠必須進得來**，於是收起要留寬限期
+ *   ——從行挪到浮窗要跨一道縫，那一兩幀滑鼠既不在行上也不在浮窗上。
+ * - 不像 `summaryTip.ts` 要向後端單取資料：失敗記錄已經隨 `ProjectTree.failures`
+ *   全量推過來了（每條幾十字、只有出錯的目標才有），直接讀快取即可。
  *
- * 定位在 [../tip.ts](../tip.ts)，四只浮窗共用一份。
+ * 定位在 [../tip.ts](../tip.ts)，四隻浮窗共用一份。
  *
- * **触屏**：兼容鼠标事件不当悬停（`touch.ts`）。两个入口，弹出来都是钉住的（按在外面才收）：手指点感叹号本身
- * （点的就是这个标记、看的就是它，不跳到别处），以及长按那一行弹的菜单最前面一项「看失败原因」。
+ * **觸屏**：相容滑鼠事件不當懸停（`touch.ts`）。兩個入口，彈出來都是釘住的（按在外面才收）：手指點感嘆號本身
+ * （點的就是這個標記、看的就是它，不跳到別處），以及長按那一行彈的選單最前面一項「看失敗原因」。
  */
 import { el as mk, closestFrom } from '../../dom';
 import type { MenuContext, MenuItem } from '../../globals';
@@ -30,17 +30,17 @@ import { closeOnOutsidePress, placeTip } from '../tip';
 import { lastTree } from './treeState';
 
 const HOVER_DELAY_MS = 300;
-/** 收起的宽限期：够鼠标从行跨到浮窗，又不至于让它赖着不走。 */
+/** 收起的寬限期：夠滑鼠從行跨到浮窗，又不至於讓它賴著不走。 */
 const CLOSE_DELAY_MS = 200;
 
-/** `unpin` 有值说明是钉住的（触屏的入口）。 */
+/** `unpin` 有值說明是釘住的（觸屏的入口）。 */
 let tip: { key: string; box: HTMLElement; unpin?: () => void } | null = null;
-/** 正在等延迟的那个感叹号（延迟到点时用它定位）。 */
+/** 正在等延遲的那個感嘆號（延遲到點時用它定位）。 */
 let hoverTarget: HTMLElement | null = null;
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** 立刻收起。滚动 / Esc / 右键 / 重渲染用这个，不给宽限。 */
+/** 立刻收起。滾動 / Esc / 右鍵 / 重渲染用這個，不給寬限。 */
 export function hideFailureTip(): void {
   if (hoverTimer) {
     clearTimeout(hoverTimer);
@@ -72,14 +72,14 @@ function cancelScheduledHide(): void {
   }
 }
 
-/** 悬停在某个感叹号上：延迟后弹浮窗。 */
+/** 懸停在某個感嘆號上：延遲後彈浮窗。 */
 function scheduleShow(node: HTMLElement): void {
   const key = node.dataset.failureKey ?? '';
   if (!key) {
     return;
   }
-  // mouseover 在行内子元素之间移动时也会冒泡上来。已经为它开着浮窗、或已经
-  // 在为它计时了就什么都别做——否则光标微动一下就重置延迟，浮窗永远弹不出来。
+  // mouseover 在行內子元素之間移動時也會冒泡上來。已經為它開著浮窗、或已經
+  // 在為它計時了就什麼都別做——否則游標微動一下就重置延遲，浮窗永遠彈不出來。
   if (tip?.key === key || hoverTarget === node) {
     return;
   }
@@ -87,7 +87,7 @@ function scheduleShow(node: HTMLElement): void {
   hoverTarget = node;
   hoverTimer = setTimeout(() => {
     hoverTimer = null;
-    // 延迟期间行可能被重渲染丢弃，那就不弹了。
+    // 延遲期間行可能被重渲染丟棄，那就不彈了。
     if (!hoverTarget?.isConnected) {
       hoverTarget = null;
       return;
@@ -105,7 +105,7 @@ function scheduleShow(node: HTMLElement): void {
 function showTip(node: HTMLElement, key: string, failures: FailureView[]): void {
   const box = mk('div', 'failure-tip');
   box.appendChild(buildBody(failures));
-  // 鼠标进了浮窗就别收——用户正在读，或者要选中复制。
+  // 滑鼠進了浮窗就別收——使用者正在讀，或者要選中複製。
   box.addEventListener('mouseenter', cancelScheduledHide);
   box.addEventListener('mouseleave', () => {
     if (!tip?.unpin) {
@@ -117,7 +117,7 @@ function showTip(node: HTMLElement, key: string, failures: FailureView[]): void 
   placeTip(node, box);
 }
 
-/** 钉住一只失败浮窗（触屏：点感叹号、长按菜单里的「看失败原因」）。 */
+/** 釘住一隻失敗浮窗（觸屏：點感嘆號、長按選單裡的「看失敗原因」）。 */
 function pinFailureTip(mark: HTMLElement): void {
   hideFailureTip();
   const key = mark.dataset.failureKey ?? '';
@@ -131,14 +131,14 @@ function pinFailureTip(mark: HTMLElement): void {
   }
 }
 
-/** 长按一行：这一行挂着失败标记就给「看失败原因」。 */
+/** 長按一行：這一行掛著失敗標記就給「看失敗原因」。 */
 function peekItems(at: MenuContext): MenuItem[] {
   const row = at.target?.closest<HTMLElement>('.row');
   const mark = row?.querySelector<HTMLElement>('.row-failure');
   if (!row || !mark || !el.projectBody.contains(row)) {
     return [];
   }
-  return [{ label: '看失败原因', run: () => pinFailureTip(mark) }];
+  return [{ label: '看失敗原因', run: () => pinFailureTip(mark) }];
 }
 
 function buildBody(failures: FailureView[]): DocumentFragment {
@@ -151,29 +151,29 @@ function buildBody(failures: FailureView[]): DocumentFragment {
       mk(
         'span',
         `failure-tip-badge failure-${failure.severity}`,
-        failure.severity === 'error' ? '未改动' : '部分完成'
+        failure.severity === 'error' ? '未改動' : '部分完成'
       )
     );
     head.appendChild(mk('span', 'failure-tip-time', logTime(failure.at)));
     item.appendChild(head);
 
-    // textContent（mk 内部就是）而非 innerHTML：这些文本里有模型返回的片段。
+    // textContent（mk 內部就是）而非 innerHTML：這些文字裡有模型返回的片段。
     item.appendChild(mk('div', 'failure-tip-msg', failure.message));
     if (failure.detail) {
       item.appendChild(mk('div', 'failure-tip-detail', failure.detail));
     }
     frag.appendChild(item);
   }
-  frag.appendChild(mk('div', 'hint failure-tip-foot', '成功一次后这个标记会自动消失。日志页有完整记录。'));
+  frag.appendChild(mk('div', 'hint failure-tip-foot', '成功一次後這個標記會自動消失。日誌頁有完整記錄。'));
   return frag;
 }
 
 export function installFailureTip(): void {
-  // 事件委托挂在 projectBody 上：树每次重渲染都换掉全部行，逐行
-  // addEventListener 会随重渲染次数堆积（与另两只浮窗同一套取舍）。
+  // 事件委託掛在 projectBody 上：樹每次重渲染都換掉全部行，逐行
+  // addEventListener 會隨重渲染次數堆積（與另兩隻浮窗同一套取捨）。
   onTouchPeek(peekItems);
 
-  // 手指点感叹号：看的就是这个标记，钉住它的浮窗（鼠标点它不做事，悬停就看得到）。
+  // 手指點感嘆號：看的就是這個標記，釘住它的浮窗（滑鼠點它不做事，懸停就看得到）。
   el.projectBody.addEventListener('click', (e) => {
     const mark = closestFrom<HTMLElement>(e.target, '.row-failure');
     if (mark && isTouchEvent(e)) {
@@ -183,7 +183,7 @@ export function installFailureTip(): void {
   });
 
   el.projectBody.addEventListener('mouseover', (e) => {
-    // 手指点一下之后补发的兼容鼠标事件不是悬停；钉住的浮窗也不跟鼠标走。
+    // 手指點一下之後補發的相容滑鼠事件不是懸停；釘住的浮窗也不跟滑鼠走。
     if (lastPointerWasTouch() || tip?.unpin) {
       return;
     }
@@ -192,8 +192,8 @@ export function installFailureTip(): void {
       cancelScheduledHide();
       scheduleShow(mark);
     } else if (tip) {
-      // 挪到了别处：给宽限而不是立刻收——鼠标要去浮窗的话，半路会先扫过
-      // 感叹号下方的那道缝。
+      // 挪到了別處：給寬限而不是立刻收——滑鼠要去浮窗的話，半路會先掃過
+      // 感嘆號下方的那道縫。
       scheduleHide();
     } else if (hoverTimer) {
       hideFailureTip();
@@ -211,12 +211,12 @@ export function installFailureTip(): void {
     }
   });
 
-  // 右键菜单弹出来时浮窗该让路，两个都是 fixed 会叠在一起。
+  // 右鍵選單彈出來時浮窗該讓路，兩個都是 fixed 會疊在一起。
   el.projectBody.addEventListener('contextmenu', hideFailureTip);
 
-  // 浮窗是 fixed 的，页面一滚就和目标脱节。但**浮窗自己内部的滚动不算**
-  // （详情可能好几行，一滚就收等于滚动条形同虚设）。捕获阶段才收得到
-  // 内部容器（.project-body）的滚动。
+  // 浮窗是 fixed 的，頁面一滾就和目標脫節。但**浮窗自己內部的滾動不算**
+  // （詳情可能好幾行，一滾就收等於捲軸形同虛設）。捕獲階段才收得到
+  // 內部容器（.project-body）的滾動。
   document.addEventListener(
     'scroll',
     (e) => {

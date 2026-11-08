@@ -1,18 +1,18 @@
 /**
- * 新工程的空模板（架构三件、文风、情节大纲、全文大纲）经网关写（AGENTS 第 7 条）。
+ * 新工程的空模板（架構三件、文風、情節大綱、全文大綱）經閘道器寫（AGENTS 第 7 條）。
  *
- * 从前 `model/project.ts` 的 `initialize` 自己 `writeIfAbsent`，绕过了网关。现在分了层：`model/` 只建固定目录、写
- * manifest（`scaffold` / `createManifest`），模板的内容也在那里定义（`newProjectTemplates`，纯数据）；写盘由
- * `Workspace.initializeProject` 经 `write`（`mode: 'create'`）做——`model/` 不能反过来依赖网关。
+ * 從前 `model/project.ts` 的 `initialize` 自己 `writeIfAbsent`，繞過了閘道器。現在分了層：`model/` 只建固定目錄、寫
+ * manifest（`scaffold` / `createManifest`），模板的內容也在那裡定義（`newProjectTemplates`，純資料）；寫盤由
+ * `Workspace.initializeProject` 經 `write`（`mode: 'create'`）做——`model/` 不能反過來依賴閘道器。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 新工程照样有这几份空模板，字一个不差 | 行为对作者不变：主按钮仍从「生成小说配置」开始 |
- * | 已经存在的文件一个字节不动 | 与从前 `writeIfAbsent` 同一个口径（第 3 条） |
- * | 不弹审阅、不弹确认、不存历史版本 | 只新建、不覆盖，没有可问的 |
- * | 不让任何东西挂 ⟳、不给已有细纲补指纹 | 第 18 条：模板落盘只经 setting / doc 两种 handler，它们不记账 |
- * | 不刷日志 | 一次初始化不该在日志页留六行 |
- * | `model/` 这一层自己不写模板 | 分层：写盘只在网关 |
+ * | 新工程照樣有這幾份空模板，字一個不差 | 行為對作者不變：主按鈕仍從「生成小說配置」開始 |
+ * | 已經存在的檔案一個位元組不動 | 與從前 `writeIfAbsent` 同一個口徑（第 3 條） |
+ * | 不彈審閱、不彈確認、不存歷史版本 | 只新建、不覆蓋，沒有可問的 |
+ * | 不讓任何東西掛 ⟳、不給已有細綱補指紋 | 第 18 條：模板落盤只經 setting / doc 兩種 handler，它們不記賬 |
+ * | 不刷日誌 | 一次初始化不該在日誌頁留六行 |
+ * | `model/` 這一層自己不寫模板 | 分層：寫盤只在閘道器 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -59,7 +59,7 @@ const TEMPLATE_RELS = [
   '.novelwarden/summaries/global.md',
 ];
 
-describe('新建一个空工程', () => {
+describe('新建一個空工程', () => {
   let t;
   let project;
   let created;
@@ -75,70 +75,70 @@ describe('新建一个空工程', () => {
     h.confirms.length = 0;
     bundle.logger.clearLogs();
     const mark = bundle.logger.recentLogs().length;
-    created = await new bundle.ws.Workspace(project).initializeProject({ title: '雾港', author: '某人' });
+    created = await new bundle.ws.Workspace(project).initializeProject({ title: '霧港', author: '某人' });
     templates = project.newProjectTemplates();
     reviewed = h.reviewed.length;
     confirms = h.confirms.length;
     logs = bundle.logger.recentLogs().slice(mark).filter((e) => e.level !== 'debug');
   });
 
-  test('模板清单就是这五份', () => {
+  test('模板清單就是這五份', () => {
     assert.deepEqual(templates.map((x) => x.rel).sort(), [...TEMPLATE_RELS].sort());
   });
 
-  test('五份空模板都在，字一个不差', () => {
+  test('五份空模板都在，字一個不差', () => {
     for (const { rel, text } of templates) {
       assert.equal(t.read(rel), text, rel);
     }
   });
 
-  test('返回新建了哪几份', () => {
+  test('返回新建了哪幾份', () => {
     assert.deepEqual([...created].sort(), [...TEMPLATE_RELS].sort());
   });
 
-  // 情节大纲是各章细纲梗概的汇总（docs/design/plans/2026-10-22-outline-from-plots.md），没有文件。
+  // 情節大綱是各章細綱梗概的彙總（docs/design/plans/2026-10-22-outline-from-plots.md），沒有檔案。
   test('不建 outline.md', () => {
     assert.ok(!t.has('.novelwarden/outline.md'));
   });
 
-  test('固定目录建好了', () => {
+  test('固定目錄建好了', () => {
     for (const d of ['chapters', '.novelwarden/characters', '.novelwarden/lore', '.novelwarden/summaries', '.novelwarden/sessions']) {
       assert.ok(fs.statSync(t.rel(d)).isDirectory(), d);
     }
   });
 
-  test('manifest 写好了，工程算初始化过', async () => {
+  test('manifest 寫好了，工程算初始化過', async () => {
     assert.equal(await project.isInitialized(), true);
     const manifest = await project.readManifest();
-    assert.equal(manifest.title, '雾港');
+    assert.equal(manifest.title, '霧港');
     assert.equal(manifest.author, '某人');
   });
 
-  test('空模板不算填过：主按钮仍从「生成小说配置」开始', async () => {
+  test('空模板不算填過：主按鈕仍從「生成小說配置」開始', async () => {
     const filled = await project.settingFilled();
     assert.equal(filled.config, false);
     assert.equal(filled.premise, false);
     assert.equal(filled.world, false);
   });
 
-  test('不弹审阅、不弹确认', () => {
+  test('不彈審閱、不彈確認', () => {
     assert.equal(reviewed, 0);
     assert.equal(confirms, 0);
   });
 
-  test('不存历史版本（没覆盖任何东西）', () => {
+  test('不存歷史版本（沒覆蓋任何東西）', () => {
     assert.equal(t.has('.novelwarden/history'), false);
   });
 
-  test('不刷日志：没有 warn / error，也没有一份模板一行', () => {
+  test('不刷日誌：沒有 warn / error，也沒有一份模板一行', () => {
     assert.ok(!logs.some((e) => e.level === 'warn' || e.level === 'error'), JSON.stringify(logs));
     assert.ok(logs.length <= 1, JSON.stringify(logs.map((e) => e.message)));
   });
 });
 
-describe('在已有东西的目录里初始化：已存在的一个字节不动', () => {
-  const AUTHOR_CONFIG = '---\ngenre: 悬疑\n---\n\n# 小说配置\n\n作者自己写好的配置，一个字都不能动。\n';
-  const AUTHOR_OUTLINE = '# 情节大纲\n\n## 第 1–10 章\n\n作者写好的大纲。\n';
+describe('在已有東西的目錄裡初始化：已存在的一個位元組不動', () => {
+  const AUTHOR_CONFIG = '---\ngenre: 懸疑\n---\n\n# 小說配置\n\n作者自己寫好的配置，一個字都不能動。\n';
+  const AUTHOR_OUTLINE = '# 情節大綱\n\n## 第 1–10 章\n\n作者寫好的大綱。\n';
   const CH = 'chapters/001-楔子.md';
   const PLOT = '.novelwarden/summaries/001-楔子.md';
   let t;
@@ -156,60 +156,60 @@ describe('在已有东西的目录里初始化：已存在的一个字节不动'
   before(async () => {
     t = tempDir('newproj-existing');
     t.write('.novelwarden/config.md', AUTHOR_CONFIG);
-    // 老工程留下的 outline.md：不再读，也一个字节不动。
+    // 老工程留下的 outline.md：不再讀，也一個位元組不動。
     t.write('.novelwarden/outline.md', AUTHOR_OUTLINE);
     t.write(CH, '# 楔子\n\n雨下了三天。\n');
-    // 一份记过 writtenFrom、没记上游指纹的细纲：初始化不该给它补 upstreamHash，也不该让正文挂 ⟳。
+    // 一份記過 writtenFrom、沒記上游指紋的細綱：初始化不該給它補 upstreamHash，也不該讓正文掛 ⟳。
     const { renderPlotFile, emptyPlotSections, plotContentHash } = bundle.plotFile;
-    const sections = { ...emptyPlotSections(), 梗概: '楔子的计划', 关键事件: '- 下雨' };
+    const sections = { ...emptyPlotSections(), 梗概: '楔子的計劃', 关键事件: '- 下雨' };
     t.write(PLOT, renderPlotFile({ no: 1, title: '楔子', upstreamHash: '', writtenFrom: plotContentHash({ sections }), done: false, sections }));
-    // 文风的落点上已经有一个目录：从前 writeIfAbsent 看到「有东西」就跳过，现在也一样，不抛。
+    // 文風的落點上已經有一個目錄：從前 writeIfAbsent 看到「有東西」就跳過，現在也一樣，不拋。
     fs.mkdirSync(t.rel('.novelwarden/style.md'), { recursive: true });
     plotBefore = t.read(PLOT);
 
     project = bundle.project.NovelProject.open(t.dir);
-    created = await new bundle.ws.Workspace(project).initializeProject({ title: '旧稿新开', author: '' });
+    created = await new bundle.ws.Workspace(project).initializeProject({ title: '舊稿新開', author: '' });
     project.invalidate();
     const plot = await project.getPlot(1);
     pipe = await bundle.pipe.buildPlotPipeline(project, { no: 1, plot });
 
     snapshot = readAll();
-    againCreated = await new bundle.ws.Workspace(project).initializeProject({ title: '旧稿新开', author: '' });
+    againCreated = await new bundle.ws.Workspace(project).initializeProject({ title: '舊稿新開', author: '' });
   });
 
-  test('作者的配置与老工程的 outline.md 一字不动', () => {
+  test('作者的配置與老工程的 outline.md 一字不動', () => {
     assert.equal(t.read('.novelwarden/config.md'), AUTHOR_CONFIG);
     assert.equal(t.read('.novelwarden/outline.md'), AUTHOR_OUTLINE);
   });
 
-  test('缺的那几份照样补上', () => {
+  test('缺的那幾份照樣補上', () => {
     assert.deepEqual([...created].sort(), ['.novelwarden/premise.md', '.novelwarden/summaries/global.md', '.novelwarden/world.md'].sort());
   });
 
-  test('落点被目录占着的那一份跳过，不抛', () => {
+  test('落點被目錄佔著的那一份跳過，不拋', () => {
     assert.ok(fs.statSync(t.rel('.novelwarden/style.md')).isDirectory());
   });
 
-  test('已有的细纲一字不动：没被补上 upstreamHash', () => {
+  test('已有的細綱一字不動：沒被補上 upstreamHash', () => {
     assert.equal(t.read(PLOT), plotBefore);
   });
 
-  test('第 18 条：初始化之后细纲不挂 ⟳、正文不挂 ⟳', () => {
+  test('第 18 條：初始化之後細綱不掛 ⟳、正文不掛 ⟳', () => {
     assert.equal(pipe.plot.upstreamStale, false);
     assert.equal(pipe.chapter.upstreamStale, false);
   });
 
-  test('不存历史版本', () => {
+  test('不存歷史版本', () => {
     assert.equal(t.has('.novelwarden/history'), false);
   });
 
-  test('再初始化一次：什么都不建、什么都不改', () => {
+  test('再初始化一次：什麼都不建、什麼都不改', () => {
     assert.deepEqual(againCreated, []);
     assert.deepEqual(readAll(), snapshot);
   });
 });
 
-describe('分层：model/ 只建目录与 manifest，不写模板', () => {
+describe('分層：model/ 只建目錄與 manifest，不寫模板', () => {
   let t;
 
   before(async () => {
@@ -219,80 +219,80 @@ describe('分层：model/ 只建目录与 manifest，不写模板', () => {
     await project.createManifest({ title: '只有骨架', author: '' });
   });
 
-  test('目录与 manifest 有了', () => {
+  test('目錄與 manifest 有了', () => {
     assert.ok(fs.statSync(t.rel('chapters')).isDirectory());
     assert.ok(t.has('.novelwarden/project.json'));
   });
 
-  test('一份模板都没写——写模板是网关的事', () => {
+  test('一份模板都沒寫——寫模板是閘道器的事', () => {
     for (const rel of TEMPLATE_RELS) {
       assert.equal(t.has(rel), false, rel);
     }
   });
 
-  test('model/project.ts 里不再有直接写模板的 writeIfAbsent', () => {
+  test('model/project.ts 裡不再有直接寫模板的 writeIfAbsent', () => {
     const src = fs.readFileSync(path.join(__dirname, '../../../src/core/model/project.ts'), 'utf8');
     assert.doesNotMatch(src, /writeIfAbsent/);
   });
 });
 
-describe('初始化流程（插件命令、网页按钮、CLI 共用的 initProjectFlow）照旧建出模板', () => {
+describe('初始化流程（外掛命令、網頁按鈕、CLI 共用的 initProjectFlow）照舊建出模板', () => {
   let t;
   let ok;
 
   before(async () => {
     t = tempDir('newproj-flow');
     const project = bundle.project.NovelProject.open(t.dir);
-    h.expect('流程建的书', '作者甲');
-    ok = await bundle.actions.initProjectFlow(project, '默认名');
+    h.expect('流程建的書', '作者甲');
+    ok = await bundle.actions.initProjectFlow(project, '預設名');
   });
 
   test('初始化成功', () => {
     assert.equal(ok, true);
   });
 
-  test('五份模板都在，manifest 记的是作者给的书名', () => {
+  test('五份模板都在，manifest 記的是作者給的書名', () => {
     for (const rel of TEMPLATE_RELS) {
       assert.ok(t.has(rel), rel);
     }
-    assert.match(t.read('.novelwarden/project.json'), /流程建的书/);
+    assert.match(t.read('.novelwarden/project.json'), /流程建的書/);
   });
 });
 
-// 欢迎页「新建一本书」「导入写好的书」（2026-10-24）：一张表单填好书名、作者、放在哪，一步建好。
-describe('createBookAt：在一个目录下建一本书', () => {
+// 歡迎頁「新建一本書」「匯入寫好的書」（2026-10-24）：一張表單填好書名、作者、放在哪，一步建好。
+describe('createBookAt：在一個目錄下建一本書', () => {
   const readManifest = (root) => JSON.parse(fs.readFileSync(path.join(root, '.novelwarden/project.json'), 'utf8'));
 
-  test('建一个以书名命名的文件夹、初始化，返回它的绝对路径', async () => {
+  test('建一個以書名命名的資料夾、初始化，返回它的絕對路徑', async () => {
     const t = tempDir('newbook');
-    const root = await bundle.actions.createBookAt(t.dir, { title: '  青云剑录 ', author: ' 某某 ' });
-    assert.equal(root, path.join(t.dir, '青云剑录'));
+    const root = await bundle.actions.createBookAt(t.dir, { title: '  青雲劍錄 ', author: ' 某某 ' });
+    assert.equal(root, path.join(t.dir, '青雲劍錄'));
     const manifest = readManifest(root);
-    assert.equal(manifest.title, '青云剑录');
+    assert.equal(manifest.title, '青雲劍錄');
     assert.equal(manifest.author, '某某');
     for (const rel of TEMPLATE_RELS) {
       assert.ok(fs.existsSync(path.join(root, rel)), rel);
     }
     assert.ok(fs.statSync(path.join(root, 'chapters')).isDirectory());
-    // 与「打开文件夹 → 初始化」是同一个结果：工程认得出自己已经初始化了。
+    // 與「開啟資料夾 → 初始化」是同一個結果：工程認得出自己已經初始化了。
     assert.equal(await bundle.project.NovelProject.open(root).isInitialized(), true);
   });
 
-  test('「放在」那个目录还不在：一路建出来', async () => {
+  test('「放在」那個目錄還不在：一路建出來', async () => {
     const t = tempDir('newbook-deep');
-    const root = await bundle.actions.createBookAt(path.join(t.dir, '小说', '长篇'), { title: '雪夜', author: '' });
-    assert.equal(root, path.join(t.dir, '小说', '长篇', '雪夜'));
+    const root = await bundle.actions.createBookAt(path.join(t.dir, '小說', '長篇'), { title: '雪夜', author: '' });
+    assert.equal(root, path.join(t.dir, '小說', '長篇', '雪夜'));
     assert.equal(readManifest(root).author, '');
   });
 
-  test('文件名里不许有的字从文件夹名里删掉，书名照原样记', async () => {
+  test('檔名裡不許有的字從資料夾名裡刪掉，書名照原樣記', async () => {
     const t = tempDir('newbook-chars');
-    const root = await bundle.actions.createBookAt(t.dir, { title: '青云:剑录?', author: '' });
-    assert.equal(path.basename(root), '青云剑录');
-    assert.equal(readManifest(root).title, '青云:剑录?');
+    const root = await bundle.actions.createBookAt(t.dir, { title: '青雲:劍錄?', author: '' });
+    assert.equal(path.basename(root), '青雲劍錄');
+    assert.equal(readManifest(root).title, '青雲:劍錄?');
   });
 
-  test('同名文件夹空着：用它', async () => {
+  test('同名資料夾空著：用它', async () => {
     const t = tempDir('newbook-empty');
     fs.mkdirSync(t.rel('雪夜'));
     const root = await bundle.actions.createBookAt(t.dir, { title: '雪夜', author: '' });
@@ -300,24 +300,24 @@ describe('createBookAt：在一个目录下建一本书', () => {
     assert.ok(fs.existsSync(t.rel('雪夜/.novelwarden/project.json')));
   });
 
-  test('同名文件夹里有东西：报错，一个字节都不写', async () => {
+  test('同名資料夾裡有東西：報錯，一個位元組都不寫', async () => {
     const t = tempDir('newbook-busy');
-    t.write('雪夜/笔记.txt', '别人的东西');
-    await assert.rejects(() => bundle.actions.createBookAt(t.dir, { title: '雪夜', author: '' }), /里面还有别的东西/);
-    assert.deepEqual(fs.readdirSync(t.rel('雪夜')), ['笔记.txt']);
+    t.write('雪夜/筆記.txt', '別人的東西');
+    await assert.rejects(() => bundle.actions.createBookAt(t.dir, { title: '雪夜', author: '' }), /裡面還有別的東西/);
+    assert.deepEqual(fs.readdirSync(t.rel('雪夜')), ['筆記.txt']);
   });
 
-  test('同名文件夹已经是一本书：报错，叫作者用「打开文件夹」', async () => {
+  test('同名資料夾已經是一本書：報錯，叫作者用「開啟資料夾」', async () => {
     const t = tempDir('newbook-twice');
     await bundle.actions.createBookAt(t.dir, { title: '雪夜', author: '' });
-    await assert.rejects(() => bundle.actions.createBookAt(t.dir, { title: '雪夜', author: '' }), /已经是一本书了，用「打开文件夹」/);
+    await assert.rejects(() => bundle.actions.createBookAt(t.dir, { title: '雪夜', author: '' }), /已經是一本書了，用「開啟資料夾」/);
   });
 
-  test('书名空着、只剩不能当文件夹名的字、「放在」空着：都报错', async () => {
+  test('書名空著、只剩不能當資料夾名的字、「放在」空著：都報錯', async () => {
     const t = tempDir('newbook-bad');
-    await assert.rejects(() => bundle.actions.createBookAt(t.dir, { title: '  ', author: '' }), /书名不能为空/);
-    await assert.rejects(() => bundle.actions.createBookAt(t.dir, { title: '???', author: '' }), /都不能当文件夹名/);
-    await assert.rejects(() => bundle.actions.createBookAt(' ', { title: '雪夜', author: '' }), /「放在」还空着/);
+    await assert.rejects(() => bundle.actions.createBookAt(t.dir, { title: '  ', author: '' }), /書名不能為空/);
+    await assert.rejects(() => bundle.actions.createBookAt(t.dir, { title: '???', author: '' }), /都不能當資料夾名/);
+    await assert.rejects(() => bundle.actions.createBookAt(' ', { title: '雪夜', author: '' }), /「放在」還空著/);
     assert.deepEqual(fs.readdirSync(t.dir), []);
   });
 });

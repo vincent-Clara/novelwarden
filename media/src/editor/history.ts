@@ -1,43 +1,43 @@
 /**
- * 编辑器自己管的撤销 / 重做。**每个打开的文件一份**（挂在 `OpenFile.history` 上）：
- * 切标签不丢，关掉标签随之丢弃，刷新页面不恢复。
+ * 編輯器自己管的撤銷 / 重做。**每個開啟的檔案一份**（掛在 `OpenFile.history` 上）：
+ * 切標籤不丟，關掉標籤隨之丟棄，重新整理頁面不恢復。
  *
- * ## 为什么不用浏览器原生的撤销
+ * ## 為什麼不用瀏覽器原生的撤銷
  *
- * 一块编辑区的所有标签共用一个 `<textarea>`，切标签时整份换 `value`，原生撤销记录随之作废；
- * Tab 缩进、粘贴兜底、「还原」这类程序改写也会把它截断。原生撤销在不同浏览器 / 桌面 WebView
- * 里跨元素、跨程序改写的行为各不相同，这台机器上测不了，jsdom 里也测不了。所以自己记：
- * 结果确定，jsdom 里能测。原生的那一份一律不用——`Ctrl+Z`、`beforeinput` 的 `historyUndo`、
- * 标题栏「编辑 → 撤销」都拦下来走这里（见 `pane.ts`）。
+ * 一塊編輯區的所有標籤共用一個 `<textarea>`，切標籤時整份換 `value`，原生撤銷記錄隨之作廢；
+ * Tab 縮排、貼上兜底、「還原」這類程式改寫也會把它截斷。原生撤銷在不同瀏覽器 / 桌面 WebView
+ * 裡跨元素、跨程式改寫的行為各不相同，這臺機器上測不了，jsdom 裡也測不了。所以自己記：
+ * 結果確定，jsdom 裡能測。原生的那一份一律不用——`Ctrl+Z`、`beforeinput` 的 `historyUndo`、
+ * 標題欄「編輯 → 撤銷」都攔下來走這裡（見 `pane.ts`）。
  *
- * ## 记的是差异，不是快照
+ * ## 記的是差異，不是快照
  *
- * 一步 = 一串 `TextChange`（起点、删掉的文字、插入的文字）+ 改之前与改之后的选区。
- * 一章几万字，500 步整份快照就是几十 MB；差异通常只有几个字。
+ * 一步 = 一串 `TextChange`（起點、刪掉的文字、插入的文字）+ 改之前與改之後的選區。
+ * 一章幾萬字，500 步整份快照就是幾十 MB；差異通常只有幾個字。
  *
- * ## 什么时候并成一步
+ * ## 什麼時候併成一步
  *
- * 只有 `record(..., { merge: true })` 记下的（`pane.ts` 里的连续打字 / 连续删除）才可能并：
- * 与上一步同一类（都是插入，或都是删除）、位置紧挨着、间隔不超过 `MERGE_WINDOW_MS`，
- * 且这一下不含换行——敲回车单独成一步，回车之后打的字另起一步。粘贴、拖放、输入法上屏、
- * 程序改写各自一步，前后都不并；撤销 / 重做之后接着打字也另起一步。
- * `join: true` 是程序改写用的：把这一处并进刚记下的那一步（例如成对符号补的后半个），
- * 撤销时两处一起退。
+ * 只有 `record(..., { merge: true })` 記下的（`pane.ts` 裡的連續打字 / 連續刪除）才可能並：
+ * 與上一步同一類（都是插入，或都是刪除）、位置緊挨著、間隔不超過 `MERGE_WINDOW_MS`，
+ * 且這一下不含換行——敲回車單獨成一步，回車之後打的字另起一步。貼上、拖放、輸入法上屏、
+ * 程式改寫各自一步，前後都不併；撤銷 / 重做之後接著打字也另起一步。
+ * `join: true` 是程式改寫用的：把這一處並進剛記下的那一步（例如成對符號補的後半個），
+ * 撤銷時兩處一起退。
  *
- * ## 纯逻辑
+ * ## 純邏輯
  *
- * 不碰 DOM、不读时钟以外的任何东西：文字由调用方传进来，返回新的文字与选区，由调用方写回编辑区。
- * 撤销前会核对「这一步插入的文字确实还在那个位置」，对不上说明有改动绕过了记账，整份历史作废
- * （宁可退不回去，也不拿错位的差异把正文改乱）。
+ * 不碰 DOM、不讀時鐘以外的任何東西：文字由呼叫方傳進來，返回新的文字與選區，由呼叫方寫回編輯區。
+ * 撤銷前會核對「這一步插入的文字確實還在那個位置」，對不上說明有改動繞過了記賬，整份歷史作廢
+ * （寧可退不回去，也不拿錯位的差異把正文改亂）。
  */
 
-/** 选区：`start` ≤ `end`，按 UTF-16 下标算（与 textarea 的 `selectionStart` / `selectionEnd` 同一套）。 */
+/** 選區：`start` ≤ `end`，按 UTF-16 下標算（與 textarea 的 `selectionStart` / `selectionEnd` 同一套）。 */
 export interface TextSelection {
   start: number;
   end: number;
 }
 
-/** 一处改动：在 `at` 处把 `removed` 换成 `inserted`。`at` 按这一处改动**之前**的文字算。 */
+/** 一處改動：在 `at` 處把 `removed` 換成 `inserted`。`at` 按這一處改動**之前**的文字算。 */
 export interface TextChange {
   at: number;
   removed: string;
@@ -45,35 +45,35 @@ export interface TextChange {
 }
 
 export interface RecordOptions {
-  /** 这是一下打字 / 删除，可以并进上一步（规则见文件头）。 */
+  /** 這是一下打字 / 刪除，可以並進上一步（規則見檔案頭）。 */
   merge?: boolean;
-  /** 并进刚记下的那一步（程序改写用）。上一步不存在、或中间撤销 / 重做过时照常另起一步。 */
+  /** 並進剛記下的那一步（程式改寫用）。上一步不存在、或中間撤銷 / 重做過時照常另起一步。 */
   join?: boolean;
-  /** 现在几点（毫秒）。测试用；缺省 `Date.now()`。 */
+  /** 現在幾點（毫秒）。測試用；預設 `Date.now()`。 */
   now?: number;
 }
 
-/** 撤销 / 重做的结果：整份新文字与该落的选区。 */
+/** 撤銷 / 重做的結果：整份新文字與該落的選區。 */
 export interface HistoryResult {
   text: string;
   selection: TextSelection;
 }
 
-/** 连续打字隔多久不再并进同一步。 */
+/** 連續打字隔多久不再並進同一步。 */
 export const MERGE_WINDOW_MS = 1000;
-/** 一个文件最多记多少步，再多就丢最早的。 */
+/** 一個檔案最多記多少步，再多就丟最早的。 */
 export const HISTORY_LIMIT = 500;
 
 interface Entry {
-  /** 这一步的编号：一个 `EditHistory` 里每记一步加一，并进来的不换号。 */
+  /** 這一步的編號：一個 `EditHistory` 裡每記一步加一，並進來的不換號。 */
   id: number;
-  /** 按发生顺序。撤销时倒着退。 */
+  /** 按發生順序。撤銷時倒著退。 */
   changes: TextChange[];
   before: TextSelection;
   after: TextSelection;
 }
 
-/** 还开着、可以继续往里并的那一步打字。 */
+/** 還開著、可以繼續往裡並的那一步打字。 */
 interface Typing {
   entry: Entry;
   kind: 'insert' | 'delete';
@@ -84,15 +84,15 @@ export class EditHistory {
   private undoStack: Entry[] = [];
   private redoStack: Entry[] = [];
   private typing: Typing | undefined;
-  /** 刚记下的那一步；`join` 只往它里面并。撤销 / 重做后清掉。 */
+  /** 剛記下的那一步；`join` 只往它裡面並。撤銷 / 重做後清掉。 */
   private last: Entry | undefined;
   private seq = 0;
 
   constructor(private readonly limit = HISTORY_LIMIT) {}
 
   /**
-   * 撤销栈顶那一步的编号（并进去的不换号；没有可撤销的是 undefined）。码字统计（`writingStats.ts` 的
-   * `StepLedger`）按它认出撤销 / 重做的是哪一步——撤销自己打的字要减回去，撤销一次粘贴不该动码字数。
+   * 撤銷棧頂那一步的編號（並進去的不換號；沒有可撤銷的是 undefined）。碼字統計（`writingStats.ts` 的
+   * `StepLedger`）按它認出撤銷 / 重做的是哪一步——撤銷自己打的字要減回去，撤銷一次貼上不該動碼字數。
    */
   get topId(): number | undefined {
     return this.undoStack[this.undoStack.length - 1]?.id;
@@ -106,12 +106,12 @@ export class EditHistory {
     return this.redoStack.length > 0;
   }
 
-  /** 撤销栈有多少步（测试与诊断用）。 */
+  /** 撤銷棧有多少步（測試與診斷用）。 */
   get size(): number {
     return this.undoStack.length;
   }
 
-  /** 记一处改动。`before` / `after` 是这处改动前后的选区。删掉与插入相同（没改）时什么都不记。 */
+  /** 記一處改動。`before` / `after` 是這處改動前後的選區。刪掉與插入相同（沒改）時什麼都不記。 */
   record(change: TextChange, before: TextSelection, after: TextSelection, opts: RecordOptions = {}): void {
     if (change.removed === change.inserted) {
       return;
@@ -143,7 +143,7 @@ export class EditHistory {
     this.typing = kind ? { entry, kind, time: now } : undefined;
   }
 
-  /** 撤销一步。没有可撤销的、或历史与 `text` 对不上（整份作废）时返回 undefined。 */
+  /** 撤銷一步。沒有可撤銷的、或歷史與 `text` 對不上（整份作廢）時返回 undefined。 */
   undo(text: string): HistoryResult | undefined {
     const entry = this.undoStack.pop();
     if (!entry) {
@@ -164,7 +164,7 @@ export class EditHistory {
     return { text: out, selection: { ...entry.before } };
   }
 
-  /** 重做一步。没有可重做的、或历史与 `text` 对不上（整份作废）时返回 undefined。 */
+  /** 重做一步。沒有可重做的、或歷史與 `text` 對不上（整份作廢）時返回 undefined。 */
   redo(text: string): HistoryResult | undefined {
     const entry = this.redoStack.pop();
     if (!entry) {
@@ -184,7 +184,7 @@ export class EditHistory {
     return { text: out, selection: { ...entry.after } };
   }
 
-  /** 下一下打字不再并进上一步（光标被挪走、切了标签之类）。 */
+  /** 下一下打字不再並進上一步（游標被挪走、切了標籤之類）。 */
   seal(): void {
     this.typing = undefined;
   }
@@ -205,14 +205,14 @@ export class EditHistory {
     }
     const prev = typing.entry.changes[0];
     if (typing.kind === 'insert') {
-      // 只并纯插入：接着上一步插入的末尾往下打。
+      // 只並純插入：接著上一步插入的末尾往下打。
       if (change.removed !== '' || change.at !== prev.at + prev.inserted.length) {
         return false;
       }
       prev.inserted += change.inserted;
       return true;
     }
-    // 删除：退格往前吃（这一处紧贴在上一处之前），或 Delete 往后吃（同一个位置）。
+    // 刪除：退格往前吃（這一處緊貼在上一處之前），或 Delete 往後吃（同一個位置）。
     if (change.at + change.removed.length === prev.at) {
       prev.at = change.at;
       prev.removed = change.removed + prev.removed;
@@ -227,8 +227,8 @@ export class EditHistory {
 }
 
 /**
- * 一下打字算哪一类。插入（含打字盖掉选区的第一下）与删除各算一类；带换行的不算——
- * 回车、退格吃掉换行都单独成一步，也不让后面的字并进来。
+ * 一下打字算哪一類。插入（含打字蓋掉選區的第一下）與刪除各算一類；帶換行的不算——
+ * 回車、退格吃掉換行都單獨成一步，也不讓後面的字並進來。
  */
 function typingKind(change: TextChange): 'insert' | 'delete' | undefined {
   if (change.inserted !== '') {
@@ -241,11 +241,11 @@ function typingKind(change: TextChange): 'insert' | 'delete' | undefined {
 }
 
 /**
- * 两份文字的差异：公共前缀与公共后缀之间的那一段。相同时返回 undefined。
+ * 兩份文字的差異：公共字首與公共字尾之間的那一段。相同時返回 undefined。
  *
- * `caret` 是改完之后的光标位置（可选）：打字与删除时改动总是结束在光标处，拿它把有歧义的情形
- * 认对——在「aab」第一个 a 后面再打一个 a，单看前后缀会认成在第二个 a 后面插的。
- * 光标与前后缀对不上（例如程序改写）时退回单看前后缀。不会把一个代理对（emoji 等）从中间切开。
+ * `caret` 是改完之後的游標位置（可選）：打字與刪除時改動總是結束在游標處，拿它把有歧義的情形
+ * 認對——在「aab」第一個 a 後面再打一個 a，單看前字尾會認成在第二個 a 後面插的。
+ * 游標與前字尾對不上（例如程式改寫）時退回單看前字尾。不會把一個代理對（emoji 等）從中間切開。
  */
 export function diffText(prev: string, next: string, caret?: number): TextChange | undefined {
   if (prev === next) {
@@ -274,7 +274,7 @@ export function diffText(prev: string, next: string, caret?: number): TextChange
       suffix++;
     }
   }
-  // 别把代理对切成两半。
+  // 別把代理對切成兩半。
   if (prefix > 0 && isHighSurrogate(next.charCodeAt(prefix - 1))) {
     prefix--;
   }

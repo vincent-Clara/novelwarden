@@ -1,22 +1,22 @@
 /**
- * 够用的 Markdown 块级渲染：标题、引用、列表、代码块、分隔线、frontmatter，
- * 行内支持 `**粗**` `*斜*` `` `码` `` `[文本](链接)`。怎么切块在零 DOM 的 `previewCore.ts`（`previewBlocks`）。
+ * 夠用的 Markdown 塊級渲染：標題、引用、列表、程式碼塊、分隔線、frontmatter，
+ * 行內支援 `**粗**` `*斜*` `` `碼` `` `[文字](連結)`。怎麼切塊在零 DOM 的 `previewCore.ts`（`previewBlocks`）。
  *
- * 全部走 createElement + textContent，**不拼 HTML 字符串**——正文里出现
- * `<script>` 也只是普通文字。这不是要做一个完整的 Markdown 实现，只是让
- * 作者能预览自己写的东西；缺的语法原样显示即可，不该为此引一个解析库。
+ * 全部走 createElement + textContent，**不拼 HTML 字串**——正文裡出現
+ * `<script>` 也只是普通文字。這不是要做一個完整的 Markdown 實現，只是讓
+ * 作者能預覽自己寫的東西；缺的語法原樣顯示即可，不該為此引一個解析庫。
  *
- * **每一块记着它是源文件的哪几行**：`data-line`（第一行，从 0 数）与 `data-line-end`（最后一行的下一行），
- * 挂在 frontmatter、标题、段落、代码块、分隔线、引用与每一个列表项上（不挂在 `<ul>` / `<ol>` 上，各块互不重叠）。
- * 切预览 / 切回编辑时按它两边滚到同一处（`previewSync.ts`）。
+ * **每一塊記著它是原始檔的哪幾行**：`data-line`（第一行，從 0 數）與 `data-line-end`（最後一行的下一行），
+ * 掛在 frontmatter、標題、段落、程式碼塊、分隔線、引用與每一個列表項上（不掛在 `<ul>` / `<ol>` 上，各塊互不重疊）。
+ * 切預覽 / 切回編輯時按它兩邊滾到同一處（`previewSync.ts`）。
  */
 import { el } from '../dom';
 import { previewBlocks } from './previewCore';
 
-/** 工程内的相对链接点开时的回调（在哪一块预览里点的，就开在哪一块）。 */
+/** 工程內的相對連結點開時的回呼（在哪一塊預覽裡點的，就開在哪一塊）。 */
 export type OpenLink = (path: string) => void;
 
-/** 给一块记上它是第几行到第几行。 */
+/** 給一塊記上它是第幾行到第幾行。 */
 function mark<T extends HTMLElement>(node: T, span: { start: number; end: number }): T {
   node.dataset.line = String(span.start);
   node.dataset.lineEnd = String(span.end);
@@ -33,7 +33,7 @@ export function renderPreview(
   for (const block of previewBlocks(text)) {
     switch (block.kind) {
       case 'frontmatter':
-        // frontmatter 是元数据，单独框起来，不混进正文。
+        // frontmatter 是後設資料，單獨框起來，不混進正文。
         target.appendChild(mark(el('div', 'ed-frontmatter', block.text), block));
         break;
       case 'heading': {
@@ -74,7 +74,7 @@ export function renderPreview(
   }
 }
 
-/** 行内：`**粗**`、`*斜*`、`` `码` ``、`[文本](链接)`。其余原样。 */
+/** 行內：`**粗**`、`*斜*`、`` `碼` ``、`[文字](連結)`。其餘原樣。 */
 function appendInline(
   parent: HTMLElement,
   text: string,
@@ -107,8 +107,8 @@ function appendInline(
 }
 
 /**
- * `[文本](链接)`。外链开浏览器，工程内的相对链接点开就是另一个标签页——
- * 角色卡里互相引用得很密，跳浏览器毫无用处。
+ * `[文字](連結)`。外鏈開瀏覽器，工程內的相對連結點開就是另一個標籤頁——
+ * 角色卡裡互相引用得很密，跳瀏覽器毫無用處。
  */
 function linkNode(token: string, fromPath: string, openLink: OpenLink): HTMLElement {
   const split = token.indexOf('](');

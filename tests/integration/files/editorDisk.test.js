@@ -1,15 +1,15 @@
 /**
- * 内置编辑器的磁盘核对与「磁盘上没了」（后端一半）：`files/fileEditing.ts` 的 `checkEditorFiles` /
- * `writeFileFromEditor`，以及独立版 `FileHost` 推出去的 `editorDiskChanged` / `editorDiskGone`。
+ * 內建編輯器的磁碟核對與「磁碟上沒了」（後端一半）：`files/fileEditing.ts` 的 `checkEditorFiles` /
+ * `writeFileFromEditor`，以及獨立版 `FileHost` 推出去的 `editorDiskChanged` / `editorDiskGone`。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | hash 对不上的回新版、读不到的报没了、对得上的不回 | 前端据此就地换掉没改过的标签、给改过的挂冲突条 |
- * | 越界、不可编辑、坏条目跳过、不抛 | 一条坏消息不该让整批作废，也不该读到工程外面去 |
- * | 只读，一个字节都不写 | 每条 `state` 之后都会核对一次 |
- * | 带了基线、文件却不在：不在原路径重建，报没了 | 网关对这种情况是当新建处理的；作者在外面改的名会白改 |
- * | 答应重建才写；期间原路径又有了别的内容照样撞冲突 | 重建也带着乐观锁 |
- * | 编辑器自己存下去的那份再核对不报「变了」 | 自己保存之后不误报 |
+ * | hash 對不上的回新版、讀不到的報沒了、對得上的不回 | 前端據此就地換掉沒改過的標籤、給改過的掛衝突條 |
+ * | 越界、不可編輯、壞條目跳過、不拋 | 一條壞訊息不該讓整批作廢，也不該讀到工程外面去 |
+ * | 只讀，一個位元組都不寫 | 每條 `state` 之後都會核對一次 |
+ * | 帶了基線、檔案卻不在：不在原路徑重建，報沒了 | 閘道器對這種情況是當新建處理的；作者在外面改的名會白改 |
+ * | 答應重建才寫；期間原路徑又有了別的內容照樣撞衝突 | 重建也帶著樂觀鎖 |
+ * | 編輯器自己存下去的那份再核對不報「變了」 | 自己儲存之後不誤報 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -38,23 +38,23 @@ const hostWith = (sent) => new FileHost(new bundle.stores.FileConfigStore(), (m)
 
 before(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nf-editor-disk-'));
-  put('chapters/001-雨夜.md', '# 雨夜\n\n林昭推开客栈的门。\n');
-  put('.novelwarden/summaries/001-雨夜.md', '# 雨夜\n\n## 梗概\n林昭进客栈。\n');
-  put('notes.txt', '随手记\n');
+  put('chapters/001-雨夜.md', '# 雨夜\n\n林昭推開客棧的門。\n');
+  put('.novelwarden/summaries/001-雨夜.md', '# 雨夜\n\n## 梗概\n林昭進客棧。\n');
+  put('notes.txt', '隨手記\n');
   put('pic.png', 'not really a png');
-  fs.mkdirSync(abs('chapters/002-目录'), { recursive: true });
+  fs.mkdirSync(abs('chapters/002-目錄'), { recursive: true });
 });
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-describe('checkEditorFiles：按 hash 核对开着的几份', () => {
+describe('checkEditorFiles：按 hash 核對開著的幾份', () => {
   const ch = 'chapters/001-雨夜.md';
 
-  test('对得上：什么都不报', async () => {
+  test('對得上：什麼都不報', async () => {
     const r = await checkEditorFiles(dir, [{ path: ch, hash: hash(fs.readFileSync(abs(ch), 'utf8')) }]);
     assert.deepEqual(r, { changed: [], gone: [] });
   });
 
-  test('对不上：报磁盘上的新版，path 原样用前端给的', async () => {
+  test('對不上：報磁碟上的新版，path 原樣用前端給的', async () => {
     const r = await checkEditorFiles(dir, [{ path: ch, hash: 'h-old' }]);
     assert.equal(r.changed.length, 1);
     assert.equal(r.changed[0].path, ch);
@@ -63,84 +63,84 @@ describe('checkEditorFiles：按 hash 核对开着的几份', () => {
     assert.equal(r.changed[0].hash, hash(r.changed[0].text));
   });
 
-  test('前端给空 hash（它以为没了）而文件在：照样报新版', async () => {
+  test('前端給空 hash（它以為沒了）而檔案在：照樣報新版', async () => {
     const r = await checkEditorFiles(dir, [{ path: ch, hash: '' }]);
     assert.equal(r.changed.length, 1);
   });
 
-  test('读不到（被删、被改名）：报没了', async () => {
-    const r = await checkEditorFiles(dir, [{ path: 'chapters/009-删了的.md', hash: 'h' }]);
-    assert.deepEqual(r.gone, ['chapters/009-删了的.md']);
+  test('讀不到（被刪、被改名）：報沒了', async () => {
+    const r = await checkEditorFiles(dir, [{ path: 'chapters/009-刪了的.md', hash: 'h' }]);
+    assert.deepEqual(r.gone, ['chapters/009-刪了的.md']);
   });
 
-  test('那个路径现在是个目录：也算没了', async () => {
-    const r = await checkEditorFiles(dir, [{ path: 'chapters/002-目录', hash: 'h' }]);
-    assert.deepEqual(r.gone, ['chapters/002-目录']);
+  test('那個路徑現在是個目錄：也算沒了', async () => {
+    const r = await checkEditorFiles(dir, [{ path: 'chapters/002-目錄', hash: 'h' }]);
+    assert.deepEqual(r.gone, ['chapters/002-目錄']);
   });
 
-  test('越界路径跳过、不抛', async () => {
+  test('越界路徑跳過、不拋', async () => {
     const r = await checkEditorFiles(dir, [{ path: '../escape.md', hash: 'h' }, { path: '/etc/passwd.md', hash: 'h' }]);
     assert.deepEqual(r, { changed: [], gone: [] });
   });
 
-  test('不可编辑的扩展名跳过', async () => {
+  test('不可編輯的副檔名跳過', async () => {
     const r = await checkEditorFiles(dir, [{ path: 'pic.png', hash: 'h' }]);
     assert.deepEqual(r, { changed: [], gone: [] });
   });
 
-  test('坏条目跳过，其余照常', async () => {
+  test('壞條目跳過，其餘照常', async () => {
     const r = await checkEditorFiles(dir, [null, { path: 3, hash: 'h' }, { path: 'notes.txt' }, { path: 'notes.txt', hash: 'h' }]);
     assert.deepEqual(r.changed.map((f) => f.path), ['notes.txt']);
   });
 
-  test('同一路径给两次只报一次', async () => {
+  test('同一路徑給兩次只報一次', async () => {
     const r = await checkEditorFiles(dir, [{ path: 'notes.txt', hash: 'h' }, { path: 'notes.txt', hash: 'h2' }]);
     assert.equal(r.changed.length, 1);
   });
 
-  test('只读：核对完磁盘上一个字节都没动', async () => {
+  test('只讀：核對完磁碟上一個位元組都沒動', async () => {
     const before = fs.statSync(abs(ch)).mtimeMs;
     const content = fs.readFileSync(abs(ch), 'utf8');
-    await checkEditorFiles(dir, [{ path: ch, hash: 'h-old' }, { path: 'chapters/009-删了的.md', hash: 'h' }]);
+    await checkEditorFiles(dir, [{ path: ch, hash: 'h-old' }, { path: 'chapters/009-刪了的.md', hash: 'h' }]);
     assert.equal(fs.statSync(abs(ch)).mtimeMs, before);
     assert.equal(fs.readFileSync(abs(ch), 'utf8'), content);
-    assert.equal(fs.existsSync(abs('chapters/009-删了的.md')), false);
+    assert.equal(fs.existsSync(abs('chapters/009-刪了的.md')), false);
   });
 });
 
-describe('writeFileFromEditor：带了基线、文件却不在', () => {
+describe('writeFileFromEditor：帶了基線、檔案卻不在', () => {
   const rel = 'chapters/003-改了名的.md';
 
-  test('不在原路径重建，抛「没了」', async () => {
-    await assert.rejects(writeFileFromEditor(dir, rel, '编辑器里的内容', 'h-base'), (err) => err instanceof FileGoneError);
+  test('不在原路徑重建，拋「沒了」', async () => {
+    await assert.rejects(writeFileFromEditor(dir, rel, '編輯器裡的內容', 'h-base'), (err) => err instanceof FileGoneError);
     assert.equal(fs.existsSync(abs(rel)), false);
   });
 
-  test('答应重建（recreate）才写', async () => {
-    const r = await writeFileFromEditor(dir, rel, '编辑器里的内容', 'h-base', { recreate: true });
-    assert.equal(fs.readFileSync(abs(rel), 'utf8'), '编辑器里的内容');
-    assert.equal(r.hash, hash('编辑器里的内容'));
+  test('答應重建（recreate）才寫', async () => {
+    const r = await writeFileFromEditor(dir, rel, '編輯器裡的內容', 'h-base', { recreate: true });
+    assert.equal(fs.readFileSync(abs(rel), 'utf8'), '編輯器裡的內容');
+    assert.equal(r.hash, hash('編輯器裡的內容'));
   });
 
-  test('答应重建时原路径已经又有了别的内容：照样撞冲突、不覆盖', async () => {
+  test('答應重建時原路徑已經又有了別的內容：照樣撞衝突、不覆蓋', async () => {
     const other = 'chapters/004-又有了.md';
-    put(other, '别处放回来的');
+    put(other, '別處放回來的');
     await assert.rejects(
-      writeFileFromEditor(dir, other, '编辑器里的内容', 'h-base', { recreate: true }),
-      (err) => err instanceof FileConflictError && err.diskText === '别处放回来的'
+      writeFileFromEditor(dir, other, '編輯器裡的內容', 'h-base', { recreate: true }),
+      (err) => err instanceof FileConflictError && err.diskText === '別處放回來的'
     );
-    assert.equal(fs.readFileSync(abs(other), 'utf8'), '别处放回来的');
+    assert.equal(fs.readFileSync(abs(other), 'utf8'), '別處放回來的');
   });
 
-  test('不带基线（作者点了强制保存）照旧直接写', async () => {
-    const forced = 'chapters/005-强制.md';
-    await writeFileFromEditor(dir, forced, '强制写的');
-    assert.equal(fs.readFileSync(abs(forced), 'utf8'), '强制写的');
+  test('不帶基線（作者點了強制儲存）照舊直接寫', async () => {
+    const forced = 'chapters/005-強制.md';
+    await writeFileFromEditor(dir, forced, '強制寫的');
+    assert.equal(fs.readFileSync(abs(forced), 'utf8'), '強制寫的');
   });
 });
 
-describe('FileHost：推给前端的消息', () => {
-  test('磁盘上变了：editorDiskChanged 带 draftPath 与 kind（与 editorOpen 同一个形状）', async () => {
+describe('FileHost：推給前端的訊息', () => {
+  test('磁碟上變了：editorDiskChanged 帶 draftPath 與 kind（與 editorOpen 同一個形狀）', async () => {
     const sent = [];
     await hostWith(sent).checkEditorFiles([{ path: 'chapters/001-雨夜.md', hash: 'h-old' }]);
     assert.equal(sent.length, 1);
@@ -149,39 +149,39 @@ describe('FileHost：推给前端的消息', () => {
     assert.equal(sent[0].file.draftPath, 'drafts/001-雨夜.md');
   });
 
-  test('读不到：editorDiskGone', async () => {
+  test('讀不到：editorDiskGone', async () => {
     const sent = [];
-    await hostWith(sent).checkEditorFiles([{ path: 'chapters/009-删了的.md', hash: 'h' }]);
-    assert.deepEqual(sent, [{ type: 'editorDiskGone', path: 'chapters/009-删了的.md' }]);
+    await hostWith(sent).checkEditorFiles([{ path: 'chapters/009-刪了的.md', hash: 'h' }]);
+    assert.deepEqual(sent, [{ type: 'editorDiskGone', path: 'chapters/009-刪了的.md' }]);
   });
 
-  test('都对得上：一条都不推', async () => {
+  test('都對得上：一條都不推', async () => {
     const sent = [];
     const text = fs.readFileSync(abs('notes.txt'), 'utf8');
     await hostWith(sent).checkEditorFiles([{ path: 'notes.txt', hash: hash(text) }]);
     assert.deepEqual(sent, []);
   });
 
-  test('保存时文件已经不在：推 editorDiskGone，什么都不写', async () => {
+  test('儲存時檔案已經不在：推 editorDiskGone，什麼都不寫', async () => {
     const sent = [];
-    await hostWith(sent).saveFromEditor('chapters/006-没了.md', '内容', 'h-base');
-    assert.deepEqual(sent, [{ type: 'editorDiskGone', path: 'chapters/006-没了.md' }]);
-    assert.equal(fs.existsSync(abs('chapters/006-没了.md')), false);
+    await hostWith(sent).saveFromEditor('chapters/006-沒了.md', '內容', 'h-base');
+    assert.deepEqual(sent, [{ type: 'editorDiskGone', path: 'chapters/006-沒了.md' }]);
+    assert.equal(fs.existsSync(abs('chapters/006-沒了.md')), false);
   });
 
-  test('带 recreate 再来：写下去，回 editorSaved', async () => {
+  test('帶 recreate 再來：寫下去，回 editorSaved', async () => {
     const sent = [];
-    await hostWith(sent).saveFromEditor('chapters/006-没了.md', '内容', 'h-base', { recreate: true });
+    await hostWith(sent).saveFromEditor('chapters/006-沒了.md', '內容', 'h-base', { recreate: true });
     assert.equal(sent[0]?.type, 'editorSaved');
-    assert.equal(fs.readFileSync(abs('chapters/006-没了.md'), 'utf8'), '内容');
+    assert.equal(fs.readFileSync(abs('chapters/006-沒了.md'), 'utf8'), '內容');
   });
 
-  test('自己存下去的那份再核对：不报「变了」', async () => {
+  test('自己存下去的那份再核對：不報「變了」', async () => {
     const sent = [];
     const host = hostWith(sent);
     const rel = 'chapters/001-雨夜.md';
     const base = hash(fs.readFileSync(abs(rel), 'utf8'));
-    await host.saveFromEditor(rel, '# 雨夜\n\n改过了。\n', base);
+    await host.saveFromEditor(rel, '# 雨夜\n\n改過了。\n', base);
     const saved = sent.find((m) => m.type === 'editorSaved');
     assert.ok(saved, JSON.stringify(sent));
     sent.length = 0;
@@ -189,7 +189,7 @@ describe('FileHost：推给前端的消息', () => {
     assert.deepEqual(sent, []);
   });
 
-  test('没打开工程时什么都不推', async () => {
+  test('沒開啟工程時什麼都不推', async () => {
     const sent = [];
     await new FileHost(new bundle.stores.FileConfigStore(), (m) => sent.push(m)).checkEditorFiles([{ path: 'a.md', hash: 'h' }]);
     assert.deepEqual(sent, []);

@@ -1,5 +1,5 @@
 /**
- * 设置页的装配：收后端推来的设置、渲染、保存。
+ * 設定頁的裝配：收後端推來的設定、渲染、儲存。
  */
 import { byId, maybeById } from '../../dom';
 import {
@@ -26,7 +26,7 @@ type SettingsCategory = 'models' | 'context' | 'general' | 'skills';
 
 const SETTINGS_CATEGORIES: readonly SettingsCategory[] = ['models', 'context', 'general', 'skills'];
 
-/** 页面上真有的那几页（「通用」只有独立版有），按显示顺序。 */
+/** 頁面上真有的那幾頁（「通用」只有獨立版有），按顯示順序。 */
 function presentCategories(): SettingsCategory[] {
   return SETTINGS_CATEGORIES.filter((c) => document.querySelector(`[data-settings-tab="${c}"]`));
 }
@@ -38,15 +38,15 @@ export function renderSettings(
 ): void {
   const nextKeys = keys || {};
 
-  // 保存成功的回执：磁盘上已是用户的版本，可以清掉本地编辑状态。
-  // 被拒（ack === 'rejected'）则保持 dirty，别把用户刚填的东西冲掉。
+  // 儲存成功的回執：磁碟上已是使用者的版本，可以清掉本地編輯狀態。
+  // 被拒（ack === 'rejected'）則保持 dirty，別把使用者剛填的東西衝掉。
   if (ack === 'saved') {
     draft.dirty = false;
   }
 
   if (draft.dirty) {
-    // 有未保存的编辑，不能拿磁盘上的值覆盖。但 Key 状态得更新——
-    // 用户刚在弹窗里输完 Key 就等着看这个。
+    // 有未儲存的編輯，不能拿磁碟上的值覆蓋。但 Key 狀態得更新——
+    // 使用者剛在彈窗裡輸完 Key 就等著看這個。
     if (JSON.stringify(nextKeys) !== JSON.stringify(draft.keys)) {
       draft.keys = nextKeys;
       renderProviders();
@@ -88,15 +88,15 @@ export function renderSettings(
   refreshProviderModal();
 }
 
-/** 「写完正文删修饰」那个勾选框的 id。 */
+/** 「寫完正文刪修飾」那個勾選框的 id。 */
 const TRIM_FIELD = 'setTrimModifiers';
-/** 「新窗口中打开项目」那个勾选框的 id。只有独立版的页面上有。 */
+/** 「新視窗中開啟專案」那個勾選框的 id。只有獨立版的頁面上有。 */
 const NEW_WINDOW_FIELD = 'setOpenInNewWindow';
-/** 「上下文详细度」下拉框与它下面那一行说明的 id。 */
+/** 「上下文詳細度」下拉框與它下面那一行說明的 id。 */
 const DETAIL_FIELD = 'setContextDetail';
 const DETAIL_HINT = 'contextDetailHint';
 
-/** 选项只建一次：标签与每一级带多少都来自 `contextDetail.ts`，前端不另写。 */
+/** 選項只建一次：標籤與每一級帶多少都來自 `contextDetail.ts`，前端不另寫。 */
 function installDetailSelect(): void {
   const select = maybeById<HTMLSelectElement>(DETAIL_FIELD);
   if (!select) {
@@ -105,7 +105,7 @@ function installDetailSelect(): void {
   for (const d of CONTEXT_DETAILS) {
     const option = document.createElement('option');
     option.value = String(d);
-    option.textContent = `${d} · ${CONTEXT_DETAIL_LABEL[d]}${d === DEFAULT_CONTEXT_DETAIL ? '（默认）' : ''}`;
+    option.textContent = `${d} · ${CONTEXT_DETAIL_LABEL[d]}${d === DEFAULT_CONTEXT_DETAIL ? '（預設）' : ''}`;
     select.appendChild(option);
   }
   select.value = String(DEFAULT_CONTEXT_DETAIL);
@@ -116,7 +116,7 @@ function installDetailSelect(): void {
   });
 }
 
-/** 下拉框下面那一行：这一级是干什么的，具体带多少。 */
+/** 下拉框下面那一行：這一級是幹什麼的，具體帶多少。 */
 function renderDetailHint(): void {
   const select = maybeById<HTMLSelectElement>(DETAIL_FIELD);
   const hint = maybeById(DETAIL_HINT);
@@ -150,19 +150,19 @@ function save(): void {
     return;
   }
 
-  // 列表里指向已删模型的项要摘掉，而不是保存一串指向空气的引用；
-  // 全摘光了退回第一个可用的，别让工程页任务无模型可用。
+  // 列表裡指向已刪模型的項要摘掉，而不是儲存一串指向空氣的引用；
+  // 全摘光了退回第一個可用的，別讓工程頁任務無模型可用。
   const refs = allRefs();
   settings.models = draft.models.filter((m) => refs.includes(m));
   if (settings.models.length === 0 && refs.length > 0) {
     settings.models = [refs[0]];
   }
   if (settings.models.length !== draft.models.length) {
-    toast('默认模型列表里有已删除的模型，已自动摘掉。');
+    toast('預設模型列表裡有已刪除的模型，已自動摘掉。');
   }
 
-  // 档位清单同样摘掉指向已删模型的项，但**摘空了就让它空着**——
-  // 空档位是有意义的（沿用默认模型），不该像默认模型那样兜底塞一个进去。
+  // 檔位清單同樣摘掉指向已刪模型的項，但**摘空了就讓它空著**——
+  // 空檔位是有意義的（沿用預設模型），不該像預設模型那樣兜底塞一個進去。
   let droppedFromTiers = 0;
   settings.tierModels = { fast: [], balanced: [], quality: [] };
   for (const tier of MODEL_TIERS) {
@@ -171,7 +171,7 @@ function save(): void {
     settings.tierModels[tier] = kept;
   }
   if (droppedFromTiers > 0) {
-    toast(`档位里有 ${droppedFromTiers} 个已删除的模型，已自动摘掉。`);
+    toast(`檔位裡有 ${droppedFromTiers} 個已刪除的模型，已自動摘掉。`);
   }
 
   vscode.postMessage({ type: 'saveSettings', settings });
@@ -192,16 +192,16 @@ export function installSettings(): void {
   installDetailSelect();
 
   byId('saveSettingsBtn').addEventListener('click', save);
-  // 能力探测：只有带原生设置界面的宿主（VS Code）才渲染这颗按钮，
-  // 独立版的页面里根本没有它——不是渲染出来再 hidden 掉。
+  // 能力探測：只有帶原生設定介面的宿主（VS Code）才渲染這顆按鈕，
+  // 獨立版的頁面里根本沒有它——不是渲染出來再 hidden 掉。
   maybeById('nativeSettingsBtn')?.addEventListener('click', () =>
     vscode.postMessage({ type: 'openNativeSettings' })
   );
 }
 
 /**
- * 「高级设置」折叠开关：默认收起模型分档/任务档位/请求与调度。
- * 展开状态是纯 UI 状态，留在前端；重启后回到默认折叠。
+ * 「高階設定」摺疊開關：預設收起模型分檔/任務檔位/請求與排程。
+ * 展開狀態是純 UI 狀態，留在前端；重啟後回到預設摺疊。
  */
 function installAdvancedToggle(): void {
   const toggle = maybeById<HTMLButtonElement>('settingsAdvancedToggle');
@@ -239,7 +239,7 @@ function showCategory(category: SettingsCategory, focus = false): void {
     panel.classList.toggle('active', active);
     panel.hidden = !active;
   }
-  // 「技能」那一页改了当场生效：底下那颗「保存设置」与存储说明在那一页上只会让人以为还要再点一下。
+  // 「技能」那一頁改了當場生效：底下那顆「儲存設定」與儲存說明在那一頁上只會讓人以為還要再點一下。
   const skills = category === 'skills';
   for (const id of ['settingsSaveRow', 'settingsStorageHint']) {
     const node = maybeById(id);

@@ -1,21 +1,21 @@
 /**
- * 多服务商 / 多模型：引用解析、配置容错、旧配置兼容，以及 readConfig 把这一切串起来的结果。
- * 迁自 scripts/smoke-providers.js（`== 模型分档的配置容错 ==` 一节除外，那节在 tiers.test.js）。
+ * 多服務商 / 多模型：引用解析、配置容錯、舊配置相容，以及 readConfig 把這一切串起來的結果。
+ * 遷自 scripts/smoke-providers.js（`== 模型分檔的配置容錯 ==` 一節除外，那節在 tiers.test.js）。
  *
- * 两件与迁移前不同、但语义等价的事：
+ * 兩件與遷移前不同、但語義等價的事：
  *
- * 1. 原脚本反复整体重赋值 `settings = {...}`，而 helpers/vscodeStub.js 把 config 对象按引用
- *    闭包捕获、换不了对象。这里就地覆写 stub 的 `getConfiguration`，让它每次读本文件当前的
- *    `settings` 变量——同一个变量同时喂给 ConfigStore 与 legacy reader，与原脚本的双重身份一致。
- * 2. 原脚本靠顶层 `return ....then(...)` 把最后两节串在后面；这里改成按 describe 声明顺序 +
- *    各自的 before()。node:test 同文件默认串行，换 ConfigStore 的先后与迁移前一致。
+ * 1. 原指令碼反覆整體重賦值 `settings = {...}`，而 helpers/vscodeStub.js 把 config 物件按引用
+ *    閉包捕獲、換不了物件。這裡就地覆寫 stub 的 `getConfiguration`，讓它每次讀本檔案當前的
+ *    `settings` 變數——同一個變數同時餵給 ConfigStore 與 legacy reader，與原指令碼的雙重身份一致。
+ * 2. 原指令碼靠頂層 `return ....then(...)` 把最後兩節串在後面；這裡改成按 describe 宣告順序 +
+ *    各自的 before()。node:test 同檔案預設序列，換 ConfigStore 的先後與遷移前一致。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { ROOT, loadBundle, loadModule } = require('../../helpers/load');
 const { installVscodeStub } = require('../../helpers/vscodeStub');
 
-/** 当前这一轮的设置。既是 ConfigStore 的内容，也是 settings.json 的内容。 */
+/** 當前這一輪的設定。既是 ConfigStore 的內容，也是 settings.json 的內容。 */
 let settings = {};
 
 let p;
@@ -35,14 +35,14 @@ before(() => {
   p = bundle.p;
   configMod = bundle.config;
 
-  // readConfig 改由注入的 ConfigStore 供数：这里用内存对象模拟 settings.json。
+  // readConfig 改由注入的 ConfigStore 供數：這裡用記憶體物件模擬 settings.json。
   configMod.initConfigFromHost({
     config: {
       read: () => settings,
       write: async (s) => { settings = s; },
     },
   });
-  // 注册遗留读取器，才能走 0.1.x 兜底分支（与真实 VS Code 壳一致）。
+  // 註冊遺留讀取器，才能走 0.1.x 兜底分支（與真實 VS Code 殼一致）。
   configMod.setLegacyConfigReader({ read: () => settings });
 });
 
@@ -55,57 +55,57 @@ describe('模型引用解析', () => {
     assert.deepEqual(p.parseModelRef('glm/glm-4-plus'), { providerId: 'glm', model: 'glm-4-plus' });
   });
 
-  // 这是整个设计的关键：只切第一个斜杠，剩下的都属于模型名。
-  test('嵌套斜杠归模型名', () => {
+  // 這是整個設計的關鍵：只切第一個斜槓，剩下的都屬於模型名。
+  test('巢狀斜槓歸模型名', () => {
     const nested = p.parseModelRef('openrouter/z-ai/glm-4.6');
     assert.equal(nested.providerId, 'openrouter', JSON.stringify(nested));
     assert.equal(nested.model, 'z-ai/glm-4.6', JSON.stringify(nested));
   });
 
-  test('多层斜杠也只切第一个', () => {
+  test('多層斜槓也只切第一個', () => {
     const deep = p.parseModelRef('or/a/b/c/d');
     assert.equal(deep.providerId, 'or', JSON.stringify(deep));
     assert.equal(deep.model, 'a/b/c/d', JSON.stringify(deep));
   });
 
-  test('冒号型模型名（Ollama）', () => {
+  test('冒號型模型名（Ollama）', () => {
     assert.equal(p.parseModelRef('ollama/qwen2.5:14b').model, 'qwen2.5:14b');
   });
 
-  test('两侧空白被裁掉', () => {
+  test('兩側空白被裁掉', () => {
     assert.equal(p.parseModelRef('  glm/glm-4-plus  ').providerId, 'glm');
   });
 
-  test('没有斜杠时无效', () => {
+  test('沒有斜槓時無效', () => {
     assert.equal(p.parseModelRef('glm-4-plus'), undefined);
   });
 
-  test('以斜杠开头时无效', () => {
+  test('以斜槓開頭時無效', () => {
     assert.equal(p.parseModelRef('/glm-4-plus'), undefined);
   });
 
-  test('以斜杠结尾时无效', () => {
+  test('以斜槓結尾時無效', () => {
     assert.equal(p.parseModelRef('glm/'), undefined);
   });
 
-  test('空串无效', () => {
+  test('空串無效', () => {
     assert.equal(p.parseModelRef(''), undefined);
   });
 
-  test('只有斜杠无效', () => {
+  test('只有斜槓無效', () => {
     assert.equal(p.parseModelRef('/'), undefined);
   });
 
-  test('模型名全是空格时无效', () => {
+  test('模型名全是空格時無效', () => {
     assert.equal(p.parseModelRef('glm/   '), undefined);
   });
 
-  test('makeModelRef 与 parseModelRef 互逆', () => {
+  test('makeModelRef 與 parseModelRef 互逆', () => {
     assert.equal(p.parseModelRef(p.makeModelRef('openrouter', 'z-ai/glm-4.6')).model, 'z-ai/glm-4.6');
   });
 });
 
-describe('服务商列表容错', () => {
+describe('服務商列表容錯', () => {
   let ok;
   let messy;
   let strings;
@@ -115,10 +115,10 @@ describe('服务商列表容错', () => {
   before(() => {
     const n = p.normalizeProviders;
     ok = n([
-      { id: 'glm', label: '智谱', kind: 'openai', baseUrl: 'https://open.bigmodel.cn/api/paas/v4/', models: [{ name: 'glm-4-plus', contextWindow: 128000 }] },
+      { id: 'glm', label: '智譜', kind: 'openai', baseUrl: 'https://open.bigmodel.cn/api/paas/v4/', models: [{ name: 'glm-4-plus', contextWindow: 128000 }] },
     ]);
 
-    // 手写 settings.json 什么都可能出现，坏条目跳过而不是整体失败。
+    // 手寫 settings.json 什麼都可能出現，壞條目跳過而不是整體失敗。
     messy = n([
       null,
       'not an object',
@@ -136,32 +136,32 @@ describe('服务商列表容错', () => {
     kinds = n([
       { id: 'a', kind: 'anthropic', models: ['m'] },
       { id: 'b', kind: 'vscode-lm', models: ['m'] },
-      { id: 'c', kind: '胡说', models: ['m'] },
+      { id: 'c', kind: '胡說', models: ['m'] },
     ]);
 
     nums = n([{ id: 'a', models: [{ name: 'm', contextWindow: -5, maxOutputTokens: 'x' }] }]);
   });
 
-  test('非数组返回空', () => {
+  test('非陣列返回空', () => {
     const n = p.normalizeProviders;
     assert.equal(n(undefined).length, 0);
     assert.equal(n('x').length, 0);
     assert.equal(n(null).length, 0);
   });
 
-  test('正常条目被保留', () => {
+  test('正常條目被保留', () => {
     assert.equal(ok.length, 1);
   });
 
-  test('baseUrl 末尾斜杠被裁掉', () => {
+  test('baseUrl 末尾斜槓被裁掉', () => {
     assert.equal(ok[0].baseUrl, 'https://open.bigmodel.cn/api/paas/v4', ok[0].baseUrl);
   });
 
-  test('模型窗口被保留', () => {
+  test('模型視窗被保留', () => {
     assert.equal(ok[0].models[0].contextWindow, 128000);
   });
 
-  test('坏条目全被跳过，只剩一个', () => {
+  test('壞條目全被跳過，只剩一個', () => {
     assert.equal(messy.length, 1, JSON.stringify(messy.map((x) => x.id)));
   });
 
@@ -169,23 +169,23 @@ describe('服务商列表容错', () => {
     assert.equal(messy[0].id, 'good');
   });
 
-  test('含斜杠的 id 被拒绝', () => {
+  test('含斜槓的 id 被拒絕', () => {
     assert.ok(!messy.some((x) => x.id.includes('/')));
   });
 
-  test('重复 id 只留第一个', () => {
+  test('重複 id 只留第一個', () => {
     assert.equal(messy.filter((x) => x.id === 'good').length, 1);
   });
 
-  test('模型可简写为字符串', () => {
+  test('模型可簡寫為字串', () => {
     assert.equal(strings[0].models.length, 2, JSON.stringify(strings[0].models));
   });
 
-  test('重复模型名被去掉', () => {
+  test('重複模型名被去掉', () => {
     assert.equal(strings[0].models.map((m) => m.name).join(','), 'gpt-4o,gpt-4o-mini');
   });
 
-  test('kind 原样保留', () => {
+  test('kind 原樣保留', () => {
     assert.equal(kinds[0].kind, 'anthropic');
     assert.equal(kinds[1].kind, 'vscode-lm');
   });
@@ -194,13 +194,13 @@ describe('服务商列表容错', () => {
     assert.equal(kinds[2].kind, 'openai');
   });
 
-  test('非法数字被忽略', () => {
+  test('非法數字被忽略', () => {
     assert.equal(nums[0].models[0].contextWindow, undefined);
     assert.equal(nums[0].models[0].maxOutputTokens, undefined);
   });
 });
 
-describe('解析与列举', () => {
+describe('解析與列舉', () => {
   let providers;
   let a;
   let b;
@@ -208,7 +208,7 @@ describe('解析与列举', () => {
 
   before(() => {
     providers = p.normalizeProviders([
-      { id: 'glm', label: '智谱 GLM', kind: 'openai', models: [{ name: 'glm-4-plus', contextWindow: 128000 }, { name: 'glm-4-air' }] },
+      { id: 'glm', label: '智譜 GLM', kind: 'openai', models: [{ name: 'glm-4-plus', contextWindow: 128000 }, { name: 'glm-4-air' }] },
       { id: 'openrouter', label: 'OpenRouter', kind: 'openai', models: [{ name: 'z-ai/glm-4.6' }] },
       { id: 'copilot', kind: 'vscode-lm', models: [{ name: 'gpt-4o' }] },
     ]);
@@ -217,7 +217,7 @@ describe('解析与列举', () => {
     choices = p.listModelChoices(providers);
   });
 
-  test('解析出服务商', () => {
+  test('解析出服務商', () => {
     assert.equal(a.profile.id, 'glm');
   });
 
@@ -225,19 +225,19 @@ describe('解析与列举', () => {
     assert.equal(a.model.name, 'glm-4-plus');
   });
 
-  test('带回规范化的 ref', () => {
+  test('帶回規範化的 ref', () => {
     assert.equal(a.ref, 'glm/glm-4-plus');
   });
 
-  test('嵌套斜杠模型可解析', () => {
+  test('巢狀斜槓模型可解析', () => {
     assert.ok(b && b.model.name === 'z-ai/glm-4.6');
   });
 
-  test('同名模型走不同渠道是两条', () => {
+  test('同名模型走不同渠道是兩條', () => {
     assert.notEqual(p.resolveModelRef(providers, 'glm/glm-4-plus').profile.id, b.profile.id);
   });
 
-  test('未知前缀返回 undefined', () => {
+  test('未知字首返回 undefined', () => {
     assert.equal(p.resolveModelRef(providers, 'nope/x'), undefined);
   });
 
@@ -249,19 +249,19 @@ describe('解析与列举', () => {
     assert.equal(p.resolveModelRef(providers, 'glm/glm-4'), undefined);
   });
 
-  test('firstModelRef 取第一个', () => {
+  test('firstModelRef 取第一個', () => {
     assert.equal(p.firstModelRef(providers), 'glm/glm-4-plus');
   });
 
-  test('空列表时 firstModelRef 为空串', () => {
+  test('空列表時 firstModelRef 為空串', () => {
     assert.equal(p.firstModelRef([]), '');
   });
 
-  test('列出全部 4 个模型', () => {
+  test('列出全部 4 個模型', () => {
     assert.equal(choices.length, 4, `got ${choices.length}`);
   });
 
-  test('列表保持配置顺序', () => {
+  test('列表保持配置順序', () => {
     assert.equal(
       choices.map((c) => c.ref).join(','),
       'glm/glm-4-plus,glm/glm-4-air,openrouter/z-ai/glm-4.6,copilot/gpt-4o',
@@ -269,58 +269,58 @@ describe('解析与列举', () => {
     );
   });
 
-  test('分组用服务商显示名', () => {
-    assert.equal(choices[0].group, '智谱 GLM');
+  test('分組用服務商顯示名', () => {
+    assert.equal(choices[0].group, '智譜 GLM');
   });
 
-  test('无 label 时分组回落到 id', () => {
+  test('無 label 時分組回落到 id', () => {
     assert.equal(choices[3].group, 'copilot');
   });
 
-  test('模型显示名回落到模型名', () => {
+  test('模型顯示名回落到模型名', () => {
     assert.equal(choices[1].label, 'glm-4-air');
   });
 
-  test('带上模型窗口', () => {
+  test('帶上模型視窗', () => {
     assert.equal(choices[0].contextWindow, 128000);
     assert.equal(choices[1].contextWindow, undefined);
   });
 });
 
-describe('引用无效时的说明', () => {
+describe('引用無效時的說明', () => {
   let providers;
 
   before(() => {
     providers = p.normalizeProviders([
-      { id: 'glm', label: '智谱 GLM', models: [{ name: 'glm-4-plus' }, { name: 'glm-4-air' }] },
+      { id: 'glm', label: '智譜 GLM', models: [{ name: 'glm-4-plus' }, { name: 'glm-4-air' }] },
     ]);
   });
 
-  test('没有服务商时提示去设置页', () => {
-    assert.ok(p.describeModelIssue([], 'x').includes('设置'));
+  test('沒有服務商時提示去設定頁', () => {
+    assert.ok(p.describeModelIssue([], 'x').includes('設定'));
   });
 
-  test('格式不对时说明格式', () => {
-    assert.ok(p.describeModelIssue(providers, 'glm-4-plus').includes('服务商前缀/模型名'));
+  test('格式不對時說明格式', () => {
+    assert.ok(p.describeModelIssue(providers, 'glm-4-plus').includes('服務商字首/模型名'));
   });
 
-  // 错误信息必须指名道姓，否则用户只能靠猜。
-  test('未知前缀时列出已有前缀', () => {
+  // 錯誤資訊必須指名道姓，否則使用者只能靠猜。
+  test('未知字首時列出已有字首', () => {
     const unknown = p.describeModelIssue(providers, 'kimi/x');
     assert.ok(unknown.includes('kimi') && unknown.includes('glm'), unknown);
   });
 
-  test('未知模型时列出该商可用模型', () => {
+  test('未知模型時列出該商可用模型', () => {
     const noModel = p.describeModelIssue(providers, 'glm/不存在');
     assert.ok(noModel.includes('glm/glm-4-plus') && noModel.includes('glm/glm-4-air'), noModel);
   });
 
-  test('未选模型时给出示例', () => {
+  test('未選模型時給出示例', () => {
     assert.ok(p.describeModelIssue(providers, '').includes('glm/glm-4-plus'));
   });
 });
 
-describe('0.1.x 配置兼容', () => {
+describe('0.1.x 配置相容', () => {
   let seeded;
   let lm;
   let none;
@@ -346,41 +346,41 @@ describe('0.1.x 配置兼容', () => {
     });
   });
 
-  test('三个服务商都被建出来', () => {
+  test('三個服務商都被建出來', () => {
     assert.equal(seeded.providers.length, 3, JSON.stringify(seeded.providers.map((x) => x.id)));
   });
 
-  test('沿用旧的 baseUrl', () => {
+  test('沿用舊的 baseUrl', () => {
     assert.equal(seeded.providers[0].baseUrl, 'https://api.deepseek.com/v1');
   });
 
-  test('沿用旧的模型名', () => {
+  test('沿用舊的模型名', () => {
     assert.equal(seeded.providers[0].models[0].name, 'deepseek-chat');
   });
 
-  test('旧的 provider 选择被保留', () => {
+  test('舊的 provider 選擇被保留', () => {
     assert.equal(seeded.activeRef, 'anthropic/claude-sonnet-4-5', seeded.activeRef);
   });
 
-  test('vscode-lm 映射到 copilot 前缀', () => {
+  test('vscode-lm 對映到 copilot 字首', () => {
     assert.equal(lm.activeRef, 'copilot/claude-3.5-sonnet', lm.activeRef);
   });
 
-  test('anthropic 模型为空时不建该服务商', () => {
+  test('anthropic 模型為空時不建該服務商', () => {
     assert.ok(!lm.providers.some((x) => x.id === 'anthropic'));
   });
 
-  test('baseUrl 为空时取默认值', () => {
+  test('baseUrl 為空時取預設值', () => {
     assert.equal(lm.providers[0].baseUrl, 'https://api.openai.com/v1');
   });
 
-  test('全空时不产生服务商', () => {
+  test('全空時不產生服務商', () => {
     assert.equal(none.providers.length, 0);
     assert.equal(none.activeRef, '');
   });
 });
 
-describe('readConfig 串起来', () => {
+describe('readConfig 串起來', () => {
   let cfg;
   let cfg2;
   let bad;
@@ -392,7 +392,7 @@ describe('readConfig 串起来', () => {
   before(() => {
     settings = {
       providers: [
-        { id: 'glm', label: '智谱 GLM', kind: 'openai', models: [{ name: 'glm-4-plus', contextWindow: 128000 }] },
+        { id: 'glm', label: '智譜 GLM', kind: 'openai', models: [{ name: 'glm-4-plus', contextWindow: 128000 }] },
         { id: 'openrouter', kind: 'openai', models: [{ name: 'z-ai/glm-4.6', contextWindow: 200000, maxOutputTokens: 8192 }] },
       ],
       model: 'openrouter/z-ai/glm-4.6',
@@ -412,7 +412,7 @@ describe('readConfig 串起来', () => {
 
     globals = configMod.readBudgetFallback();
 
-    // 老用户升级：providers 为空，应从旧设置兜底，而不是「没有模型」。
+    // 老使用者升級：providers 為空，應從舊設定兜底，而不是「沒有模型」。
     settings = {
       provider: 'openai',
       'openai.baseUrl': 'https://api.deepseek.com/v1',
@@ -422,76 +422,76 @@ describe('readConfig 串起来', () => {
     };
     legacy = configMod.readConfig();
 
-    // 新结构一旦存在就以它为准，不再看旧设置。
+    // 新結構一旦存在就以它為準，不再看舊設定。
     settings.providers = [{ id: 'glm', models: [{ name: 'glm-4-plus' }] }];
     settings.model = 'glm/glm-4-plus';
     both = configMod.readConfig();
   });
 
-  test('读出两个服务商', () => {
+  test('讀出兩個服務商', () => {
     assert.equal(cfg.providers.length, 2);
   });
 
-  test('当前模型已解析', () => {
+  test('當前模型已解析', () => {
     assert.ok(cfg.active && cfg.active.model.name === 'z-ai/glm-4.6');
   });
 
-  // 同一服务商下 32k 和 200k 的模型常并存，全局值不该盖住模型自带的窗口。
-  test('模型窗口覆盖全局值', () => {
+  // 同一服務商下 32k 和 200k 的模型常並存，全域值不該蓋住模型自帶的視窗。
+  test('模型視窗覆蓋全域值', () => {
     assert.equal(cfg.contextWindow, 200000, String(cfg.contextWindow));
   });
 
-  test('模型输出上限覆盖全局值', () => {
+  test('模型輸出上限覆蓋全域值', () => {
     assert.equal(cfg.maxOutputTokens, 8192, String(cfg.maxOutputTokens));
   });
 
-  test('切换模型后窗口跟着变', () => {
+  test('切換模型後視窗跟著變', () => {
     assert.equal(cfg2.contextWindow, 128000, String(cfg2.contextWindow));
   });
 
-  test('模型没设输出上限时用全局值', () => {
+  test('模型沒設輸出上限時用全域值', () => {
     assert.equal(cfg2.maxOutputTokens, 4096, String(cfg2.maxOutputTokens));
   });
 
-  test('引用无效时 active 为空', () => {
+  test('引用無效時 active 為空', () => {
     assert.equal(bad.active, undefined);
   });
 
-  test('引用无效时退回全局窗口', () => {
+  test('引用無效時退回全域視窗', () => {
     assert.equal(bad.contextWindow, 64000, String(bad.contextWindow));
   });
 
-  test('引用无效时不丢服务商列表', () => {
+  test('引用無效時不丟服務商列表', () => {
     assert.equal(bad.providers.length, 2);
   });
 
-  test('未指定模型时取第一个', () => {
+  test('未指定模型時取第一個', () => {
     assert.equal(emptyModel.model, 'glm/glm-4-plus');
   });
 
-  test('readBudgetFallback 不受模型覆盖影响', () => {
+  test('readBudgetFallback 不受模型覆蓋影響', () => {
     assert.equal(globals.contextWindow, 64000, String(globals.contextWindow));
   });
 
-  test('providers 为空时从旧设置兜底', () => {
+  test('providers 為空時從舊設定兜底', () => {
     assert.equal(legacy.providers.length, 1, JSON.stringify(legacy.providers));
   });
 
-  test('兜底后模型可用', () => {
+  test('兜底後模型可用', () => {
     assert.ok(legacy.active && legacy.active.model.name === 'deepseek-chat');
   });
 
-  test('兜底后引用为 openai/deepseek-chat', () => {
+  test('兜底後引用為 openai/deepseek-chat', () => {
     assert.equal(legacy.model, 'openai/deepseek-chat', legacy.model);
   });
 
-  test('新结构存在时忽略旧设置', () => {
+  test('新結構存在時忽略舊設定', () => {
     assert.equal(both.providers.length, 1, JSON.stringify(both.providers.map((x) => x.id)));
     assert.equal(both.providers[0].id, 'glm', JSON.stringify(both.providers.map((x) => x.id)));
   });
 });
 
-describe('默认模型列表', () => {
+describe('預設模型列表', () => {
   const providers = [
     { id: 'glm', models: [{ name: 'glm-4-plus', contextWindow: 128000 }] },
     { id: 'ds', models: [{ name: 'deepseek-chat', contextWindow: 64000 }] },
@@ -507,24 +507,24 @@ describe('默认模型列表', () => {
   let odd;
 
   before(() => {
-    // 只有 model 的旧配置：自动升级成单元素列表，用户无感。
+    // 只有 model 的舊配置：自動升級成單元素列表，使用者無感。
     settings = { providers, model: 'ds/deepseek-chat' };
     upgraded = configMod.readConfig();
 
-    // 两者都空：取第一个可用模型，不能是空列表。
+    // 兩者都空：取第一個可用模型，不能是空列表。
     settings = { providers };
     seeded = configMod.readConfig();
 
-    // 列表是唯一真相：model 恒等于首项，哪怕磁盘上的 model 指着别处。
+    // 列表是唯一真相：model 恆等於首項，哪怕磁碟上的 model 指著別處。
     settings = { providers, models: ['ds/deepseek-chat', 'glm/glm-4-plus'], model: 'glm/glm-4-plus' };
     listed = configMod.readConfig();
 
-    // 解析不出的引用**留在列表里**——设置页要能说清「这个模型没了」，
-    // 剔除是模型池构造时的事（那里会打 warn）。
+    // 解析不出的引用**留在列表裡**——設定頁要能說清「這個模型沒了」，
+    // 剔除是模型池構造時的事（那裡會打 warn）。
     settings = { providers, models: ['nope/x', 'glm/glm-4-plus'] };
     broken = configMod.readConfig();
 
-    // 并发与 fallback 的默认值与 clamp。
+    // 併發與 fallback 的預設值與 clamp。
     settings = { providers };
     defaults = configMod.readConfig();
 
@@ -538,17 +538,17 @@ describe('默认模型列表', () => {
     odd = configMod.readConfig();
   });
 
-  test('非数组返回空', () => {
+  test('非陣列返回空', () => {
     const norm = configMod.normalizeModelList;
     assert.equal(norm(undefined).length, 0);
     assert.equal(norm(null).length, 0);
   });
 
-  test('裸字符串当作单元素列表', () => {
+  test('裸字串當作單元素列表', () => {
     assert.equal(configMod.normalizeModelList('glm/a').join(','), 'glm/a');
   });
 
-  test('去空白与空项', () => {
+  test('去空白與空項', () => {
     const norm = configMod.normalizeModelList;
     assert.equal(norm(['  a/x  ', '', '   ']).join(','), 'a/x', JSON.stringify(norm(['  a/x  ', '', '   '])));
   });
@@ -557,79 +557,79 @@ describe('默认模型列表', () => {
     assert.equal(configMod.normalizeModelList(['a/x', 'b/y', 'a/x']).join(','), 'a/x,b/y');
   });
 
-  test('非字符串项被跳过', () => {
+  test('非字串項被跳過', () => {
     assert.equal(configMod.normalizeModelList(['a/x', 42, null, { a: 1 }]).join(','), 'a/x');
   });
 
-  test('旧配置只有 model 时升级成单元素列表', () => {
+  test('舊配置只有 model 時升級成單元素列表', () => {
     assert.equal(upgraded.models.join(','), 'ds/deepseek-chat', upgraded.models.join(','));
   });
 
-  test('升级后 model 不变', () => {
+  test('升級後 model 不變', () => {
     assert.equal(upgraded.model, 'ds/deepseek-chat');
   });
 
-  test('都没配时取第一个可用模型', () => {
+  test('都沒配時取第一個可用模型', () => {
     assert.equal(seeded.models.join(','), 'glm/glm-4-plus', seeded.models.join(','));
   });
 
-  test('model 恒等于列表首项', () => {
+  test('model 恆等於列表首項', () => {
     assert.equal(listed.model, 'ds/deepseek-chat', listed.model);
   });
 
-  test('首项决定窗口', () => {
+  test('首項決定視窗', () => {
     assert.equal(listed.contextWindow, 64000, String(listed.contextWindow));
   });
 
-  test('列表原样保留顺序', () => {
+  test('列表原樣保留順序', () => {
     assert.equal(listed.models.join(','), 'ds/deepseek-chat,glm/glm-4-plus');
   });
 
-  test('解析不出的引用不在 readConfig 里被丢掉', () => {
+  test('解析不出的引用不在 readConfig 裡被丟掉', () => {
     assert.equal(broken.models.length, 2, broken.models.join(','));
   });
 
-  test('首项解析不出时 active 为空', () => {
+  test('首項解析不出時 active 為空', () => {
     assert.equal(broken.active, undefined);
   });
 
-  test('并发默认 3', () => {
+  test('併發預設 3', () => {
     assert.equal(defaults.concurrency, 3, String(defaults.concurrency));
   });
 
-  test('换模型重试默认 2 次', () => {
+  test('換模型重試預設 2 次', () => {
     assert.equal(defaults.fallbackAttempts, 2, String(defaults.fallbackAttempts));
   });
 
-  test('并发超上限被收到 16', () => {
+  test('併發超上限被收到 16', () => {
     assert.equal(high.concurrency, 16, String(high.concurrency));
   });
 
-  test('重试超上限被收到 5', () => {
+  test('重試超上限被收到 5', () => {
     assert.equal(high.fallbackAttempts, 5, String(high.fallbackAttempts));
   });
 
-  test('并发不小于 1', () => {
+  test('併發不小於 1', () => {
     assert.equal(low.concurrency, 1, String(low.concurrency));
   });
 
-  test('重试次数不小于 0', () => {
+  test('重試次數不小於 0', () => {
     assert.equal(low.fallbackAttempts, 0, String(low.fallbackAttempts));
   });
 
-  test('小数向下取整', () => {
+  test('小數向下取整', () => {
     assert.equal(odd.concurrency, 2, String(odd.concurrency));
   });
 
-  test('非数字退回默认值', () => {
+  test('非數字退回預設值', () => {
     assert.equal(odd.fallbackAttempts, 2, String(odd.fallbackAttempts));
   });
 });
 
-describe('设置页未保存编辑不被刷新冲掉', () => {
-  // 把 view.js 里那段 renderSettings 的逻辑原样复刻一遍。
-  // 这是一条真实的丢数据路径：FileSystemWatcher 一刷新就推设置，
-  // 用户正在填的 baseUrl 不该被磁盘上的旧值覆盖。
+describe('設定頁未儲存編輯不被重新整理沖掉', () => {
+  // 把 view.js 裡那段 renderSettings 的邏輯原樣復刻一遍。
+  // 這是一條真實的丟資料路徑：FileSystemWatcher 一重新整理就推設定，
+  // 使用者正在填的 baseUrl 不該被磁碟上的舊值覆蓋。
   const snap = {};
 
   before(() => {
@@ -649,24 +649,24 @@ describe('设置页未保存编辑不被刷新冲掉', () => {
     render(onDisk, { glm: false });
     snap.firstId = draft.providers[0].id;
 
-    // 用户开始编辑
+    // 使用者開始編輯
     draft.providers[0].baseUrl = 'https://正在填一半';
     draft.dirty = true;
 
     render(onDisk, { glm: false });
     snap.afterRefresh = draft.providers[0].baseUrl;
 
-    // 刚在弹窗里输完 Key，状态要更新
+    // 剛在彈窗裡輸完 Key，狀態要更新
     render(onDisk, { glm: true });
     snap.keysGlm = draft.keys.glm;
     snap.afterKeyUpdate = draft.providers[0].baseUrl;
 
-    // 保存被拒：必须保住编辑
+    // 儲存被拒：必須保住編輯
     render(onDisk, { glm: true }, 'rejected');
     snap.afterRejected = draft.providers[0].baseUrl;
     snap.dirtyAfterRejected = draft.dirty;
 
-    // 保存成功：以磁盘为准
+    // 儲存成功：以磁碟為準
     const saved = { providers: [{ id: 'glm', baseUrl: 'https://填完了', models: [{ name: 'glm-4-plus' }] }] };
     render(saved, { glm: true }, 'saved');
     snap.afterSaved = draft.providers[0].baseUrl;
@@ -676,47 +676,47 @@ describe('设置页未保存编辑不被刷新冲掉', () => {
     snap.cleanLength = draft.providers.length;
   });
 
-  test('首次渲染读磁盘', () => {
+  test('首次渲染讀磁碟', () => {
     assert.equal(snap.firstId, 'glm');
   });
 
-  test('刷新不冲掉未保存的编辑', () => {
+  test('重新整理不沖掉未儲存的編輯', () => {
     assert.equal(snap.afterRefresh, 'https://正在填一半');
   });
 
-  test('脏状态下 Key 状态仍会更新', () => {
+  test('髒狀態下 Key 狀態仍會更新', () => {
     assert.equal(snap.keysGlm, true);
   });
 
-  test('更新 Key 状态时不动编辑内容', () => {
+  test('更新 Key 狀態時不動編輯內容', () => {
     assert.equal(snap.afterKeyUpdate, 'https://正在填一半');
   });
 
-  test('保存被拒时保住编辑', () => {
+  test('儲存被拒時保住編輯', () => {
     assert.equal(snap.afterRejected, 'https://正在填一半');
   });
 
-  test('保存被拒后仍是脏的', () => {
+  test('儲存被拒後仍是髒的', () => {
     assert.equal(snap.dirtyAfterRejected, true);
   });
 
-  test('保存成功后以磁盘为准', () => {
+  test('儲存成功後以磁碟為準', () => {
     assert.equal(snap.afterSaved, 'https://填完了');
   });
 
-  test('保存成功后不再是脏的', () => {
+  test('儲存成功後不再是髒的', () => {
     assert.equal(snap.dirtyAfterSaved, false);
   });
 
-  test('干净状态下正常跟随磁盘', () => {
+  test('乾淨狀態下正常跟隨磁碟', () => {
     assert.equal(snap.cleanLength, 0);
   });
 });
 
-describe('设置页草稿：新配置的模型不必先保存就能测', () => {
-  // 「新加的模型必须先保存才能测」对用户毫无道理——而且保存一份没验过的
-  // 配置正是「测试」这个按钮想要避免的事。设置页把屏幕上那份服务商随
-  // testConnection 一起发过来，解析时叠加到已保存的列表上。
+describe('設定頁草稿：新配置的模型不必先儲存就能測', () => {
+  // 「新加的模型必須先儲存才能測」對使用者毫無道理——而且儲存一份沒驗過的
+  // 配置正是「測試」這個按鈕想要避免的事。設定頁把螢幕上那份服務商隨
+  // testConnection 一起發過來，解析時疊加到已儲存的列表上。
   let saved;
   let draft;
   let withDraft;
@@ -731,7 +731,7 @@ describe('设置页草稿：新配置的模型不必先保存就能测', () => {
       { id: 'glm', kind: 'openai', models: [{ name: 'glm-4-plus' }] },
     ]);
 
-    // 屏幕上：同一个服务商刚加了第三个模型，还没保存。
+    // 螢幕上：同一個服務商剛加了第三個模型，還沒儲存。
     draft = p.normalizeProviders([
       { id: 'openai', label: 'my-router', kind: 'openai', baseUrl: 'https://router.example/v1',
         models: [{ name: 'gemini/gemma-4-31b-it' }, { name: 'ms/deepseek-ai/DeepSeek-V4-Flash' },
@@ -741,28 +741,28 @@ describe('设置页草稿：新配置的模型不必先保存就能测', () => {
     withDraft = p.withDraftProvider(saved, draft);
     fresh = p.resolveModelRef(withDraft, 'openai/ms/deepseek-ai/DeepSeek-V4-Pro');
 
-    // 改了 baseUrl 但没保存，测试要打新地址而不是旧地址。
+    // 改了 baseUrl 但沒儲存，測試要打新地址而不是舊地址。
     const moved = p.normalizeProviders([
       { id: 'openai', kind: 'openai', baseUrl: 'https://新地址.example/v1', models: [{ name: 'gemini/gemma-4-31b-it' }] },
     ])[0];
     movedResolved = p.resolveModelRef(p.withDraftProvider(saved, moved), 'openai/gemini/gemma-4-31b-it');
 
-    // 全新的服务商（还没保存过任何一份）同样要能测。
+    // 全新的服務商（還沒儲存過任何一份）同樣要能測。
     brandNew = p.normalizeProviders([
       { id: 'kimi', kind: 'openai', baseUrl: 'https://kimi.example/v1', models: [{ name: 'moonshot-v1-128k' }] },
     ])[0];
   });
 
-  test('未保存的新模型能解析出来', () => {
+  test('未儲存的新模型能解析出來', () => {
     assert.ok(!!fresh, p.describeModelIssue(withDraft, 'openai/ms/deepseek-ai/DeepSeek-V4-Pro'));
   });
 
-  test('解析出的模型名是完整的（含两层斜杠）', () => {
+  test('解析出的模型名是完整的（含兩層斜槓）', () => {
     assert.ok(fresh && fresh.model.name === 'ms/deepseek-ai/DeepSeek-V4-Pro', fresh && fresh.model.name);
   });
 
-  // 草稿只顶掉同 id 的那一个，别家不能受牵连——否则 ref 指向 glm 时就废了。
-  test('草稿不影响其他服务商', () => {
+  // 草稿只頂掉同 id 的那一個，別家不能受牽連——否則 ref 指向 glm 時就廢了。
+  test('草稿不影響其他服務商', () => {
     assert.ok(!!p.resolveModelRef(withDraft, 'glm/glm-4-plus'));
   });
 
@@ -770,42 +770,42 @@ describe('设置页草稿：新配置的模型不必先保存就能测', () => {
     assert.equal(withDraft.filter((x) => x.id === 'openai').length, 1);
   });
 
-  test('草稿排在最前（同 id 时命中屏幕上这份）', () => {
+  test('草稿排在最前（同 id 時命中螢幕上這份）', () => {
     assert.equal(withDraft[0], draft);
   });
 
-  test('未保存的 baseUrl 生效', () => {
+  test('未儲存的 baseUrl 生效', () => {
     assert.ok(
       movedResolved && movedResolved.profile.baseUrl === 'https://新地址.example/v1',
       movedResolved && movedResolved.profile.baseUrl
     );
   });
 
-  test('没有草稿时原样返回', () => {
+  test('沒有草稿時原樣返回', () => {
     assert.equal(p.withDraftProvider(saved, undefined), saved);
   });
 
-  test('全新服务商的模型也能测', () => {
+  test('全新服務商的模型也能測', () => {
     assert.ok(!!p.resolveModelRef(p.withDraftProvider(saved, brandNew), 'kimi/moonshot-v1-128k'));
   });
 
-  test('全新服务商不挤掉已保存的', () => {
+  test('全新服務商不擠掉已儲存的', () => {
     assert.equal(p.withDraftProvider(saved, brandNew).length, 3);
   });
 });
 
-describe('config.json 缺席时的 settings.json 兜底', () => {
-  // 真实 VS Code 壳里这是**两个不同的源**：ConfigStore 读 ~/.novelwarden/config.json，
-  // legacy reader 读 settings.json。上面的用例让两者共用一个对象，
-  // 恰好掩盖了这条路径——这里必须分开。
+describe('config.json 缺席時的 settings.json 兜底', () => {
+  // 真實 VS Code 殼裡這是**兩個不同的源**：ConfigStore 讀 ~/.novelwarden/config.json，
+  // legacy reader 讀 settings.json。上面的用例讓兩者共用一個物件，
+  // 恰好掩蓋了這條路徑——這裡必須分開。
   //
-  // 触发条件：config.json 不存在/损坏（FileConfigStore.read 返回 undefined），
-  // 而用户的 novel.providers 就在 settings.json 里。
+  // 觸發條件：config.json 不存在/損壞（FileConfigStore.read 返回 undefined），
+  // 而使用者的 novel.providers 就在 settings.json 裡。
   let configJson;
   let cfg;
   let back;
   let seeded;
-  /** 落盘那一刻的快照：configJson 在本节最后会被置回 undefined。 */
+  /** 落盤那一刻的快照：configJson 在本節最後會被置回 undefined。 */
   let diskKeys;
   let diskProviders;
 
@@ -815,7 +815,7 @@ describe('config.json 缺席时的 settings.json 兜底', () => {
       baseUrl: 'https://router.example/v1',
       models: [{ name: 'gemini/gemma-4-31b-it', contextWindow: 256000, maxOutputTokens: 33000 }],
     };
-    // cfg.get() 对声明了默认值的键永远返回值，所以 0.1.x 的键总是"存在"。
+    // cfg.get() 對宣告瞭預設值的鍵永遠返回值，所以 0.1.x 的鍵總是"存在"。
     const settingsJson = {
       providers: [userProvider],
       model: 'openai/gemini/gemma-4-31b-it',
@@ -831,68 +831,68 @@ describe('config.json 缺席时的 settings.json 兜底', () => {
     configMod.initConfigFromHost({
       config: { read: () => configJson, write: async (s) => { configJson = JSON.parse(JSON.stringify(s)); } },
     });
-    // 用**真实**的 legacySettingsReader，而不是手写桩：这条 bug 的一半就出在
-    // 那个 reader 只读 0.1.x 的键、把 novel.providers 整份漏掉。
+    // 用**真實**的 legacySettingsReader，而不是手寫樁：這條 bug 的一半就出在
+    // 那個 reader 只讀 0.1.x 的鍵、把 novel.providers 整份漏掉。
     settings = settingsJson;
     configMod.setLegacyConfigReader(loadModule('src/shells/vscode/migrate.ts').legacySettingsReader);
 
     cfg = configMod.readConfig();
 
-    // 只改一个字段的写入（下拉框切模型）不能把 providers 弄丢，
-    // 否则回读时 model 指向的服务商解析不出来，界面报「下没有模型」。
+    // 只改一個欄位的寫入（下拉框切模型）不能把 providers 弄丟，
+    // 否則回讀時 model 指向的服務商解析不出來，介面報「下沒有模型」。
     await configMod.updateSettings({ model: 'openai/gemini/gemma-4-31b-it' });
     diskKeys = Object.keys(configJson);
     diskProviders = configJson.providers;
     back = configMod.readConfig();
 
-    // providers 被用户清空时，0.1.x 兜底仍要生效（老用户升级路径不能回归）。
+    // providers 被使用者清空時，0.1.x 兜底仍要生效（老使用者升級路徑不能迴歸）。
     const legacyOnly = { provider: 'openai', 'openai.baseUrl': 'https://api.deepseek.com/v1', 'openai.model': 'deepseek-chat', 'anthropic.model': '', 'vscodeLm.family': '' };
     configJson = undefined;
     settings = legacyOnly;
     seeded = configMod.readConfig();
   });
 
-  test('用 settings.json 里的 providers，而不是 0.1.x 默认值', () => {
+  test('用 settings.json 裡的 providers，而不是 0.1.x 預設值', () => {
     assert.equal(cfg.providers.length, 1, JSON.stringify(cfg.providers.map((x) => x.label)));
     assert.equal(cfg.providers[0].label, 'my-router', JSON.stringify(cfg.providers.map((x) => x.label)));
   });
 
-  test('当前模型解析得出', () => {
+  test('當前模型解析得出', () => {
     assert.ok(!!cfg.active, cfg.active ? '' : p.describeModelIssue(cfg.providers, cfg.model));
   });
 
-  test('窗口取模型自带值', () => {
+  test('視窗取模型自帶值', () => {
     assert.equal(cfg.contextWindow, 256000, String(cfg.contextWindow));
   });
 
-  test('落盘时带上 providers', () => {
+  test('落盤時帶上 providers', () => {
     assert.ok(Array.isArray(diskProviders) && diskProviders.length === 1, JSON.stringify(diskKeys));
   });
 
-  test('落盘时丢掉 0.1.x 的带点键', () => {
+  test('落盤時丟掉 0.1.x 的帶點鍵', () => {
     assert.ok(!diskKeys.some((k) => k.includes('.') || k === 'provider'), JSON.stringify(diskKeys));
   });
 
-  test('回读后模型仍可解析', () => {
+  test('回讀後模型仍可解析', () => {
     assert.ok(!!back.active, back.active ? '' : p.describeModelIssue(back.providers, back.model));
   });
 
-  test('回读后仍是用户的服务商', () => {
+  test('回讀後仍是使用者的服務商', () => {
     assert.ok(back.providers[0] && back.providers[0].label === 'my-router');
   });
 
-  test('纯 0.1.x 设置仍能兜底', () => {
+  test('純 0.1.x 設定仍能兜底', () => {
     assert.ok(seeded.model === 'openai/deepseek-chat' && !!seeded.active, seeded.model);
   });
 });
 
 /**
- * 切换模型 = 把它提到默认模型列表首位。
+ * 切換模型 = 把它提到預設模型列表首位。
  *
- * 单独一节且放在最后，因为它要 await 落盘：前面的用例都是同步读配置，
- * 混进去会打乱它们对 `settings` 的假设。
+ * 單獨一節且放在最後，因為它要 await 落盤：前面的用例都是同步讀配置，
+ * 混進去會打亂它們對 `settings` 的假設。
  */
-describe('切换模型 = 提到列表首位', () => {
+describe('切換模型 = 提到列表首位', () => {
   const providers = [
     { id: 'glm', models: [{ name: 'glm-4-plus' }] },
     { id: 'ds', models: [{ name: 'deepseek-chat' }] },
@@ -907,7 +907,7 @@ describe('切换模型 = 提到列表首位', () => {
   let afterOutsideList;
 
   before(async () => {
-    // 自带一份存储：上一节把 store 换成了 configJson，这里要能直接看落盘结果。
+    // 自帶一份儲存：上一節把 store 換成了 configJson，這裡要能直接看落盤結果。
     disk = { providers, models: ['glm/glm-4-plus', 'ds/deepseek-chat', 'kimi/moonshot-v1-128k'] };
     configMod.initConfigFromHost({
       config: { read: () => disk, write: async (s) => { disk = JSON.parse(JSON.stringify(s)); } },
@@ -917,25 +917,25 @@ describe('切换模型 = 提到列表首位', () => {
     after1 = configMod.readConfig();
     diskAfter1 = { models0: disk.models[0], model: disk.model };
 
-    // 只写 model 不写 models 会被首项盖回去——这是「列表是唯一真相」的代价：
-    // 所有切换模型的入口都必须走 promoteModel，不能自己写 model。
+    // 只寫 model 不寫 models 會被首項蓋回去——這是「列表是唯一真相」的代價：
+    // 所有切換模型的入口都必須走 promoteModel，不能自己寫 model。
     await configMod.updateSettings({ model: 'kimi/moonshot-v1-128k' });
     afterPlainWrite = configMod.readConfig();
 
     await configMod.promoteModel('kimi/moonshot-v1-128k');
     afterPromoteKimi = configMod.readConfig();
 
-    // 列表里原本没有的模型也能切过去（命令面板可以选到任何已配置的模型）。
+    // 列表裡原本沒有的模型也能切過去（命令面板可以選到任何已配置的模型）。
     disk = { providers, models: ['glm/glm-4-plus'] };
     await configMod.promoteModel('ds/deepseek-chat');
     afterOutsideList = configMod.readConfig();
   });
 
-  test('切换的模型排到了首位', () => {
+  test('切換的模型排到了首位', () => {
     assert.equal(after1.models[0], 'ds/deepseek-chat', after1.models.join(','));
   });
 
-  test('其余顺序原样保留', () => {
+  test('其餘順序原樣保留', () => {
     assert.equal(
       after1.models.join(','),
       'ds/deepseek-chat,glm/glm-4-plus,kimi/moonshot-v1-128k',
@@ -943,27 +943,27 @@ describe('切换模型 = 提到列表首位', () => {
     );
   });
 
-  test('model 跟着变', () => {
+  test('model 跟著變', () => {
     assert.equal(after1.model, 'ds/deepseek-chat', after1.model);
   });
 
-  test('落盘的 models 与 model 一致', () => {
+  test('落盤的 models 與 model 一致', () => {
     assert.equal(diskAfter1.models0, diskAfter1.model, `${diskAfter1.models0} vs ${diskAfter1.model}`);
   });
 
-  test('只写 model 不生效（切换模型必须走 promoteModel）', () => {
+  test('只寫 model 不生效（切換模型必須走 promoteModel）', () => {
     assert.equal(afterPlainWrite.model, 'ds/deepseek-chat', afterPlainWrite.model);
   });
 
-  test('promoteModel 才切得动', () => {
+  test('promoteModel 才切得動', () => {
     assert.equal(afterPromoteKimi.model, 'kimi/moonshot-v1-128k');
   });
 
-  test('切换不丢别的模型', () => {
+  test('切換不丟別的模型', () => {
     assert.equal(afterPromoteKimi.models.length, 3, afterPromoteKimi.models.join(','));
   });
 
-  test('切到列表外的模型会把它加进列表', () => {
+  test('切到列表外的模型會把它加進列表', () => {
     assert.equal(
       afterOutsideList.models.join(','),
       'ds/deepseek-chat,glm/glm-4-plus',

@@ -1,44 +1,44 @@
 /**
- * 外观与专注的取值表、上下限与校验（纯函数、零 DOM、零 import）。
+ * 外觀與專注的取值表、上下限與校驗（純函式、零 DOM、零 import）。
  *
- * 这几项都按浏览器记在 `novelforge.editor.prefs` 里（与成对符号、自动保存同一处，见 `paragraphState.ts`），
- * 作者会手改 localStorage、旧版本写下的值也可能不认识——**读回来的坏值一律回落缺省、越界的夹进上下限**，
- * 口径只在这里写一份（`tests/unit/editor/lookCore.test.js` 钉着）。`look.ts` 只管把结果写成 CSS 变量，
- * `focus.ts` 只管开关。
+ * 這幾項都按瀏覽器記在 `novelforge.editor.prefs` 裡（與成對符號、自動儲存同一處，見 `paragraphState.ts`），
+ * 作者會手改 localStorage、舊版本寫下的值也可能不認識——**讀回來的壞值一律回落預設、越界的夾進上下限**，
+ * 口徑只在這裡寫一份（`tests/unit/editor/lookCore.test.js` 釘著）。`look.ts` 只管把結果寫成 CSS 變數，
+ * `focus.ts` 只管開關。
  *
- * ## 排版参数怎么落到页面上
+ * ## 排版引數怎麼落到頁面上
  *
- * 字体、字号、行距、版心宽度是一组 CSS 变量（`LOOK_VARS`），写在 `<html>` 上；编辑区的 textarea、高亮镜像层、
- * 预览三处在 `css/standalone/look.css` 里**共用同一条规则**读它们——别给哪一处单写一份，镜像层与 textarea 排得
- * 不一样，查找高亮就对不齐了（`media/README.md`「镜像层与 textarea 排版必须完全一致」）。
+ * 字型、字號、行距、版心寬度是一組 CSS 變數（`LOOK_VARS`），寫在 `<html>` 上；編輯區的 textarea、高亮映象層、
+ * 預覽三處在 `css/standalone/look.css` 裡**共用同一條規則**讀它們——別給哪一處單寫一份，映象層與 textarea 排得
+ * 不一樣，查詢高亮就對不齊了（`media/README.md`「映象層與 textarea 排版必須完全一致」）。
  */
 
-/** 正文字体。只列字体族名，不打包字体文件：作者机器上没有的那几个名字浏览器会跳过，落到最后的通用族上。 */
+/** 正文字型。只列字型族名，不打包字型檔案：作者機器上沒有的那幾個名字瀏覽器會跳過，落到最後的通用族上。 */
 export type FontId = 'song' | 'hei' | 'kai' | 'fangsong' | 'system';
 
 export interface FontChoice {
   id: FontId;
   label: string;
-  /** `font-family` 的值。固定的一张表，不收作者输入（写进 CSS 变量的只会是这几串）。 */
+  /** `font-family` 的值。固定的一張表，不收作者輸入（寫進 CSS 變數的只會是這幾串）。 */
   stack: string;
 }
 
-/** 顺序即面板上的顺序。宋体是缺省（与改造前编辑区的正文字体同一串）。 */
+/** 順序即面板上的順序。宋體是預設（與改造前編輯區的正文字型同一串）。 */
 export const FONT_CHOICES: readonly FontChoice[] = [
   {
     id: 'song',
-    label: '宋体（衬线）',
+    label: '宋體（襯線）',
     stack: "'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', Georgia, serif",
   },
   {
     id: 'hei',
-    label: '黑体（无衬线）',
+    label: '黑體（無襯線）',
     stack:
       "'Noto Sans CJK SC', 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'WenQuanYi Micro Hei', sans-serif",
   },
   {
     id: 'kai',
-    label: '楷体',
+    label: '楷體',
     stack: "'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', 'AR PL UKai CN', serif",
   },
   {
@@ -48,18 +48,18 @@ export const FONT_CHOICES: readonly FontChoice[] = [
   },
   {
     id: 'system',
-    label: '跟随系统',
+    label: '跟隨系統',
     stack: "system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif",
   },
 ];
 
-/** 字号（px）。快捷键 Ctrl+= / Ctrl+- 一下一步。 */
+/** 字號（px）。快捷鍵 Ctrl+= / Ctrl+- 一下一步。 */
 export const FONT_SIZE = { min: 12, max: 32, step: 1, fallback: 15 } as const;
-/** 行距（倍数）。空行分段时段与段之间那一行空行也跟着它变。 */
+/** 行距（倍數）。空行分段時段與段之間那一行空行也跟著它變。 */
 export const LINE_HEIGHT = { min: 1.3, max: 3, step: 0.05, fallback: 1.95 } as const;
 /**
- * 版心宽度：一行最多几个字（按全角字宽算），宽屏时那一栏居中。`0` 是「铺满」——缺省，与改造前一样。
- * `presets` 是面板下拉框里的几档；手改成别的整数也认（夹进上下限）。
+ * 版心寬度：一行最多幾個字（按全形字寬算），寬屏時那一欄居中。`0` 是「鋪滿」——預設，與改造前一樣。
+ * `presets` 是面板下拉框裡的幾檔；手改成別的整數也認（夾進上下限）。
  */
 export const MEASURE = { min: 20, max: 80, fallback: 0, presets: [0, 30, 35, 40, 45, 50, 60, 70] } as const;
 
@@ -67,9 +67,9 @@ export interface LookPrefs {
   fontFamily: FontId;
   /** px */
   fontSize: number;
-  /** 倍数 */
+  /** 倍數 */
   lineHeight: number;
-  /** 一行最多几个字；0 = 铺满 */
+  /** 一行最多幾個字；0 = 鋪滿 */
   measure: number;
 }
 
@@ -80,10 +80,10 @@ export const DEFAULT_LOOK: Readonly<LookPrefs> = Object.freeze({
   measure: MEASURE.fallback,
 });
 
-/** 偏好里这几项的键名（与成对符号、自动保存平铺在同一个对象里）。 */
+/** 偏好裡這幾項的鍵名（與成對符號、自動儲存平鋪在同一個物件裡）。 */
 export const LOOK_KEYS: readonly (keyof LookPrefs)[] = ['fontFamily', 'fontSize', 'lineHeight', 'measure'];
 
-/** 排版那组 CSS 变量的名字。textarea、镜像层、预览在 `look.css` 里读同一组。 */
+/** 排版那組 CSS 變數的名字。textarea、映象層、預覽在 `look.css` 裡讀同一組。 */
 export const LOOK_VARS = {
   fontFamily: '--nf-ed-font-family',
   fontSize: '--nf-ed-font-size',
@@ -93,24 +93,24 @@ export const LOOK_VARS = {
 
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-/** 按步长取整（避免 0.1 + 0.2 那种尾巴写进偏好），再夹进上下限。 */
+/** 按步長取整（避免 0.1 + 0.2 那種尾巴寫進偏好），再夾進上下限。 */
 function snap(v: number, min: number, max: number, step: number): number {
   const stepped = Math.round(v / step) * step;
   const fixed = Number(stepped.toFixed(4));
   return Math.min(max, Math.max(min, fixed));
 }
 
-/** 字号：不是有限数字回落缺省，越界夹进 12–32，取整到 1px。 */
+/** 字號：不是有限數字回落預設，越界夾進 12–32，取整到 1px。 */
 export function clampFontSize(v: unknown): number {
   return isNumber(v) ? snap(v, FONT_SIZE.min, FONT_SIZE.max, FONT_SIZE.step) : FONT_SIZE.fallback;
 }
 
-/** 行距：不是有限数字回落缺省，越界夹进 1.3–3，取整到 0.05。 */
+/** 行距：不是有限數字回落預設，越界夾進 1.3–3，取整到 0.05。 */
 export function clampLineHeight(v: unknown): number {
   return isNumber(v) ? snap(v, LINE_HEIGHT.min, LINE_HEIGHT.max, LINE_HEIGHT.step) : LINE_HEIGHT.fallback;
 }
 
-/** 版心：不是有限数字回落缺省（铺满）；≤ 0 是铺满；其余取整、夹进 20–80 字。 */
+/** 版心：不是有限數字回落預設（鋪滿）；≤ 0 是鋪滿；其餘取整、夾進 20–80 字。 */
 export function clampMeasure(v: unknown): number {
   if (!isNumber(v)) {
     return MEASURE.fallback;
@@ -121,12 +121,12 @@ export function clampMeasure(v: unknown): number {
   return Math.min(MEASURE.max, Math.max(MEASURE.min, Math.round(v)));
 }
 
-/** 字体：认不出的回落宋体。 */
+/** 字型：認不出的回落宋體。 */
 export function normalizeFont(v: unknown): FontId {
   return FONT_CHOICES.some((f) => f.id === v) ? (v as FontId) : DEFAULT_LOOK.fontFamily;
 }
 
-/** 从整份偏好（一个随便什么都可能的对象）里读出外观那几项，坏值逐项回落。 */
+/** 從整份偏好（一個隨便什麼都可能的物件）裡讀出外觀那幾項，壞值逐項回落。 */
 export function normalizeLook(raw: unknown): LookPrefs {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   return {
@@ -137,12 +137,12 @@ export function normalizeLook(raw: unknown): LookPrefs {
   };
 }
 
-/** 两份外观一样不一样。 */
+/** 兩份外觀一樣不一樣。 */
 export function sameLook(a: LookPrefs, b: LookPrefs): boolean {
   return LOOK_KEYS.every((k) => a[k] === b[k]);
 }
 
-/** 放大 / 缩小一档（到头了原样返回）。 */
+/** 放大 / 縮小一檔（到頭了原樣返回）。 */
 export function stepFontSize(size: number, dir: 1 | -1): number {
   return clampFontSize(clampFontSize(size) + dir * FONT_SIZE.step);
 }
@@ -152,8 +152,8 @@ export function fontStack(id: FontId): string {
 }
 
 /**
- * 写到 `<html>` 上的那组变量。版心按 `em` 写（全角字宽 = 字号），在用到它的元素上按那里的字号解析——
- * textarea、镜像层、预览字号相同，算出来就相同。铺满写 `100cqi`（整个编辑区宽），居中那一算式就落回最小内边距。
+ * 寫到 `<html>` 上的那組變數。版心按 `em` 寫（全形字寬 = 字號），在用到它的元素上按那裡的字號解析——
+ * textarea、映象層、預覽字號相同，算出來就相同。鋪滿寫 `100cqi`（整個編輯區寬），居中那一算式就落回最小內邊距。
  */
 export function lookVars(look: LookPrefs): Record<string, string> {
   return {
@@ -164,14 +164,14 @@ export function lookVars(look: LookPrefs): Record<string, string> {
   };
 }
 
-/** 版心那一档怎么说（面板下拉框、菜单提示）。 */
+/** 版心那一檔怎麼說（面板下拉框、選單提示）。 */
 export function measureLabel(measure: number): string {
-  return measure > 0 ? `一行最多 ${measure} 字` : '铺满';
+  return measure > 0 ? `一行最多 ${measure} 字` : '鋪滿';
 }
 
-// ---------------------------------------------------------------- 专注
+// ---------------------------------------------------------------- 專注
 
-/** 专注那三个开关（全屏不记：浏览器每次加载都从窗口模式开始，记了也恢复不了）。 */
+/** 專注那三個開關（全屏不記：瀏覽器每次載入都從視窗模式開始，記了也恢復不了）。 */
 export interface FocusPrefs {
   focusMode: boolean;
   typewriter: boolean;
@@ -180,7 +180,7 @@ export interface FocusPrefs {
 
 export const FOCUS_KEYS: readonly (keyof FocusPrefs)[] = ['focusMode', 'typewriter', 'paragraphFocus'];
 
-/** 三个开关缺省都关，只认明明白白的 `true`（与自动保存同一个口径）。 */
+/** 三個開關預設都關，只認明明白白的 `true`（與自動儲存同一個口徑）。 */
 export function normalizeFocus(raw: unknown): FocusPrefs {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   return {

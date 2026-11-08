@@ -1,18 +1,18 @@
 /**
- * 小说编辑器的基本功：分段格式、回车自动缩进、成对符号、段落快捷键、一键排版。`index.ts` 启动时调一次
- * {@link installParagraphTools}，各模块只经 `api.ts`（`addKeyHandler` / `onEditorChange` / `Pane.applyEdit`）
- * 碰编辑区，`pane.ts` 不知道它们的存在。
+ * 小說編輯器的基本功：分段格式、回車自動縮排、成對符號、段落快捷鍵、一鍵排版。`index.ts` 啟動時調一次
+ * {@link installParagraphTools}，各模組只經 `api.ts`（`addKeyHandler` / `onEditorChange` / `Pane.applyEdit`）
+ * 碰編輯區，`pane.ts` 不知道它們的存在。
  *
- * | 模块 | 管什么 |
+ * | 模組 | 管什麼 |
  * |---|---|
- * | `paragraphState.ts` | 分段格式（后端推来的）与编辑器偏好（localStorage `novelforge.editor.prefs`） |
- * | `enter.ts` | 回车 / Shift+Enter：正文按分段格式另起一段，Markdown 接着写列表，其余沿用缩进 |
- * | `pairs.ts` | 成对符号自动补全（“” 「」 （） ……） |
- * | `lines.ts` | 段落快捷键：Alt+↑↓ 交换、Shift+Alt+↑↓ 复制、Ctrl+Shift+K 删除、Ctrl+Enter 另起一段 |
- * | `layout.ts` | 一键排版、半角标点转全角、工具栏「排版」按钮 |
+ * | `paragraphState.ts` | 分段格式（後端推來的）與編輯器偏好（localStorage `novelforge.editor.prefs`） |
+ * | `enter.ts` | 回車 / Shift+Enter：正文按分段格式另起一段，Markdown 接著寫列表，其餘沿用縮排 |
+ * | `pairs.ts` | 成對符號自動補全（“” 「」 （） ……） |
+ * | `lines.ts` | 段落快捷鍵：Alt+↑↓ 交換、Shift+Alt+↑↓ 複製、Ctrl+Shift+K 刪除、Ctrl+Enter 另起一段 |
+ * | `layout.ts` | 一鍵排版、半形標點轉全形、工具欄「排版」按鈕 |
  *
- * 标题栏「编辑」菜单（view.js 里的 `view/paragraphMenu.ts`）经 `nf-paragraph-query` 问这里的状态、经
- * `nf-paragraph-command` 把动作交过来；切换分段格式不经这里，菜单直接发 `setParagraphStyle` 给后端。
+ * 標題欄「編輯」選單（view.js 裡的 `view/paragraphMenu.ts`）經 `nf-paragraph-query` 問這裡的狀態、經
+ * `nf-paragraph-command` 把動作交過來；切換分段格式不經這裡，選單直接發 `setParagraphStyle` 給後端。
  */
 import { activeEditor, isProse } from './api';
 import { installEnter } from './enter';

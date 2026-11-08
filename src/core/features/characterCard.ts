@@ -1,8 +1,9 @@
+import { traditionalLabel } from '../model/labels';
 /**
- * **单个角色**的档案更新编排。每批模型按十个小标题写档案、转写那一档照抄成 JSON（每批 2 次，最多 3 次，
- * `transcribedCalls`）；转写没成跳过这一批。建卡 `createCastCards` 交回实际调了几次。
+ * **單個角色**的檔案更新編排。每批模型按十個小標題寫檔案、轉寫那一檔照抄成 JSON（每批 2 次，最多 3 次，
+ * `transcribedCalls`）；轉寫沒成跳過這一批。建卡 `createCastCards` 交回實際調了幾次。
  *
- * 解析在 characterCardParse.ts，控篇幅的提示词在 characterCardPrompt.ts（字数上限是第 15 条的锚点）。
+ * 解析在 characterCardParse.ts，控篇幅的提示詞在 characterCardPrompt.ts（字數上限是第 15 條的錨點）。
  */
 import { appearancesOf, buildCastIndex, cardLookup, CastMember, describePlots } from '../views/cast';
 import { readConfig } from '../config';
@@ -40,42 +41,42 @@ export { parseCardResponse } from './characterCardParse';
 const log = scoped('角色卡');
 
 /**
- * 单个角色的档案更新——右键角色行上的「更新角色卡」。
+ * 單個角色的檔案更新——右鍵角色行上的「更新角色卡」。
  *
- * 与 `extractCharacters`（一次从几章里扒出一批人）互补：那条流程面向
- * 「刚写完几章，把新出现的人补上」，这条面向「这个人写了三十章了，
- * 把他的档案重新过一遍」。
+ * 與 `extractCharacters`（一次從幾章裡扒出一批人）互補：那條流程面向
+ * 「剛寫完幾章，把新出現的人補上」，這條面向「這個人寫了三十章了，
+ * 把他的檔案重新過一遍」。
  *
- * 三件事是这条流程存在的理由：
+ * 三件事是這條流程存在的理由：
  *
- * 1. **自动关联出场章节**。作者不必再手输章节号——出场章节由定稿过的细纲聚合出来（出场索引）。
- * 2. **控制上下文**。主角可能出现在几十章里，一次塞不进窗口，按输入预算
- *    切成多批、逐批精炼同一张卡（后一批看得到前一批的产出）。
- * 3. **先说要调几次模型**。分批意味着 N 次请求，动手前必须把 N 告诉作者
- *    ——「不偷偷烧 token」。
+ * 1. **自動關聯出場章節**。作者不必再手輸章節號——出場章節由定稿過的細綱聚合出來（出場索引）。
+ * 2. **控制上下文**。主角可能出現在幾十章裡，一次塞不進視窗，按輸入預算
+ *    切成多批、逐批精煉同一張卡（後一批看得到前一批的產出）。
+ * 3. **先說要調幾次模型**。分批意味著 N 次請求，動手前必須把 N 告訴作者
+ *    ——「不偷偷燒 token」。
  */
 
-/** 更新范围。 */
+/** 更新範圍。 */
 export type UpdateScope =
-  /** 只读上次更新之后的新出场章节。首次更新时等同于全量。 */
+  /** 只讀上次更新之後的新出場章節。首次更新時等同於全量。 */
   | 'incremental'
-  /** 从头通读该角色的全部出场章节。 */
+  /** 從頭通讀該角色的全部出場章節。 */
   | 'full';
 
 export interface Batch {
-  /** 这一批读了哪几章。 */
+  /** 這一批讀了哪幾章。 */
   plots: Chapter[];
-  /** 这一批的语料（已按预算截断）。 */
+  /** 這一批的語料（已按預算截斷）。 */
   corpus: string;
-  /** 这几章定稿过的细纲里出场、但不是这个人的人物（见 {@link isSelfOf}）。 */
+  /** 這幾章定稿過的細綱裡出場、但不是這個人的人物（見 {@link isSelfOf}）。 */
   others: string[];
 }
 
 /**
- * 更新一张已有角色卡。
+ * 更新一張已有角色卡。
  *
- * @param relPath 角色卡的工作区相对路径。
- * @param scope 增量还是全量；不给则问用户。
+ * @param relPath 角色卡的工作區相對路徑。
+ * @param scope 增量還是全量；不給則問使用者。
  */
 export async function updateCharacterCard(
   project: NovelProject,
@@ -85,8 +86,8 @@ export async function updateCharacterCard(
   const cards = await project.listCharacters();
   const card = cards.find((c) => c.relPath === relPath);
   if (!card) {
-    log.warn(`找不到角色卡 ${relPath}，可能刚被改名或删除`);
-    getHost().toast('找不到这张角色卡，可能刚被改名或删除。', 'error');
+    log.warn(`找不到角色卡 ${relPath}，可能剛被改名或刪除`);
+    getHost().toast('找不到這張角色卡，可能剛被改名或刪除。', 'error');
     return;
   }
 
@@ -94,15 +95,15 @@ export async function updateCharacterCard(
   const all = appearancesOf(index, card);
   if (all.length === 0) {
     log.warn(
-      `「${card.name}」未在任何同步过的章里出现`,
+      `「${card.name}」未在任何同步過的章裡出現`,
       index.summaryCount === 0
-        ? '这个工程还没有任何一章同步过：先同步（工程页黄条上的「立即同步」，或章节右键「同步」）。'
-        : '同步过的细纲里没有这个名字。可能是角色卡的 name/aliases 与正文里的写法对不上。'
+        ? '這個工程還沒有任何一章同步過：先同步（工程頁黃條上的「立即同步」，或章節右鍵「同步」）。'
+        : '同步過的細綱裡沒有這個名字。可能是角色卡的 name/aliases 與正文裡的寫法對不上。'
     );
     getHost().toast(
       index.summaryCount === 0
-        ? '还没有同步过的章：先同步（工程页黄条上的「立即同步」，或章节右键「同步」）。'
-        : `同步过的细纲里没有出现「${card.name}」，无法自动关联章节。`,
+        ? '還沒有同步過的章：先同步（工程頁黃條上的「立即同步」，或章節右鍵「同步」）。'
+        : `同步過的細綱裡沒有出現「${card.name}」，無法自動關聯章節。`,
       'error'
     );
     return;
@@ -111,42 +112,42 @@ export async function updateCharacterCard(
   const updatedThrough = card.updatedThrough ?? 0;
   const fresh = all.filter((o) => o > updatedThrough);
 
-  // 增量没有新章节时不必白跑一趟模型。
+  // 增量沒有新章節時不必白跑一趟模型。
   if (scope === 'incremental' && fresh.length === 0) {
-    log.info(`「${card.name}」自第 ${updatedThrough} 章以来没有新的出场章节`);
-    getHost().toast(`「${card.name}」没有新的出场章节，无需更新。`);
+    log.info(`「${card.name}」自第 ${updatedThrough} 章以來沒有新的出場章節`);
+    getHost().toast(`「${card.name}」沒有新的出場章節，無需更新。`);
     return;
   }
 
   const picked = scope ?? (await askScope(card, all, fresh));
   if (!picked) {
-    log.info('用户取消了更新');
+    log.info('使用者取消了更新');
     return;
   }
   const nos = picked === 'incremental' && fresh.length > 0 ? fresh : all;
 
   const plots = (await project.listChapters()).filter((c) => nos.includes(c.order));
   if (plots.length === 0) {
-    log.warn(`「${card.name}」的出场章都已不在磁盘上`, `同步记录：${describePlots(nos)}`);
-    getHost().toast('这些出场章的正文已不存在。', 'error');
+    log.warn(`「${card.name}」的出場章都已不在磁碟上`, `同步記錄：${describePlots(nos)}`);
+    getHost().toast('這些出場章的正文已不存在。', 'error');
     return;
   }
 
   await runUpdate(project, card, plots, {
     scope: picked,
-    // 全量重来时 lastSeen/appearsIn 以完整清单为准；增量只补新的。
+    // 全量重來時 lastSeen/appearsIn 以完整清單為準；增量只補新的。
     allAppearances: all,
   });
 }
 
-/** 批量计划里的一张卡。 */
+/** 批次計劃裡的一張卡。 */
 export interface CardUpdatePlan {
   card: CharacterCard;
-  /** 本次要读的出场章号。 */
+  /** 本次要讀的出場章號。 */
   nos: number[];
-  /** 预先算好的分批（总确认报调用次数用，执行时不重算）。 */
+  /** 預先算好的分批（總確認報呼叫次數用，執行時不重算）。 */
   batches: Batch[];
-  /** 真正参与分析的章数（没有正文的章已剔除）。 */
+  /** 真正參與分析的章數（沒有正文的章已剔除）。 */
   plots: number;
 }
 
@@ -156,15 +157,15 @@ export interface BatchUpdatePlan {
 }
 
 /**
- * 批量计划：列出全部角色卡，逐卡算出要读哪些章、分几批。
- * 增量模式只取 updatedThrough 之后的新出场；无新出场/未在定稿中出现/
- * 出场章节已不在磁盘/正文全空的卡计入 skipped。导出供总确认与冒烟测试。
+ * 批次計劃：列出全部角色卡，逐卡算出要讀哪些章、分幾批。
+ * 增量模式只取 updatedThrough 之後的新出場；無新出場/未在定稿中出現/
+ * 出場章節已不在磁碟/正文全空的卡計入 skipped。匯出供總確認與冒煙測試。
  */
 export async function planAllUpdates(project: NovelProject, scope: UpdateScope): Promise<BatchUpdatePlan> {
   const cards = await project.listCharacters();
   const index = await buildCastIndex(project);
-  // 分批用**角色卡那一档**的窗口：批数就是确认框里那句「预计调用 N 次」，
-  // 拿对话页模型的窗口来算，跑起来会超窗且数字对不上账。
+  // 分批用**角色卡那一檔**的視窗：批數就是確認框裡那句「預計呼叫 N 次」，
+  // 拿對話頁模型的視窗來算，跑起來會超窗且數字對不上賬。
   const budget = budgetForTask('characterCard');
   const allPlots = await project.listChapters();
   const lookup = cardLookup(cards);
@@ -173,22 +174,22 @@ export async function planAllUpdates(project: NovelProject, scope: UpdateScope):
   for (const card of cards) {
     const all = appearancesOf(index, card);
     if (all.length === 0) {
-      result.skipped.push({ card, reason: '未在同步过的章里出现' });
+      result.skipped.push({ card, reason: '未在同步過的章裡出現' });
       continue;
     }
     const nos = scope === 'incremental' ? all.filter((n) => n > (card.updatedThrough ?? 0)) : all;
     if (nos.length === 0) {
-      result.skipped.push({ card, reason: '没有新的出场章节' });
+      result.skipped.push({ card, reason: '沒有新的出場章節' });
       continue;
     }
     const plots = allPlots.filter((c) => nos.includes(c.order));
     if (plots.length === 0) {
-      result.skipped.push({ card, reason: '出场章节已不在磁盘上' });
+      result.skipped.push({ card, reason: '出場章節已不在磁碟上' });
       continue;
     }
     const batches = await planBatches(project, plots, budget, isSelfOf(lookup, card.name, card));
     if (batches.length === 0) {
-      result.skipped.push({ card, reason: '章节正文都为空' });
+      result.skipped.push({ card, reason: '章節正文都為空' });
       continue;
     }
     result.plans.push({
@@ -202,21 +203,21 @@ export async function planAllUpdates(project: NovelProject, scope: UpdateScope):
 }
 
 /**
- * 批量更新全部角色卡——工程页「角色」分组的右键动作。
- * incremental：每卡只读上次更新后的新出场章节；full：每卡全量重读。
+ * 批次更新全部角色卡——工程頁「角色」分組的右鍵動作。
+ * incremental：每卡只讀上次更新後的新出場章節；full：每卡全量重讀。
  *
- * 「不偷偷烧 token」：总确认框先报清卡数、章数、批数（= 预计调用次数），
- * 并让用户选采纳方式（逐张 diff 确认 / 全部直接采纳）。
+ * 「不偷偷燒 token」：總確認框先報清卡數、章數、批數（= 預計呼叫次數），
+ * 並讓使用者選採納方式（逐張 diff 確認 / 全部直接採納）。
  *
- * 各卡之间没有先后依赖，按配置并发；**卡内的批仍然严格串行**（后一批要
- * 看到前一批的产出）。逐张确认时 diff 走 `serialize` 排队，一次只弹一张。
+ * 各卡之間沒有先後依賴，按配置併發；**卡內的批仍然嚴格序列**（後一批要
+ * 看到前一批的產出）。逐張確認時 diff 走 `serialize` 排隊，一次只彈一張。
  */
 export async function updateAllCharacterCards(project: NovelProject, scope: UpdateScope): Promise<void> {
   const { plans, skipped } = await planAllUpdates(project, scope);
   if (plans.length === 0) {
-    log.info('没有需要更新的角色卡', skipped.length > 0 ? `跳过 ${skipped.length} 张` : undefined);
+    log.info('沒有需要更新的角色卡', skipped.length > 0 ? `跳過 ${skipped.length} 張` : undefined);
     getHost().toast(
-      `没有需要更新的角色卡${skipped.length > 0 ? `（${skipped.length} 张被跳过）` : ''}。`
+      `沒有需要更新的角色卡${skipped.length > 0 ? `（${skipped.length} 張被跳過）` : ''}。`
     );
     return;
   }
@@ -224,18 +225,18 @@ export async function updateAllCharacterCards(project: NovelProject, scope: Upda
   const totalBatches = plans.reduce((sum, p) => sum + p.batches.length, 0);
   const totalPlots = plans.reduce((sum, p) => sum + p.plots, 0);
   const lanes = Math.min(readConfig().concurrency, plans.length);
-  const label = scope === 'incremental' ? '更新' : '从头重建';
+  const label = scope === 'incremental' ? '更新' : '從頭重建';
   const answer = await askCall({
     message:
-      `${label} ${plans.length} 张角色卡：共需通读 ${totalPlots} 章，` +
-      `分 ${totalBatches} 批，${describeCalls(transcribedCalls(totalBatches, '每批'))}。现在开始？`,
-    actions: ['逐张确认后开始', '全部直接采纳并开始'],
+      `${label} ${plans.length} 張角色卡：共需通讀 ${totalPlots} 章，` +
+      `分 ${totalBatches} 批，${describeCalls(transcribedCalls(totalBatches, '每批'))}。現在開始？`,
+    actions: ['逐張確認後開始', '全部直接採納並開始'],
     detail: [
       lanes > 1
-        ? `并发 ${lanes} 张同时处理（同一张卡内的批次仍按顺序来）。逐张确认时，diff 会按完成顺序一张一张弹出。`
-        : '逐张串行处理（并发数为 1）。',
+        ? `併發 ${lanes} 張同時處理（同一張卡內的批次仍按順序來）。逐張確認時，diff 會按完成順序一張一張彈出。`
+        : '逐張序列處理（併發數為 1）。',
       skipped.length > 0
-        ? `跳过 ${skipped.length} 张：${skipped.map((s) => `「${s.card.name}」（${s.reason}）`).join('、')}`
+        ? `跳過 ${skipped.length} 張：${skipped.map((s) => `「${s.card.name}」（${s.reason}）`).join('、')}`
         : '',
     ]
       .filter(Boolean)
@@ -244,30 +245,30 @@ export async function updateAllCharacterCards(project: NovelProject, scope: Upda
     contextDetail: false,
   });
   if (!answer) {
-    log.info('用户取消了批量更新');
+    log.info('使用者取消了批次更新');
     return;
   }
-  const autoApply = answer.action === '全部直接采纳并开始';
+  const autoApply = answer.action === '全部直接採納並開始';
 
   return withCallChoice(answer.choice, async () => {
     const config = readConfig();
     const pool = await createModelPool({ task: 'characterCard', concurrent: lanes > 1 });
     if (!pool) {
-      log.error('没有可用的模型，批量更新中止');
+      log.error('沒有可用的模型，批次更新中止');
       return;
     }
 
     log.info(
-      `开始批量${label}角色卡`,
-      `${plans.length} 张｜${totalPlots} 章分 ${totalBatches} 批｜模型 ${pool.label}｜` +
-        (lanes > 1 ? `并发 ${lanes} 路｜` : '') +
-        (autoApply ? '全部直接采纳' : '逐张确认')
+      `開始批次${label}角色卡`,
+      `${plans.length} 張｜${totalPlots} 章分 ${totalBatches} 批｜模型 ${pool.label}｜` +
+        (lanes > 1 ? `併發 ${lanes} 路｜` : '') +
+        (autoApply ? '全部直接採納' : '逐張確認')
     );
 
     await runTask(
-      `批量${label}角色卡`,
+      `批次${label}角色卡`,
       async ({ signal, report }) => {
-        // 每张卡的步数（批数 + 写入那一步），累加成总进度条的分母。
+        // 每張卡的步數（批數 + 寫入那一步），累加成總進度條的分母。
         const totalSteps = plans.reduce((sum, p) => sum + p.batches.length + 1, 0);
         let done = 0;
         let finished = 0;
@@ -277,12 +278,12 @@ export async function updateAllCharacterCards(project: NovelProject, scope: Upda
         const running = new Set<string>();
         const transcribe = poolTranscriber(signal, pool);
 
-        // 并发下按卡内步数细分只会互相打架，所以完成粒度取到「卡」：
-        // 一张卡结束时把它的全部步数一次性计入，进行中的另行报。
+        // 併發下按卡內步數細分只會互相打架，所以完成粒度取到「卡」：
+        // 一張卡結束時把它的全部步數一次性計入，進行中的另行報。
         const describeState = (): string =>
           lanes > 1
-            ? `已完成 ${finished}/${plans.length} 张` +
-              (running.size > 0 ? ` · ${running.size} 张进行中（${[...running].join('、')}）` : '')
+            ? `已完成 ${finished}/${plans.length} 張` +
+              (running.size > 0 ? ` · ${running.size} 張進行中（${[...running].join('、')}）` : '')
             : '';
 
         await runPool(
@@ -300,7 +301,7 @@ export async function updateAllCharacterCards(project: NovelProject, scope: Upda
                     message:
                       lanes > 1
                         ? `${describeState()} · 「${plan.card.name}」${message}`
-                        : `第 ${i + 1}/${plans.length} 张「${plan.card.name}」· ${message}`,
+                        : `第 ${i + 1}/${plans.length} 張「${plan.card.name}」· ${message}`,
                     current: done + (lanes > 1 ? 0 : current ?? 0),
                     total: totalSteps,
                   }),
@@ -323,17 +324,17 @@ export async function updateAllCharacterCards(project: NovelProject, scope: Upda
               if (result.status === 'rejected') {
                 failed++;
                 const reason = describeError(result.reason);
-                log.error(`「${plan.card.name}」更新失败：${reason}`, result.reason);
-                // 抛出来的异常（网络/超时/取消以外的错）此前只进了「失败 N 张」
-                // 这个汇总数字，看不出是哪一张。挂到卡上才找得回来。
+                log.error(`「${plan.card.name}」更新失敗：${reason}`, result.reason);
+                // 拋出來的異常（網路/超時/取消以外的錯）此前只進了「失敗 N 張」
+                // 這個彙總數字，看不出是哪一張。掛到卡上才找得回來。
                 void recordFailure(project, {
                   scope: '角色卡',
                   targetKind: 'character',
                   targetKey: plan.card.relPath,
                   severity: 'error',
                   op: 'updateCard',
-                  message: `更新失败：${reason}`,
-                  detail: `批量${label}时抛出异常，这张卡未改动｜共 ${plan.batches.length} 批`,
+                  message: `更新失敗：${reason}`,
+                  detail: `批次${label}時拋出異常，這張卡未改動｜共 ${plan.batches.length} 批`,
                 });
               } else if (result.value.status === 'updated') {
                 updated++;
@@ -349,14 +350,14 @@ export async function updateAllCharacterCards(project: NovelProject, scope: Upda
 
         report({ message: '完成', current: totalSteps, total: totalSteps });
         const summary =
-          `已更新 ${updated} 张` +
-          (discarded > 0 ? `，放弃 ${discarded} 张` : '') +
-          (failed > 0 ? `，失败 ${failed} 张` : '') +
-          (skipped.length > 0 ? `，跳过 ${skipped.length} 张` : '');
-        log.info(`批量${label}角色卡结束`, summary);
+          `已更新 ${updated} 張` +
+          (discarded > 0 ? `，放棄 ${discarded} 張` : '') +
+          (failed > 0 ? `，失敗 ${failed} 張` : '') +
+          (skipped.length > 0 ? `，跳過 ${skipped.length} 張` : '');
+        log.info(`批次${label}角色卡結束`, summary);
         getHost().toast(`角色卡${label}完成：${summary}。`);
-        // 与单卡流程不同：批量结束后不自动打开卡——连开几十个标签是灾难，
-        // 每张卡的路径已经在日志里了。
+        // 與單卡流程不同：批次結束後不自動開啟卡——連開幾十個標籤是災難，
+        // 每張卡的路徑已經在日誌裡了。
       },
       { scope: '角色卡' }
     );
@@ -364,21 +365,21 @@ export async function updateAllCharacterCards(project: NovelProject, scope: Upda
 }
 
 /**
- * 给定稿里出现、但还没建卡的人物建一张卡，并立刻用它的出场章节跑一次提取。
- * 工程页「出场人物 · 未建卡」那一组的右键动作。
+ * 給定稿裡出現、但還沒建卡的人物建一張卡，並立刻用它的出場章節跑一次提取。
+ * 工程頁「出場人物 · 未建卡」那一組的右鍵動作。
  */
 export async function createCardForCast(project: NovelProject, name: string): Promise<void> {
   const index = await buildCastIndex(project);
   const member = index.unknown.find((m) => m.name === name);
   if (!member) {
-    log.warn(`同步过的细纲里已经没有「${name}」了，可能刚重新同步过`);
-    getHost().toast(`同步过的细纲里没有「${name}」了，请刷新工程页。`, 'error');
+    log.warn(`同步過的細綱裡已經沒有「${name}」了，可能剛重新同步過`);
+    getHost().toast(`同步過的細綱裡沒有「${name}」了，請重新整理工程頁。`, 'error');
     return;
   }
 
   const plots = (await project.listChapters()).filter((c) => member.plots.includes(c.order));
   if (plots.length === 0) {
-    getHost().toast('这些出场章节的正文已不存在。', 'error');
+    getHost().toast('這些出場章節的正文已不存在。', 'error');
     return;
   }
 
@@ -389,34 +390,34 @@ export async function createCardForCast(project: NovelProject, name: string): Pr
   await runUpdate(project, card, plots, {
     scope: 'full',
     allAppearances: member.plots,
-    // 刚建出来的空卡没有可覆盖的人工内容，不必走 diff 审阅。
+    // 剛建出來的空卡沒有可覆蓋的人工內容，不必走 diff 審閱。
     skipReview: true,
   });
 }
 
-/** 给没建卡的一位人物建卡要做的事：通读哪几章、分几批（一批写一次、转写一次）。 */
+/** 給沒建卡的一位人物建卡要做的事：通讀哪幾章、分幾批（一批寫一次、轉寫一次）。 */
 export interface CastCardPlan {
   member: CastMember;
   plots: Chapter[];
   batches: Batch[];
 }
 
-/** {@link planCastCards} 的结果。 */
+/** {@link planCastCards} 的結果。 */
 export interface CastCardsPlan {
   plans: CastCardPlan[];
-  /** 读不到正文、建不了的人和原因。 */
+  /** 讀不到正文、建不了的人和原因。 */
   skipped: { name: string; reason: string }[];
-  /** 一共几批。 */
+  /** 一共幾批。 */
   batches: number;
-  /** 预计调用次数：每批写 1 次、转写 1 次（2026-10-25 起改成转写，`transcribedCalls`）。 */
+  /** 預計呼叫次數：每批寫 1 次、轉寫 1 次（2026-10-25 起改成轉寫，`transcribedCalls`）。 */
   calls: CallEstimate;
-  /** 一共通读几章（同一章给几个人读算几次）。 */
+  /** 一共通讀幾章（同一章給幾個人讀算幾次）。 */
   chapters: number;
 }
 
 /**
- * 定稿里出现过、还没建卡的人，各要通读哪几章、分几批。`minAppearances` 只收出场至少这么多章的人
- * （批量写章开跑前补卡用 2：只露过一面的路人不值得一张卡）。零调用。
+ * 定稿裡出現過、還沒建卡的人，各要通讀哪幾章、分幾批。`minAppearances` 只收出場至少這麼多章的人
+ * （批次寫章開跑前補卡用 2：只露過一面的路人不值得一張卡）。零呼叫。
  */
 export async function planCastCards(project: NovelProject, opts: { minAppearances?: number } = {}): Promise<CastCardsPlan> {
   const index = await buildCastIndex(project);
@@ -429,12 +430,12 @@ export async function planCastCards(project: NovelProject, opts: { minAppearance
   for (const member of index.unknown.filter((m) => m.plots.length >= min)) {
     const plots = allPlots.filter((c) => member.plots.includes(c.order));
     if (plots.length === 0) {
-      skipped.push({ name: member.name, reason: '出场章节已不在磁盘上' });
+      skipped.push({ name: member.name, reason: '出場章節已不在磁碟上' });
       continue;
     }
     const batches = await planBatches(project, plots, cardBudget, isSelfOf(lookup, member.name, undefined, member.aliases));
     if (batches.length === 0) {
-      skipped.push({ name: member.name, reason: '章节正文都为空' });
+      skipped.push({ name: member.name, reason: '章節正文都為空' });
       continue;
     }
     plans.push({ member, plots, batches });
@@ -450,9 +451,9 @@ export async function planCastCards(project: NovelProject, opts: { minAppearance
 }
 
 /**
- * 按 {@link planCastCards} 排好的建卡：各人之间没有先后依赖，按 `lanes` 并发。每位先落一张空卡再让模型来填——
- * 即便调用失败或被取消，作者也拿到了一个可手写的档案；失败挂在那张卡上。不弹框、不开任务，调用方负责
- * 确认与进度条（工程页的「全部建卡」、批量写章开跑前的补卡）。`calls` 是实际调了几次（写的与转写的都算）。
+ * 按 {@link planCastCards} 排好的建卡：各人之間沒有先後依賴，按 `lanes` 併發。每位先落一張空卡再讓模型來填——
+ * 即便呼叫失敗或被取消，作者也拿到了一個可手寫的檔案；失敗掛在那張卡上。不彈框、不開任務，呼叫方負責
+ * 確認與進度條（工程頁的「全部建卡」、批次寫章開跑前的補卡）。`calls` 是實際調了幾次（寫的與轉寫的都算）。
  */
 export async function createCastCards(
   project: NovelProject,
@@ -462,7 +463,7 @@ export async function createCastCards(
     pool: ModelPool;
     config: ReturnType<typeof readConfig>;
     lanes?: number;
-    /** 进度：一句话，与已完成 / 一共多少步（一位 = 批数 + 1）。 */
+    /** 進度：一句話，與已完成 / 一共多少步（一位 = 批數 + 1）。 */
     report?: (p: { message: string; current: number; total: number }) => void;
   }
 ): Promise<{ created: number; failed: number; calls: number }> {
@@ -475,15 +476,15 @@ export async function createCastCards(
   const running = new Set<string>();
   const transcribe = poolTranscriber(opts.signal, opts.pool);
   /**
-   * 每位人物那张刚落下的空卡的路径，按 plan 下标记。
+   * 每位人物那張剛落下的空卡的路徑，按 plan 下標記。
    *
-   * 抛异常时 `onSettled` 只拿得到 `plan`（那里只有名字），而失败记录要
-   * 挂在**文件**上。空卡是在 worker 里现建的，只能这样把路径带出来。
+   * 拋異常時 `onSettled` 只拿得到 `plan`（那裡只有名字），而失敗記錄要
+   * 掛在**檔案**上。空卡是在 worker 裡現建的，只能這樣把路徑帶出來。
    */
   const seeded: (string | undefined)[] = [];
   const describeState = (): string =>
     `已完成 ${finished}/${plans.length} 位` +
-    (running.size > 0 ? ` · ${running.size} 位进行中（${[...running].join('、')}）` : '');
+    (running.size > 0 ? ` · ${running.size} 位進行中（${[...running].join('、')}）` : '');
 
   await runPool(
     [...plans],
@@ -491,7 +492,7 @@ export async function createCastCards(
     async (plan, i) => {
       const card = await seedEmptyCard(project, plan.member);
       if (!card) {
-        throw new Error(`建卡失败：${plan.member.name}`);
+        throw new Error(`建卡失敗：${plan.member.name}`);
       }
       seeded[i] = card.relPath;
       return runCardUpdate(
@@ -528,9 +529,9 @@ export async function createCastCards(
         if (result.status === 'rejected') {
           failed++;
           const reason = describeError(result.reason);
-          log.error(`「${plan.member.name}」建卡失败：${reason}`, result.reason);
-          // 空卡已经落盘了（那是有意的），但它是空的——不挂个标记的话
-          // 作者会看到一张干净的新卡，以为模型就只写出这么点东西。
+          log.error(`「${plan.member.name}」建卡失敗：${reason}`, result.reason);
+          // 空卡已經落盤了（那是有意的），但它是空的——不掛個標記的話
+          // 作者會看到一張乾淨的新卡，以為模型就只寫出這麼點東西。
           const relPath = seeded[index];
           if (relPath) {
             void recordFailure(project, {
@@ -539,8 +540,8 @@ export async function createCastCards(
               targetKey: relPath,
               severity: 'error',
               op: 'updateCard',
-              message: `建卡失败：${reason}`,
-              detail: '空卡已留下，可手写或重新运行「更新角色卡」重试。',
+              message: `建卡失敗：${reason}`,
+              detail: '空卡已留下，可手寫或重新執行「更新角色卡」重試。',
             });
           }
         } else if (result.value.status === 'updated') {
@@ -556,50 +557,50 @@ export async function createCastCards(
 }
 
 /**
- * 给「出场人物 · 未建卡」里的**所有**人建卡——该分组的右键动作。
+ * 給「出場人物 · 未建卡」裡的**所有**人建卡——該分組的右鍵動作。
  *
- * 各人之间没有先后依赖，按配置并发。新卡都是空卡，一律 `skipReview`，
- * 没有 diff 排队的问题。
+ * 各人之間沒有先後依賴，按配置併發。新卡都是空卡，一律 `skipReview`，
+ * 沒有 diff 排隊的問題。
  *
- * 「不偷偷烧 token」：确认框里报清人数、章数与预计调用次数——定稿里
- * 冒出十几个路人是常事，一次点下去可能是几十次模型调用。
+ * 「不偷偷燒 token」：確認框裡報清人數、章數與預計呼叫次數——定稿裡
+ * 冒出十幾個路人是常事，一次點下去可能是幾十次模型呼叫。
  */
 export async function createCardsForAllCast(project: NovelProject): Promise<void> {
   const index = await buildCastIndex(project);
   if (index.unknown.length === 0) {
-    log.info('没有未建卡的出场人物');
-    getHost().toast('同步过的章里出现的人都已经有角色卡了。');
+    log.info('沒有未建卡的出場人物');
+    getHost().toast('同步過的章裡出現的人都已經有角色卡了。');
     return;
   }
 
   const { plans, skipped, batches, calls, chapters } = await planCastCards(project);
   if (plans.length === 0) {
-    log.info('没有可建卡的出场人物', skipped.map((s) => `${s.name}（${s.reason}）`).join('、'));
-    getHost().toast('这些人物的出场章节都读不到内容，无法建卡。');
+    log.info('沒有可建卡的出場人物', skipped.map((s) => `${s.name}（${s.reason}）`).join('、'));
+    getHost().toast('這些人物的出場章節都讀不到內容，無法建卡。');
     return;
   }
 
   const lanes = Math.min(readConfig().concurrency, plans.length);
   const answer = await askCall({
     message:
-      `给 ${plans.length} 位未建卡的人物建卡：共需通读 ${chapters} 章，` +
-      `分 ${batches} 批，${describeCalls(calls)}。现在开始？`,
-    actions: ['开始建卡'],
+      `給 ${plans.length} 位未建卡的人物建卡：共需通讀 ${chapters} 章，` +
+      `分 ${batches} 批，${describeCalls(calls)}。現在開始？`,
+    actions: ['開始建卡'],
     detail: [
       `人物：${plans.map((p) => p.member.name).join('、')}`,
-      lanes > 1 ? `并发 ${lanes} 位同时处理。` : '逐位串行处理（并发数为 1）。',
+      lanes > 1 ? `併發 ${lanes} 位同時處理。` : '逐位序列處理（併發數為 1）。',
       skipped.length > 0
-        ? `跳过 ${skipped.length} 位：${skipped.map((s) => `「${s.name}」（${s.reason}）`).join('、')}`
+        ? `跳過 ${skipped.length} 位：${skipped.map((s) => `「${s.name}」（${s.reason}）`).join('、')}`
         : '',
-      '新卡都是空卡，模型产出直接写入，不走 diff 审阅。',
+      '新卡都是空卡，模型產出直接寫入，不走 diff 審閱。',
     ]
       .filter(Boolean)
       .join('\n\n'),
     tasks: ['characterCard', 'transcribe'],
     contextDetail: false,
   });
-  if (answer?.action !== '开始建卡') {
-    log.info('用户取消了批量建卡');
+  if (answer?.action !== '開始建卡') {
+    log.info('使用者取消了批次建卡');
     return;
   }
 
@@ -607,26 +608,26 @@ export async function createCardsForAllCast(project: NovelProject): Promise<void
     const config = readConfig();
     const pool = await createModelPool({ task: 'characterCard', concurrent: lanes > 1 });
     if (!pool) {
-      log.error('没有可用的模型，批量建卡中止');
+      log.error('沒有可用的模型，批次建卡中止');
       return;
     }
     log.info(
-      `开始批量建卡`,
+      `開始批次建卡`,
       `${plans.length} 位｜${chapters} 章分 ${batches} 批｜模型 ${pool.label}｜` +
-        (lanes > 1 ? `并发 ${lanes} 路` : '串行')
+        (lanes > 1 ? `併發 ${lanes} 路` : '序列')
     );
 
     await runTask(
-      '批量建角色卡',
+      '批次建角色卡',
       async ({ signal, report }) => {
         const totalSteps = plans.reduce((sum, p) => sum + p.batches.length + 1, 0);
         const { created, failed } = await createCastCards(project, plans, { signal, pool, config, lanes, report });
         report({ message: '完成', current: totalSteps, total: totalSteps });
         const summary =
-          `已建 ${created} 张` +
-          (failed > 0 ? `，失败 ${failed} 张（空卡已留下，可手写或重试）` : '') +
-          (skipped.length > 0 ? `，跳过 ${skipped.length} 位` : '');
-        log.info('批量建卡结束', summary);
+          `已建 ${created} 張` +
+          (failed > 0 ? `，失敗 ${failed} 張（空卡已留下，可手寫或重試）` : '') +
+          (skipped.length > 0 ? `，跳過 ${skipped.length} 位` : '');
+        log.info('批次建卡結束', summary);
         getHost().toast(`建卡完成：${summary}。`);
       },
       { scope: '角色卡' }
@@ -635,10 +636,10 @@ export async function createCardsForAllCast(project: NovelProject): Promise<void
 }
 
 /**
- * 先落一张空卡再让模型来填。
+ * 先落一張空卡再讓模型來填。
  *
- * 顺序不能反过来：模型调用失败或被取消时，作者至少拿到了一个可手写的档案，
- * 而不是白点一次。slug 冲突时自动加后缀。
+ * 順序不能反過來：模型呼叫失敗或被取消時，作者至少拿到了一個可手寫的檔案，
+ * 而不是白點一次。slug 衝突時自動加字尾。
  */
 async function seedEmptyCard(project: NovelProject, member: CastMember): Promise<CharacterCard | undefined> {
   const slug = await uniqueSlug(project.charactersDir, slugify(member.name));
@@ -652,16 +653,16 @@ async function seedEmptyCard(project: NovelProject, member: CastMember): Promise
     appearsIn: member.plots,
     sections: emptyCharacterSections(),
   });
-  log.info(`新建角色卡「${member.name}」`, `${relPath}｜出场 ${describePlots(member.plots)}`);
+  log.info(`新建角色卡「${member.name}」`, `${relPath}｜出場 ${describePlots(member.plots)}`);
   return (await project.listCharacters()).find((c) => c.relPath === relPath);
 }
 
 // ---------------------------------------------------------------- 核心流程
 
-/** 单卡执行的结果。批量编排据此统计。 */
+/** 單卡執行的結果。批次編排據此統計。 */
 export interface CardUpdateOutcome {
   status: 'updated' | 'discarded' | 'failed' | 'cancelled';
-  /** status 为 updated 时给出推进后的水位线。 */
+  /** status 為 updated 時給出推進後的水位線。 */
   updatedThrough?: number;
 }
 
@@ -674,56 +675,56 @@ async function runUpdate(
   const lookup = cardLookup(await project.listCharacters());
   const batches = await planBatches(project, plots, budgetForTask('characterCard'), isSelfOf(lookup, card.name, card));
   if (batches.length === 0) {
-    log.warn(`「${card.name}」的出场章节都是空的`);
-    getHost().toast('这些章节都是空的，没有可分析的内容。', 'error');
+    log.warn(`「${card.name}」的出場章節都是空的`);
+    getHost().toast('這些章節都是空的，沒有可分析的內容。', 'error');
     return;
   }
 
-  // 空章节在 planBatches 里被剔掉了，报数以真正要读的为准——
-  // 说「通读 12 章」却只读了 9 章，作者对不上账。
+  // 空章節在 planBatches 裡被剔掉了，報數以真正要讀的為準——
+  // 說「通讀 12 章」卻只讀了 9 章，作者對不上賬。
   const willRead = batches.reduce((sum, b) => sum + b.plots.length, 0);
   const skipped = plots.length - willRead;
   if (skipped > 0) {
-    log.warn(`${skipped} 章正文为空，不参与分析`);
+    log.warn(`${skipped} 章正文為空，不參與分析`);
   }
 
-  // 「不偷偷烧 token」：要调几次模型，动手前说清楚。
+  // 「不偷偷燒 token」：要調幾次模型，動手前說清楚。
   const scopeLabel = opts.scope === 'incremental' ? '增量更新' : '全量重建';
   const answer = await askCall({
     message:
-      `${scopeLabel}「${card.name}」的角色卡：需要通读 ${willRead} 章，` +
-      `分 ${batches.length} 批，${describeCalls(transcribedCalls(batches.length, '每批'))}。现在开始？`,
-    actions: ['开始'],
+      `${scopeLabel}「${card.name}」的角色卡：需要通讀 ${willRead} 章，` +
+      `分 ${batches.length} 批，${describeCalls(transcribedCalls(batches.length, '每批'))}。現在開始？`,
+    actions: ['開始'],
     detail:
       [
         batches.length > 1
-          ? '章节太多，一次装不进上下文窗口，因此分批处理：后一批会看到前一批已经归纳出的内容，逐批精炼同一张卡。'
+          ? '章節太多，一次裝不進上下文視窗，因此分批處理：後一批會看到前一批已經歸納出的內容，逐批精煉同一張卡。'
           : '',
-        skipped > 0 ? `（另有 ${skipped} 章正文为空，已跳过。）` : '',
+        skipped > 0 ? `（另有 ${skipped} 章正文為空，已跳過。）` : '',
       ]
         .filter(Boolean)
         .join('\n\n') || undefined,
     tasks: ['characterCard', 'transcribe'],
     contextDetail: false,
   });
-  if (answer?.action !== '开始') {
-    log.info('用户取消了更新');
+  if (answer?.action !== '開始') {
+    log.info('使用者取消了更新');
     return;
   }
 
   return withCallChoice(answer.choice, async () => {
     const config = readConfig();
-    // 单卡内的批必须串行（后一批看前一批的产出），所以池按串行取模型：
-    // 恒用首选，失败才随机换。
+    // 單卡內的批必須序列（後一批看前一批的產出），所以池按序列取模型：
+    // 恆用首選，失敗才隨機換。
     const pool = await createModelPool({ task: 'characterCard', concurrent: false });
     if (!pool) {
-      log.error('没有可用的模型，更新中止');
+      log.error('沒有可用的模型，更新中止');
       return;
     }
 
     log.info(
-      `开始${scopeLabel}「${card.name}」`,
-      `${willRead} 章分 ${batches.length} 批｜章节 ${describePlots(
+      `開始${scopeLabel}「${card.name}」`,
+      `${willRead} 章分 ${batches.length} 批｜章節 ${describePlots(
         batches.flatMap((b) => b.plots.map((p) => p.order))
       )}｜模型 ${pool.label}`
     );
@@ -744,7 +745,7 @@ async function runUpdate(
           }
         );
         if (outcome.status === 'updated') {
-          getHost().toast(`「${card.name}」已更新，覆盖至第 ${outcome.updatedThrough} 章。`);
+          getHost().toast(`「${card.name}」已更新，覆蓋至第 ${outcome.updatedThrough} 章。`);
           await getHost().openFile(card.relPath);
         }
       },
@@ -754,11 +755,11 @@ async function runUpdate(
 }
 
 /**
- * 单张卡的执行体：分批分析 → 合并 → 审阅/写回。
+ * 單張卡的執行體：分批分析 → 合併 → 審閱/寫回。
  *
- * 不自己开 runTask，进度经 ctx.report 交给外层——单卡与批量共用一条
- * 进度条，不叠两层。`batches` 由外层算好传入：批量场景在总确认前已算过
- * 一次，执行时不必重读章节。
+ * 不自己開 runTask，進度經 ctx.report 交給外層——單卡與批次共用一條
+ * 進度條，不疊兩層。`batches` 由外層算好傳入：批次場景在總確認前已算過
+ * 一次，執行時不必重讀章節。
  */
 async function runCardUpdate(
   project: NovelProject,
@@ -773,33 +774,33 @@ async function runCardUpdate(
     signal: AbortSignal;
     report: (message: string, current?: number, total?: number) => void;
     pool: ModelPool;
-    /** 转写那一档（features/poolIO.ts 的 `poolTranscriber`）。 */
+    /** 轉寫那一檔（features/poolIO.ts 的 `poolTranscriber`）。 */
     transcribe: TranscribeCall;
-    /** 每调一次模型记一下（写的与转写的都算）：建卡要报实际调了几次。 */
+    /** 每調一次模型記一下（寫的與轉寫的都算）：建卡要報實際調了幾次。 */
     count?: (n: number) => void;
     config: { contextWindow: number; maxOutputTokens: number; requestTimeoutMs: number };
   }
 ): Promise<CardUpdateOutcome> {
   const startedAt = Date.now();
   const { batches } = opts;
-  // 批数 + 最后写入那一步。
+  // 批數 + 最後寫入那一步。
   const steps = batches.length + 1;
   let sections: CharacterSections = { ...card.sections };
   let aliases = [...card.aliases];
   let tags = [...card.tags];
   let gender = card.gender;
   /**
-   * 真正分析成功 / 失败的章节。
+   * 真正分析成功 / 失敗的章節。
    *
-   * `updatedThrough` 是一条**水位线**（下次增量从它之后开始），所以不能
-   * 简单地推到「最后一批成功的章节」——中间某批失败时，那几章会被水位线
-   * 越过去，此后永远不会被重读，而界面上看不出任何异常。因此水位线只能
-   * 推进到**第一个失败章节之前**，失败之后的成果照样写进卡里（那是白赚的），
-   * 但下次更新会从失败处重来。
+   * `updatedThrough` 是一條**水位線**（下次增量從它之後開始），所以不能
+   * 簡單地推到「最後一批成功的章節」——中間某批失敗時，那幾章會被水位線
+   * 越過去，此後永遠不會被重讀，而介面上看不出任何異常。因此水位線只能
+   * 推進到**第一個失敗章節之前**，失敗之後的成果照樣寫進卡裡（那是白賺的），
+   * 但下次更新會從失敗處重來。
    */
   const analyzed: number[] = [];
   const failed: number[] = [];
-  /** 最后一批没成的原因：全部失败时写进卡上的标记。 */
+  /** 最後一批沒成的原因：全部失敗時寫進卡上的標記。 */
   let lastWhy = '';
   const others = new Set(batches.flatMap((b) => b.others.map(normalizeName)));
 
@@ -822,12 +823,12 @@ async function runCardUpdate(
       count: ctx.count,
     });
     if (!result.ok) {
-      // 单批解析失败不放弃整次更新：已归纳出的内容仍然值得写回。
+      // 單批解析失敗不放棄整次更新：已歸納出的內容仍然值得寫回。
       failed.push(...batch.plots.map((p) => p.order));
       lastWhy = result.why;
       log.warn(
-        `第 ${i + 1}/${batches.length} 批解析失败，跳过`,
-        `范围 ${range}｜${result.why}｜这几章不计入「已读到」，下次更新会重试`
+        `第 ${i + 1}/${batches.length} 批解析失敗，跳過`,
+        `範圍 ${range}｜${result.why}｜這幾章不計入「已讀到」，下次更新會重試`
       );
       continue;
     }
@@ -839,79 +840,79 @@ async function runCardUpdate(
     analyzed.push(...batch.plots.map((p) => p.order));
     log.info(
       `第 ${i + 1}/${batches.length} 批完成（${range}）`,
-      `${batch.plots.length} 章，用时 ${elapsed(each)}`
+      `${batch.plots.length} 章，用時 ${elapsed(each)}`
     );
   }
 
   if (ctx.signal.aborted) {
-    log.warn('更新被取消（写入前）');
+    log.warn('更新被取消（寫入前）');
     return { status: 'cancelled' };
   }
 
-  // 一批都没成功：没有任何新内容，不要拿一份原样的卡去烦作者确认，
-  // 更不能推进 updatedThrough（那等于宣称读过了这些章）。
+  // 一批都沒成功：沒有任何新內容，不要拿一份原樣的卡去煩作者確認，
+  // 更不能推進 updatedThrough（那等於宣稱讀過了這些章）。
   if (analyzed.length === 0) {
     const detail =
-      `范围 ${describePlots(batches.flatMap((b) => b.plots.map((p) => p.order)))}｜` +
-      `模型没有按格式写，或者转写没成（${lastWhy}）。可在日志页看到每批的失败记录；换个模型或稍后重试。`;
-    log.error(`「${card.name}」的 ${batches.length} 批全部解析失败，角色卡未改动`, detail);
-    getHost().toast(`模型返回无法解析，「${card.name}」未改动。`, 'error');
-    // 日志与 toast 都是「要求用户恰好在看」的出口。这一条必须留在卡上：
-    // 界面上那张卡此刻与更新成功的一模一样，作者会以为已经更新过了。
+      `範圍 ${describePlots(batches.flatMap((b) => b.plots.map((p) => p.order)))}｜` +
+      `模型沒有按格式寫，或者轉寫沒成（${lastWhy}）。可在日誌頁看到每批的失敗記錄；換個模型或稍後重試。`;
+    log.error(`「${card.name}」的 ${batches.length} 批全部解析失敗，角色卡未改動`, detail);
+    getHost().toast(`模型返回無法解析，「${card.name}」未改動。`, 'error');
+    // 日誌與 toast 都是「要求使用者恰好在看」的出口。這一條必須留在卡上：
+    // 介面上那張卡此刻與更新成功的一模一樣，作者會以為已經更新過了。
     await recordFailure(project, {
       scope: '角色卡',
       targetKind: 'character',
       targetKey: card.relPath,
       severity: 'error',
       op: 'updateCard',
-      message: `${batches.length} 批全部解析失败，角色卡未改动`,
+      message: `${batches.length} 批全部解析失敗，角色卡未改動`,
       detail,
     });
     return { status: 'failed' };
   }
 
-  ctx.report('写入角色卡', batches.length, steps);
-  // 别名在这里收一次口：并集是只进不出的，模型吐出的 `她`/`姐姐`/`少女` 一旦
-  // 混进来就再也出不去，而别名是「谁是谁」的判据（cast.ts / model/identity.ts 都吃它），
-  // 泛称会把几个角色串成一个。顺带把存量脏别名一并清掉——差异走 diff 审阅，看得见。
+  ctx.report('寫入角色卡', batches.length, steps);
+  // 別名在這裡收一次口：並集是隻進不出的，模型吐出的 `她`/`姐姐`/`少女` 一旦
+  // 混進來就再也出不去，而別名是「誰是誰」的判據（cast.ts / model/identity.ts 都吃它），
+  // 泛稱會把幾個角色串成一個。順帶把存量髒別名一併清掉——差異走 diff 審閱，看得見。
   const droppedAliases = explainDroppedAliases(aliases, card.name);
   aliases = sanitizeAliases(aliases, card.name);
-  // 别人的名字：模型把同场的主角当成了这个人时，头一个症状就是把主角的名字记成别名
-  // （实战：配角「叶伦」的卡挂上了「林樾」）。提示词里叮嘱过，这里兜底。
+  // 別人的名字：模型把同場的主角當成了這個人時，頭一個症狀就是把主角的名字記成別名
+  // （實戰：配角「葉倫」的卡掛上了「林樾」）。提示詞裡叮囑過，這裡兜底。
   const borrowed = aliases.filter((a) => others.has(normalizeName(a)));
   if (borrowed.length > 0) {
     aliases = aliases.filter((a) => !borrowed.includes(a));
-    droppedAliases.push(...borrowed.map((alias) => ({ alias, reason: '是别的角色的名字' })));
+    droppedAliases.push(...borrowed.map((alias) => ({ alias, reason: '是別的角色的名字' })));
   }
   if (droppedAliases.length > 0) {
     log.info(
-      `「${card.name}」丢弃 ${droppedAliases.length} 个非专属称呼`,
+      `「${card.name}」丟棄 ${droppedAliases.length} 個非專屬稱呼`,
       droppedAliases.map((d) => `${d.alias}（${d.reason}）`).join('、')
     );
   }
   const appearances = uniqueNumbers(
     opts.scope === 'incremental' ? [...card.appearsIn, ...opts.allAppearances] : opts.allAppearances
   );
-  // 水位线只推进到第一个失败章节之前——越过去的话那几章再也不会被重读。
+  // 水位線只推進到第一個失敗章節之前——越過去的話那幾章再也不會被重讀。
   const firstFailure = failed.length > 0 ? Math.min(...failed) : Number.POSITIVE_INFINITY;
   const covered = analyzed.filter((o) => o < firstFailure);
   const updatedThrough = Math.max(card.updatedThrough ?? 0, ...covered, 0);
   if (failed.length > 0) {
-    const detail = `失败章节：${describePlots(uniqueNumbers(failed))}｜下次更新会从这里重来`;
-    log.warn(`${failed.length} 章解析失败，「已读到」只推进到第 ${updatedThrough} 章`, detail);
-    // 这一条以前只有日志：卡确实更新了一部分，界面上完全看不出还缺一块。
+    const detail = `失敗章節：${describePlots(uniqueNumbers(failed))}｜下次更新會從這裡重來`;
+    log.warn(`${failed.length} 章解析失敗，「已讀到」只推進到第 ${updatedThrough} 章`, detail);
+    // 這一條以前只有日誌：卡確實更新了一部分，介面上完全看不出還缺一塊。
     await recordFailure(project, {
       scope: '角色卡',
       targetKind: 'character',
       targetKey: card.relPath,
       severity: 'warn',
       op: 'updateCard',
-      message: `${failed.length} 章解析失败，「已读到」只推进到第 ${updatedThrough} 章`,
+      message: `${failed.length} 章解析失敗，「已讀到」只推進到第 ${updatedThrough} 章`,
       detail,
     });
   }
-  // 「当前状态」是机器按读到的最后一章写的：盖章（D15），作者采纳之后这一节归机器，
-  // 定稿时接着往后更新。
+  // 「當前狀態」是機器按讀到的最後一章寫的：蓋章（D15），作者採納之後這一節歸機器，
+  // 定稿時接著往後更新。
   const merged = stampState(
     {
       slug: card.slug,
@@ -930,9 +931,9 @@ async function runCardUpdate(
 
   const proposedText = renderCharacterCard(merged);
   if (opts.skipReview) {
-    // 作者已经点过头（批量的「全部直接采纳」/ 刚建的空卡）：经网关覆盖，旧内容先进历史版本，不再弹覆盖审阅。
+    // 作者已經點過頭（批次的「全部直接採納」/ 剛建的空卡）：經閘道器覆蓋，舊內容先進歷史版本，不再彈覆蓋審閱。
     await writeCardText(project, card, proposedText);
-    log.info(`已写入角色卡「${card.name}」`, `${card.relPath}｜总耗时 ${elapsed(startedAt)}`);
+    log.info(`已寫入角色卡「${card.name}」`, `${card.relPath}｜總耗時 ${elapsed(startedAt)}`);
   } else {
     const applied = await review(project, card, proposedText);
     if (!applied) {
@@ -941,12 +942,12 @@ async function runCardUpdate(
     }
     log.info(
       `已更新角色卡「${card.name}」`,
-      `${card.relPath}｜覆盖至第 ${merged.updatedThrough} 章｜总耗时 ${elapsed(startedAt)}`
+      `${card.relPath}｜覆蓋至第 ${merged.updatedThrough} 章｜總耗時 ${elapsed(startedAt)}`
     );
   }
   ctx.report('完成', steps, steps);
-  // 全批都成功才算这张卡「好了」，把它挂着的旧感叹号收掉。
-  // 有失败批次时不能清——上面刚记了一条 warn，清掉等于自己把它抹了。
+  // 全批都成功才算這張卡「好了」，把它掛著的舊感嘆號收掉。
+  // 有失敗批次時不能清——上面剛記了一條 warn，清掉等於自己把它抹了。
   if (failed.length === 0) {
     await clearFailures(project, 'character', card.relPath, 'updateCard');
   }
@@ -954,9 +955,9 @@ async function runCardUpdate(
 }
 
 /**
- * 定稿过的细纲 cast 里的一条是不是这个人。认人走 {@link cardLookup}（正式名压过别名）：这张卡上
- * 已经混进来的别人的名字照样算别人。未建卡的人物（`card` 不给）认自己的主名与聚类别称，
- * 落到任何一张现有卡上的都不是他。
+ * 定稿過的細綱 cast 裡的一條是不是這個人。認人走 {@link cardLookup}（正式名壓過別名）：這張卡上
+ * 已經混進來的別人的名字照樣算別人。未建卡的人物（`card` 不給）認自己的主名與聚類別稱，
+ * 落到任何一張現有卡上的都不是他。
  */
 function isSelfOf(
   lookup: ReturnType<typeof cardLookup>,
@@ -975,23 +976,23 @@ function isSelfOf(
 }
 
 /**
- * 把出场章节按输入预算切成若干批。
+ * 把出場章節按輸入預算切成若干批。
  *
- * 每批顺带记下同场的其他人物（`others`）：配角那几章往往通篇是主角视角，只告诉模型
- * 「归纳叶伦」，它会把戏份最重的那位当成叶伦，把主角的身份连同名字一起写进这张卡。
- * 点名告诉它谁不是他，别名也拿这份名单拦。在计划阶段读好，执行时不再碰盘。
+ * 每批順帶記下同場的其他人物（`others`）：配角那幾章往往通篇是主角視角，只告訴模型
+ * 「歸納葉倫」，它會把戲份最重的那位當成葉倫，把主角的身份連同名字一起寫進這張卡。
+ * 點名告訴它誰不是他，別名也拿這份名單攔。在計劃階段讀好，執行時不再碰盤。
  *
- * 一章都放不下时仍然单独成批（正文会被 takeHead 截断并打 warn）——
- * 宁可读半章，也不能把这一章整个跳过而不吭声。
+ * 一章都放不下時仍然單獨成批（正文會被 takeHead 截斷並打 warn）——
+ * 寧可讀半章，也不能把這一章整個跳過而不吭聲。
  */
 async function planBatches(
   project: NovelProject,
   plots: Chapter[],
-  /** 干活那个模型的窗口（`budgetForTask('characterCard')` / `pool.primaryBudget`）。 */
+  /** 幹活那個模型的視窗（`budgetForTask('characterCard')` / `pool.primaryBudget`）。 */
   window: { contextWindow: number; maxOutputTokens: number },
   isSelf: (entry: SummaryCast) => boolean
 ): Promise<Batch[]> {
-  // 留出角色卡本体、提示词与输出的余量。
+  // 留出角色卡本體、提示詞與輸出的餘量。
   const budget = Math.max(2000, window.contextWindow - window.maxOutputTokens - 3000);
   const batches: Batch[] = [];
   let current: { plots: Chapter[]; parts: string[]; others: string[]; tokens: number } = {
@@ -1013,7 +1014,7 @@ async function planBatches(
     if (!text.trim()) {
       continue;
     }
-    // 与出场统计同一口径（views/cast 的 finalizedPlots）：定稿过就认，定稿后正文又改过也照样算。
+    // 與出場統計同一口徑（views/cast 的 finalizedPlots）：定稿過就認，定稿後正文又改過也照樣算。
     const summary = await project.plotOfChapter(plot);
     const others = (summary?.sourceHash ? summary.cast : [])
       .filter((entry) => entry.name.trim() && !isSelf(entry))
@@ -1022,12 +1023,12 @@ async function planBatches(
     const tokens = estimateTokens(block);
 
     if (tokens > budget) {
-      // 单章就超预算：自己单独一批，截断并说明。
+      // 單章就超預算：自己單獨一批，截斷並說明。
       flush();
       const clipped = takeHead(block, budget);
       log.warn(
-        `第 ${plot.order} 章正文超出单批预算，已截断`,
-        `${block.length} 字 → ${clipped.length} 字（预算 ${budget} token）`
+        `第 ${plot.order} 章正文超出單批預算，已截斷`,
+        `${block.length} 字 → ${clipped.length} 字（預算 ${budget} token）`
       );
       batches.push({ plots: [plot], corpus: clipped, others: unique(others) });
       continue;
@@ -1045,14 +1046,14 @@ async function planBatches(
 }
 
 /**
- * 分析一批章节，产出精炼后的角色卡内容。
+ * 分析一批章節，產出精煉後的角色卡內容。
  *
- * 关键点：把**当前已归纳出的卡**一并发过去，要求模型「在此基础上修订」而不是
- * 从零重写。这既让多批之间接得上，也是控制篇幅的抓手——提示词里反复强调
- * 保持精炼、不要堆砌。
+ * 關鍵點：把**當前已歸納出的卡**一併發過去，要求模型「在此基礎上修訂」而不是
+ * 從零重寫。這既讓多批之間接得上，也是控制篇幅的抓手——提示詞裡反覆強調
+ * 保持精煉、不要堆砌。
  *
- * 2026-10-25 起改成转写：模型按十个小标题写档案，转写那一档照抄成 JSON（原文本身就是 JSON 的不转）。
- * 转写没成（重转一次仍不合格、转写调用失败）同从前解析失败：这一批跳过，`why` 说清是哪一样。
+ * 2026-10-25 起改成轉寫：模型按十個小標題寫檔案，轉寫那一檔照抄成 JSON（原文字身就是 JSON 的不轉）。
+ * 轉寫沒成（重轉一次仍不合格、轉寫呼叫失敗）同從前解析失敗：這一批跳過，`why` 說清是哪一樣。
  */
 async function analyzeBatch(
   pool: ModelPool,
@@ -1069,7 +1070,7 @@ async function analyzeBatch(
   }
 ): Promise<{ ok: true; card: ParsedCard } | { ok: false; why: string }> {
   const options: StreamOptions = {
-    // 输出上限跟着实际干活的模型走（pool 就在手边），不是对话页那个。
+    // 輸出上限跟著實際幹活的模型走（pool 就在手邊），不是對話頁那個。
     maxOutputTokens: pool.primaryBudget.maxOutputTokens,
     temperature: 0.3,
     timeoutMs: ctx.config.requestTimeoutMs,
@@ -1077,12 +1078,12 @@ async function analyzeBatch(
   };
 
   const currentCard = [
-    `性别：${card.gender || '（空）'}`,
-    ...CHARACTER_SECTION_KEYS.map((k) => `${k}：${current[k]?.trim() || '（空）'}`),
+    `性別：${card.gender || '（空）'}`,
+    ...CHARACTER_SECTION_KEYS.map((k) => `${traditionalLabel(k)}：${current[k]?.trim() || '（空）'}`),
   ].join('\n');
   const range = describePlots(batch.plots.map((p) => p.order));
   const progress =
-    ctx.total > 1 ? `这是第 ${ctx.index + 1}/${ctx.total} 批（${range}）。\n` : `本次分析 ${range}。\n`;
+    ctx.total > 1 ? `這是第 ${ctx.index + 1}/${ctx.total} 批（${range}）。\n` : `本次分析 ${range}。\n`;
   const label = `角色卡「${card.name}」${range}`;
 
   ctx.count?.(1);
@@ -1094,17 +1095,17 @@ async function analyzeBatch(
           {
             role: 'user',
             content:
-              `${progress}要归纳的角色：${card.name}` +
-              `${card.aliases.length > 0 ? `（又称 ${card.aliases.join('、')}）` : ''}\n` +
+              `${progress}要歸納的角色：${card.name}` +
+              `${card.aliases.length > 0 ? `（又稱 ${card.aliases.join('、')}）` : ''}\n` +
               (batch.others.length > 0
-                ? `这几章里出场的其他人物：${batch.others.join('、')}。他们都不是${card.name}，` +
-                  `不要把他们的身份、经历、对白写进这张卡，也不要把他们的名字写进别名。` +
-                  `正文多半以别人的视角展开，只归纳写到${card.name}本人的部分。\n`
+                ? `這幾章裡出場的其他人物：${batch.others.join('、')}。他們都不是${card.name}，` +
+                  `不要把他們的身份、經歷、對白寫進這張卡，也不要把他們的名字寫進別名。` +
+                  `正文多半以別人的視角展開，只歸納寫到${card.name}本人的部分。\n`
                 : '') +
               '\n' +
-              `【当前的角色档案】\n${currentCard}\n\n` +
+              `【當前的角色檔案】\n${currentCard}\n\n` +
               `【正文】\n${batch.corpus}\n\n` +
-              '请在当前档案的基础上修订，按格式写出完整的档案。',
+              '請在當前檔案的基礎上修訂，按格式寫出完整的檔案。',
           },
         ],
         options
@@ -1115,7 +1116,7 @@ async function analyzeBatch(
   const r = await transcribeJson(raw, cardTranscribeSpec(label), ctx.transcribe);
   ctx.count?.(r.calls);
   if (r.notes.length > 0) {
-    log.info(`${label}：转写 ${r.calls} 次`, r.notes.join('\n'));
+    log.info(`${label}：轉寫 ${r.calls} 次`, r.notes.join('\n'));
   }
   if (!r.ok) {
     return { ok: false, why: r.failed ? r.message : `${r.message}（返回 ${raw.length} 字）` };
@@ -1124,30 +1125,30 @@ async function analyzeBatch(
 }
 
 /**
- * 让作者对比现有卡与新版本，确认后才写入。返回是否写入。
+ * 讓作者對比現有卡與新版本，確認後才寫入。返回是否寫入。
  *
- * 走 `serialize` 排队：批量更新时几张卡是并发分析的，但**同时弹三个 diff
- * 编辑器，用户根本不知道自己在看谁**。分析照跑，审阅在这里一张一张来，
- * 顺序即完成顺序。
+ * 走 `serialize` 排隊：批次更新時幾張卡是併發分析的，但**同時彈三個 diff
+ * 編輯器，使用者根本不知道自己在看誰**。分析照跑，審閱在這裡一張一張來，
+ * 順序即完成順序。
  */
 async function review(project: NovelProject, card: CharacterCard, proposedText: string): Promise<boolean> {
   const abs = project.pathOf(card.relPath);
   const host = getHost();
 
   const verdict = await serialize(async () => {
-    // 现有内容在排到队之前可能已被别处改过，进队后再读一次才是当下的真相。
+    // 現有內容在排到隊之前可能已被別處改過，進隊後再讀一次才是當下的真相。
     const currentText = await readText(abs);
     if (host.reviewReplace) {
       return plainVerdict(await host.reviewReplace(card.name, currentText, proposedText, card.relPath));
     }
-    const pick = await host.confirm(`已生成「${card.name}」的新版角色卡。采纳？`, ['采纳', '跳过'], {
+    const pick = await host.confirm(`已生成「${card.name}」的新版角色卡。採納？`, ['採納', '跳過'], {
       modal: true,
     });
-    return pick === '采纳' ? 'apply' : pick === '跳过' ? 'discard' : undefined;
+    return pick === '採納' ? 'apply' : pick === '跳過' ? 'discard' : undefined;
   });
 
   if (verdict !== 'apply') {
-    log.info(`跳过角色卡「${card.name}」`, verdict === 'discard' ? '用户放弃' : '用户取消');
+    log.info(`跳過角色卡「${card.name}」`, verdict === 'discard' ? '使用者放棄' : '使用者取消');
     return false;
   }
   await writeCardText(project, card, proposedText);
@@ -1155,22 +1156,22 @@ async function review(project: NovelProject, card: CharacterCard, proposedText: 
 }
 
 /**
- * 把新版写回**这张卡原来的文件**：经网关（越界 / 大小守卫照过，覆盖之前旧内容先存一版历史），`review: false`——
- * 到这里作者已经点过头（上面那张审阅，或批量确认框里的「全部直接采纳」），同一件事不问第二次。
+ * 把新版寫回**這張卡原來的檔案**：經閘道器（越界 / 大小守衛照過，覆蓋之前舊內容先存一版歷史），`review: false`——
+ * 到這裡作者已經點過頭（上面那張審閱，或批次確認框裡的「全部直接採納」），同一件事不問第二次。
  *
- * 走 `write(card.relPath)` 而不是 `writeCharacter`：后者按 slug 拼 `<slug>.md`，作者的卡若是 `林昭.MD`，
- * 在分大小写的文件系统上会在旁边另起一张；它也不过 `guardWrite`。
+ * 走 `write(card.relPath)` 而不是 `writeCharacter`：後者按 slug 拼 `<slug>.md`，作者的卡若是 `林昭.MD`，
+ * 在分大小寫的檔案系統上會在旁邊另起一張；它也不過 `guardWrite`。
  */
 async function writeCardText(project: NovelProject, card: CharacterCard, text: string): Promise<void> {
   await new Workspace(project).write(card.relPath, { text }, { mode: 'overwrite', review: false });
 }
 
 /**
- * 增量/全量二选一。带上章数，作者才判断得出该选哪个。
+ * 增量/全量二選一。帶上章數，作者才判斷得出該選哪個。
  *
- * **只在两个选项确有区别时才问**：从没更新过、或没有新出场章节时，增量与全量
- * 是同一件事，弹一个只有「开始」的框纯属多此一举——`runUpdate` 紧接着还会问
- * 一次（那一次带批数与预计调用次数，信息更全）。连着弹两个框会让人以为点错了。
+ * **只在兩個選項確有區別時才問**：從沒更新過、或沒有新出場章節時，增量與全量
+ * 是同一件事，彈一個只有「開始」的框純屬多此一舉——`runUpdate` 緊接著還會問
+ * 一次（那一次帶批數與預計呼叫次數，資訊更全）。連著彈兩個框會讓人以為點錯了。
  */
 async function askScope(
   card: CharacterCard,
@@ -1182,18 +1183,18 @@ async function askScope(
     return 'full';
   }
   const pick = await getHost().confirm(
-    `更新「${card.name}」的角色卡。上次更新覆盖到第 ${updatedThrough} 章。`,
-    [`只读新增的 ${fresh.length} 章`, `重读全部 ${all.length} 章`],
+    `更新「${card.name}」的角色卡。上次更新覆蓋到第 ${updatedThrough} 章。`,
+    [`只讀新增的 ${fresh.length} 章`, `重讀全部 ${all.length} 章`],
     {
       modal: true,
       detail:
-        `新增出场：${describePlots(fresh)}\n` +
-        `全部出场：${describePlots(all)}\n\n` +
-        '只读新增更省 token；全部重读更完整，适合角色卡被改乱或想彻底重来时。',
+        `新增出場：${describePlots(fresh)}\n` +
+        `全部出場：${describePlots(all)}\n\n` +
+        '只讀新增更省 token；全部重讀更完整，適合角色卡被改亂或想徹底重來時。',
     }
   );
   if (!pick) {
     return undefined;
   }
-  return pick.startsWith('只读') ? 'incremental' : 'full';
+  return pick.startsWith('只讀') ? 'incremental' : 'full';
 }

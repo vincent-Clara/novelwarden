@@ -1,13 +1,13 @@
 /**
- * 写完一章之后的几项确定性检查与续写回退点（model/manuscriptCheck.ts，五期补遗 §1）。
+ * 寫完一章之後的幾項確定性檢查與續寫回退點（model/manuscriptCheck.ts，五期補遺 §1）。
  *
- * - 比喻词按三个词合计数，说明里逐个列；
- * - 拉丁字母缩写：两个以上大写字母连写才算，全角折成半角，去重；
- * - 「本章不出场」：后面几章才排到的人，本章与前面排过的不算；
- * - 提前登场：名字或两个字以上的别名出现了，引那一句；
- * - 回退点：与钩子最像的那一段起切；找不到切最后约四分之一；至少留一半；只有一段不切。
- * - 找位置（内置编辑器的写作体检也打包这几个）：`locateTerms` 每个词各找各的、不重叠，与 `split` 数的一样多
- *   （计数都建在它上面）；`foldCase` 只折拉丁字母、长度不变；`latinAcronymRanges` 每一处都给、位置是原文的。
+ * - 比喻詞按三個詞合計數，說明裡逐個列；
+ * - 拉丁字母縮寫：兩個以上大寫字母連寫才算，全形折成半形，去重；
+ * - 「本章不出場」：後面幾章才排到的人，本章與前面排過的不算；
+ * - 提前登場：名字或兩個字以上的別名出現了，引那一句；
+ * - 回退點：與鉤子最像的那一段起切；找不到切最後約四分之一；至少留一半；只有一段不切。
+ * - 找位置（內建編輯器的寫作體檢也打包這幾個）：`locateTerms` 每個詞各找各的、不重疊，與 `split` 數的一樣多
+ *   （計數都建在它上面）；`foldCase` 只折拉丁字母、長度不變；`latinAcronymRanges` 每一處都給、位置是原文的。
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -15,83 +15,83 @@ const { loadModule } = require('../../helpers/load');
 
 const m = loadModule('src/core/model/manuscriptCheck.ts');
 
-describe('manuscriptCheck · 比喻词', () => {
-  test('三个词合计', () => {
-    assert.equal(m.countSimiles('仿佛一场梦。犹如隔世。宛如新生，仿佛未醒。'), 4);
-    assert.equal(m.countSimiles('没有比喻。'), 0);
+describe('manuscriptCheck · 比喻詞', () => {
+  test('三個詞合計', () => {
+    assert.equal(m.countSimiles('彷彿一場夢。猶如隔世。宛如新生，彷彿未醒。'), 4);
+    assert.equal(m.countSimiles('沒有比喻。'), 0);
   });
 
-  test('说明里逐个列，0 次的不列', () => {
-    assert.equal(m.describeSimiles('仿佛，仿佛，宛如'), '「仿佛」2 次、「宛如」1 次');
+  test('說明裡逐個列，0 次的不列', () => {
+    assert.equal(m.describeSimiles('彷彿，彷彿，宛如'), '「彷彿」2 次、「宛如」1 次');
   });
 });
 
-describe('manuscriptCheck · 对白占比', () => {
-  test('带引号的段占全部段的比例', () => {
-    assert.equal(m.dialogueShare('他走了。\n\n“站住。”\n\n她说：「别走」。\n\n雨停了。'), 0.5);
+describe('manuscriptCheck · 對白佔比', () => {
+  test('帶引號的段佔全部段的比例', () => {
+    assert.equal(m.dialogueShare('他走了。\n\n“站住。”\n\n她說：「別走」。\n\n雨停了。'), 0.5);
   });
 
-  test('没有段时不提醒', () => {
+  test('沒有段時不提醒', () => {
     assert.equal(m.dialogueShare(''), 1);
   });
 });
 
 describe('manuscriptCheck · 停在半句', () => {
-  test('结尾不是句末标点就算停在半句', () => {
-    assert.equal(m.endsMidSentence('他已经到了极限，全身'), true);
-    assert.equal(m.endsMidSentence('他已经到了极限，全身，'), true);
+  test('結尾不是句末標點就算停在半句', () => {
+    assert.equal(m.endsMidSentence('他已經到了極限，全身'), true);
+    assert.equal(m.endsMidSentence('他已經到了極限，全身，'), true);
   });
 
-  test('句号、问叹号、省略号、收引号、破折号收尾都不算；末尾空白先去掉', () => {
+  test('句號、問歎號、省略號、收引號、破折號收尾都不算；末尾空白先去掉', () => {
     for (const t of ['走了。', '走了？', '走了！', '走了……', '“走了。”', '「走了」', '他走了——', '走了。\n\n  ']) {
       assert.equal(m.endsMidSentence(t), false, t);
     }
   });
 
-  test('空文本不算', () => {
+  test('空文字不算', () => {
     assert.equal(m.endsMidSentence(''), false);
     assert.equal(m.endsMidSentence('  \n'), false);
   });
 });
 
-describe('manuscriptCheck · 拉丁字母缩写', () => {
-  test('两个以上大写字母连写才算，去重、按出现顺序', () => {
-    assert.deepEqual(m.latinAcronyms('他的PTSD又发作了，PTSD让他头晕，CPU也烧了。'), ['PTSD', 'CPU']);
+describe('manuscriptCheck · 拉丁字母縮寫', () => {
+  test('兩個以上大寫字母連寫才算，去重、按出現順序', () => {
+    assert.deepEqual(m.latinAcronyms('他的PTSD又發作了，PTSD讓他頭暈，CPU也燒了。'), ['PTSD', 'CPU']);
   });
 
-  test('单个字母、小写、混写的单词不算', () => {
-    assert.deepEqual(m.latinAcronyms('A 字头，ok，iPhone，Hello'), []);
+  test('單個字母、小寫、混寫的單詞不算', () => {
+    assert.deepEqual(m.latinAcronyms('A 字頭，ok，iPhone，Hello'), []);
   });
 
-  test('全角字母折成半角', () => {
-    assert.deepEqual(m.latinAcronyms('严重的ＰＴＳＤ'), ['PTSD']);
+  test('全形字母折成半形', () => {
+    assert.deepEqual(m.latinAcronyms('嚴重的ＰＴＳＤ'), ['PTSD']);
   });
 });
 
-describe('manuscriptCheck · 找位置（计数都建在它上面）', () => {
-  test('每个词各找各的、从左往右、不重叠；叠在同一段字上的两个词各算各的', () => {
-    const hits = m.locateTerms('数据库里的数据，数据数据', ['数据', '数据库', '没有']);
+describe('manuscriptCheck · 找位置（計數都建在它上面）', () => {
+  test('每個詞各找各的、從左往右、不重疊；疊在同一段字上的兩個詞各算各的', () => {
+    const hits = m.locateTerms('資料庫裡的資料，資料資料', ['資料', '資料庫', '沒有']);
     assert.deepEqual(JSON.parse(JSON.stringify(hits)), [
-      { term: '数据', offsets: [0, 5, 8, 10] },
-      { term: '数据库', offsets: [0] },
-      { term: '没有', offsets: [] },
+      { term: '資料', offsets: [0, 5, 8, 10] },
+      { term: '資料庫', offsets: [0] },
+      { term: '沒有', offsets: [] },
     ]);
   });
 
-  test('同一个词不重叠：「aaa」里的「aa」只有一处（与 split 一样）', () => {
+  test('同一個詞不重疊：「aaa」裡的「aa」只有一處（與 split 一樣）', () => {
     assert.deepEqual(m.locateTerms('aaaa', ['aa'])[0].offsets, [0, 2]);
     assert.deepEqual(m.locateTerms('aaa', ['aa'])[0].offsets, [0]);
   });
 
-  test('重复的词各给一份、空串没有命中、空文字不抛', () => {
+  test('重複的詞各給一份、空串沒有命中、空文字不拋', () => {
     const hits = m.locateTerms('能量能量', ['能量', '', '能量']);
     assert.deepEqual(hits.map((h) => h.offsets), [[0, 2], [], [0, 2]]);
     assert.deepEqual(m.locateTerms(undefined, ['能量'])[0].offsets, []);
   });
 
-  test('与 split 数出来的一样多（固定样本 + 随机 300 段）', () => {
-    const alphabet = ['能', '量', '数', '据', 'a', 'b', '，', '仿', '佛'];
-    const terms = ['能量', '数据', '量能', 'ab', 'aa', '仿佛', '能'];
+  test('與 split 數出來的一樣多（固定樣本 + 隨機 300 段）', () => {
+    const alphabet = ['能', '量', '數', '據', 'a', 'b', '，', '仿', '佛'];
+    const terms = ['能量', '資料', '量能', 'ab', 'aa', '彷彿', '能'];
     let seed = 7;
     const rand = () => {
       seed = (seed * 1103515245 + 12345) % 2147483648;
@@ -109,34 +109,34 @@ describe('manuscriptCheck · 找位置（计数都建在它上面）', () => {
     }
   });
 
-  test('foldCase：英文不分大小写、全角字母当半角；位置是原文的', () => {
+  test('foldCase：英文不分大小寫、全形字母當半形；位置是原文的', () => {
     const text = 'Hello HELLO ｈｅｌｌｏ ＨＥＬＬＯ hello';
     assert.deepEqual(m.locateTerms(text, ['hello'], { foldCase: true })[0].offsets, [0, 6, 12, 18, 24]);
     assert.deepEqual(m.locateTerms(text, ['HeLLo'], { foldCase: true })[0].offsets, [0, 6, 12, 18, 24]);
-    // 不折时区分大小写（禁用词就是这么数的）。
+    // 不折時區分大小寫（禁用詞就是這麼數的）。
     assert.deepEqual(m.locateTerms(text, ['hello'])[0].offsets, [24]);
   });
 
-  test('foldLatin 只折拉丁字母、一个字换一个字', () => {
+  test('foldLatin 只折拉丁字母、一個字換一個字', () => {
     const text = 'ABCｘｙｚＸＹＺ能量Ωé';
     const folded = m.foldLatin(text);
     assert.equal(folded, 'abcxyzxyz能量Ωé');
     assert.equal(folded.length, text.length);
   });
 
-  test('countBanned / countSimiles / describeSimiles 的数与 locateTerms 一致', () => {
-    const text = '能量涌动，仿佛潮水；能量退去，犹如梦醒，仿佛未醒。';
-    assert.deepEqual(m.countBanned(text, ['能量', '神经']), [{ term: '能量', count: 2 }]);
+  test('countBanned / countSimiles / describeSimiles 的數與 locateTerms 一致', () => {
+    const text = '能量湧動，彷彿潮水；能量退去，猶如夢醒，彷彿未醒。';
+    assert.deepEqual(m.countBanned(text, ['能量', '神經']), [{ term: '能量', count: 2 }]);
     assert.equal(m.countSimiles(text), 3);
-    assert.equal(m.describeSimiles(text), '「仿佛」2 次、「犹如」1 次');
+    assert.equal(m.describeSimiles(text), '「彷彿」2 次、「猶如」1 次');
     assert.deepEqual(m.locateSimiles(text).filter((h) => h.offsets.length).map((h) => [h.term, h.offsets]), [
-      ['仿佛', [5, 20]],
-      ['犹如', [15]],
+      ['彷彿', [5, 20]],
+      ['猶如', [15]],
     ]);
   });
 
-  test('latinAcronymRanges：每一处都给、按出现顺序、全角的位置是原文的', () => {
-    const text = 'PTSD 与ＰＴＳＤ，还有CPU。';
+  test('latinAcronymRanges：每一處都給、按出現順序、全形的位置是原文的', () => {
+    const text = 'PTSD 與ＰＴＳＤ，還有CPU。';
     assert.deepEqual(JSON.parse(JSON.stringify(m.latinAcronymRanges(text))), [
       { term: 'PTSD', start: 0, end: 4 },
       { term: 'PTSD', start: 6, end: 10 },
@@ -146,30 +146,30 @@ describe('manuscriptCheck · 找位置（计数都建在它上面）', () => {
   });
 });
 
-describe('manuscriptCheck · 本章不出场', () => {
-  test('后面几章才排到、本章与前面都没排过的人，按第一次排到的章号', () => {
+describe('manuscriptCheck · 本章不出場', () => {
+  test('後面幾章才排到、本章與前面都沒排過的人，按第一次排到的章號', () => {
     const out = m.notYetOnStage({
-      self: ['陆烬'],
-      previous: [{ no: 1, characters: ['陆烬', '陈婆婆'] }],
+      self: ['陸燼'],
+      previous: [{ no: 1, characters: ['陸燼', '陳婆婆'] }],
       ahead: [
-        { no: 5, characters: ['陆瑶', '沈秋'] },
-        { no: 4, characters: ['陆烬', '沈秋', '陈婆婆'] },
+        { no: 5, characters: ['陸瑤', '沈秋'] },
+        { no: 4, characters: ['陸燼', '沈秋', '陳婆婆'] },
       ],
     });
     assert.deepEqual(JSON.parse(JSON.stringify(out)), [
       { name: '沈秋', no: 4 },
-      { name: '陆瑶', no: 5 },
+      { name: '陸瑤', no: 5 },
     ]);
   });
 
-  test('没有后文就是空的', () => {
+  test('沒有後文就是空的', () => {
     assert.deepEqual(m.notYetOnStage({ self: ['甲'], previous: [], ahead: [] }), []);
   });
 });
 
-describe('manuscriptCheck · 提前登场', () => {
-  test('名字出现了：引第一次出现的那一句', () => {
-    const text = '雾越来越浓。\n\n巷子尽头站着一个人。是沈秋。他没有看陆烬。';
+describe('manuscriptCheck · 提前登場', () => {
+  test('名字出現了：引第一次出現的那一句', () => {
+    const text = '霧越來越濃。\n\n巷子盡頭站著一個人。是沈秋。他沒有看陸燼。';
     const out = m.findEarlyEntrances(text, [{ name: '沈秋', no: 4 }]);
     assert.equal(out.length, 1);
     assert.equal(out[0].name, '沈秋');
@@ -177,41 +177,41 @@ describe('manuscriptCheck · 提前登场', () => {
     assert.equal(out[0].quote, '是沈秋。');
   });
 
-  test('别名也认；单字别名不认', () => {
-    const text = '“秋哥来了。”有人喊。';
+  test('別名也認；單字別名不認', () => {
+    const text = '“秋哥來了。”有人喊。';
     assert.equal(m.findEarlyEntrances(text, [{ name: '沈秋', no: 4, aliases: ['秋哥'] }]).length, 1);
     assert.equal(m.findEarlyEntrances('秋天到了。', [{ name: '沈秋', no: 4, aliases: ['秋'] }]).length, 0);
   });
 
-  test('没出现就是空的', () => {
-    assert.deepEqual(m.findEarlyEntrances('陆烬独自走了。', [{ name: '沈秋', no: 4 }]), []);
+  test('沒出現就是空的', () => {
+    assert.deepEqual(m.findEarlyEntrances('陸燼獨自走了。', [{ name: '沈秋', no: 4 }]), []);
   });
 
-  // 真实模型试跑：角色图谱起的名字是「镇守人（陈道源）」，正文里写的是「陈道源」或别名「陈老爷」。
-  test('名字带括号：括号里外各一截也认', () => {
-    assert.deepEqual(m.namesOf('镇守人（陈道源）', ['陈老爷', '某']), ['镇守人（陈道源）', '镇守人', '陈道源', '陈老爷']);
-    assert.equal(m.findEarlyEntrances('陈道源坐在太师椅上。', [{ name: '镇守人（陈道源）', no: 4 }]).length, 1);
+  // 真實模型試跑：角色圖譜起的名字是「鎮守人（陳道源）」，正文裡寫的是「陳道源」或別名「陳老爺」。
+  test('名字帶括號：括號裡外各一截也認', () => {
+    assert.deepEqual(m.namesOf('鎮守人（陳道源）', ['陳老爺', '某']), ['鎮守人（陳道源）', '鎮守人', '陳道源', '陳老爺']);
+    assert.equal(m.findEarlyEntrances('陳道源坐在太師椅上。', [{ name: '鎮守人（陳道源）', no: 4 }]).length, 1);
   });
 
-  test('本章细纲自己提到的人不算「不出场」（按名字、括号里外与别名认）', () => {
+  test('本章細綱自己提到的人不算「不出場」（按名字、括號裡外與別名認）', () => {
     const list = [
-      { name: '镇守人（陈道源）', no: 4, aliases: ['陈老爷'] },
-      { name: '红姑', no: 5, aliases: [] },
+      { name: '鎮守人（陳道源）', no: 4, aliases: ['陳老爺'] },
+      { name: '紅姑', no: 5, aliases: [] },
     ];
-    const kept = m.dropMentioned(list, '老客提醒他祠堂里的陈老爷正在到处搜寻火场里的漏网之鱼。');
-    assert.deepEqual(kept.map((x) => x.name), ['红姑']);
+    const kept = m.dropMentioned(list, '老客提醒他祠堂裡的陳老爺正在到處搜尋火場裡的漏網之魚。');
+    assert.deepEqual(kept.map((x) => x.name), ['紅姑']);
   });
 });
 
-// 章末钩子并进「看点」之后不再按钩子找收尾那一场，一律从末尾按比例切。
-describe('manuscriptCheck · 回退点', () => {
+// 章末鉤子並進「看點」之後不再按鉤子找收尾那一場，一律從末尾按比例切。
+describe('manuscriptCheck · 回退點', () => {
   const para = (ch, n) => ch.repeat(n);
 
-  test('从末尾切约四分之一', () => {
+  test('從末尾切約四分之一', () => {
     const text = [para('甲', 400), para('乙', 300), para('丙', 200), para('丁', 100)].join('\n\n');
     const r = m.rewindPoint(text);
     assert.ok(r);
-    // 最后两段 300 字，正好过了四分之一（250）。
+    // 最後兩段 300 字，正好過了四分之一（250）。
     assert.equal(r.paragraphs, 2);
     assert.equal(r.keep, [para('甲', 400), para('乙', 300)].join('\n\n'));
     assert.equal(r.cut, [para('丙', 200), para('丁', 100)].join('\n\n'));
@@ -224,7 +224,7 @@ describe('manuscriptCheck · 回退点', () => {
     assert.ok(r.keep.length >= r.cut.length);
   });
 
-  test('只有一段：没法切', () => {
+  test('只有一段：沒法切', () => {
     assert.equal(m.rewindPoint(para('甲', 500)), undefined);
   });
 
@@ -236,35 +236,35 @@ describe('manuscriptCheck · 回退点', () => {
   });
 });
 
-// 百章实验：全局要求写着「严禁使用现代科学或心理学词汇」，正文照样写了「能量」33 次——没人数。
-describe('manuscriptCheck · 禁用词', () => {
-  test('文风指南禁用词表里括起来的词', () => {
-    assert.deepEqual(m.bannedTerms({ styleBanList: '不使用「不禁」「顿时」“仿佛整个世界”这类套话' }), ['不禁', '顿时', '仿佛整个世界']);
+// 百章實驗：全域要求寫著「嚴禁使用現代科學或心理學詞彙」，正文照樣寫了「能量」33 次——沒人數。
+describe('manuscriptCheck · 禁用詞', () => {
+  test('文風指南禁用詞表裡括起來的詞', () => {
+    assert.deepEqual(m.bannedTerms({ styleBanList: '不使用「不禁」「頓時」“彷彿整個世界”這類套話' }), ['不禁', '頓時', '彷彿整個世界']);
   });
 
-  test('全局要求：只收表禁止的那一个分句里括起来的词，要用的词不收', () => {
-    const guidance = '严禁使用“系统”“面板”一类词，情绪须用“惊悸”、“心病”表达；不要写「众所周知」。';
-    assert.deepEqual(m.bannedTerms({ guidance }), ['系统', '面板', '众所周知']);
+  test('全域要求：只收表禁止的那一個分句裡括起來的詞，要用的詞不收', () => {
+    const guidance = '嚴禁使用“系統”“面板”一類詞，情緒須用“驚悸”、“心病”表達；不要寫「眾所周知」。';
+    assert.deepEqual(m.bannedTerms({ guidance }), ['系統', '面板', '眾所周知']);
   });
 
-  test('古代、修真一类题材带上内置的现代说法；都市不带', () => {
-    assert.ok(m.bannedTerms({ genre: '仙侠 凡人流' }).includes('能量'));
-    assert.ok(m.bannedTerms({ genre: '历史' }).includes('神经'));
+  test('古代、修真一類題材帶上內建的現代說法；都市不帶', () => {
+    assert.ok(m.bannedTerms({ genre: '仙俠 凡人流' }).includes('能量'));
+    assert.ok(m.bannedTerms({ genre: '歷史' }).includes('神經'));
     assert.deepEqual(m.bannedTerms({ genre: '都市' }), []);
   });
 
-  test('去重；太长的不算词', () => {
-    assert.deepEqual(m.bannedTerms({ styleBanList: '「能量」「这是一句很长很长的话不是词」', genre: '仙侠' }).filter((t) => t === '能量').length, 1);
-    assert.ok(!m.bannedTerms({ styleBanList: '「这是一句很长很长的话不是词」' }).length);
+  test('去重；太長的不算詞', () => {
+    assert.deepEqual(m.bannedTerms({ styleBanList: '「能量」「這是一句很長很長的話不是詞」', genre: '仙俠' }).filter((t) => t === '能量').length, 1);
+    assert.ok(!m.bannedTerms({ styleBanList: '「這是一句很長很長的話不是詞」' }).length);
   });
 
-  test('数几次，按次数排；说明里逐个列', () => {
-    const list = m.countBanned('能量涌动，神经一跳，能量又散了。', ['神经', '能量', '坐标']);
-    assert.deepEqual(list, [{ term: '能量', count: 2 }, { term: '神经', count: 1 }]);
-    assert.equal(m.describeBanned(list), '「能量」2 次、「神经」1 次');
+  test('數幾次，按次數排；說明裡逐個列', () => {
+    const list = m.countBanned('能量湧動，神經一跳，能量又散了。', ['神經', '能量', '座標']);
+    assert.deepEqual(list, [{ term: '能量', count: 2 }, { term: '神經', count: 1 }]);
+    assert.equal(m.describeBanned(list), '「能量」2 次、「神經」1 次');
   });
 
-  test('比喻词也数「如同」「好似」', () => {
-    assert.equal(m.countSimiles('如同死水，好似梦境，恍如隔世，宛若新生。'), 4);
+  test('比喻詞也數「如同」「好似」', () => {
+    assert.equal(m.countSimiles('如同死水，好似夢境，恍如隔世，宛若新生。'), 4);
   });
 });

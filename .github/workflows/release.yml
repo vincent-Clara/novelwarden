@@ -1,35 +1,35 @@
-# 正式发布：推一个 v* tag 触发，一次出齐四条发布路径的产物。
+# 正式釋出：推一個 v* tag 觸發，一次出齊四條釋出路徑的產物。
 #
-# 与 app.yml 的分工：app.yml 是手动点的桌面壳构建（日常验证「还能编出来」），
-# 这个文件是**发版**时才跑的一条完整流水线——桌面安装包 + VS Code 扩展
-# .vsix + 独立版单文件可执行 + Android 安装包（调 android.yml），汇总成一个 GitHub Release 草稿；
-# 另外调 docker.yml 往 GHCR 推独立版的 Docker 镜像。
+# 與 app.yml 的分工：app.yml 是手動點的桌面殼構建（日常驗證「還能編出來」），
+# 這個檔案是**發版**時才跑的一條完整流水線——桌面安裝包 + VS Code 擴充套件
+# .vsix + 獨立版單檔案可執行 + Android 安裝包（調 android.yml），彙總成一個 GitHub Release 草稿；
+# 另外調 docker.yml 往 GHCR 推獨立版的 Docker 映象。
 #
-# 版本号只记在仓库根 package.json 一处（tauri.conf.json 指过去，独立版编译时写进程序）。
-# 发版在本地做：`npm version patch|minor|major` 先跑全量测试，再改版本号、提交、打 tag，
-# `git push --follow-tags` 推上来就到这里。所以这条流水线**不改版本号、不往 main 写**，
-# 只核对 tag 与 package.json 对得上。
+# 版本號只記在倉庫根 package.json 一處（tauri.conf.json 指過去，獨立版編譯時寫程序序）。
+# 發版在本地做：`npm version patch|minor|major` 先跑全量測試，再改版本號、提交、打 tag，
+# `git push --follow-tags` 推上來就到這裡。所以這條流水線**不改版本號、不往 main 寫**，
+# 只核對 tag 與 package.json 對得上。
 #
-# 只认 tag 触发：这条流水线要编两次 Rust 壳、跑两遍全量测试，是仓库里最贵的一个 job，
-# 不该由推 main 引发；而 tag 本身就是「决定发版」这件事。
+# 只認 tag 觸發：這條流水線要編兩次 Rust 殼、跑兩遍全量測試，是倉庫裡最貴的一個 job，
+# 不該由推 main 引發；而 tag 本身就是「決定發版」這件事。
 name: release
 
 on:
   push:
     tags: ['v*']
 
-# 同一个 tag 重复触发时，掐掉旧的那次——两次发布跑在一起只会互相踩。
+# 同一個 tag 重複觸發時，掐掉舊的那次——兩次釋出跑在一起只會互相踩。
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: write # 创建 Release 要写权限
+  contents: write # 建立 Release 要寫許可權
 
 jobs:
-  # ── 1) 版本号核对 ───────────────────────────────────────────────
-  # tag 是谁打的不由这里管（本地 npm version 打），但 tag 与 package.json 对不上的话，
-  # Release 的名字与安装包里的版本号就是两个数，所以先核对，对不上就整条停下。
+  # ── 1) 版本號核對 ───────────────────────────────────────────────
+  # tag 是誰打的不由這裡管（本地 npm version 打），但 tag 與 package.json 對不上的話，
+  # Release 的名字與安裝包裡的版本號就是兩個數，所以先核對，對不上就整條停下。
   version:
     runs-on: ubuntu-latest
     outputs:
@@ -38,27 +38,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 核对版本号
+      - name: 核對版本號
         id: pick
         run: |
           tag="${{ github.ref_name }}"
           v="${tag#v}"
           pkg="$(node -p "require('./package.json').version")"
           if [ "$v" != "$pkg" ]; then
-            echo "::error::tag $tag 与 package.json 的版本号 $pkg 对不上（应当用 npm version 打 tag）"
+            echo "::error::tag $tag 與 package.json 的版本號 $pkg 對不上（應當用 npm version 打 tag）"
             exit 1
           fi
-          # Windows MSI 只认纯数字的版本号，0.2.0-beta.0 这种在桌面构建那一步才会炸，这里先拦下。
+          # Windows MSI 只認純數字的版本號，0.2.0-beta.0 這種在桌面構建那一步才會炸，這裡先攔下。
           if ! echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::版本号 $v 不是 X.Y.Z（只支持 npm version patch / minor / major）"
+            echo "::error::版本號 $v 不是 X.Y.Z（只支援 npm version patch / minor / major）"
             exit 1
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "本次发布版本：$v"
+          echo "本次釋出版本：$v"
 
-  # ── 2) VS Code 扩展 + 独立版可执行 ──────────────────────────────
-  # 这两样合成一个 job：都只依赖 Node/Bun，不需要 Rust，也不需要原生 Windows
-  # ——Bun 能交叉编译出 .exe。合在一起省一次 npm ci 和一遍测试。
+  # ── 2) VS Code 擴充套件 + 獨立版可執行 ──────────────────────────────
+  # 這兩樣合成一個 job：都只依賴 Node/Bun，不需要 Rust，也不需要原生 Windows
+  # ——Bun 能交叉編譯出 .exe。合在一起省一次 npm ci 和一遍測試。
   bundles:
     needs: version
     runs-on: ubuntu-latest
@@ -76,12 +76,12 @@ jobs:
 
       - run: npm ci
 
-      # 闸门：测试挂了就不该有产物流出去。
-      - name: 跑测试
+      # 閘門：測試掛了就不該有產物流出去。
+      - name: 跑測試
         run: npm test
 
-      # 独立版：两个平台都由 Bun 交叉编译，产物带平台后缀便于区分。
-      - name: 构建独立版（linux + windows）
+      # 獨立版：兩個平臺都由 Bun 交叉編譯，產物帶平臺字尾便於區分。
+      - name: 構建獨立版（linux + windows）
         run: |
           node scripts/embed-media.js
           bun build src/shells/standalone/main.ts --compile \
@@ -89,24 +89,24 @@ jobs:
           bun build src/shells/standalone/main.ts --compile \
             --target=bun-windows-x64 --outfile dist/novelwarden-windows-x64.exe
 
-      # .vsix 必须在独立版**之后**打，且靠 .vscodeignore 把 dist/novelwarden*
-      # 排除掉——否则 113 MB 的可执行会被塞进扩展包。
+      # .vsix 必須在獨立版**之後**打，且靠 .vscodeignore 把 dist/novelwarden*
+      # 排除掉——否則 113 MB 的可執行會被塞進擴充套件包。
       - name: 打包 .vsix
         run: npx --yes @vscode/vsce@latest package --no-dependencies --out novelwarden-${{ needs.version.outputs.version }}.vsix
 
-      # 防呆闸门：.claude/ 与 local/ 是本机私有目录，绝不能进公开产物。
-      # vsce 一旦看到 .vscodeignore 就完全无视 .gitignore，所以这里实测一遍
-      # 包内清单，而不是信任配置。
-      - name: 校验 .vsix 未夹带私有文件
+      # 防呆閘門：.claude/ 與 local/ 是本機私有目錄，絕不能進公開產物。
+      # vsce 一旦看到 .vscodeignore 就完全無視 .gitignore，所以這裡實測一遍
+      # 包內清單，而不是信任配置。
+      - name: 校驗 .vsix 未夾帶私有檔案
         run: |
           list="$(unzip -Z1 novelwarden-${{ needs.version.outputs.version }}.vsix)"
           echo "$list"
           if echo "$list" | grep -Ei '(^|/)(\.claude|\.cursor|\.worktrees|local|temp)/'; then
-            echo "::error::.vsix 里夹带了私有目录，检查 .vscodeignore"
+            echo "::error::.vsix 裡夾帶了私有目錄，檢查 .vscodeignore"
             exit 1
           fi
           if echo "$list" | grep -E 'dist/novelwarden'; then
-            echo "::error::.vsix 里夹带了独立版可执行（应由 .vscodeignore 排除）"
+            echo "::error::.vsix 裡夾帶了獨立版可執行（應由 .vscodeignore 排除）"
             exit 1
           fi
 
@@ -119,15 +119,15 @@ jobs:
             dist/novelwarden-windows-x64.exe
           if-no-files-found: error
 
-  # ── 3) 桌面安装包 ───────────────────────────────────────────────
-  # Rust 壳不能交叉编译，所以每个平台一台原生 runner。
+  # ── 3) 桌面安裝包 ───────────────────────────────────────────────
+  # Rust 殼不能交叉編譯，所以每個平臺一臺原生 runner。
   desktop:
     needs: version
     strategy:
       fail-fast: false
       matrix:
         include:
-          # ubuntu-22.04 而不是 latest：链接的 glibc 越低，能装的发行版越多。
+          # ubuntu-22.04 而不是 latest：連結的 glibc 越低，能裝的發行版越多。
           - os: ubuntu-22.04
             name: linux
           - os: windows-latest
@@ -149,10 +149,10 @@ jobs:
 
       - run: npm ci
 
-      - name: 跑测试
+      - name: 跑測試
         run: npm test
 
-      - name: Linux 构建依赖
+      - name: Linux 構建依賴
         if: matrix.name == 'linux'
         run: |
           sudo apt-get update
@@ -161,38 +161,38 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      # 编 Rust 壳很慢，缓存能把重复构建从几分钟压到几十秒。
+      # 編 Rust 殼很慢，快取能把重複構建從幾分鐘壓到幾十秒。
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src/shells/desktop
 
-      # sidecar 由 tauri.conf.json 的 beforeBuildCommand 自动构建，不必单独跑。
+      # sidecar 由 tauri.conf.json 的 beforeBuildCommand 自動構建，不必單獨跑。
       #
       # Linux 只出 deb + rpm，**不出 AppImage**：AppImage 由 linuxdeploy 打，
-      # 而 linuxdeploy 会对包进去的每个可执行跑 patchelf 改 ELF 头。我们的
-      # sidecar 是 Bun `--compile` 出来的单文件可执行——ELF 后面直接粘着 JS
-      # 运行时与脚本，patchelf 一改就把这段 payload 的偏移弄坏。装了 libfuse2、
-      # 加了 APPIMAGE_EXTRACT_AND_RUN 与 NO_STRIP 都只解决「linuxdeploy 跑不
-      # 起来」，解决不了「它不该碰这个二进制」。deb / rpm 走 Tauri 自己的打包
-      # 器，原样复制 sidecar，所以一直是好的。
+      # 而 linuxdeploy 會對包進去的每個可執行跑 patchelf 改 ELF 頭。我們的
+      # sidecar 是 Bun `--compile` 出來的單檔案可執行——ELF 後面直接粘著 JS
+      # 執行時與指令碼，patchelf 一改就把這段 payload 的偏移弄壞。裝了 libfuse2、
+      # 加了 APPIMAGE_EXTRACT_AND_RUN 與 NO_STRIP 都只解決「linuxdeploy 跑不
+      # 起來」，解決不了「它不該碰這個二進位制」。deb / rpm 走 Tauri 自己的打包
+      # 器，原樣複製 sidecar，所以一直是好的。
       #
-      # 要恢复 AppImage 就得让 sidecar 不经 linuxdeploy 之手（例如改由 app
-      # 运行时下载，或换成非单文件的分发形式），那是另一件事。
+      # 要恢復 AppImage 就得讓 sidecar 不經 linuxdeploy 之手（例如改由 app
+      # 執行時下載，或換成非單檔案的分發形式），那是另一件事。
       - uses: tauri-apps/tauri-action@v0
         with:
           projectPath: src/shells/desktop
           args: ${{ matrix.name == 'linux' && '--bundles deb,rpm' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # sidecar 是 Bun 编出来的单文件可执行，strip 会把内嵌的 JS 运行时
-          # 弄坏。deb/rpm 这条路本来不 strip，留着它是防打包器换实现。
+          # sidecar 是 Bun 編出來的單檔案可執行，strip 會把內嵌的 JS 執行時
+          # 弄壞。deb/rpm 這條路本來不 strip，留著它是防打包器換實現。
           NO_STRIP: true
 
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.name }}
-          # 只收安装包，不收 90 MB 的 sidecar 中间产物。各平台产出什么由
-          # Tauri 按平台决定，所以用通配而不写死目录名。
+          # 只收安裝包，不收 90 MB 的 sidecar 中間產物。各平臺產出什麼由
+          # Tauri 按平臺決定，所以用通配而不寫死目錄名。
           path: |
             src/shells/desktop/target/release/bundle/*/*.deb
             src/shells/desktop/target/release/bundle/*/*.rpm
@@ -200,23 +200,23 @@ jobs:
             src/shells/desktop/target/release/bundle/*/*.msi
           if-no-files-found: error
 
-  # ── 4) Docker 镜像 ──────────────────────────────────────────────
-  # 整条流程在 docker.yml 里（手动点也走它，自带测试闸门与冒烟），这里只给版本号。
-  # 和别的 job 并行，不拦 Release 草稿。注意镜像推上 GHCR 就公开了（:latest 也跟着动），
-  # 不等作者在 GitHub 上把草稿点成公开。
+  # ── 4) Docker 映象 ──────────────────────────────────────────────
+  # 整條流程在 docker.yml 裡（手動點也走它，自帶測試閘門與冒煙），這裡只給版本號。
+  # 和別的 job 並行，不攔 Release 草稿。注意映象推上 GHCR 就公開了（:latest 也跟著動），
+  # 不等作者在 GitHub 上把草稿點成公開。
   docker:
     needs: version
     uses: ./.github/workflows/docker.yml
     with:
       version: ${{ needs.version.outputs.version }}
-    # 被调用的 workflow 只能在这里给的权限内再收紧，所以推 GHCR 的写权限得从这里给。
+    # 被呼叫的 workflow 只能在這裡給的許可權內再收緊，所以推 GHCR 的寫許可權得從這裡給。
     permissions:
       contents: read
       packages: write
 
-  # ── 5) Android 安装包 ───────────────────────────────────────────
-  # 整条流程在 android.yml 里（手动点出 debug 包也走它）。发版密钥在仓库 secrets 里，缺了这一步就失败，
-  # 整个 Release 停下——不能退回 debug 签名，签名不同的包装过的人升不了级。
+  # ── 5) Android 安裝包 ───────────────────────────────────────────
+  # 整條流程在 android.yml 裡（手動點出 debug 包也走它）。發版金鑰在倉庫 secrets 裡，缺了這一步就失敗，
+  # 整個 Release 停下——不能退回 debug 簽名，簽名不同的包裝過的人升不了級。
   android:
     needs: version
     uses: ./.github/workflows/android.yml
@@ -226,14 +226,14 @@ jobs:
       NOVELFORGE_KEYSTORE_BASE64: ${{ secrets.NOVELFORGE_KEYSTORE_BASE64 }}
       NOVELFORGE_KEYSTORE_PASSWORD: ${{ secrets.NOVELFORGE_KEYSTORE_PASSWORD }}
 
-  # ── 6) 汇总成 Release ───────────────────────────────────────────
+  # ── 6) 彙總成 Release ───────────────────────────────────────────
   release:
     needs: [version, bundles, desktop, android]
     runs-on: ubuntu-latest
     steps:
-      # 按名字只取 bundles 与 desktop-*，不能不带名字全拉：docker job 里的
-      # build-push-action 会顺手传两个「<仓库>~XXXX.dockerbuild」构建记录，
-      # download-artifact 解不开，整步失败（v0.2.0～v0.2.2 的 Release 都死在这）。
+      # 按名字只取 bundles 與 desktop-*，不能不帶名字全拉：docker job 裡的
+      # build-push-action 會順手傳兩個「<倉庫>~XXXX.dockerbuild」構建記錄，
+      # download-artifact 解不開，整步失敗（v0.2.0～v0.2.2 的 Release 都死在這）。
       - uses: actions/download-artifact@v4
         with:
           pattern: desktop-*
@@ -247,17 +247,17 @@ jobs:
           name: android
           path: artifacts/android
 
-      # 三个 job 的产物散在各自子目录里，摊平到一层、统一改名再上传。
+      # 三個 job 的產物散在各自子目錄裡，攤平到一層、統一改名再上傳。
       #
-      # 各家打包器的名字各是各的（Tauri 用产品名「Novelwarden」：
-      # `Novelwarden_0.3.0_x64-setup.exe`；vsce 是 `novelwarden-0.3.0.vsix`；独立版不带版本号），
-      # Windows 下桌面安装器和独立版又都是 .exe，下载页上分不出谁是谁。一律改成
-      # `Novelwarden-<版本>-<形态>-<系统>-<架构>`：形态是 desktop（桌面版，装了双击打开）、
-      # server（独立版，跑起来用浏览器打开）、vscode（插件）、android（手机 app，内置的 node 只有 arm64）；
-      # 桌面与独立版的架构一律写 x64（deb 叫 amd64、rpm 叫 x86_64）。
-      # 只在这里改：前面各 job 的中间产物名照旧（.vscodeignore 按 dist/novelwarden* 排除独立版）。
-      # 每个源文件必须正好一个，产物多了、少了都停下，不静默漏传。
-      - name: 摊平产物并统一改名
+      # 各家打包器的名字各是各的（Tauri 用產品名「Novelwarden」：
+      # `Novelwarden_0.3.0_x64-setup.exe`；vsce 是 `novelwarden-0.3.0.vsix`；獨立版不帶版本號），
+      # Windows 下桌面安裝器和獨立版又都是 .exe，下載頁上分不出誰是誰。一律改成
+      # `Novelwarden-<版本>-<形態>-<系統>-<架構>`：形態是 desktop（桌面版，裝了雙擊開啟）、
+      # server（獨立版，跑起來用瀏覽器開啟）、vscode（外掛）、android（手機 app，內建的 node 只有 arm64）；
+      # 桌面與獨立版的架構一律寫 x64（deb 叫 amd64、rpm 叫 x86_64）。
+      # 只在這裡改：前面各 job 的中間產物名照舊（.vscodeignore 按 dist/novelwarden* 排除獨立版）。
+      # 每個原始檔必須正好一個，產物多了、少了都停下，不靜默漏傳。
+      - name: 攤平產物並統一改名
         run: |
           p="Novelwarden-${{ needs.version.outputs.version }}"
           mkdir -p out
@@ -266,7 +266,7 @@ jobs:
             hits="$(find artifacts -type f -name "$1")"
             n="$(printf '%s' "$hits" | grep -c . || true)"
             if [ "$n" -ne 1 ]; then
-              echo "::error::产物 $1 应当正好 1 个，找到 $n 个"
+              echo "::error::產物 $1 應當正好 1 個，找到 $n 個"
               printf '%s\n' "$hits"
               exit 1
             fi
@@ -282,13 +282,13 @@ jobs:
           put 'novelwarden-android.apk'     "$p-android-arm64.apk"
           total="$(find artifacts -type f | wc -l)"
           if [ "$total" -ne "$(ls out | wc -l)" ]; then
-            echo "::error::产物里有 $total 个文件，只认领了 $(ls out | wc -l) 个——新的产物要在上面加一行改名"
+            echo "::error::產物裡有 $total 個檔案，只認領了 $(ls out | wc -l) 個——新的產物要在上面加一行改名"
             find artifacts -type f
             exit 1
           fi
           ls -lh out
 
-      # 一律先出草稿：作者在 GitHub 上看过产物再点公开。
+      # 一律先出草稿：作者在 GitHub 上看過產物再點公開。
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version.outputs.tag }}

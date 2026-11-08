@@ -1,11 +1,11 @@
 /*
- * 面板样式，两个形态共用。由 scripts/build-media.js 打包成 media/view.css。
+ * 面板樣式，兩個形態共用。由 scripts/build-media.js 打包成 media/view.css。
  *
- * **不写死颜色**——全部走 `--vscode-*` 变量：插件里这些变量由 VS Code 注入，
- * 独立版由 standalone.css 提供（深/浅两套）。
+ * **不寫死顏色**——全部走 `--vscode-*` 變數：外掛裡這些變數由 VS Code 注入，
+ * 獨立版由 standalone.css 提供（深/淺兩套）。
  *
- * 顺序有意义：base 定下变量与通用排版，后面的片段各管一块，
- * 同名选择器越靠后越优先。
+ * 順序有意義：base 定下變數與通用排版，後面的片段各管一塊，
+ * 同名選擇器越靠後越優先。
  */
 
 @import './view/base.css';
@@ -14,7 +14,7 @@
 @import './view/forms.css';
 @import './view/banner.css';
 
-/* 各页 */
+/* 各頁 */
 @import './view/project.css';
 @import './view/tasks.css';
 @import './view/logs.css';
@@ -27,7 +27,7 @@
 @import './view/history.css';
 @import './view/settings.css';
 
-/* 浮层：菜单、浮窗、弹窗、提示条 */
+/* 浮層：選單、浮窗、彈窗、提示條 */
 @import './view/menu.css';
 @import './view/summary-tip.css';
 @import './view/detail-tip.css';

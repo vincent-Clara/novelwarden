@@ -21,13 +21,13 @@ import { scoped } from '../runtime/logger';
 
 const log = scoped('面板');
 
-/** 设置读写不依赖 NovelProject：空窗口也能打开设置页。 */
+/** 設定讀寫不依賴 NovelProject：空視窗也能開啟設定頁。 */
 export interface SettingsSink {
   post(message: OutMessage): void;
   toast(message: string, level?: 'info' | 'error'): void;
 }
 
-/** 设置页。字段只给 controller/ 同包用。 */
+/** 設定頁。欄位只給 controller/ 同包用。 */
 
 export async function pushSettingsTo(sink: SettingsSink, ack?: 'saved' | 'rejected'): Promise<void> {
   const cfg = readConfig();
@@ -76,23 +76,23 @@ export async function saveSettingsFrom(
   const providers = normalizeProviders(s.providers);
   if (s.providers.length > 0 && providers.length === 0) {
     log.error(
-      '设置未保存：服务商配置不合法',
-      'id 不能为空或含斜杠，且每个服务商至少要有一个模型。前端已收到 rejected 回执，编辑内容保留。'
+      '設定未儲存：服務商配置不合法',
+      'id 不能為空或含斜槓，且每個服務商至少要有一個模型。前端已收到 rejected 回執，編輯內容保留。'
     );
-    sink.toast('服务商配置不合法：id 不能为空或含斜杠，且每个服务商至少要有一个模型。', 'error');
-    // 回执必须发——前端据此知道这次没落盘，从而保住未保存的编辑。
+    sink.toast('服務商配置不合法：id 不能為空或含斜槓，且每個服務商至少要有一個模型。', 'error');
+    // 回執必須發——前端據此知道這次沒落盤，從而保住未儲存的編輯。
     await pushSettingsTo(sink, 'rejected');
     return;
   }
 
   const models = normalizeModelList(s.models);
-  // 档位清单与 models 同样容错：去空、去重、保序，认不出的档位名丢弃。
+  // 檔位清單與 models 同樣容錯：去空、去重、保序，認不出的檔位名丟棄。
   const tierModels = normalizeTierModels(s.tierModels);
   const taskTiers = normalizeTaskTiers(s.taskTiers);
   const contextDetail = normalizeContextDetail(s.contextDetail);
   await updateSettings({
     providers,
-    // 列表是唯一真相；updateSettings 会顺手把 model 对齐到首项。
+    // 列表是唯一真相；updateSettings 會順手把 model 對齊到首項。
     models,
     model: models[0] ?? '',
     tierModels,
@@ -107,22 +107,22 @@ export async function saveSettingsFrom(
     ...(typeof s.openInNewWindow === 'boolean' ? { openInNewWindow: s.openInNewWindow } : {}),
   });
 
-  // 删掉的服务商不该在钥匙串里留下孤儿 Key。
+  // 刪掉的服務商不該在鑰匙串裡留下孤兒 Key。
   await pruneApiKeys(providers, before);
 
   log.info(
-    '设置已保存',
-    `${providers.length} 个服务商｜默认模型 ${models.join('、') || '（未选）'}｜` +
+    '設定已儲存',
+    `${providers.length} 個服務商｜預設模型 ${models.join('、') || '（未選）'}｜` +
       `${describeTierConfig(tierModels, taskTiers)}｜` +
-      `温度 ${s.temperature}｜上下文详细度 ${CONTEXT_DETAIL_LABEL[contextDetail]}｜超时 ${s.requestTimeoutMs}ms｜` +
-      `并发 ${s.concurrency}｜换模型重试 ${s.fallbackAttempts} 次｜` +
-      `删修饰 ${s.trimModifiers !== false ? '开' : '关'}`
+      `溫度 ${s.temperature}｜上下文詳細度 ${CONTEXT_DETAIL_LABEL[contextDetail]}｜超時 ${s.requestTimeoutMs}ms｜` +
+      `併發 ${s.concurrency}｜換模型重試 ${s.fallbackAttempts} 次｜` +
+      `刪修飾 ${s.trimModifiers !== false ? '開' : '關'}`
   );
   await pushSettingsTo(sink, 'saved');
   if (afterSave) {
     await afterSave();
   }
-  sink.toast('设置已保存。');
+  sink.toast('設定已儲存。');
 }
 
 export async function saveSettings(c: ChatController, s: SettingsPayload): Promise<void> {
@@ -130,24 +130,24 @@ export async function saveSettings(c: ChatController, s: SettingsPayload): Promi
 }
 
 /**
- * 输入框旁边的模型下拉框。只改选中项，不动服务商列表。
+ * 輸入框旁邊的模型下拉框。只改選中項，不動服務商列表。
  *
- * 「默认模型列表」是唯一真相，所以这里不是覆盖某个字段，而是**把选中的
- * 模型提到列表头**——设置页里排的顺序其余部分原样保留。
+ * 「預設模型列表」是唯一真相，所以這裡不是覆蓋某個欄位，而是**把選中的
+ * 模型提到列表頭**——設定頁裡排的順序其餘部分原樣保留。
  */
 export async function selectModel(c: ChatController, ref: string): Promise<void> {
   const config = readConfig();
   if (!resolveModelRef(config.providers, ref)) {
     const issue = describeModelIssue(config.providers, ref);
-    log.error(`切换模型失败：${issue}`, `请求的引用 ${ref}`);
+    log.error(`切換模型失敗：${issue}`, `請求的引用 ${ref}`);
     c.toast(issue, 'error');
     await c.pushState();
     return;
   }
   const models = await promoteModel(ref);
-  log.info(`已切换到模型 ${ref}`, models.length > 1 ? `默认模型列表：${models.join('、')}` : undefined);
+  log.info(`已切換到模型 ${ref}`, models.length > 1 ? `預設模型列表：${models.join('、')}` : undefined);
   await c.pushState();
-  // 设置页开着时，列表顺序变了要立刻看得见。
+  // 設定頁開著時，列表順序變了要立刻看得見。
   await pushSettings(c);
 }
 
@@ -167,7 +167,7 @@ export async function testConnectionTo(
 ): Promise<void> {
   const target = ref ?? readConfig().model;
   const draft = provider ? normalizeProviders([provider])[0] : undefined;
-  sink.toast(`正在测试 ${target}…`);
+  sink.toast(`正在測試 ${target}…`);
   const result = await runConnectionTest(ref, draft);
   sink.toast(result.message, result.ok ? 'info' : 'error');
   if (after) {

@@ -1,18 +1,18 @@
 /**
- * 同步一章里除叙事线以外的几步改成转写（2026-10-25）：照正文更新细纲、角色当前状态、故事时间，干活的模型按格式写自然语言，
- * 「转写」那一档的模型照抄成原来那份 JSON（features/transcribe.ts）。叙事线那一步这里直接给 JSON（不转），它自己的断言在别处。
+ * 同步一章裡除敘事線以外的幾步改成轉寫（2026-10-25）：照正文更新細綱、角色當前狀態、故事時間，幹活的模型按格式寫自然語言，
+ * 「轉寫」那一檔的模型照抄成原來那份 JSON（features/transcribe.ts）。敘事線那一步這裡直接給 JSON（不轉），它自己的斷言在別處。
  *
- * 作者定的：所有要模型直接输出 JSON 的步骤都改成这种模式；转写用**固定的转写模型**（不跟对话页选的、也不跟确认框上为这一次挑的）。
+ * 作者定的：所有要模型直接輸出 JSON 的步驟都改成這種模式；轉寫用**固定的轉寫模型**（不跟對話頁選的、也不跟確認框上為這一次挑的）。
  *
- * | 用例组 | 钉的是什么 |
+ * | 用例組 | 釘的是什麼 |
  * |---|---|
- * | 同步一章 · 三步都照抄收下 | 写的是对话页那个模型、转写的是转写那一档；转写只带合同与原文；细纲（八节、出场人物别名、连续性事实证据、设定）、角色状态、时间线都落盘；次数 = 写 4 + 转写 3 |
- * | 转写改了字 | 不收，重转一次，说清哪几处不是原文里的字；第二次照抄的落盘 |
- * | 补推时间 · 一批两章 | 写一次、转一次；「看不出」转成推不出（+?）；确认框报「预计 2 次，最多 3 次」、单列转写那一档 |
- * | 转写模型调用失败 | 原来的失败走法：细纲按小节读原文照样落盘（出场人物从文字里认）；角色状态、故事时间挂黄 ❗，次数照算 |
- * | 角色状态没人变 | 「本章没有人的状态变了。」这种短短一句不转，算没人变 |
- * | 原文不像这一步的输出 | 「好的……」这种不花转写那一次，照原来报读不出来 |
- * | 提示词 | 三步都不再要 JSON；内容要求一条不少（字数、条数、照抄名字、证据用「」引原文） |
+ * | 同步一章 · 三步都照抄收下 | 寫的是對話頁那個模型、轉寫的是轉寫那一檔；轉寫只帶合同與原文；細綱（八節、出場人物別名、連續性事實證據、設定）、角色狀態、時間線都落盤；次數 = 寫 4 + 轉寫 3 |
+ * | 轉寫改了字 | 不收，重轉一次，說清哪幾處不是原文裡的字；第二次照抄的落盤 |
+ * | 補推時間 · 一批兩章 | 寫一次、轉一次；「看不出」轉成推不出（+?）；確認框報「預計 2 次，最多 3 次」、單列轉寫那一檔 |
+ * | 轉寫模型呼叫失敗 | 原來的失敗走法：細綱按小節讀原文照樣落盤（出場人物從文字裡認）；角色狀態、故事時間掛黃 ❗，次數照算 |
+ * | 角色狀態沒人變 | 「本章沒有人的狀態變了。」這種短短一句不轉，算沒人變 |
+ * | 原文不像這一步的輸出 | 「好的……」這種不花轉寫那一次，照原來報讀不出來 |
+ * | 提示詞 | 三步都不再要 JSON；內容要求一條不少（字數、條數、照抄名字、證據用「」引原文） |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,7 +27,7 @@ let h;
 let fake;
 let t;
 let project;
-/** 按模型引用注入异常（fakeProvider 的 behavior）：建 provider 时现读。 */
+/** 按模型引用注入異常（fakeProvider 的 behavior）：建 provider 時現讀。 */
 const behavior = {};
 
 const pad3 = (n) => String(n).padStart(3, '0');
@@ -37,121 +37,121 @@ const CARD = '.novelwarden/characters/林昭.md';
 const TIMELINE = '.novelwarden/threads/时间线.md';
 
 const TEXT = [
-  '次日清晨，林昭推开客栈的门，檐下的灯笼被风吹得直晃。',
-  '青鳞从暗处扑出来，他侧身躲开，血顺着左臂往下淌，他把袖子扎紧了。',
-  '沈氏在柜台后看着他，没说话。她把那块残令收进了袖中。',
-  '两日后的夜里，林昭离开了青崖镇，往北去了。',
+  '次日清晨，林昭推開客棧的門，簷下的燈籠被風吹得直晃。',
+  '青鱗從暗處撲出來，他側身躲開，血順著左臂往下淌，他把袖子紮緊了。',
+  '沈氏在櫃檯後看著他，沒說話。她把那塊殘令收進了袖中。',
+  '兩日後的夜裡，林昭離開了青崖鎮，往北去了。',
 ].join('\n\n');
 
-const TRANSCRIBER = '格式转写员';
-const SUMMARY_MARK = '建立可检索的章节档案';
-const STATE_MARK = '依据本章正文更新角色的「当前状态」';
-const TIME_MARK = '你是小说的时间校对员';
-const FIND_MARK = '你是小说定稿事实审查员';
+const TRANSCRIBER = '格式轉寫員';
+const SUMMARY_MARK = '建立可檢索的章節檔案';
+const STATE_MARK = '依據本章正文更新角色的「當前狀態」';
+const TIME_MARK = '你是小說的時間校對員';
+const FIND_MARK = '你是小說定稿事實審查員';
 
-// ---------------------------------------------------------------- 写的那一次（按格式写的自然语言）
+// ---------------------------------------------------------------- 寫的那一次（按格式寫的自然語言）
 
 const SUMMARY_PROSE = [
   '## 梗概',
-  '林昭在客栈遇袭负伤，两日后离开青崖镇北上。',
+  '林昭在客棧遇襲負傷，兩日後離開青崖鎮北上。',
   '',
-  '## 出场人物',
+  '## 出場人物',
   '- 林昭（昭公子）',
   '- 沈氏',
   '',
-  '## 时间地点',
-  '青崖镇客栈，次日清晨到两日后的夜里。',
+  '## 時間地點',
+  '青崖鎮客棧，次日清晨到兩日後的夜裡。',
   '',
-  '## 关键事件',
-  '- 青鳞从暗处偷袭林昭。',
-  '- 沈氏收起残令。',
-  '- 林昭离开青崖镇往北去。',
+  '## 關鍵事件',
+  '- 青鱗從暗處偷襲林昭。',
+  '- 沈氏收起殘令。',
+  '- 林昭離開青崖鎮往北去。',
   '',
-  '## 看点',
-  '- 章末林昭北上，吊着他要去哪里。',
+  '## 看點',
+  '- 章末林昭北上，吊著他要去哪裡。',
   '',
-  '## 状态变更',
-  '林昭左臂受伤。',
+  '## 狀態變更',
+  '林昭左臂受傷。',
   '',
-  '## 连续性事实',
-  '- 林昭左臂被青鳞划伤',
-  '- 沈氏把残令收进袖中',
+  '## 連續性事實',
+  '- 林昭左臂被青鱗劃傷',
+  '- 沈氏把殘令收進袖中',
   '',
-  '## 设定',
-  '- 青崖镇〔地点〕',
+  '## 設定',
+  '- 青崖鎮〔地點〕',
 ].join('\n');
 
-const STATE_PROSE = '## 林昭\n左臂带伤，离开青崖镇往北去了。';
+const STATE_PROSE = '## 林昭\n左臂帶傷，離開青崖鎮往北去了。';
 
-/** 一章的时间：`days` 是「看不出」时不写依据、写理由。 */
+/** 一章的時間：`days` 是「看不出」時不寫依據、寫理由。 */
 const timeProse = (no, days = '1') =>
   [
     `## 第${no}章`,
-    `- 开头晚几天：${days}`,
-    '- 开头时段：清晨',
-    days === '看不出' ? '- 开头的依据：无' : '- 开头的依据：「次日清晨，林昭推开客栈的门」',
-    days === '看不出' ? '- 判断理由：场面接不上' : '- 判断理由：无',
-    '- 章内往后跳：',
-    '  - 2 天：「两日后的夜里」',
-    '- 结尾时段：夜里',
-    '- 整章回忆：无',
-    '- 写明的日子：无',
-    '- 季节：无',
+    `- 開頭晚幾天：${days}`,
+    '- 開頭時段：清晨',
+    days === '看不出' ? '- 開頭的依據：無' : '- 開頭的依據：「次日清晨，林昭推開客棧的門」',
+    days === '看不出' ? '- 判斷理由：場面接不上' : '- 判斷理由：無',
+    '- 章內往後跳：',
+    '  - 2 天：「兩日後的夜裡」',
+    '- 結尾時段：夜裡',
+    '- 整章回憶：無',
+    '- 寫明的日子：無',
+    '- 季節：無',
   ].join('\n');
 
-// ---------------------------------------------------------------- 转写那一次（照抄出来的 JSON）
+// ---------------------------------------------------------------- 轉寫那一次（照抄出來的 JSON）
 
 const SUMMARY_COPY = {
-  梗概: '林昭在客栈遇袭负伤，两日后离开青崖镇北上。',
+  梗概: '林昭在客棧遇襲負傷，兩日後離開青崖鎮北上。',
   出场人物: [
     { name: '林昭', aliases: ['昭公子'] },
     { name: '沈氏', aliases: [] },
   ],
-  时间地点: '青崖镇客栈，次日清晨到两日后的夜里。',
-  关键事件: ['青鳞从暗处偷袭林昭。', '沈氏收起残令。', '林昭离开青崖镇往北去。'],
-  看点: ['章末林昭北上，吊着他要去哪里。'],
-  状态变更: '林昭左臂受伤。',
-  连续性事实: ['林昭左臂被青鳞划伤', '沈氏把残令收进袖中'],
-  设定: [{ name: '青崖镇', category: '地点', fact: '' }],
+  时间地点: '青崖鎮客棧，次日清晨到兩日後的夜裡。',
+  关键事件: ['青鱗從暗處偷襲林昭。', '沈氏收起殘令。', '林昭離開青崖鎮往北去。'],
+  看点: ['章末林昭北上，吊著他要去哪裡。'],
+  状态变更: '林昭左臂受傷。',
+  连续性事实: ['林昭左臂被青鱗劃傷', '沈氏把殘令收進袖中'],
+  设定: [{ name: '青崖鎮', category: '地點', fact: '' }],
 };
-const STATE_COPY = { updates: [{ name: '林昭', 当前状态: '左臂带伤，离开青崖镇往北去了。' }] };
+const STATE_COPY = { updates: [{ name: '林昭', 当前状态: '左臂帶傷，離開青崖鎮往北去了。' }] };
 const timeCopy = (no, days = 1) => ({
   chapter: no,
   days,
   part: '清晨',
-  evidence: days === null ? '无' : '次日清晨，林昭推开客栈的门',
-  reason: days === null ? '场面接不上' : '无',
-  jumps: [{ days: 2, evidence: '两日后的夜里' }],
-  endPart: '夜里',
-  flashback: '无',
+  evidence: days === null ? '無' : '次日清晨，林昭推開客棧的門',
+  reason: days === null ? '場面接不上' : '無',
+  jumps: [{ days: 2, evidence: '兩日後的夜裡' }],
+  endPart: '夜裡',
+  flashback: '無',
   date: null,
   season: null,
 });
 
-/** 下一次细纲转写先答这几条（改了字的那种），用完回到照抄。 */
+/** 下一次細綱轉寫先答這幾條（改了字的那種），用完回到照抄。 */
 let summaryCopies = [];
-/** 写细纲那一次答什么（缺省按格式写）。 */
+/** 寫細綱那一次答什麼（預設按格式寫）。 */
 let summaryProse = SUMMARY_PROSE;
-/** 写角色状态那一次答什么。 */
+/** 寫角色狀態那一次答什麼。 */
 let stateProse = STATE_PROSE;
-/** 补推那一批里，这些章「看不出」晚几天。 */
+/** 補推那一批裡，這些章「看不出」晚幾天。 */
 let unknownDays = new Set();
 
 function reply(messages) {
   const system = messages[0]?.content ?? '';
   const user = messages[messages.length - 1]?.content ?? '';
   if (system.includes(TRANSCRIBER)) {
-    if (user.includes('【章节档案 JSON 合同】')) {
+    if (user.includes('【章節檔案 JSON 合同】')) {
       return JSON.stringify(summaryCopies.shift() ?? SUMMARY_COPY);
     }
-    if (user.includes('【角色状态 JSON 合同】')) {
+    if (user.includes('【角色狀態 JSON 合同】')) {
       return JSON.stringify(STATE_COPY);
     }
-    if (user.includes('【故事时间 JSON 合同】')) {
+    if (user.includes('【故事時間 JSON 合同】')) {
       const nos = [...user.matchAll(/## 第(\d+)章/g)].map((m) => Number(m[1]));
       return JSON.stringify({ times: nos.map((no) => (unknownDays.has(no) ? timeCopy(no, null) : timeCopy(no))) });
     }
-    return '（认不出这份合同）';
+    return '（認不出這份合同）';
   }
   if (system.includes(SUMMARY_MARK)) {
     return summaryProse;
@@ -166,15 +166,15 @@ function reply(messages) {
     const nos = [...user.matchAll(/【第(\d+)章 /g)].map((m) => Number(m[1]));
     return nos.map((no) => timeProse(no, unknownDays.has(no) ? '看不出' : '1')).join('\n\n');
   }
-  return '（认不出这一步）';
+  return '（認不出這一步）';
 }
 
 const systemOf = (i) => fake.calls[i][0].content;
 const userOf = (i) => fake.calls[i][fake.calls[i].length - 1].content;
 const refOf = (i) => fake.calls[i].ref;
-/** 系统提示里带着 `mark` 的那几次调用的下标。 */
+/** 系統提示裡帶著 `mark` 的那幾次呼叫的下標。 */
 const callsWith = (mark) => fake.calls.map((m, i) => (m[0].content.includes(mark) ? i : -1)).filter((i) => i >= 0);
-/** 转写那几次里，合同是 `contract` 的那几次的下标。 */
+/** 轉寫那幾次裡，合同是 `contract` 的那幾次的下標。 */
 const transcribesOf = (contract) => callsWith(TRANSCRIBER).filter((i) => userOf(i).includes(contract));
 
 async function chapterNo(no) {
@@ -198,7 +198,7 @@ before(async () => {
     errorLog: './src/core/runtime/errorLog.ts',
     db: './src/core/runtime/db.ts',
   });
-  // 对话页选的是 big；转写那一档（缺省快速档）配的是 small。
+  // 對話頁選的是 big；轉寫那一檔（預設快速檔）配的是 small。
   const settings = {
     providers: [{ id: 'p', kind: 'vscode-lm', models: [{ name: 'big', contextWindow: 100000 }, { name: 'small', contextWindow: 32000 }] }],
     models: ['p/big'],
@@ -212,13 +212,13 @@ before(async () => {
     behavior,
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
-  t = await makeTempProject(bundle.project, { prefix: 'finalize-transcribe', title: '青崖记' });
+  t = await makeTempProject(bundle.project, { prefix: 'finalize-transcribe', title: '青崖記' });
   project = t.project;
   for (let no = 1; no <= 5; no++) {
     t.write(CH(no), `# 第${no}章\n\n${TEXT}\n`);
   }
-  const hash = bundle.stateModel.stateHashOf('在客栈');
-  t.write(CARD, `---\nname: 林昭\nstateThrough: 1\nstateHash: ${hash}\n---\n\n# 林昭\n\n## 身份\n\n少年剑客\n\n## 当前状态\n\n在客栈\n`);
+  const hash = bundle.stateModel.stateHashOf('在客棧');
+  t.write(CARD, `---\nname: 林昭\nstateThrough: 1\nstateHash: ${hash}\n---\n\n# 林昭\n\n## 身份\n\n少年劍客\n\n## 當前狀態\n\n在客棧\n`);
   project.invalidate();
 });
 
@@ -226,23 +226,23 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('同步一章 · 细纲、角色状态、故事时间都按格式写，转写模型照抄', () => {
+describe('同步一章 · 細綱、角色狀態、故事時間都按格式寫，轉寫模型照抄', () => {
   let outcome;
   before(async () => {
     fake.reset();
     outcome = await bundle.finalize.finalizeChapter(project, await chapterNo(2));
   });
 
-  test('写 4 次（细纲、角色状态、叙事线、故事时间）、转写 3 次（叙事线直接给了 JSON，不转）；账对得上', () => {
+  test('寫 4 次（細綱、角色狀態、敘事線、故事時間）、轉寫 3 次（敘事線直接給了 JSON，不轉）；賬對得上', () => {
     assert.equal(fake.callCount(), 7);
     assert.equal(outcome.calls, 7);
     assert.equal(callsWith(TRANSCRIBER).length, 3);
-    for (const contract of ['【章节档案 JSON 合同】', '【角色状态 JSON 合同】', '【故事时间 JSON 合同】']) {
+    for (const contract of ['【章節檔案 JSON 合同】', '【角色狀態 JSON 合同】', '【故事時間 JSON 合同】']) {
       assert.equal(transcribesOf(contract).length, 1, contract);
     }
   });
 
-  test('写的是对话页那个模型，转写的是转写那一档', () => {
+  test('寫的是對話頁那個模型，轉寫的是轉寫那一檔', () => {
     for (const i of callsWith(TRANSCRIBER)) {
       assert.equal(refOf(i), 'p/small');
     }
@@ -251,44 +251,44 @@ describe('同步一章 · 细纲、角色状态、故事时间都按格式写，
     }
   });
 
-  test('转写只带合同与原文：原文进了转写的消息，书的上下文、正文没进', () => {
-    const [s] = transcribesOf('【章节档案 JSON 合同】');
+  test('轉寫只帶合同與原文：原文進了轉寫的訊息，書的上下文、正文沒進', () => {
+    const [s] = transcribesOf('【章節檔案 JSON 合同】');
     assert.ok(userOf(s).includes('【原文】') && userOf(s).includes('- 林昭（昭公子）'), userOf(s));
-    assert.ok(!userOf(s).includes('血顺着左臂往下淌'), userOf(s));
-    const [st] = transcribesOf('【角色状态 JSON 合同】');
-    assert.ok(userOf(st).includes('## 林昭\n左臂带伤'), userOf(st));
-    const [tm] = transcribesOf('【故事时间 JSON 合同】');
-    assert.ok(userOf(tm).includes('- 开头的依据：「次日清晨，林昭推开客栈的门」'), userOf(tm));
+    assert.ok(!userOf(s).includes('血順著左臂往下淌'), userOf(s));
+    const [st] = transcribesOf('【角色狀態 JSON 合同】');
+    assert.ok(userOf(st).includes('## 林昭\n左臂帶傷'), userOf(st));
+    const [tm] = transcribesOf('【故事時間 JSON 合同】');
+    assert.ok(userOf(tm).includes('- 開頭的依據：「次日清晨，林昭推開客棧的門」'), userOf(tm));
   });
 
-  test('写的那几次不要 JSON', () => {
+  test('寫的那幾次不要 JSON', () => {
     for (const mark of [SUMMARY_MARK, STATE_MARK, TIME_MARK]) {
       const i = callsWith(mark)[0];
-      assert.ok(systemOf(i).includes('不写 JSON'), systemOf(i).slice(0, 400));
+      assert.ok(systemOf(i).includes('不寫 JSON'), systemOf(i).slice(0, 400));
     }
-    assert.ok(userOf(callsWith(STATE_MARK)[0]).endsWith('请按要求写。'));
-    assert.ok(userOf(callsWith(TIME_MARK)[0]).includes('请给第 2 章各判一次时间，按要求的格式写。'));
+    assert.ok(userOf(callsWith(STATE_MARK)[0]).endsWith('請按要求寫。'));
+    assert.ok(userOf(callsWith(TIME_MARK)[0]).includes('請給第 2 章各判一次時間，按要求的格式寫。'));
   });
 
-  test('细纲落盘：八节照抄，出场人物带别名，连续性事实挂上正文原句，设定一节在', async () => {
+  test('細綱落盤：八節照抄，出場人物帶別名，連續性事實掛上正文原句，設定一節在', async () => {
     const plot = t.read(PLOT(2));
-    assert.ok(plot.includes('林昭在客栈遇袭负伤，两日后离开青崖镇北上。'), plot);
+    assert.ok(plot.includes('林昭在客棧遇襲負傷，兩日後離開青崖鎮北上。'), plot);
     assert.match(plot, /^cast: \[林昭\(昭公子\), 沈氏\]$/m);
-    assert.ok(plot.includes('- 青鳞从暗处偷袭林昭。'), plot);
-    assert.ok(plot.includes('林昭左臂被青鳞划伤') && plot.includes('血顺着左臂往下淌'), plot);
-    assert.ok(/## 设定\s+- 青崖镇〔地点〕/.test(plot), plot);
-    // 原文写「无」的那一节换成空的，不落一个「无」字进去（这里没有「无」：状态变更有内容）。
-    assert.ok(plot.includes('林昭左臂受伤。'), plot);
+    assert.ok(plot.includes('- 青鱗從暗處偷襲林昭。'), plot);
+    assert.ok(plot.includes('林昭左臂被青鱗劃傷') && plot.includes('血順著左臂往下淌'), plot);
+    assert.ok(/## 設定\s+- 青崖鎮〔地點〕/.test(plot), plot);
+    // 原文寫「無」的那一節換成空的，不落一個「無」字進去（這裡沒有「無」：狀態變更有內容）。
+    assert.ok(plot.includes('林昭左臂受傷。'), plot);
     project.invalidate();
     assert.ok((await project.getPlot(2)).sourceHash);
   });
 
-  test('角色卡的当前状态换成转写出来的那一段', () => {
-    assert.match(t.read(CARD), /## 当前状态\s+左臂带伤，离开青崖镇往北去了。/);
+  test('角色卡的當前狀態換成轉寫出來的那一段', () => {
+    assert.match(t.read(CARD), /## 當前狀態\s+左臂帶傷，離開青崖鎮往北去了。/);
     assert.deepEqual(outcome.states.updated, ['林昭']);
   });
 
-  test('时间线写上这一章：晚 1 天，依据是正文原句，章内跳了 2 天，「无」的理由不留', () => {
+  test('時間線寫上這一章：晚 1 天，依據是正文原句，章內跳了 2 天，「無」的理由不留', () => {
     const e = timelineOf().entries.find((x) => x.chapter === 2);
     assert.ok(e, t.read(TIMELINE));
     assert.deepEqual(e.value, { kind: 'delta', days: 1 });
@@ -299,35 +299,35 @@ describe('同步一章 · 细纲、角色状态、故事时间都按格式写，
   });
 });
 
-describe('转写改了原文的字：不收，重转一次', () => {
+describe('轉寫改了原文的字：不收，重轉一次', () => {
   let outcome;
   before(async () => {
-    summaryCopies = [{ ...SUMMARY_COPY, 关键事件: ['林昭夜探客栈，被青鳞所伤。'] }];
+    summaryCopies = [{ ...SUMMARY_COPY, 关键事件: ['林昭夜探客棧，被青鱗所傷。'] }];
     fake.reset();
     outcome = await bundle.finalize.finalizeChapter(project, await chapterNo(2));
   });
 
-  test('重转那一次说清哪几处不是原文里的字', () => {
-    const [first, second] = transcribesOf('【章节档案 JSON 合同】');
+  test('重轉那一次說清哪幾處不是原文裡的字', () => {
+    const [first, second] = transcribesOf('【章節檔案 JSON 合同】');
     assert.ok(second !== undefined, JSON.stringify(callsWith(TRANSCRIBER)));
-    assert.ok(!userOf(first).includes('【上次转写不合格】'));
-    assert.ok(userOf(second).includes('【上次转写不合格】这几处不是原文里的字：「林昭夜探客栈，被青鳞所伤。」'), userOf(second).slice(0, 800));
+    assert.ok(!userOf(first).includes('【上次轉寫不合格】'));
+    assert.ok(userOf(second).includes('【上次轉寫不合格】這幾處不是原文裡的字：「林昭夜探客棧，被青鱗所傷。」'), userOf(second).slice(0, 800));
   });
 
-  test('多调的那一次记进账里', () => {
+  test('多調的那一次記進賬裡', () => {
     assert.equal(fake.callCount(), 8);
     assert.equal(outcome.calls, 8);
   });
 
-  test('落盘的是第二次照抄的那一份', () => {
+  test('落盤的是第二次照抄的那一份', () => {
     const plot = t.read(PLOT(2));
-    assert.ok(plot.includes('- 青鳞从暗处偷袭林昭。') && !plot.includes('林昭夜探客栈'), plot);
+    assert.ok(plot.includes('- 青鱗從暗處偷襲林昭。') && !plot.includes('林昭夜探客棧'), plot);
   });
 });
 
-describe('补推时间 · 一批两章：写一次、转一次', () => {
+describe('補推時間 · 一批兩章：寫一次、轉一次', () => {
   before(async () => {
-    // 第 3、4 章同步过（细纲记着正文的指纹），时间线里还没有它们。
+    // 第 3、4 章同步過（細綱記著正文的指紋），時間線裡還沒有它們。
     for (const no of [3, 4]) {
       const hash = (await chapterNo(no)).contentHash;
       t.write(PLOT(no), `---\nno: ${no}\ntitle: 第${no}章\nsourceHash: ${hash}\n---\n\n# 第${no}章\n\n## 梗概\n第 ${no} 章。\n`);
@@ -335,31 +335,31 @@ describe('补推时间 · 一批两章：写一次、转一次', () => {
     unknownDays = new Set([3]);
     project.invalidate();
     fake.reset();
-    h.expect('开始补推');
+    h.expect('開始補推');
     await bundle.timeBackfill.backfillTimeline(project);
     unknownDays = new Set();
   });
 
-  test('确认框报「预计 2 次，最多 3 次」，单列转写那一档', () => {
+  test('確認框報「預計 2 次，最多 3 次」，單列轉寫那一檔', () => {
     const c = h.confirms.at(-1);
-    assert.ok(c.message.includes('第 3–4 章') && c.message.includes('预计 2 次调用，最多 3 次'), c.message);
-    assert.ok(c.call.fixed?.some((f) => f.startsWith('转写') && f.endsWith('（不跟这一次挑的模型）')), JSON.stringify(c.call));
+    assert.ok(c.message.includes('第 3–4 章') && c.message.includes('預計 2 次呼叫，最多 3 次'), c.message);
+    assert.ok(c.call.fixed?.some((f) => f.startsWith('轉寫') && f.endsWith('（不跟這一次挑的模型）')), JSON.stringify(c.call));
   });
 
-  test('一批写一次、转一次；转写的原文是两章各一节', () => {
+  test('一批寫一次、轉一次；轉寫的原文是兩章各一節', () => {
     assert.equal(fake.callCount(), 2);
     assert.ok(systemOf(0).includes(TIME_MARK) && systemOf(1).includes(TRANSCRIBER));
     assert.ok(userOf(1).includes('## 第3章') && userOf(1).includes('## 第4章'), userOf(1));
   });
 
-  test('「看不出」转成推不出（+?），另一章晚 1 天', () => {
+  test('「看不出」轉成推不出（+?），另一章晚 1 天', () => {
     const entries = timelineOf().entries;
     assert.equal(entries.find((e) => e.chapter === 3)?.value.kind, 'unknown', t.read(TIMELINE));
     assert.deepEqual(entries.find((e) => e.chapter === 4)?.value, { kind: 'delta', days: 1 });
   });
 });
 
-describe('转写模型调用失败：照这几步原来解析失败的走法', () => {
+describe('轉寫模型呼叫失敗：照這幾步原來解析失敗的走法', () => {
   let outcome;
   before(async () => {
     behavior['p/small'] = 'fail';
@@ -368,50 +368,50 @@ describe('转写模型调用失败：照这几步原来解析失败的走法', (
     delete behavior['p/small'];
   });
 
-  test('细纲照样落盘：按小节读原文，出场人物与别名从文字里认', async () => {
+  test('細綱照樣落盤：按小節讀原文，出場人物與別名從文字裡認', async () => {
     const plot = t.read(PLOT(5));
-    assert.ok(plot.includes('林昭在客栈遇袭负伤'), plot);
+    assert.ok(plot.includes('林昭在客棧遇襲負傷'), plot);
     assert.match(plot, /^cast: \[林昭\(昭公子\), 沈氏\]$/m);
     project.invalidate();
     assert.ok((await project.getPlot(5)).sourceHash);
   });
 
-  test('角色状态、故事时间没成：黄 ❗ 挂在章节上，说清是转写没成', async () => {
-    assert.match(outcome.stateError ?? '', /转写没成/);
-    assert.match(outcome.timeError ?? '', /转写没成/);
+  test('角色狀態、故事時間沒成：黃 ❗ 掛在章節上，說清是轉寫沒成', async () => {
+    assert.match(outcome.stateError ?? '', /轉寫沒成/);
+    assert.match(outcome.timeError ?? '', /轉寫沒成/);
     const marks = await failuresOf(CH(5));
     assert.deepEqual(marks.map((m) => m.op).sort(), ['cardState', 'timeline']);
     assert.ok(marks.every((m) => m.severity === 'warn'), JSON.stringify(marks));
     assert.ok(!timelineOf().entries.some((e) => e.chapter === 5));
   });
 
-  test('发出去的转写也算钱：写 4 次 + 转写 3 次（都失败了）', () => {
+  test('發出去的轉寫也算錢：寫 4 次 + 轉寫 3 次（都失敗了）', () => {
     assert.equal(fake.callCount(), 7);
     assert.equal(outcome.calls, 7);
   });
 });
 
-describe('角色状态：没人变就只写一句，不花转写那一次', () => {
+describe('角色狀態：沒人變就只寫一句，不花轉寫那一次', () => {
   let outcome;
   before(async () => {
-    stateProse = '本章没有人的状态变了。';
+    stateProse = '本章沒有人的狀態變了。';
     fake.reset();
     outcome = await bundle.finalize.finalizeChapter(project, await chapterNo(2));
     stateProse = STATE_PROSE;
   });
 
-  test('角色状态那一步只调了写的那一次，没有报错', () => {
-    assert.equal(transcribesOf('【角色状态 JSON 合同】').length, 0);
+  test('角色狀態那一步只調了寫的那一次，沒有報錯', () => {
+    assert.equal(transcribesOf('【角色狀態 JSON 合同】').length, 0);
     assert.equal(outcome.states.calls, 1);
     assert.ok(!outcome.stateError, outcome.stateError);
     assert.deepEqual(outcome.states.updated, []);
   });
 });
 
-describe('原文连这一步的样子都没有：不花转写那一次', () => {
+describe('原文連這一步的樣子都沒有：不花轉寫那一次', () => {
   let error;
   before(async () => {
-    summaryProse = '好的，这一章主要写了林昭在客栈遇袭然后离开，整体节奏紧凑。';
+    summaryProse = '好的，這一章主要寫了林昭在客棧遇襲然後離開，整體節奏緊湊。';
     fake.reset();
     try {
       await bundle.finalize.finalizeChapter(project, await chapterNo(1));
@@ -421,43 +421,43 @@ describe('原文连这一步的样子都没有：不花转写那一次', () => {
     summaryProse = SUMMARY_PROSE;
   });
 
-  test('照原来报读不出来、红 ❗，只调了写的那一次', async () => {
-    assert.ok(error && /同步失败/.test(error.message), String(error));
+  test('照原來報讀不出來、紅 ❗，只調了寫的那一次', async () => {
+    assert.ok(error && /同步失敗/.test(error.message), String(error));
     assert.equal(fake.callCount(), 1);
     const marks = await failuresOf(CH(1));
-    assert.ok(marks.some((m) => m.severity === 'error' && /无法解析/.test(m.message)), JSON.stringify(marks));
+    assert.ok(marks.some((m) => m.severity === 'error' && /無法解析/.test(m.message)), JSON.stringify(marks));
   });
 });
 
-describe('提示词：不再要 JSON，内容要求一条不少', () => {
+describe('提示詞：不再要 JSON，內容要求一條不少', () => {
   const sp = loadModule('src/core/features/summarizePrompt.ts');
   const cp = loadModule('src/core/features/characterCardPrompt.ts');
   const tp = loadModule('src/core/features/timePrompt.ts');
 
-  test('细纲：八个小标题，字数、条数、照抄名字、别名只收专属称呼都还在', () => {
-    for (const head of ['## 梗概', '## 出场人物', '## 时间地点', '## 关键事件', '## 看点', '## 状态变更', '## 连续性事实', '## 设定']) {
+  test('細綱：八個小標題，字數、條數、照抄名字、別名只收專屬稱呼都還在', () => {
+    for (const head of ['## 梗概', '## 出場人物', '## 時間地點', '## 關鍵事件', '## 看點', '## 狀態變更', '## 連續性事實', '## 設定']) {
       assert.ok(sp.SUMMARY_SYSTEM.includes(head), head);
     }
-    assert.ok(!/输出一个 JSON|JSON 对象|aliases|"name"/.test(sp.SUMMARY_SYSTEM), sp.SUMMARY_SYSTEM);
-    for (const rule of ['150 字以内', '40 字以内；最多 12 条', '已有角色卡」列表里有就照抄', '括号里只收专属称呼', '60 字以内', '1–3 条']) {
+    assert.ok(!/輸出一個 JSON|JSON 物件|aliases|"name"/.test(sp.SUMMARY_SYSTEM), sp.SUMMARY_SYSTEM);
+    for (const rule of ['150 字以內', '40 字以內；最多 12 條', '已有角色卡」列表裡有就照抄', '括號裡只收專屬稱呼', '60 字以內', '1–3 條']) {
       assert.ok(sp.SUMMARY_SYSTEM.includes(rule), rule);
     }
     assert.ok(sp.SUMMARY_JSON_CONTRACT.includes('"出场人物":[{"name":"…","aliases":["…"]}]'));
   });
 
-  test('角色状态：一人一节，100 字以内、只写变了的、名字与名单一致；没人变只写「无」', () => {
-    assert.ok(!/JSON 对象|"updates"/.test(cp.STATE_SYSTEM), cp.STATE_SYSTEM);
-    for (const rule of ['## 〈人物名〉', '100 字以内', '只写本章里状态确实变了的人', '只写一个字「无」', '与名单完全一致']) {
+  test('角色狀態：一人一節，100 字以內、只寫變了的、名字與名單一致；沒人變只寫「無」', () => {
+    assert.ok(!/JSON 物件|"updates"/.test(cp.STATE_SYSTEM), cp.STATE_SYSTEM);
+    for (const rule of ['## 〈人物名〉', '100 字以內', '只寫本章裡狀態確實變了的人', '只寫一個字「無」', '與名單完全一致']) {
       assert.ok(cp.STATE_SYSTEM.includes(rule), rule);
     }
     assert.ok(cp.STATE_JSON_CONTRACT.includes('{"updates":[{"name":"…","当前状态":"…"}]}'));
   });
 
-  test('故事时间：一章一节，依据用「」逐字引正文，不许自己算日期', () => {
-    assert.ok(!/输出一个 JSON|JSON 对象|evidence|"times"/.test(tp.TIME_SYSTEM), tp.TIME_SYSTEM);
-    for (const rule of ['## 第12章', '用「」把这一章正文里交代时间的那一小截原样引出来，逐字复制，40 字以内', '不要自己算日期', '写「看不出」', '「三年后」按一年 360 天写 1080']) {
+  test('故事時間：一章一節，依據用「」逐字引正文，不許自己算日期', () => {
+    assert.ok(!/輸出一個 JSON|JSON 物件|evidence|"times"/.test(tp.TIME_SYSTEM), tp.TIME_SYSTEM);
+    for (const rule of ['## 第12章', '用「」把這一章正文裡交代時間的那一小截原樣引出來，逐字複製，40 字以內', '不要自己算日期', '寫「看不出」', '「三年後」按一年 360 天寫 1080']) {
       assert.ok(tp.TIME_SYSTEM.includes(rule), rule);
     }
-    assert.ok(tp.TIME_JSON_CONTRACT.includes('写「看不出」或没写的给 null'));
+    assert.ok(tp.TIME_JSON_CONTRACT.includes('寫「看不出」或沒寫的給 null'));
   });
 });

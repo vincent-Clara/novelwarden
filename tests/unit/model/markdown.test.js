@@ -1,6 +1,6 @@
 /**
- * Markdown 解析：frontmatter、小节抽取、H1 处理、序列化往返。
- * 迁自 scripts/smoke.js 的 `== markdown.ts ==` 一节。
+ * Markdown 解析：frontmatter、小節抽取、H1 處理、序列化往返。
+ * 遷自 scripts/smoke.js 的 `== markdown.ts ==` 一節。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -24,12 +24,12 @@ describe('markdown.ts', () => {
     assert.equal(parsed.frontmatter.name, '林昭');
   });
 
-  test('解析行内数组 aliases', () => {
+  test('解析行內陣列 aliases', () => {
     assert.ok(Array.isArray(parsed.frontmatter.aliases), JSON.stringify(parsed.frontmatter.aliases));
     assert.equal(parsed.frontmatter.aliases[0], '阿昭');
   });
 
-  test('解析数字字段 firstAppear', () => {
+  test('解析數字欄位 firstAppear', () => {
     assert.equal(parsed.frontmatter.firstAppear, '1');
   });
 
@@ -40,63 +40,63 @@ describe('markdown.ts', () => {
   describe('pickSections', () => {
     let sections;
     before(() => {
-      sections = md.pickSections(parsed.body, ['身份', '语言习惯', '当前状态', '不存在的小节']);
+      sections = md.pickSections(parsed.body, ['身份', '语言习惯', '当前状态', '不存在的小節']);
     });
 
-    test('抽取「身份」小节', () => {
-      assert.ok(sections.身份.includes('七年前那场火的幸存者'), sections.身份);
+    test('抽取「身份」小節', () => {
+      assert.ok(sections.身份.includes('七年前那場火的倖存者'), sections.身份);
     });
 
-    test('抽取「语言习惯」小节', () => {
-      assert.ok(sections.语言习惯.includes('答话极短'), sections.语言习惯);
+    test('抽取「語言習慣」小節', () => {
+      assert.ok(sections.语言习惯.includes('答話極短'), sections.语言习惯);
     });
 
-    test('抽取「当前状态」小节', () => {
+    test('抽取「當前狀態」小節', () => {
       assert.ok(sections.当前状态.includes('停舟'), sections.当前状态);
     });
 
-    test('缺失小节返回空串', () => {
-      assert.equal(sections.不存在的小节, '');
+    test('缺失小節返回空串', () => {
+      assert.equal(sections.不存在的小節, '');
     });
   });
 
-  describe('块状数组写法', () => {
+  describe('塊狀陣列寫法', () => {
     let block;
     before(() => {
-      block = md.parseMarkdown('---\ntags:\n  - 主角\n  - 视角人物\nname: 甲\n---\n\n正文');
+      block = md.parseMarkdown('---\ntags:\n  - 主角\n  - 視角人物\nname: 甲\n---\n\n正文');
     });
 
-    test('解析块状数组', () => {
+    test('解析塊狀陣列', () => {
       assert.ok(Array.isArray(block.frontmatter.tags), JSON.stringify(block.frontmatter.tags));
       assert.equal(block.frontmatter.tags.length, 2, JSON.stringify(block.frontmatter.tags));
     });
 
-    test('块状数组后的键仍能解析', () => {
+    test('塊狀陣列後的鍵仍能解析', () => {
       assert.equal(block.frontmatter.name, '甲');
     });
   });
 
-  describe('H1 处理', () => {
+  describe('H1 處理', () => {
     test('extractH1', () => {
       assert.equal(md.extractH1('# 楔子\n\n正文'), '楔子');
     });
 
-    test('stripH1 去掉标题', () => {
+    test('stripH1 去掉標題', () => {
       assert.ok(md.stripH1('# 楔子\n\n雨下了三天').startsWith('雨下了三天'));
     });
 
-    test('stripH1 不误伤无标题正文', () => {
+    test('stripH1 不誤傷無標題正文', () => {
       assert.equal(md.stripH1('雨下了三天'), '雨下了三天');
     });
   });
 
-  describe('容错：作者会手改任何 Markdown', () => {
-    test('无 frontmatter 不抛错', () => {
-      assert.equal(md.parseMarkdown('# 标题\n正文').frontmatter.name, undefined);
+  describe('容錯：作者會手改任何 Markdown', () => {
+    test('無 frontmatter 不拋錯', () => {
+      assert.equal(md.parseMarkdown('# 標題\n正文').frontmatter.name, undefined);
     });
 
-    test('畸形行被跳过而非抛错', () => {
-      const messy = md.parseMarkdown('---\n这行不是键值对\nname: 乙\n---\n正文');
+    test('畸形行被跳過而非拋錯', () => {
+      const messy = md.parseMarkdown('---\n這行不是鍵值對\nname: 乙\n---\n正文');
       assert.equal(messy.frontmatter.name, '乙');
     });
   });
@@ -109,7 +109,7 @@ describe('markdown.ts', () => {
       assert.equal(round.frontmatter.aliases.length, 2);
     });
 
-    test('undefined 字段被跳过', () => {
+    test('undefined 欄位被跳過', () => {
       const fm = md.stringifyFrontmatter({ name: '丙', aliases: ['x', 'y'], firstAppear: 3, skip: undefined });
       assert.ok(!fm.includes('skip'));
     });

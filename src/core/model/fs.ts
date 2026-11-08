@@ -6,7 +6,7 @@ export function hash(text: string): string {
   return crypto.createHash('sha1').update(text.replace(/\r\n/g, '\n')).digest('hex').slice(0, 16);
 }
 
-/** 中文按字符计，英文按词计，粗略但稳定。 */
+/** 中文按字元計，英文按詞計，粗略但穩定。 */
 export function countWords(text: string): number {
   const stripped = text.replace(/\s+/g, '');
   const cjk = (stripped.match(/[一-鿿㐀-䶿]/g) ?? []).length;
@@ -28,7 +28,7 @@ export function sanitizeFileName(name: string): string {
   );
 }
 
-/** 从角色名生成 slug：ASCII 转小写连字符，中文保留。 */
+/** 從角色名生成 slug：ASCII 轉小寫連字元，中文保留。 */
 export function slugify(name: string): string {
   return sanitizeFileName(name).toLowerCase() || 'unnamed';
 }
@@ -47,16 +47,16 @@ export async function readText(absPath: string): Promise<string> {
 }
 
 /**
- * 读一个**可能不存在**的文件：读不到就给 undefined，不抛。
+ * 讀一個**可能不存在**的檔案：讀不到就給 undefined，不拋。
  *
- * 取代 `exists()` + `readText()` 两步走：那样每个文件要两次系统调用（工程页
- * 刷新时每章的细纲与摘要各占一次多余的 stat），而且中间那一瞬文件被删掉的话
- * 仍然会抛——作者随时在手改文件，这条竞态是真的会发生的。
+ * 取代 `exists()` + `readText()` 兩步走：那樣每個檔案要兩次系統呼叫（工程頁
+ * 重新整理時每章的細綱與摘要各佔一次多餘的 stat），而且中間那一瞬檔案被刪掉的話
+ * 仍然會拋——作者隨時在手改檔案，這條競態是真的會發生的。
  *
- * 「读不到」包含三种：不存在（ENOENT）、路径中间那一段不是目录（ENOTDIR）、
- * 目标本身是个目录（EISDIR）。对调用方它们是同一件事——**这一章没有这份产物**，
- * 而作者手里真的可能出现一个叫 `001-楔子.md` 的目录。其余错误（权限、编码）
- * 照常上抛：那些是调用方该知道的事，不该被悄悄当成「没有」。
+ * 「讀不到」包含三種：不存在（ENOENT）、路徑中間那一段不是目錄（ENOTDIR）、
+ * 目標本身是個目錄（EISDIR）。對呼叫方它們是同一件事——**這一章沒有這份產物**，
+ * 而作者手裡真的可能出現一個叫 `001-楔子.md` 的目錄。其餘錯誤（許可權、編碼）
+ * 照常上拋：那些是呼叫方該知道的事，不該被悄悄當成「沒有」。
  */
 export async function readTextIfExists(absPath: string): Promise<string | undefined> {
   try {
@@ -75,12 +75,12 @@ export async function writeText(absPath: string, text: string): Promise<void> {
   await fs.writeFile(absPath, text, 'utf8');
 }
 
-/** 扫描时跳过的目录名。 */
+/** 掃描時跳過的目錄名。 */
 export function isIgnoredDir(name: string): boolean {
   return name.startsWith('.') || name === 'node_modules';
 }
 
-/** 在某个区目录下找一个没被占用的 slug。slug 可以带子目录前缀。 */
+/** 在某個區目錄下找一個沒被佔用的 slug。slug 可以帶子目錄字首。 */
 export async function uniqueSlug(dirAbs: string, base: string): Promise<string> {
   let slug = base;
   let i = 2;

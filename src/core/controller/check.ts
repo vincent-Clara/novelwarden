@@ -1,17 +1,17 @@
 /**
- * 内置编辑器「写作体检」的后端一半：推词表（`checkTerms`），以及「编辑敏感词表…」。
+ * 內建編輯器「寫作體檢」的後端一半：推詞表（`checkTerms`），以及「編輯敏感詞表…」。
  *
- * 两件事都**不调模型**（第 4 条：体检只是在正文里按词表找字）。
+ * 兩件事都**不調模型**（第 4 條：體檢只是在正文裡按詞表找字）。
  *
- * - **推词表**：`pushState` 每跑一次就现算一份（`views/checkTerms.ts`：`style.md` 的禁用词表、小说配置、
- *   `.novelwarden/sensitive.txt`），与上一次推的一样就不推——与 `chapterIndex` 同一个做法；新连上的前端不论变没变
- *   都推一份。只给有内置编辑器的宿主推（`Host.openInEditor` 这个能力），插件壳用不上，也就不为它多读两个文件。
- * - **编辑敏感词表…**：文件不在就经网关新建一份带说明注释的模板（`workspace.write`，`mode: 'create'`：同名报错、
- *   不覆盖），然后在编辑器里打开它；作者保存也走网关（编辑器那条路，乐观锁、存历史版本）。
+ * - **推詞表**：`pushState` 每跑一次就現算一份（`views/checkTerms.ts`：`style.md` 的禁用詞表、小說配置、
+ *   `.novelwarden/sensitive.txt`），與上一次推的一樣就不推——與 `chapterIndex` 同一個做法；新連上的前端不論變沒變
+ *   都推一份。只給有內建編輯器的宿主推（`Host.openInEditor` 這個能力），外掛殼用不上，也就不為它多讀兩個檔案。
+ * - **編輯敏感詞表…**：檔案不在就經閘道器新建一份帶說明註釋的模板（`workspace.write`，`mode: 'create'`：同名報錯、
+ *   不覆蓋），然後在編輯器裡開啟它；作者儲存也走閘道器（編輯器那條路，樂觀鎖、存歷史版本）。
  *
- * 敏感词表在指纹链之外：种类是 `sensitive`（`workspace/kind.ts`），没有创作阶段、不进装配器、不记 `upstreamHash` /
- * `writtenFrom`，改了它不会让任何一章挂 ⟳；新建是作者点的那一下（文件本来不在，没有可覆盖的），保存是编辑器的
- * 乐观锁，所以都不弹覆盖审阅（第 3 条的那一问由这两样担着）。
+ * 敏感詞表在指紋鏈之外：種類是 `sensitive`（`workspace/kind.ts`），沒有創作階段、不進裝配器、不記 `upstreamHash` /
+ * `writtenFrom`，改了它不會讓任何一章掛 ⟳；新建是作者點的那一下（檔案本來不在，沒有可覆蓋的），儲存是編輯器的
+ * 樂觀鎖，所以都不彈覆蓋審閱（第 3 條的那一問由這兩樣擔著）。
  */
 import type { ChatController } from './index';
 import { getHost } from '../host';
@@ -22,14 +22,14 @@ import type { BookConfig } from '../model/settingFile';
 import { buildCheckTerms } from '../views/checkTerms';
 import { WsError } from '../workspace/guard';
 
-const log = scoped('体检');
+const log = scoped('體檢');
 
-/** 每个 controller 上一次推出去的词表（JSON）。 */
+/** 每個 controller 上一次推出去的詞表（JSON）。 */
 const lastSig = new WeakMap<ChatController, string>();
 
 /**
- * 推体检词表。内容与上一次推的一样就不推；`force` 给新连上的前端。`book` 是调用方手上已经读过的小说配置。
- * 失败只记 warn，不拖垮调用它的 `pushState`。
+ * 推體檢詞表。內容與上一次推的一樣就不推；`force` 給新連上的前端。`book` 是呼叫方手上已經讀過的小說配置。
+ * 失敗只記 warn，不拖垮呼叫它的 `pushState`。
  */
 export async function pushCheckTerms(c: ChatController, opts: { force?: boolean; book?: BookConfig } = {}): Promise<void> {
   if (!getHost().openInEditor) {
@@ -44,24 +44,24 @@ export async function pushCheckTerms(c: ChatController, opts: { force?: boolean;
     lastSig.set(c, sig);
     c.post({ type: 'checkTerms', terms });
   } catch (err) {
-    log.warn(`算体检词表失败：${describeError(err)}`, err);
+    log.warn(`算體檢詞表失敗：${describeError(err)}`, err);
   }
 }
 
-/** 「编辑敏感词表…」：没有就新建模板，然后在编辑器里打开。 */
+/** 「編輯敏感詞表…」：沒有就新建模板，然後在編輯器裡開啟。 */
 export async function editSensitiveWords(c: ChatController): Promise<void> {
   if (!(await c.project.isInitialized())) {
-    c.toast('这个目录还不是小说工程（没有 .novelwarden/），没有敏感词表可编辑。', 'error');
+    c.toast('這個目錄還不是小說工程（沒有 .novelwarden/），沒有敏感詞表可編輯。', 'error');
     return;
   }
   const rel = c.project.relPath(c.project.sensitivePath);
   if (!(await exists(c.project.sensitivePath))) {
     try {
       await c.workspace.write(rel, { text: SENSITIVE_TEMPLATE }, { mode: 'create' });
-      log.info(`新建了敏感词表 ${rel}`, '全是注释的模板，一个词都还没生效');
+      log.info(`新建了敏感詞表 ${rel}`, '全是註釋的模板，一個詞都還沒生效');
       await pushCheckTerms(c);
     } catch (err) {
-      // 刚好在这一刻别处建了它：照样打开那一份，不盖掉。
+      // 剛好在這一刻別處建了它：照樣開啟那一份，不蓋掉。
       if (!(err instanceof WsError && err.code === 'exists')) {
         throw err;
       }

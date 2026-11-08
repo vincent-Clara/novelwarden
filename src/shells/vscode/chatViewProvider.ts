@@ -4,11 +4,11 @@ import { InMessage, OutMessage } from '../../core/protocol';
 import { htmlFor, webviewOptions } from './webview';
 
 /**
- * 侧边栏宿主。视图在 package.json 里注册为 `novelForge.chat`，
- * 与树视图同处 Novelwarden 活动栏容器。
+ * 側邊欄宿主。檢視在 package.json 裡註冊為 `novelForge.chat`，
+ * 與樹檢視同處 Novelwarden 活動欄容器。
  *
- * 面板内部用 tabbar 切换 对话/历史/设置，参考 Roo 的做法——
- * 侧边栏本来就窄，多开几个 view 不如一个视图内切页。
+ * 面板內部用 tabbar 切換 對話/歷史/設定，參考 Roo 的做法——
+ * 側邊欄本來就窄，多開幾個 view 不如一個檢視內切頁。
  */
 export class ChatViewProvider implements vscode.WebviewViewProvider, ViewHost {
   static readonly viewType = 'novelForge.chat';
@@ -42,7 +42,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, ViewHost {
     if (this.view) {
       this.view.show?.(true);
     } else {
-      // 视图还没被创建过（用户没点开过侧边栏），先让容器聚焦。
+      // 檢視還沒被建立過（使用者沒點開過側邊欄），先讓容器聚焦。
       void vscode.commands.executeCommand(`${ChatViewProvider.viewType}.focus`);
     }
   }

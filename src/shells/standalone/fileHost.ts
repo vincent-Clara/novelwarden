@@ -25,22 +25,22 @@ import { PromptHub } from './promptHub';
 import { openWithSystem } from './systemOpen';
 
 /**
- * 独立 Web 服务壳的 Host 实现。
+ * 獨立 Web 服務殼的 Host 實現。
  *
- * 交互（input/confirm/pick）经 WebSocket 变成网页弹窗（PromptHub）；
- * 进度降级为 toast；文件监听用 fs.watch（失败退化为轮询）；
- * 「打开文件」交给网页里的内置编辑器，非文本文件才回落到系统默认程序。
+ * 互動（input/confirm/pick）經 WebSocket 變成網頁彈窗（PromptHub）；
+ * 進度降級為 toast；檔案監聽用 fs.watch（失敗退化為輪詢）；
+ * 「開啟檔案」交給網頁裡的內建編輯器，非文字檔案才回落到系統預設程式。
  */
 export class FileHost implements Host {
   readonly name = 'standalone' as const;
   readonly supportsVscodeLm = false;
   readonly prompts: PromptHub;
   /**
-   * 用来回答「这份文件是不是某一章、它的草稿在哪」。
-   * 只做纯路径推导，不缓存章节列表——那份缓存归 controller 持有的实例管。
+   * 用來回答「這份檔案是不是某一章、它的草稿在哪」。
+   * 只做純路徑推導，不快取章節列表——那份快取歸 controller 持有的例項管。
    */
   private project: NovelProject | undefined;
-  /** 小说工程根目录；openFile 据此解析相对路径。空窗口时没有。 */
+  /** 小說工程根目錄；openFile 據此解析相對路徑。空視窗時沒有。 */
   private root: string | undefined;
 
   constructor(
@@ -54,14 +54,14 @@ export class FileHost implements Host {
     }
   }
 
-  /** 绑到一个工程目录。热换时由 WorkspaceHub 调用。 */
+  /** 綁到一個工程目錄。熱換時由 WorkspaceHub 呼叫。 */
   bind(root: string): NovelProject {
     this.root = root;
     this.project = NovelProject.open(root);
     return this.project;
   }
 
-  /** 卸掉当前工程。空窗口。 */
+  /** 卸掉當前工程。空視窗。 */
   unbind(): void {
     this.root = undefined;
     this.project = undefined;
@@ -70,7 +70,7 @@ export class FileHost implements Host {
   async input(opts: InputOptions): Promise<string | undefined> {
     const { value } = await this.prompts.ask({
       kind: 'input',
-      title: opts.title ?? '输入',
+      title: opts.title ?? '輸入',
       message: opts.prompt,
       placeholder: opts.placeHolder,
       value: opts.value,
@@ -90,17 +90,17 @@ export class FileHost implements Host {
     return value;
   }
 
-  /** 网页确认框：一个 action 一颗按钮，回的是点的那颗上的字（标题取第一颗）。 */
+  /** 網頁確認框：一個 action 一顆按鈕，回的是點的那顆上的字（標題取第一顆）。 */
   async confirm(message: string, actions: string[], opts?: { detail?: string }): Promise<string | undefined> {
-    const { value } = await this.prompts.ask({ kind: 'confirm', title: actions[0] ?? '确认', message, value: opts?.detail, actions });
+    const { value } = await this.prompts.ask({ kind: 'confirm', title: actions[0] ?? '確認', message, value: opts?.detail, actions });
     return value !== undefined && actions.includes(value) ? value : undefined;
   }
 
-  /** 同一个网页确认框，按钮上面多两个下拉框（模型、上下文详细度），回答另带作者的选择。 */
+  /** 同一個網頁確認框，按鈕上面多兩個下拉框（模型、上下文詳細度），回答另帶作者的選擇。 */
   async confirmCall(message: string, actions: string[], opts: { detail?: string; call: CallPrompt }): Promise<CallAnswer | undefined> {
     const { value, choice } = await this.prompts.ask({
       kind: 'confirm',
-      title: actions[0] ?? '确认',
+      title: actions[0] ?? '確認',
       message,
       value: opts.detail,
       actions,
@@ -119,7 +119,7 @@ export class FileHost implements Host {
     return idx >= 0 ? choices[idx].value : undefined;
   }
 
-  /** 网页里的本机目录选择器（`folderPicker.ts` 的选文件模式）：只列目录与这几种扩展名，回绝对路径。 */
+  /** 網頁裡的本機目錄選擇器（`folderPicker.ts` 的選檔案模式）：只列目錄與這幾種副檔名，回絕對路徑。 */
   async pickHostFile(opts: { title: string; extensions: string[]; startDir?: string }): Promise<string | undefined> {
     const { value: picked } = await this.prompts.ask({
       kind: 'file',
@@ -131,18 +131,18 @@ export class FileHost implements Host {
   }
 
   /**
-   * 长任务。**不再为每次进度弹 toast**——`core/runtime/progress.ts` 把同一份进度
-   * 结构化推给了网页，工程页顶部有进度条与计时，逐条 toast 只会连着刷屏
-   * 把别的提示盖掉。这里只负责给出 signal，以及把失败原因报出来。
+   * 長任務。**不再為每次進度彈 toast**——`core/runtime/progress.ts` 把同一份進度
+   * 結構化推給了網頁，工程頁頂部有進度條與計時，逐條 toast 只會連著刷屏
+   * 把別的提示蓋掉。這裡只負責給出 signal，以及把失敗原因報出來。
    *
-   * 取消：网页点进度条上的「停止」走 `cancelTask`，那边直接 abort
-   * `runTask` 自己的 controller，因此这里不需要额外的取消入口。
+   * 取消：網頁點進度條上的「停止」走 `cancelTask`，那邊直接 abort
+   * `runTask` 自己的 controller，因此這裡不需要額外的取消入口。
    */
   async progress<T>(
     title: string,
     fn: (signal: AbortSignal, report: (message: string) => void) => Promise<T>
   ): Promise<T> {
-    void title; // 展示名由 core/runtime/progress.ts 推给网页，这里用不上
+    void title; // 展示名由 core/runtime/progress.ts 推給網頁，這裡用不上
     const abort = new AbortController();
     try {
       return await fn(abort.signal, () => undefined);
@@ -153,8 +153,8 @@ export class FileHost implements Host {
   }
 
   watch(project: NovelProject, onChange: () => void): Disposable {
-    // 去抖：onChange 会触发 pushState，那是一次全量重扫（每章读盘算摘要新鲜度）。
-    // 编辑器连续保存、Git 切分支这类操作会连着扔出十几个事件，逐个跑一遍没必要。
+    // 去抖：onChange 會觸發 pushState，那是一次全量重掃（每章讀盤算摘要新鮮度）。
+    // 編輯器連續儲存、Git 切分支這類操作會連著扔出十幾個事件，逐個跑一遍沒必要。
     let timer: ReturnType<typeof setTimeout> | undefined;
     const fire = (): void => {
       if (timer) {
@@ -163,8 +163,8 @@ export class FileHost implements Host {
       timer = setTimeout(onChange, 250);
     };
 
-    // 优先 fs.watch（recursive）；不支持时退化为 1s 轮询。
-    // 「哪些改动值得刷新」由 core 的 watchPolicy 说，这里只管机制。
+    // 優先 fs.watch（recursive）；不支援時退化為 1s 輪詢。
+    // 「哪些改動值得重新整理」由 core 的 watchPolicy 說，這裡只管機制。
     try {
       const watcher = fs.watch(project.root, { recursive: true }, (_event, filename) => {
         if (shouldIgnoreChange(String(filename ?? ''))) {
@@ -182,7 +182,7 @@ export class FileHost implements Host {
       };
     } catch {
       const timer2 = setInterval(() => {
-        // 轮询兜底：目录可访问就触发一次刷新（pushState 内部会合并）。
+        // 輪詢兜底：目錄可訪問就觸發一次重新整理（pushState 內部會合併）。
         void fsp.stat(project.novelDir).then(onChange, () => undefined);
       }, 1000);
       return { dispose: () => clearInterval(timer2) };
@@ -190,10 +190,10 @@ export class FileHost implements Host {
   }
 
   /**
-   * 「打开文件」。文本文件进网页的内置编辑器，其余（图片等）交系统默认程序。
+   * 「開啟檔案」。文字檔案進網頁的內建編輯器，其餘（圖片等）交系統預設程式。
    *
-   * 这里刻意让 openFile 也走编辑器：controller 里「采纳写入后打开」
-   * 「点章节名」「点上下文条目」全都调它，改这一处，三处都对。
+   * 這裡刻意讓 openFile 也走編輯器：controller 裡「採納寫入後開啟」
+   * 「點章節名」「點上下文條目」全都調它，改這一處，三處都對。
    */
   async openFile(relPath: string, intent?: EditorOpenIntent): Promise<void> {
     if (isEditablePath(relPath)) {
@@ -204,12 +204,12 @@ export class FileHost implements Host {
   }
 
   /**
-   * 读一份快照广播给前端，网页里开标签页。失败只报错，不抛给 controller。
-   * `intent`（临时标签 / 原位换掉）后端不看，原样带回 `editorOpen`，由内置编辑器决定新开还是复用。
+   * 讀一份快照廣播給前端，網頁裡開標籤頁。失敗只報錯，不拋給 controller。
+   * `intent`（臨時標籤 / 原位換掉）後端不看，原樣帶回 `editorOpen`，由內建編輯器決定新開還是複用。
    */
   async openInEditor(relPath: string, pane?: EditorPane, intent?: EditorOpenIntent): Promise<void> {
     if (!this.root) {
-      this.broadcastMsg({ type: 'editorError', path: relPath, message: '请先打开文件夹' });
+      this.broadcastMsg({ type: 'editorError', path: relPath, message: '請先開啟資料夾' });
       return;
     }
     try {
@@ -230,7 +230,7 @@ export class FileHost implements Host {
     }
   }
 
-  /** 「在旁边打开」= 开在第二块编辑区（草稿区）。 */
+  /** 「在旁邊開啟」= 開在第二塊編輯區（草稿區）。 */
   async openBeside(relPath: string, intent?: EditorOpenIntent): Promise<void> {
     if (!isEditablePath(relPath)) {
       await this.openExternal(relPath);
@@ -240,9 +240,9 @@ export class FileHost implements Host {
   }
 
   /**
-   * 推给内置编辑器的那一份：磁盘上读来的内容，加上后端才说得清的三样——草稿在哪（`draftPath`）、
-   * 是什么（`kind`）、怎么称呼（`label`：标签上的短标记与名字、工具栏的面包屑）。`editorOpen` /
-   * `editorSaved` / `editorDiskChanged` 三处同一个形状，漏一处前端就会在保存一次之后忘掉。
+   * 推給內建編輯器的那一份：磁碟上讀來的內容，加上後端才說得清的三樣——草稿在哪（`draftPath`）、
+   * 是什麼（`kind`）、怎麼稱呼（`label`：標籤上的短標記與名字、工具欄的麵包屑）。`editorOpen` /
+   * `editorSaved` / `editorDiskChanged` 三處同一個形狀，漏一處前端就會在儲存一次之後忘掉。
    */
   private viewOf(file: EditorFileView): EditorFileView {
     return {
@@ -254,10 +254,10 @@ export class FileHost implements Host {
   }
 
   /**
-   * 这份文件是章节正文时，给出它草稿的相对路径；否则 undefined。
+   * 這份檔案是章節正文時，給出它草稿的相對路徑；否則 undefined。
    *
-   * 「在章节根之下」由 draftRelPathFor 判定，「文件名像章节」由
-   * isChapterFileName 判定——两半都复用现成的，不在这里写第三份规则。
+   * 「在章節根之下」由 draftRelPathFor 判定，「檔名像章節」由
+   * isChapterFileName 判定——兩半都複用現成的，不在這裡寫第三份規則。
    */
   private draftPathOf(rel: string): string | undefined {
     if (!this.project) {
@@ -271,26 +271,26 @@ export class FileHost implements Host {
   }
 
   /**
-   * 这份文件在工程里是什么（`kindOfPath`，与网关同一张表）。前端据此分「正文」与其余文件
-   * （Tab 缩进全角还是半角），不自己拿路径猜。没打开工程时 undefined，前端当非正文。
+   * 這份檔案在工程裡是什麼（`kindOfPath`，與閘道器同一張表）。前端據此分「正文」與其餘檔案
+   * （Tab 縮排全形還是半形），不自己拿路徑猜。沒開啟工程時 undefined，前端當非正文。
    */
   private kindOf(rel: string): ArtifactKind | undefined {
     return this.project ? kindOfPath(this.project, rel).kind : undefined;
   }
 
   /**
-   * 保存编辑器内容。冲突不覆盖，改为把磁盘版本回给前端让用户取舍；带了基线而文件已经不在时
-   * 也不重建（`FileGoneError` → `editorDiskGone`），作者答应了才带 `recreate` 再来。
+   * 儲存編輯器內容。衝突不覆蓋，改為把磁碟版本回給前端讓使用者取捨；帶了基線而檔案已經不在時
+   * 也不重建（`FileGoneError` → `editorDiskGone`），作者答應了才帶 `recreate` 再來。
    */
   async saveFromEditor(relPath: string, text: string, baseHash?: string, opts?: { recreate?: boolean }): Promise<void> {
     if (!this.root) {
-      this.broadcastMsg({ type: 'editorError', path: relPath, message: '请先打开文件夹' });
+      this.broadcastMsg({ type: 'editorError', path: relPath, message: '請先開啟資料夾' });
       return;
     }
     try {
       const file = await writeFileFromEditor(this.root, relPath, text, baseHash, opts);
-      // draftPath、kind 与 label 要一并带回：前端的保存分支只更新 text/hash，
-      // 这里漏掉 draftPath 的话工具栏上的「草稿」按钮会在首次保存后消失。
+      // draftPath、kind 與 label 要一併帶回：前端的儲存分支只更新 text/hash，
+      // 這裡漏掉 draftPath 的話工具欄上的「草稿」按鈕會在首次儲存後消失。
       this.broadcastMsg({ type: 'editorSaved', file: this.viewOf(file) });
     } catch (err) {
       if (err instanceof FileGoneError) {
@@ -315,8 +315,8 @@ export class FileHost implements Host {
   }
 
   /**
-   * 核对编辑器里开着的几份文件（`checkEditorFiles`）。变了的推 `editorDiskChanged`（带 draftPath / kind，
-   * 与 editorOpen 同一个形状），读不到的推 `editorDiskGone`，没变的什么都不推。
+   * 核對編輯器裡開著的幾份檔案（`checkEditorFiles`）。變了的推 `editorDiskChanged`（帶 draftPath / kind，
+   * 與 editorOpen 同一個形狀），讀不到的推 `editorDiskGone`，沒變的什麼都不推。
    */
   async checkEditorFiles(files: readonly EditorFileCheck[]): Promise<void> {
     if (!this.root) {
@@ -331,17 +331,17 @@ export class FileHost implements Host {
     }
   }
 
-  /** 用系统默认程序打开（用户自己的编辑器 / 图片查看器）。 */
+  /** 用系統預設程式開啟（使用者自己的編輯器 / 圖片檢視器）。 */
   async openExternal(relPath: string): Promise<void> {
     try {
       if (!this.root) {
-        this.toast('请先打开文件夹', 'error');
+        this.toast('請先開啟資料夾', 'error');
         return;
       }
       openWithSystem(path.resolve(this.root, relPath));
-      this.toast(`已用系统程序打开：${relPath}`);
+      this.toast(`已用系統程式開啟：${relPath}`);
     } catch {
-      this.toast(`无法打开：${relPath}，请手动打开。`);
+      this.toast(`無法開啟：${relPath}，請手動開啟。`);
     }
   }
 
@@ -351,13 +351,13 @@ export class FileHost implements Host {
 
   async selectionAttachment(project: NovelProject): Promise<Attachment | undefined> {
     void project;
-    // 内置编辑器里选着字时前端已经把选区带上来了（controller 不会走到这里）；走到这里是没选中，弹粘贴框，存快照。
+    // 內建編輯器裡選著字時前端已經把選區帶上來了（controller 不會走到這裡）；走到這裡是沒選中，彈貼上框，存快照。
     const text = await this.input({
-      title: '加入选区',
-      prompt: '粘贴要引用的原文',
+      title: '加入選區',
+      prompt: '貼上要引用的原文',
       multiline: true,
-      placeHolder: '在编辑器里复制后粘贴到这里',
-      validate: (v) => (v.trim() ? undefined : '不能为空'),
+      placeHolder: '在編輯器裡複製後貼上到這裡',
+      validate: (v) => (v.trim() ? undefined : '不能為空'),
     });
     if (text === undefined) {
       return undefined;
@@ -365,19 +365,19 @@ export class FileHost implements Host {
     return {
       id: `paste-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       kind: 'selection',
-      label: '粘贴的选区',
+      label: '貼上的選區',
       text,
     };
   }
 
   async browseFile(project: NovelProject): Promise<string | undefined> {
     const rel = await this.input({
-      title: '引用文件',
-      prompt: '输入工程内的相对路径（如 chapters/003.md）',
+      title: '引用檔案',
+      prompt: '輸入工程內的相對路徑（如 chapters/003.md）',
       validate: (v) => {
         const abs = project.pathOf(v.trim());
         if (!fs.existsSync(abs)) {
-          return '文件不存在';
+          return '檔案不存在';
         }
         return undefined;
       },
@@ -386,14 +386,14 @@ export class FileHost implements Host {
   }
 
   /**
-   * 覆盖前审阅：网页上开段级 diff / 合并视图（五期 W11，`media/src/view/merge.ts`）。
+   * 覆蓋前審閱：網頁上開段級 diff / 合併檢視（五期 W11，`media/src/view/merge.ts`）。
    *
-   * 调用方请求了合并（`opts.merge`，网关的覆盖审阅）：作者可以逐段「采用新版 / 保留原文」、
-   * 在结果格里手改，交回来的是挑过的那一份。没请求的（角色卡、设定条目那几处）只读，
-   * 只有采纳 / 放弃——它们收不下一份作者拼出来的文字。
+   * 呼叫方請求了合併（`opts.merge`，閘道器的覆蓋審閱）：作者可以逐段「採用新版 / 保留原文」、
+   * 在結果格里手改，交回來的是挑過的那一份。沒請求的（角色卡、設定條目那幾處）只讀，
+   * 只有採納 / 放棄——它們收不下一份作者拼出來的文字。
    *
-   * `name` 是调用方给的称呼，可能是角色卡、设定、大纲、细纲或正文——从前这里写死成
-   * 「将更新角色卡」，覆盖大纲时也这么说。
+   * `name` 是呼叫方給的稱呼，可能是角色卡、設定、大綱、細綱或正文——從前這裡寫死成
+   * 「將更新角色卡」，覆蓋大綱時也這麼說。
    */
   async reviewReplace(
     name: string,
@@ -404,7 +404,7 @@ export class FileHost implements Host {
   ): Promise<ReviewVerdict> {
     const { value } = await this.prompts.ask({
       kind: 'merge',
-      title: `对比「${name}」：现有 ↔ 新版`,
+      title: `對比「${name}」：現有 ↔ 新版`,
       message: relPath,
       current: currentText,
       proposed: proposedText,
@@ -428,12 +428,12 @@ export class FileHost implements Host {
   }
 
   /**
-   * 点审稿报告上的引文（五期）：内置编辑器里打开那一章，再推一条 `editorReveal` 让它选中那一句。
-   * 找不到那一句（正文改过）时只打开、返回 false。
+   * 點審稿報告上的引文（五期）：內建編輯器裡開啟那一章，再推一條 `editorReveal` 讓它選中那一句。
+   * 找不到那一句（正文改過）時只開啟、返回 false。
    */
   async revealText(relPath: string, quote: string): Promise<boolean> {
     if (!this.root) {
-      this.broadcastMsg({ type: 'editorError', path: relPath, message: '请先打开文件夹' });
+      this.broadcastMsg({ type: 'editorError', path: relPath, message: '請先開啟資料夾' });
       return false;
     }
     await this.openInEditor(relPath);
@@ -450,12 +450,12 @@ export class FileHost implements Host {
     return true;
   }
 
-  // standalone 没有 openNativeSettings：前端已隐藏按钮，此处不提供。
+  // standalone 沒有 openNativeSettings：前端已隱藏按鈕，此處不提供。
 }
 
 /**
- * 合并视图的回答（协议 `prompt kind: 'merge'`）：`{"verdict":"apply"|"discard","merged"?}` 的 JSON。
- * 认不出、或者没回答（关掉了），当取消——宁可这一次不写。只读模式下交回来的 `merged` 不认。
+ * 合併檢視的回答（協議 `prompt kind: 'merge'`）：`{"verdict":"apply"|"discard","merged"?}` 的 JSON。
+ * 認不出、或者沒回答（關掉了），當取消——寧可這一次不寫。只讀模式下交回來的 `merged` 不認。
  */
 export function parseMergeReply(value: string | undefined, mergeable: boolean): ReviewVerdict {
   if (value === undefined) {

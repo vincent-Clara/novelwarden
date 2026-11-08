@@ -1,53 +1,53 @@
 /**
- * 写作技能（Skill）的纯函数部分：`SKILL.md` 怎么读、什么样的算兼容、绑定文件长什么样、
- * 一次装配算哪个阶段。**零 I/O、零运行时 import**（前端要直接用这里的常量，见 protocol/index.ts）。
+ * 寫作技能（Skill）的純函式部分：`SKILL.md` 怎麼讀、什麼樣的算相容、繫結檔案長什麼樣、
+ * 一次裝配算哪個階段。**零 I/O、零執行時 import**（前端要直接用這裡的常量，見 protocol/index.ts）。
  *
- * 移植自 AI-Novel-Writer（GPL-3.0）：解析与兼容检查逐条照搬 `src/shared/writing-skills.ts`
- * （`inspectWritingSkillMarkdown` / `parseGitHubWritingSkillUrl`），绑定文件的形状照搬
- * `src/services/agent/writing-skill-bindings.ts`，注入时那句话照搬 `base-command.ts:48-81`。
- * 上游的设计说明是它的 ADR 0015「写作 Skill 是按阶段冻结的补充指导」。
+ * 移植自 AI-Novel-Writer（GPL-3.0）：解析與相容檢查逐條照搬 `src/shared/writing-skills.ts`
+ * （`inspectWritingSkillMarkdown` / `parseGitHubWritingSkillUrl`），繫結檔案的形狀照搬
+ * `src/services/agent/writing-skill-bindings.ts`，注入時那句話照搬 `base-command.ts:48-81`。
+ * 上游的設計說明是它的 ADR 0015「寫作 Skill 是按階段凍結的補充指導」。
  *
- * ## 一份技能是什么
+ * ## 一份技能是什麼
  *
- * **常规的技能目录**：一份 `SKILL.md`（YAML frontmatter + 正文），旁边可以带它引用的文本文件
- * （`references/*.md` 这类，叫「附带文件」）。frontmatter 只读顶层的 `name` / `display_name` /
- * `description` / `version` / `stage`，别的键（`allowed-tools`、`metadata`……）读得过去、不碍事。
+ * **常規的技能目錄**：一份 `SKILL.md`（YAML frontmatter + 正文），旁邊可以帶它引用的文字檔案
+ * （`references/*.md` 這類，叫「附帶檔案」）。frontmatter 只讀頂層的 `name` / `display_name` /
+ * `description` / `version` / `stage`，別的鍵（`allowed-tools`、`metadata`……）讀得過去、不礙事。
  *
- * **只收纯提示词**：要跑脚本、装 hook、派子代理、调工具的一律判「不兼容」——装不进来，也绑不上。
- * 它们在这里没有可执行的地方，装进来只会让模型以为自己能做一件做不了的事。附带文件不一样：
- * 这里的生成是一次调用、模型没有读文件的工具，所以引用到的整份接在正文后面一起带；引用了却
- * 带不上的（找不到、在技能目录外、不是文本）才判「包含相对引用」。
+ * **只收純提示詞**：要跑指令碼、裝 hook、派子代理、調工具的一律判「不相容」——裝不進來，也綁不上。
+ * 它們在這裡沒有可執行的地方，裝進來只會讓模型以為自己能做一件做不了的事。附帶檔案不一樣：
+ * 這裡的生成是一次呼叫、模型沒有讀檔案的工具，所以引用到的整份接在正文後面一起帶；引用了卻
+ * 帶不上的（找不到、在技能目錄外、不是文字）才判「包含相對引用」。
  *
- * ## 与上游不同的几处
+ * ## 與上游不同的幾處
  *
- * - **名字可以是中文**。上游只认 `[A-Za-z0-9._-]`，这里放宽到任意字母数字（`\p{L}\p{N}`）：
- *   作者给自己写的方法起「去AI味」这种名字再自然不过。
- * - **用户与工程技能的身份是目录名**（上游取 frontmatter 的 `name`、目录名只是回落）。
- *   一份手放进来的技能 frontmatter 写的名字与目录不一样时，上游按 frontmatter 认、按它去删，
- *   结果删了个空；这里只有一个名字，`display_name` 与 `name` 只用来显示。
- * - **没有中英双语**：Novelwarden 只写中文，`language` 字段不读。
- * - **认常规技能格式**（2026-10-21）：上游一行一个键地读 frontmatter、引用旁边的文件就判不兼容、
- *   声明了 `allowed-tools` 就判依赖工具。这里 frontmatter 按 YAML 读顶层键，附带文件一起带，
- *   `allowed-tools` 不算——上游原样的技能目录放进来就能用。见
+ * - **名字可以是中文**。上游只認 `[A-Za-z0-9._-]`，這裡放寬到任意字母數字（`\p{L}\p{N}`）：
+ *   作者給自己寫的方法起「去AI味」這種名字再自然不過。
+ * - **使用者與工程技能的身份是目錄名**（上游取 frontmatter 的 `name`、目錄名只是回落）。
+ *   一份手放進來的技能 frontmatter 寫的名字與目錄不一樣時，上游按 frontmatter 認、按它去刪，
+ *   結果刪了個空；這裡只有一個名字，`display_name` 與 `name` 只用來顯示。
+ * - **沒有中英雙語**：Novelwarden 只寫中文，`language` 欄位不讀。
+ * - **認常規技能格式**（2026-10-21）：上游一行一個鍵地讀 frontmatter、引用旁邊的檔案就判不相容、
+ *   宣告瞭 `allowed-tools` 就判依賴工具。這裡 frontmatter 按 YAML 讀頂層鍵，附帶檔案一起帶，
+ *   `allowed-tools` 不算——上游原樣的技能目錄放進來就能用。見
  *   docs/design/plans/2026-10-21-skill-dirs.md。
  */
 import type { CreationAction, WriteMode } from './pipeline';
 
-// ---------------------------------------------------------------- 阶段与来源
+// ---------------------------------------------------------------- 階段與來源
 
 /**
- * 四个阶段，照搬上游。一个工程每个阶段最多绑一份。
+ * 四個階段，照搬上游。一個工程每個階段最多綁一份。
  *
- * 与 Novelwarden 的创作阶段对得上（{@link skillStageOf}）：规划 = 架构 / 大纲 / 细纲三层的
- * 生成与沉淀，写正文 = 写、接着写、重写与它们的续写，审稿与修稿各是正文层的一张配方。
+ * 與 Novelwarden 的創作階段對得上（{@link skillStageOf}）：規劃 = 架構 / 大綱 / 細綱三層的
+ * 生成與沉澱，寫正文 = 寫、接著寫、重寫與它們的續寫，審稿與修稿各是正文層的一張配方。
  */
 export const SKILL_STAGES = ['planning', 'drafting', 'review', 'refinement'] as const;
 export type SkillStage = (typeof SKILL_STAGES)[number];
 
 export const SKILL_STAGE_LABEL: Record<SkillStage, string> = {
-  planning: '规划（架构 / 大纲 / 细纲）',
-  drafting: '写正文',
-  review: '审稿',
+  planning: '規劃（架構 / 大綱 / 細綱）',
+  drafting: '寫正文',
+  review: '審稿',
   refinement: '修稿',
 };
 
@@ -55,18 +55,18 @@ export function isSkillStage(value: unknown): value is SkillStage {
   return typeof value === 'string' && (SKILL_STAGES as readonly string[]).includes(value);
 }
 
-/** 内置的随应用发布；我的技能库在 `~/.novelwarden/skills/`；本工程的在 `.novelwarden/skills/`。 */
+/** 內建的隨應用釋出；我的技能庫在 `~/.novelwarden/skills/`；本工程的在 `.novelwarden/skills/`。 */
 export type SkillSource = 'builtin' | 'user' | 'project';
 
 export const SKILL_SOURCES: readonly SkillSource[] = ['builtin', 'user', 'project'];
 
 export const SKILL_SOURCE_LABEL: Record<SkillSource, string> = {
-  builtin: '内置',
-  user: '我的技能库',
+  builtin: '內建',
+  user: '我的技能庫',
   project: '本工程',
 };
 
-// ---------------------------------------------------------------- 兼容检查
+// ---------------------------------------------------------------- 相容檢查
 
 export type SkillIncompat =
   | 'relative-reference'
@@ -76,77 +76,77 @@ export type SkillIncompat =
   | 'tool-dependency'
   | 'content-too-large';
 
-/** 说法照搬上游设置页的 `REASON_COPY`。 */
+/** 說法照搬上游設定頁的 `REASON_COPY`。 */
 export const SKILL_INCOMPAT_LABEL: Record<SkillIncompat, string> = {
-  'relative-reference': '包含相对引用',
-  'script-dependency': '依赖脚本',
-  'hook-dependency': '依赖 hook',
-  'subagent-dependency': '依赖子代理',
-  'tool-dependency': '依赖工具调用',
-  'content-too-large': '内容超过 64 KiB',
+  'relative-reference': '包含相對引用',
+  'script-dependency': '依賴指令碼',
+  'hook-dependency': '依賴 hook',
+  'subagent-dependency': '依賴子代理',
+  'tool-dependency': '依賴工具呼叫',
+  'content-too-large': '內容超過 64 KiB',
 };
 
 /**
- * 一份技能注入的上限：`SKILL.md` 整份（含 frontmatter）加上它带的附带文件，合起来，与上游
- * 的 64 KiB 同一个数。下载时也按它拒。
+ * 一份技能注入的上限：`SKILL.md` 整份（含 frontmatter）加上它帶的附帶檔案，合起來，與上游
+ * 的 64 KiB 同一個數。下載時也按它拒。
  */
 export const MAX_SKILL_BYTES = 64 * 1024;
 
-/** 一份技能最多带几份附带文件。 */
+/** 一份技能最多帶幾份附帶檔案。 */
 export const MAX_SKILL_ATTACHMENTS = 32;
 
 /**
- * 附带文件：技能目录里被 `SKILL.md`（或被别的附带文件）引用到的文本文件，比如常规技能的
- * `references/*.md`。这里的生成是一次调用、模型没有读文件的工具，没法「按需去读」，所以
- * 引用到的整份接在正文后面一起带；没被引用的（README、CHANGELOG、LICENSE）不带。
+ * 附帶檔案：技能目錄裡被 `SKILL.md`（或被別的附帶檔案）引用到的文字檔案，比如常規技能的
+ * `references/*.md`。這裡的生成是一次呼叫、模型沒有讀檔案的工具，沒法「按需去讀」，所以
+ * 引用到的整份接在正文後面一起帶；沒被引用的（README、CHANGELOG、LICENSE）不帶。
  */
 export interface SkillAttachment {
-  /** 技能目录里的相对路径，`/` 分隔。 */
+  /** 技能目錄裡的相對路徑，`/` 分隔。 */
   path: string;
   text: string;
 }
 
 export interface SkillInspection {
-  /** frontmatter 的 `name`；没写时是调用方给的回落名（目录名），再没有就是 `unnamed-writing-skill`。 */
+  /** frontmatter 的 `name`；沒寫時是呼叫方給的回落名（目錄名），再沒有就是 `unnamed-writing-skill`。 */
   name: string;
   displayName?: string;
   description: string;
   version?: string;
-  /** frontmatter 里写明的阶段。 */
+  /** frontmatter 裡寫明的階段。 */
   stage?: SkillStage;
-  /** 写明了就是它，没写按名字、描述与正文开头猜一个（只是建议，任何阶段都能绑）。 */
+  /** 寫明瞭就是它，沒寫按名字、描述與正文開頭猜一個（只是建議，任何階段都能綁）。 */
   suggestedStage: SkillStage;
   compatible: boolean;
   reasons: SkillIncompat[];
-  /** 正文（frontmatter 之后，去掉首尾空白）。 */
+  /** 正文（frontmatter 之後，去掉首尾空白）。 */
   body: string;
-  /** 引用到、一起带的附带文件，按引用的先后。 */
+  /** 引用到、一起帶的附帶檔案，按引用的先後。 */
   attachments: SkillAttachment[];
-  /** 明确引用了、却带不上的文件（找不到、在技能目录外、不是文本），就是「包含相对引用」的那几处。 */
+  /** 明確引用了、卻帶不上的檔案（找不到、在技能目錄外、不是文字），就是「包含相對引用」的那幾處。 */
   unresolved: string[];
-  /** 注入的字节数：正文加附带文件（UTF-8）。上限按整份 `SKILL.md` 加附带文件算，见 {@link MAX_SKILL_BYTES}。 */
+  /** 注入的位元組數：正文加附帶檔案（UTF-8）。上限按整份 `SKILL.md` 加附帶檔案算，見 {@link MAX_SKILL_BYTES}。 */
   bytes: number;
 }
 
-/** 界面与提示词里叫它什么：`display_name` → `name`。 */
+/** 介面與提示詞裡叫它什麼：`display_name` → `name`。 */
 export function skillLabel(s: Pick<SkillInspection, 'name' | 'displayName'>): string {
   return s.displayName?.trim() || s.name;
 }
 
-// ---------------------------------------------------------------- frontmatter（YAML 的一个子集）
+// ---------------------------------------------------------------- frontmatter（YAML 的一個子集）
 
 /**
- * 常规技能的 frontmatter 是 YAML：列表（`allowed-tools:\n  - Read`）、嵌套块（`metadata:` 下面
- * 缩进的几行）、多行的 `description: |`。项目不引入 yaml 依赖，这里只读**顶层的键**：
+ * 常規技能的 frontmatter 是 YAML：列表（`allowed-tools:\n  - Read`）、巢狀塊（`metadata:` 下面
+ * 縮排的幾行）、多行的 `description: |`。專案不引入 yaml 依賴，這裡只讀**頂層的鍵**：
  *
- * - 顶层 `键: 值`，值可以加单引号 / 双引号（双引号认常见转义），行尾 ` # 注释` 去掉；
- *   不加引号的值可以折到下面缩进的几行（YAML 的多行纯量）。
- * - `|` / `>` 块标量（带 `-` / `+`），缩进的那几行是它的内容。
- * - 值为空的键下面缩进的几行（列表、嵌套映射）**整块归它，不展开**——从前一行一个键的读法会把
- *   `metadata:` 下面的 `name:` / `version:` 拍平到顶层、盖掉真的那个。
- * - 列表（`[a, b]` 或 `- a`）只记有这个键，值不读：这里用不到。
+ * - 頂層 `鍵: 值`，值可以加單引號 / 雙引號（雙引號認常見轉義），行尾 ` # 註釋` 去掉；
+ *   不加引號的值可以折到下面縮排的幾行（YAML 的多行純量）。
+ * - `|` / `>` 塊標量（帶 `-` / `+`），縮排的那幾行是它的內容。
+ * - 值為空的鍵下面縮排的幾行（列表、巢狀對映）**整塊歸它，不展開**——從前一行一個鍵的讀法會把
+ *   `metadata:` 下面的 `name:` / `version:` 拍平到頂層、蓋掉真的那個。
+ * - 列表（`[a, b]` 或 `- a`）只記有這個鍵，值不讀：這裡用不到。
  *
- * 键一律转小写。BOM、CRLF、`---` 后面的空白都认。**绝不抛**：读不懂的行跳过。
+ * 鍵一律轉小寫。BOM、CRLF、`---` 後面的空白都認。**絕不拋**：讀不懂的行跳過。
  */
 function parseFrontmatter(raw: string): { fields: Record<string, string>; keys: string[]; content: string } {
   const text = raw.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
@@ -162,12 +162,12 @@ function parseFrontmatter(raw: string): { fields: Record<string, string>; keys: 
     const line = lines[i++];
     const kv = line.match(/^([^\s#:'"\-[{][^:]*?)[ \t]*:[ \t]*(.*?)[ \t]*$/);
     if (!kv) {
-      // 空行、注释、顶层的 `- 列表项`、上一个键的缩进内容（列表、嵌套映射）：都不是一个新的顶层键。
+      // 空行、註釋、頂層的 `- 列表項`、上一個鍵的縮排內容（列表、巢狀對映）：都不是一個新的頂層鍵。
       continue;
     }
     const key = kv[1].trim().toLowerCase();
     const value = kv[2];
-    // 这个键下面缩进的那几行（空行夹在中间也算）。末尾的空行不算它的。
+    // 這個鍵下面縮排的那幾行（空行夾在中間也算）。末尾的空行不算它的。
     let end = i;
     while (end < lines.length && indented(lines[end])) {
       end++;
@@ -208,7 +208,7 @@ function blockScalarValue(block: string[], folded: boolean, chomp: string): stri
   return out.trim();
 }
 
-/** 引号里的值：双引号认 `\"` `\\` `\n` `\t` `\uXXXX`，单引号认 `''`。引号外的 ` # 注释` 去掉。 */
+/** 引號裡的值：雙引號認 `\"` `\\` `\n` `\t` `\uXXXX`，單引號認 `''`。引號外的 ` # 註釋` 去掉。 */
 function quotedValue(value: string): string {
   const quote = value[0];
   let out = '';
@@ -237,7 +237,7 @@ function quotedValue(value: string): string {
     }
     out += ch;
   }
-  // 没有收尾的引号：照原样（去掉开头那个）。
+  // 沒有收尾的引號：照原樣（去掉開頭那個）。
   return out;
 }
 
@@ -251,9 +251,9 @@ function suggestStage(fields: Record<string, string>, content: string): SkillSta
     return explicit;
   }
   const searchable = `${fields.name ?? ''} ${fields.description ?? ''} ${content.slice(0, 1000)}`.toLowerCase();
-  if (/review|critique|审稿|审阅|检查/.test(searchable)) return 'review';
-  if (/refin|polish|prose|润色|修稿|改写/.test(searchable)) return 'refinement';
-  if (/plan|outline|architect|规划|大纲|设定/.test(searchable)) return 'planning';
+  if (/review|critique|(?:审|審)稿|(?:审|審)(?:阅|閱)|(?:检|檢)查/.test(searchable)) return 'review';
+  if (/refin|polish|prose|(?:润|潤)色|修稿|改(?:写|寫)/.test(searchable)) return 'refinement';
+  if (/plan|outline|architect|(?:规|規)(?:划|劃)|大(?:纲|綱)|(?:设|設)定/.test(searchable)) return 'planning';
   return 'drafting';
 }
 
@@ -261,22 +261,22 @@ function utf8Bytes(text: string): number {
   return new TextEncoder().encode(text).byteLength;
 }
 
-// ---------------------------------------------------------------- 附带文件
+// ---------------------------------------------------------------- 附帶檔案
 
-/** 能当附带文件带的：文本。图片这类带不进提示词。 */
+/** 能當附帶檔案帶的：文字。圖片這類帶不進提示詞。 */
 const TEXT_FILE = /\.(?:md|markdown|txt)$/i;
 
 export interface SkillReference {
-  /** 规范成技能根下的相对路径（`/` 分隔）；越出技能目录的是 undefined。 */
+  /** 規範成技能根下的相對路徑（`/` 分隔）；越出技能目錄的是 undefined。 */
   path?: string;
-  /** 原文里写的那个目标。 */
+  /** 原文裡寫的那個目標。 */
   target: string;
   /**
-   * 明确指向旁边文件的写法（`./`、`../`、`references/`、`assets/`）：带不上就不兼容。
-   * 普通的 `[示例](a.md)` 找不到只是不带，与从前一样。
+   * 明確指向旁邊檔案的寫法（`./`、`../`、`references/`、`assets/`）：帶不上就不相容。
+   * 普通的 `[示例](a.md)` 找不到只是不帶，與從前一樣。
    */
   strong: boolean;
-  /** 是文本、能带进提示词。 */
+  /** 是文字、能帶進提示詞。 */
   text: boolean;
 }
 
@@ -299,9 +299,9 @@ function joinSkillPath(fromPath: string, target: string): string | undefined {
 }
 
 /**
- * 一份 Markdown 里引用了技能目录里的哪些文件：Markdown 链接的目标（不含网址、锚点、绝对路径），
- * 加上正文里裸写的 `references/…`、`assets/…`。`fromPath` 是这份文件自己的相对路径，引用按它
- * 所在的目录解析。去重，按出现的先后。
+ * 一份 Markdown 裡引用了技能目錄裡的哪些檔案：Markdown 連結的目標（不含網址、錨點、絕對路徑），
+ * 加上正文裡裸寫的 `references/…`、`assets/…`。`fromPath` 是這份檔案自己的相對路徑，引用按它
+ * 所在的目錄解析。去重，按出現的先後。
  */
 export function skillReferences(markdown: string, fromPath = 'SKILL.md'): SkillReference[] {
   const found: SkillReference[] = [];
@@ -311,7 +311,7 @@ export function skillReferences(markdown: string, fromPath = 'SKILL.md'): SkillR
     try {
       target = decodeURI(target);
     } catch {
-      // 解不开就按原样。
+      // 解不開就按原樣。
     }
     target = target.replace(/\\/g, '/');
     if (!target || /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('/') || seen.has(target)) {
@@ -321,7 +321,7 @@ export function skillReferences(markdown: string, fromPath = 'SKILL.md'): SkillR
     const strong = bare || /^\.\.?\//.test(target) || /^(?:references?|assets?)\//i.test(target);
     found.push({ path: joinSkillPath(fromPath, target), target, strong, text: TEXT_FILE.test(target) });
   };
-  // 两种写法各找一遍，再按在原文里出现的先后排：说「带不上哪几个」时顺着原文说。
+  // 兩種寫法各找一遍，再按在原文裡出現的先後排：說「帶不上哪幾個」時順著原文說。
   const hits: { at: number; target: string; bare: boolean }[] = [];
   for (const m of markdown.matchAll(/\]\(\s*(<[^>]*>|[^)\s]+)(?:\s+["'][^)]*["'])?\s*\)/g)) {
     hits.push({ at: m.index, target: m[1], bare: false });
@@ -339,8 +339,8 @@ export function skillReferences(markdown: string, fromPath = 'SKILL.md'): SkillR
 }
 
 /**
- * 从 `SKILL.md` 正文出发、按引用一层层找附带文件（附带文件里再引用的也算）。只在给的 `files` 里找：
- * 读盘与下载由调用方按 {@link skillReferences} 先做，这里零 I/O。
+ * 從 `SKILL.md` 正文出發、按引用一層層找附帶檔案（附帶檔案裡再引用的也算）。只在給的 `files` 裡找：
+ * 讀盤與下載由呼叫方按 {@link skillReferences} 先做，這裡零 I/O。
  */
 function resolveAttachments(
   body: string,
@@ -374,21 +374,21 @@ function resolveAttachments(
   return { attachments, unresolved, tooMany };
 }
 
-// ---------------------------------------------------------------- 兼容检查
+// ---------------------------------------------------------------- 相容檢查
 
 /**
- * 读一份技能。**绝不抛**：读不懂的 frontmatter 当成没有，正文就是整份文件。
+ * 讀一份技能。**絕不拋**：讀不懂的 frontmatter 當成沒有，正文就是整份檔案。
  *
- * 兼容规则照搬上游（`writing-skills.ts:110-125`），命中任何一条就不兼容，有两处放宽（常规技能
+ * 相容規則照搬上游（`writing-skills.ts:110-125`），命中任何一條就不相容，有兩處放寬（常規技能
  * 格式）：
- * - 引用旁边的文件：带得上（`files` 里有、是文本、在技能目录里）就当附带文件一起带，带不上的
- *   才算「包含相对引用」。
- * - frontmatter 里的 `allowed-tools` / `tools` 不算依赖工具调用：那是给 Claude Code 一类 agent
- *   预先放行的权限，不是这份技能要调的东西；`metadata` 这类块也不看。声明了 `hooks` / `mcp` /
- *   `scripts` / `sub-agents` 的照旧不兼容，正文与附带文件里要调工具、跑脚本、派子代理的也照旧。
+ * - 引用旁邊的檔案：帶得上（`files` 裡有、是文字、在技能目錄裡）就當附帶檔案一起帶，帶不上的
+ *   才算「包含相對引用」。
+ * - frontmatter 裡的 `allowed-tools` / `tools` 不算依賴工具呼叫：那是給 Claude Code 一類 agent
+ *   預先放行的許可權，不是這份技能要調的東西；`metadata` 這類塊也不看。宣告瞭 `hooks` / `mcp` /
+ *   `scripts` / `sub-agents` 的照舊不相容，正文與附帶檔案裡要調工具、跑指令碼、派子代理的也照舊。
  *
- * @param fallbackName 用户与工程技能传目录名：frontmatter 没写 `name` 时用它。
- * @param files 技能目录里读到的文件（相对路径 → 文本），附带文件从这里取。不给就是只有一份 `SKILL.md`。
+ * @param fallbackName 使用者與工程技能傳目錄名：frontmatter 沒寫 `name` 時用它。
+ * @param files 技能目錄裡讀到的檔案（相對路徑 → 文字），附帶檔案從這裡取。不給就是隻有一份 `SKILL.md`。
  */
 export function inspectSkillMarkdown(
   raw: string,
@@ -400,7 +400,7 @@ export function inspectSkillMarkdown(
   const name = fields.name?.trim() || fallbackName?.trim() || 'unnamed-writing-skill';
   const reasons = new Set<SkillIncompat>();
   const { attachments, unresolved, tooMany } = resolveAttachments(content, files);
-  // 内容类的规则在正文与每一份附带文件上各查一遍：它们一样会进提示词。
+  // 內容類的規則在正文與每一份附帶檔案上各查一遍：它們一樣會進提示詞。
   const texts = [content, ...attachments.map((a) => a.text)];
   const anyText = (pattern: RegExp): boolean => texts.some((t) => pattern.test(t));
   const bytes = utf8Bytes(content) + attachments.reduce((sum, a) => sum + utf8Bytes(a.text), 0);
@@ -414,24 +414,24 @@ export function inspectSkillMarkdown(
   if (
     anyText(/(?:^|[\s`'"(])scripts?[/\\][^\s`'")]+/im) ||
     anyText(/\b(?:run|execute)\s+(?:the\s+)?script\b/i) ||
-    anyText(/运行.{0,12}脚本/)
+    anyText(/(?:运行|運行|執行).{0,12}(?:脚本|腳本|指令碼)/)
   ) {
     reasons.add('script-dependency');
   }
   if (
     anyText(/(?:^|[\s`'"(])hooks?[/\\][^\s`'")]+/im) ||
     anyText(/\b(?:install|run|execute)\s+(?:the\s+)?hook\b/i) ||
-    anyText(/安装.{0,12}钩子/)
+    anyText(/安(?:装|裝).{0,12}(?:钩|鉤)子/)
   ) {
     reasons.add('hook-dependency');
   }
-  if (anyText(/\bsub-?agents?\b|\bdelegate\b.{0,30}\bagents?\b|子代理|子智能体/i)) {
+  if (anyText(/\bsub-?agents?\b|\bdelegate\b.{0,30}\bagents?\b|子代理|子智能(?:体|體)/i)) {
     reasons.add('subagent-dependency');
   }
   if (
     keys.some((k) => /\bmcp\b|\bhooks?\b|\bscripts?\b|\bsub-?agents?\b/.test(k)) ||
     anyText(/\b(?:use|call|invoke)\s+(?:the\s+)?[a-z0-9_-]+\s+tools?\b/i) ||
-    anyText(/(?:使用|调用).{0,24}工具/)
+    anyText(/(?:使用|(?:调用|調用|呼叫)).{0,24}工具/)
   ) {
     reasons.add('tool-dependency');
   }
@@ -439,7 +439,7 @@ export function inspectSkillMarkdown(
   return {
     name,
     displayName: fields.display_name || fields['display-name'] || undefined,
-    description: fields.description || `写作技能：${name}`,
+    description: fields.description || `寫作技能：${name}`,
     version: fields.version || undefined,
     stage: normalizedStage(fields.stage),
     suggestedStage: suggestStage(fields, content),
@@ -452,12 +452,12 @@ export function inspectSkillMarkdown(
   };
 }
 
-/** 不兼容的原因，一句话。给了带不上的那几个文件就跟在「包含相对引用」后面。 */
+/** 不相容的原因，一句話。給了帶不上的那幾個檔案就跟在「包含相對引用」後面。 */
 export function describeIncompat(reasons: readonly SkillIncompat[], unresolved: readonly string[] = []): string {
   return reasons
     .map((r) =>
       r === 'relative-reference' && unresolved.length > 0
-        ? `${SKILL_INCOMPAT_LABEL[r]}（带不上：${unresolved.join('、')}）`
+        ? `${SKILL_INCOMPAT_LABEL[r]}（帶不上：${unresolved.join('、')}）`
         : (SKILL_INCOMPAT_LABEL[r] ?? r)
     )
     .join('、');
@@ -466,8 +466,8 @@ export function describeIncompat(reasons: readonly SkillIncompat[], unresolved: 
 // ---------------------------------------------------------------- 身份
 
 /**
- * 技能名：也是它在磁盘上的目录名。字母或数字开头，其后可以有 `.` `_` `-`，最长 64。
- * 中文算字母（与上游不同，见文件头）。没有斜杠、没有 `..`，拼成路径不会越界。
+ * 技能名：也是它在磁碟上的目錄名。字母或數字開頭，其後可以有 `.` `_` `-`，最長 64。
+ * 中文算字母（與上游不同，見檔案頭）。沒有斜槓、沒有 `..`，拼成路徑不會越界。
  */
 const SKILL_NAME = /^[\p{L}\p{N}][\p{L}\p{N}._-]{0,63}$/u;
 
@@ -475,7 +475,7 @@ export function isSkillName(name: unknown): name is string {
   return typeof name === 'string' && SKILL_NAME.test(name);
 }
 
-/** 稳定 id：`来源:名字`。同名的技能可以在几个来源里各有一份，靠前缀分开。 */
+/** 穩定 id：`來源:名字`。同名的技能可以在幾個來源裡各有一份，靠字首分開。 */
 export function skillId(source: SkillSource, name: string): string {
   return `${source}:${name}`;
 }
@@ -493,21 +493,21 @@ export function parseSkillId(id: unknown): { source: SkillSource; name: string }
   return { source, name };
 }
 
-// ---------------------------------------------------------------- 绑定文件
+// ---------------------------------------------------------------- 繫結檔案
 
-/** 每个阶段绑了哪一份（技能 id）。没绑的阶段不出现。 */
+/** 每個階段綁了哪一份（技能 id）。沒綁的階段不出現。 */
 export type SkillBindings = Partial<Record<SkillStage, string>>;
 
 /**
- * `.novelwarden/skills.json` 的内容。形状照搬上游的 `.vela/writing-skills.json`：
+ * `.novelwarden/skills.json` 的內容。形狀照搬上游的 `.vela/writing-skills.json`：
  * `{ "version": 1, "bindings": { "drafting": "builtin:plain-prose" } }`。
  *
- * **容错**（第 1 条）：读不懂的整份当成没绑、认不出的那一项跳过，但都写进 `problems`——
- * 装配器拿它在明细里说一声（第 2 条），不让作者以为技能带上了。上游是读不懂就整个工作流
- * 起不来。
+ * **容錯**（第 1 條）：讀不懂的整份當成沒綁、認不出的那一項跳過，但都寫進 `problems`——
+ * 裝配器拿它在明細裡說一聲（第 2 條），不讓作者以為技能帶上了。上游是讀不懂就整個工作流
+ * 起不來。
  */
 export interface SkillBindingProblem {
-  /** 出在哪个阶段的那一项上。整份读不懂时没有。 */
+  /** 出在哪個階段的那一項上。整份讀不懂時沒有。 */
   stage?: string;
   text: string;
 }
@@ -523,22 +523,22 @@ export function parseSkillBindings(raw: string): { bindings: SkillBindings; prob
     return { bindings: {}, problems: [{ text: '不是合法的 JSON' }] };
   }
   if (!data || typeof data !== 'object' || (data as { version?: unknown }).version !== 1) {
-    return { bindings: {}, problems: [{ text: '认不出的版本（应为 "version": 1）' }] };
+    return { bindings: {}, problems: [{ text: '認不出的版本（應為 "version": 1）' }] };
   }
   const source = (data as { bindings?: unknown }).bindings;
   if (source === undefined) {
     return { bindings: {}, problems: [] };
   }
   if (!source || typeof source !== 'object' || Array.isArray(source)) {
-    return { bindings: {}, problems: [{ text: '"bindings" 应该是一个对象' }] };
+    return { bindings: {}, problems: [{ text: '"bindings" 應該是一個物件' }] };
   }
   const bindings: SkillBindings = {};
   const problems: SkillBindingProblem[] = [];
   for (const [stage, id] of Object.entries(source as Record<string, unknown>)) {
     if (!isSkillStage(stage)) {
-      problems.push({ stage, text: `认不出的阶段「${stage}」` });
+      problems.push({ stage, text: `認不出的階段「${stage}」` });
     } else if (!parseSkillId(id)) {
-      problems.push({ stage, text: `「${SKILL_STAGE_LABEL[stage]}」绑的不是合法的技能 id` });
+      problems.push({ stage, text: `「${SKILL_STAGE_LABEL[stage]}」綁的不是合法的技能 id` });
     } else {
       bindings[stage] = id as string;
     }
@@ -546,7 +546,7 @@ export function parseSkillBindings(raw: string): { bindings: SkillBindings; prob
   return { bindings, problems };
 }
 
-/** 落盘的那份文本。阶段按固定顺序排，改一项不会让整份文件的 diff 乱跳。 */
+/** 落盤的那份文字。階段按固定順序排，改一項不會讓整份檔案的 diff 亂跳。 */
 export function renderSkillBindings(bindings: SkillBindings): string {
   const ordered: SkillBindings = {};
   for (const stage of SKILL_STAGES) {
@@ -557,14 +557,14 @@ export function renderSkillBindings(bindings: SkillBindings): string {
   return `${JSON.stringify({ version: 1, bindings: ordered }, null, 2)}\n`;
 }
 
-// ---------------------------------------------------------------- 一次装配算哪个阶段
+// ---------------------------------------------------------------- 一次裝配算哪個階段
 
 /**
- * 这一次装配该带哪个阶段的技能。`undefined` = 不带。
+ * 這一次裝配該帶哪個階段的技能。`undefined` = 不帶。
  *
- * 讨论（`discuss`）不带：那是作者在聊，不是一次产出——上游的 AI 助手对话同样不带阶段技能。
- * 定稿、摘要、文风提取、角色卡这些不经 `buildContext`，本来就带不到（上游的定稿与文风分析
- * 也不带）。
+ * 討論（`discuss`）不帶：那是作者在聊，不是一次產出——上游的 AI 助手對話同樣不帶階段技能。
+ * 定稿、摘要、文風提取、角色卡這些不經 `buildContext`，本來就帶不到（上游的定稿與文風分析
+ * 也不帶）。
  */
 export function skillStageOf(action: CreationAction, writeMode?: WriteMode): SkillStage | undefined {
   const { stage, capability } = action;
@@ -581,15 +581,15 @@ export function skillStageOf(action: CreationAction, writeMode?: WriteMode): Ski
 }
 
 /**
- * 注入提示词的那一块。说法照搬上游（`base-command.ts:63`），去掉了「项目写作语言」——
- * 这里没有那个概念。**放在用户消息的最前面**，与上游一样：它是补充，作者事实与末尾的
- * 输出合同都排在它后面、说了算。
+ * 注入提示詞的那一塊。說法照搬上游（`base-command.ts:63`），去掉了「專案寫作語言」——
+ * 這裡沒有那個概念。**放在使用者訊息的最前面**，與上游一樣：它是補充，作者事實與末尾的
+ * 輸出合同都排在它後面、說了算。
  */
 export function renderSkillBlock(label: string, body: string, attachments: readonly SkillAttachment[] = []): string {
-  const parts = [`【补充写作 Skill：${label}】\n以下内容只能补充创作方法；作者事实和后续输出合同始终优先。\n${body.trim()}`];
-  // 附带文件接在后面，标出路径：正文里「按需读取 references/x.md」说的就是这一份。
+  const parts = [`【補充寫作 Skill：${label}】\n以下內容只能補充創作方法；作者事實和後續輸出合同始終優先。\n${body.trim()}`];
+  // 附帶檔案接在後面，標出路徑：正文裡「按需讀取 references/x.md」說的就是這一份。
   for (const a of attachments) {
-    parts.push(`【附带文件：${a.path}】\n${a.text.replace(/\r\n?/g, '\n').trim()}`);
+    parts.push(`【附帶檔案：${a.path}】\n${a.text.replace(/\r\n?/g, '\n').trim()}`);
   }
   return parts.join('\n\n');
 }
@@ -599,9 +599,9 @@ export function renderSkillBlock(label: string, body: string, attachments: reado
 export interface GitHubSkillLocation {
   owner: string;
   repo: string;
-  /** 没给就是默认分支（下载前要问一次 GitHub）。 */
+  /** 沒給就是預設分支（下載前要問一次 GitHub）。 */
   ref?: string;
-  /** 仓库里那份 `SKILL.md` 的路径。 */
+  /** 倉庫裡那份 `SKILL.md` 的路徑。 */
   path: string;
   sourceUrl: string;
 }
@@ -613,16 +613,16 @@ function safePart(value: string, label: string): string {
   try {
     decoded = decodeURIComponent(value);
   } catch {
-    throw new Error(`GitHub 地址里的${label}不合法`);
+    throw new Error(`GitHub 地址裡的${label}不合法`);
   }
   if (!SAFE_SEGMENT.test(decoded) || decoded === '.' || decoded === '..') {
-    throw new Error(`GitHub 地址里的${label}不合法`);
+    throw new Error(`GitHub 地址裡的${label}不合法`);
   }
   return decoded;
 }
 
 function safePath(parts: string[]): string {
-  const decoded = parts.map((part, index) => safePart(part, `第 ${index + 1} 段路径`)).join('/');
+  const decoded = parts.map((part, index) => safePart(part, `第 ${index + 1} 段路徑`)).join('/');
   if (!decoded || !decoded.toLowerCase().endsWith('skill.md')) {
     throw new Error('GitHub 地址要指到一份 SKILL.md');
   }
@@ -630,19 +630,19 @@ function safePath(parts: string[]): string {
 }
 
 /**
- * 认四种地址（照搬上游）：仓库首页（取默认分支根下的 `SKILL.md`）、`/tree/<分支>/<目录>`、
+ * 認四種地址（照搬上游）：倉庫首頁（取預設分支根下的 `SKILL.md`）、`/tree/<分支>/<目錄>`、
  * `/blob/<分支>/<…SKILL.md>`、`raw.githubusercontent.com/<owner>/<repo>/<分支>/<…>`。
- * 只要公开的 https，不许带用户名、密码、端口。**错了就抛**，抛的那句就是给作者看的。
+ * 只要公開的 https，不許帶使用者名稱、密碼、埠。**錯了就拋**，拋的那句就是給作者看的。
  */
 export function parseGitHubSkillUrl(value: string): GitHubSkillLocation {
   let url: URL;
   try {
     url = new URL(value.trim());
   } catch {
-    throw new Error('不是一个合法的地址');
+    throw new Error('不是一個合法的地址');
   }
   if (url.protocol !== 'https:' || url.username || url.password || url.port) {
-    throw new Error('只支持公开的 https GitHub 地址');
+    throw new Error('只支援公開的 https GitHub 地址');
   }
   const parts = url.pathname.split('/').filter(Boolean);
 
@@ -651,25 +651,25 @@ export function parseGitHubSkillUrl(value: string): GitHubSkillLocation {
       throw new Error('raw.githubusercontent.com 的地址不完整');
     }
     return {
-      owner: safePart(parts[0], '用户名'),
-      repo: safePart(parts[1].replace(/\.git$/i, ''), '仓库名'),
+      owner: safePart(parts[0], '使用者名稱'),
+      repo: safePart(parts[1].replace(/\.git$/i, ''), '倉庫名'),
       ref: safePart(parts[2], '分支'),
       path: safePath(parts.slice(3)),
       sourceUrl: url.toString(),
     };
   }
   if (url.hostname !== 'github.com' || parts.length < 2) {
-    throw new Error('只支持 github.com 与 raw.githubusercontent.com');
+    throw new Error('只支援 github.com 與 raw.githubusercontent.com');
   }
 
-  const owner = safePart(parts[0], '用户名');
-  const repo = safePart(parts[1].replace(/\.git$/i, ''), '仓库名');
+  const owner = safePart(parts[0], '使用者名稱');
+  const repo = safePart(parts[1].replace(/\.git$/i, ''), '倉庫名');
   if (parts.length === 2) {
     return { owner, repo, path: 'SKILL.md', sourceUrl: url.toString() };
   }
   const kind = parts[2];
   if ((kind !== 'tree' && kind !== 'blob') || parts.length < 4) {
-    throw new Error('请给仓库、目录（/tree/…）、文件（/blob/…）或 raw 的 SKILL.md 地址');
+    throw new Error('請給倉庫、目錄（/tree/…）、檔案（/blob/…）或 raw 的 SKILL.md 地址');
   }
   const ref = safePart(parts[3], '分支');
   const targetParts = parts.slice(4);
@@ -679,18 +679,18 @@ export function parseGitHubSkillUrl(value: string): GitHubSkillLocation {
   return { owner, repo, ref, path: safePath(targetParts), sourceUrl: url.toString() };
 }
 
-/** 真正去下载的那个地址。 */
+/** 真正去下載的那個地址。 */
 export function githubRawUrl(owner: string, repo: string, ref: string, filePath: string): string {
   const segments = [owner, repo, ref, ...filePath.split('/')].map(encodeURIComponent);
   return `https://raw.githubusercontent.com/${segments.join('/')}`;
 }
 
-/** 分支名是否可以照抄进下载地址（GitHub 返回的默认分支也要过一遍）。 */
+/** 分支名是否可以照抄進下載地址（GitHub 返回的預設分支也要過一遍）。 */
 export function isSafeRef(ref: unknown): ref is string {
   return typeof ref === 'string' && SAFE_SEGMENT.test(ref) && ref !== '.' && ref !== '..';
 }
 
-/** 仓库里的一个文件路径能不能照抄进下载地址：每一段都与分支名同一条规矩。附带文件下载前过一遍。 */
+/** 倉庫裡的一個檔案路徑能不能照抄進下載地址：每一段都與分支名同一條規矩。附帶檔案下載前過一遍。 */
 export function isSafeGitHubPath(filePath: string): boolean {
   return filePath.split('/').every((seg) => isSafeRef(seg));
 }

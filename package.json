@@ -1,7 +1,7 @@
 {
   "name": "novelwarden",
-  "displayName": "Novelwarden — 小说写作：自动整理细纲、角色卡、设定",
-  "description": "写长篇小说、网文用：照正文自动整理每章细纲、角色卡、世界观设定、剧情线和伏笔，不用手动维护；也能用 AI 续写，支持 OpenAI、Claude 和 Copilot 的模型。Long-form novel writing: auto-maintained chapter outlines, character sheets, worldbuilding and plot threads, plus AI drafting.",
+  "displayName": "Novelwarden — 小說寫作：自動整理細綱、角色卡、設定",
+  "description": "寫長篇小說、網文用：照正文自動整理每章細綱、角色卡、世界觀設定、劇情線和伏筆，不用手動維護；也能用 AI 續寫，支援 OpenAI、Claude 和 Copilot 的模型。Long-form novel writing: auto-maintained chapter outlines, character sheets, worldbuilding and plot threads, plus AI drafting.",
   "version": "0.2.15",
   "publisher": "novelwarden",
   "icon": "media/icon.png",
@@ -18,25 +18,25 @@
     "Other"
   ],
   "keywords": [
-    "小说",
-    "写小说",
-    "小说写作",
-    "小说创作",
-    "长篇小说",
-    "网文",
-    "网络小说",
-    "写作",
-    "大纲",
-    "细纲",
-    "章纲",
+    "小說",
+    "寫小說",
+    "小說寫作",
+    "小說創作",
+    "長篇小說",
+    "網文",
+    "網路小說",
+    "寫作",
+    "大綱",
+    "細綱",
+    "章綱",
     "角色卡",
-    "人物设定",
-    "世界观",
-    "设定集",
-    "伏笔",
-    "续写",
-    "AI写作",
-    "AI写小说",
+    "人物設定",
+    "世界觀",
+    "設定集",
+    "伏筆",
+    "續寫",
+    "AI寫作",
+    "AI寫小說",
     "novel",
     "fiction",
     "writing",
@@ -75,22 +75,22 @@
     "commands": [
       {
         "command": "novel.initProject",
-        "title": "Novel: 初始化小说工程",
+        "title": "Novel: 初始化小說工程",
         "icon": "$(new-folder)"
       },
       {
         "command": "novel.refresh",
-        "title": "Novel: 刷新",
+        "title": "Novel: 重新整理",
         "icon": "$(refresh)"
       },
       {
         "command": "novel.newPlot",
-        "title": "Novel: 新建细纲",
+        "title": "Novel: 新建細綱",
         "icon": "$(add)"
       },
       {
         "command": "novel.setApiKey",
-        "title": "Novel: 设置 API Key"
+        "title": "Novel: 設定 API Key"
       },
       {
         "command": "novel.clearApiKey",
@@ -98,62 +98,62 @@
       },
       {
         "command": "novel.selectModel",
-        "title": "Novel: 选择模型"
+        "title": "Novel: 選擇模型"
       },
       {
         "command": "novel.continue",
-        "title": "Novel: 打开续写对话",
+        "title": "Novel: 開啟續寫對話",
         "icon": "$(sparkle)"
       },
       {
         "command": "novel.openChatInEditor",
-        "title": "Novel: 在编辑器中打开对话面板",
+        "title": "Novel: 在編輯器中開啟對話面板",
         "icon": "$(link-external)"
       },
       {
         "command": "novel.newSession",
-        "title": "Novel: 新建对话",
+        "title": "Novel: 新建對話",
         "icon": "$(add)"
       },
       {
         "command": "novel.addSelectionToChat",
-        "title": "Novel: 将选中文本加入对话上下文"
+        "title": "Novel: 將選中文字加入對話上下文"
       },
       {
         "command": "novel.openSettings",
-        "title": "Novel: 打开设置页",
+        "title": "Novel: 開啟設定頁",
         "icon": "$(gear)"
       },
       {
         "command": "novel.openProject",
-        "title": "Novel: 打开工程页",
+        "title": "Novel: 開啟工程頁",
         "icon": "$(book)"
       },
       {
         "command": "novel.openLogs",
-        "title": "Novel: 打开日志页",
+        "title": "Novel: 開啟日誌頁",
         "icon": "$(output)"
       },
       {
         "command": "novel.showOutputChannel",
-        "title": "Novel: 显示输出面板日志"
+        "title": "Novel: 顯示輸出面板日誌"
       },
       {
         "command": "novel.quickContinue",
-        "title": "Novel: 快速续写（不开面板）"
+        "title": "Novel: 快速續寫（不開面板）"
       },
       {
         "command": "novel.summarizePlot",
-        "title": "Novel: 同步这一章",
+        "title": "Novel: 同步這一章",
         "icon": "$(book)"
       },
       {
         "command": "novel.syncSummaries",
-        "title": "Novel: 照正文更新所有过期细纲"
+        "title": "Novel: 照正文更新所有過期細綱"
       },
       {
         "command": "novel.rebuildGlobalSummary",
-        "title": "Novel: 重建全文大纲"
+        "title": "Novel: 重建全文大綱"
       },
       {
         "command": "novel.extractCharacters",
@@ -161,31 +161,31 @@
       },
       {
         "command": "novel.recordLore",
-        "title": "Novel: 补记设定（同步过、还没记设定的章）"
+        "title": "Novel: 補記設定（同步過、還沒記設定的章）"
       },
       {
         "command": "novel.buildLore",
-        "title": "Novel: 给出现过的设定建条目"
+        "title": "Novel: 給出現過的設定建條目"
       },
       {
         "command": "novel.integrateLore",
-        "title": "Novel: 整合设定（把同步过的章里的新内容并进条目）"
+        "title": "Novel: 整合設定（把同步過的章裡的新內容並進條目）"
       },
       {
         "command": "novel.organizeLore",
-        "title": "Novel: 按目录整理设定"
+        "title": "Novel: 按目錄整理設定"
       },
       {
         "command": "novel.updateCharacterCard",
-        "title": "Novel: 更新某个角色的档案"
+        "title": "Novel: 更新某個角色的檔案"
       },
       {
         "command": "novel.extractStyle",
-        "title": "Novel: 提取文风指南"
+        "title": "Novel: 提取文風指南"
       },
       {
         "command": "novel.openFile",
-        "title": "打开文件"
+        "title": "開啟檔案"
       },
       {
         "command": "novel.newCharacter",
@@ -194,12 +194,12 @@
       },
       {
         "command": "novel.newLore",
-        "title": "Novel: 新建设定条目",
+        "title": "Novel: 新建設定條目",
         "icon": "$(add)"
       },
       {
         "command": "novel.newFolder",
-        "title": "Novel: 新建文件夹",
+        "title": "Novel: 新建資料夾",
         "icon": "$(new-folder)"
       }
     ],
@@ -244,7 +244,7 @@
         "novel.providers": {
           "type": "array",
           "default": [],
-          "markdownDescription": "服务商列表。每个服务商有一个前缀 `id`，其下可配置多个模型；模型用 `前缀/模型名` 引用（模型名本身可含斜杠，只在第一个斜杠处切分）。留空时会沿用旧版的 `novel.provider` 等设置。",
+          "markdownDescription": "服務商列表。每個服務商有一個字首 `id`，其下可配置多個模型；模型用 `字首/模型名` 引用（模型名本身可含斜槓，只在第一個斜槓處切分）。留空時會沿用舊版的 `novel.provider` 等設定。",
           "items": {
             "type": "object",
             "required": [
@@ -255,11 +255,11 @@
               "id": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9._-]+$",
-                "description": "引用前缀，不能含斜杠。例如 glm、openrouter、ollama。"
+                "description": "引用字首，不能含斜槓。例如 glm、openrouter、ollama。"
               },
               "label": {
                 "type": "string",
-                "description": "显示名，留空则显示 id。"
+                "description": "顯示名，留空則顯示 id。"
               },
               "kind": {
                 "type": "string",
@@ -270,19 +270,19 @@
                 ],
                 "default": "openai",
                 "enumDescriptions": [
-                  "OpenAI 兼容接口（OpenAI / DeepSeek / 智谱 / Kimi / 通义 / OpenRouter / Ollama 等）",
+                  "OpenAI 相容介面（OpenAI / DeepSeek / 智谱 / Kimi / 通义 / OpenRouter / Ollama 等）",
                   "Anthropic Messages API",
-                  "VS Code Language Model API（复用 GitHub Copilot 订阅）"
+                  "VS Code Language Model API（複用 GitHub Copilot 訂閱）"
                 ],
-                "description": "接口协议。"
+                "description": "介面協議。"
               },
               "baseUrl": {
                 "type": "string",
-                "description": "接口地址，不含末尾斜杠。vscode-lm 无需填写。"
+                "description": "介面地址，不含末尾斜槓。vscode-lm 無需填寫。"
               },
               "models": {
                 "type": "array",
-                "description": "该服务商下的模型清单。",
+                "description": "該服務商下的模型清單。",
                 "items": {
                   "type": "object",
                   "required": [
@@ -291,26 +291,26 @@
                   "properties": {
                     "name": {
                       "type": "string",
-                      "description": "原样传给 API 的模型名，可含斜杠，如 z-ai/glm-4.6。"
+                      "description": "原樣傳給 API 的模型名，可含斜槓，如 z-ai/glm-4.6。"
                     },
                     "label": {
                       "type": "string",
-                      "description": "显示名，留空则显示模型名。"
+                      "description": "顯示名，留空則顯示模型名。"
                     },
                     "contextWindow": {
                       "type": "number",
-                      "description": "该模型的上下文窗口。建议按模型实际规格填写；留空时使用内置兼容值。"
+                      "description": "該模型的上下文視窗。建議按模型實際規格填寫；留空時使用內建相容值。"
                     },
                     "maxOutputTokens": {
                       "type": "number",
-                      "description": "该模型的最大输出 token。建议按模型实际规格填写；留空时使用内置兼容值。"
+                      "description": "該模型的最大輸出 token。建議按模型實際規格填寫；留空時使用內建相容值。"
                     }
                   }
                 }
               }
             }
           },
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.models": {
           "type": "array",
@@ -318,8 +318,8 @@
           "items": {
             "type": "string"
           },
-          "markdownDescription": "默认模型列表，按顺序，第一个是首选。格式为 `前缀/模型名`。工程页的同步 / 角色卡 / 设定 / 文风任务串行时用第一个，失败会随机换用其余（见 `novel.fallbackAttempts`）；并发时在列表里轮转做负载均衡。分档后它是**所有未配置档位的兜底清单**（见 `novel.tierModels`）。留空则退化为 `novel.model` 单个模型。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "markdownDescription": "預設模型列表，按順序，第一個是首選。格式為 `字首/模型名`。工程頁的同步 / 角色卡 / 設定 / 文風任務序列時用第一個，失敗會隨機換用其餘（見 `novel.fallbackAttempts`）；併發時在列表裡輪轉做負載均衡。分檔後它是**所有未配置檔位的兜底清單**（見 `novel.tierModels`）。留空則退化為 `novel.model` 單個模型。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.tierModels": {
           "type": "object",
@@ -330,26 +330,26 @@
               "items": {
                 "type": "string"
               },
-              "description": "快速档：便宜、快，用于量大而单次简单的活。"
+              "description": "快速檔：便宜、快，用於量大而單次簡單的活。"
             },
             "balanced": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "均衡档：折中，用于量不小但质量也要紧的活。"
+              "description": "均衡檔：折中，用於量不小但質量也要緊的活。"
             },
             "quality": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "精标档：最聪明的模型，用于一次定调、错了代价大的活。"
+              "description": "精標檔：最聰明的模型，用於一次定調、錯了代價大的活。"
             }
           },
           "additionalProperties": false,
-          "markdownDescription": "三档（快速 / 均衡 / 精标）各自的模型清单，格式与 `novel.models` 相同。工程页任务按 `novel.taskTiers` 归档取模型：简单大量的活走快速档，困难的活走精标档。**某一档留空则该档的任务沿用 `novel.models`**，三档都空即不分档（行为与分档前一致）。失败换模型只在**同档内**发生，绝不跨档升级。对话页续写不看档位，永远用 `novel.model`。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "markdownDescription": "三檔（快速 / 均衡 / 精標）各自的模型清單，格式與 `novel.models` 相同。工程頁任務按 `novel.taskTiers` 歸檔取模型：簡單大量的活走快速檔，困難的活走精標檔。**某一檔留空則該檔的任務沿用 `novel.models`**，三檔都空即不分檔（行為與分檔前一致）。失敗換模型只在**同檔內**發生，絕不跨檔升級。對話頁續寫不看檔位，永遠用 `novel.model`。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.taskTiers": {
           "type": "object",
@@ -362,7 +362,7 @@
                 "balanced",
                 "quality"
               ],
-              "description": "同步 · 照正文更新细纲。默认 fast。"
+              "description": "同步 · 照正文更新細綱。預設 fast。"
             },
             "globalSummaryStage": {
               "type": "string",
@@ -371,7 +371,7 @@
                 "balanced",
                 "quality"
               ],
-              "description": "全文大纲 · 分批汇总。默认 fast。"
+              "description": "全文大綱 · 分批匯總。預設 fast。"
             },
             "globalSummaryMerge": {
               "type": "string",
@@ -380,7 +380,7 @@
                 "balanced",
                 "quality"
               ],
-              "description": "全文大纲 · 最终合并。默认 quality。"
+              "description": "全文大綱 · 最終合併。預設 quality。"
             },
             "loreScan": {
               "type": "string",
@@ -389,7 +389,7 @@
                 "balanced",
                 "quality"
               ],
-              "description": "设定 · 记设定（单独记一章、补记）。默认 fast。"
+              "description": "設定 · 記設定（單獨記一章、補記）。預設 fast。"
             },
             "loreSynthesis": {
               "type": "string",
@@ -398,7 +398,7 @@
                 "balanced",
                 "quality"
               ],
-              "description": "设定 · 建条目、整合与按目录整理。默认 balanced。"
+              "description": "設定 · 建條目、整合與按目錄整理。預設 balanced。"
             },
             "characterCard": {
               "type": "string",
@@ -407,7 +407,7 @@
                 "balanced",
                 "quality"
               ],
-              "description": "角色卡 · 更新 / 建卡。默认 balanced。"
+              "description": "角色卡 · 更新 / 建卡。預設 balanced。"
             },
             "extractCharacters": {
               "type": "string",
@@ -416,7 +416,7 @@
                 "balanced",
                 "quality"
               ],
-              "description": "提取角色。默认 quality。"
+              "description": "提取角色。預設 quality。"
             },
             "extractStyle": {
               "type": "string",
@@ -425,68 +425,68 @@
                 "balanced",
                 "quality"
               ],
-              "description": "提取文风。默认 quality。"
+              "description": "提取文風。預設 quality。"
             }
           },
           "additionalProperties": false,
-          "markdownDescription": "每项工程页任务归在哪一档（见 `novel.tierModels`）。只需写与内置默认不同的项——没写的任务跟着内置默认走。内置默认按「调用次数 × 单次难度」定：次数多而单次简单的归 fast，一次定调的归 quality。认不出的任务名与非法档位名一律忽略，那一项回落默认。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "markdownDescription": "每項工程頁任務歸在哪一檔（見 `novel.tierModels`）。只需寫與內建預設不同的項——沒寫的任務跟著內建預設走。內建預設按「呼叫次數 × 單次難度」定：次數多而單次簡單的歸 fast，一次定調的歸 quality。認不出的任務名與非法檔位名一律忽略，那一項回落預設。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.model": {
           "type": "string",
           "default": "",
-          "markdownDescription": "当前使用的模型，格式为 `前缀/模型名`，例如 `glm/glm-4-plus`、`openrouter/z-ai/glm-4.6`。恒等于 `novel.models` 的第一项（对话页切换模型会把它提到列表首位）。留空则取第一个可用模型。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "markdownDescription": "當前使用的模型，格式為 `字首/模型名`，例如 `glm/glm-4-plus`、`openrouter/z-ai/glm-4.6`。恆等於 `novel.models` 的第一項（對話頁切換模型會把它提到列表首位）。留空則取第一個可用模型。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.concurrency": {
           "type": "number",
           "default": 3,
           "minimum": 1,
           "maximum": 16,
-          "markdownDescription": "工程页批量任务（批量同步、重建全文大纲、批量更新角色卡、批量建卡、生成设定）的并发请求数。1 表示串行。调大能显著缩短等待，但更容易撞上服务商的限流（429）。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "markdownDescription": "工程頁批次任務（批次同步、重建全文大綱、批次更新角色卡、批次建卡、生成設定）的併發請求數。1 表示序列。調大能顯著縮短等待，但更容易撞上服務商的限流（429）。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.fallbackAttempts": {
           "type": "number",
           "default": 2,
           "minimum": 0,
           "maximum": 5,
-          "markdownDescription": "工程页任务里一次调用失败后，换用**同档**其它模型重试的次数上限（档位见 `novel.tierModels`，未分档时就是 `novel.models`）。0 表示不重试。该档里只有一个模型时不生效，也不会跨档去找别的模型。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "markdownDescription": "工程頁任務裡一次呼叫失敗後，換用**同檔**其它模型重試的次數上限（檔位見 `novel.tierModels`，未分檔時就是 `novel.models`）。0 表示不重試。該檔裡只有一個模型時不生效，也不會跨檔去找別的模型。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.temperature": {
           "type": "number",
           "default": 0.8,
           "minimum": 0,
           "maximum": 2,
-          "description": "采样温度。写小说建议 0.7 ~ 1.0。同步与全文大纲这类整理任务内部固定用 0.3。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "description": "取樣溫度。寫小說建議 0.7 ~ 1.0。同步與全文大綱這類整理任務內部固定用 0.3。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.chaptersDir": {
           "type": "string",
           "default": "chapters",
-          "description": "章节正文目录（相对工作区根目录）。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "description": "章節正文目錄（相對工作區根目錄）。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.draftsDir": {
           "type": "string",
           "default": "drafts",
-          "description": "章节草稿目录（相对工作区根目录）。每章的草稿按它在章节目录下的相对路径镜像存放。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "description": "章節草稿目錄（相對工作區根目錄）。每章的草稿按它在章節目錄下的相對路徑映象存放。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.summaryBatchSize": {
           "type": "number",
           "default": 15,
           "minimum": 3,
-          "description": "重建全文大纲时，每批汇总多少章同步过的细纲。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "description": "重建全文大綱時，每批匯總多少章同步過的細綱。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.requestTimeoutMs": {
           "type": "number",
           "default": 300000,
           "minimum": 10000,
-          "description": "单次 LLM 请求的空闲超时（毫秒）。流式还在吐字时不计时，卡住这么久没数据才中止。",
-          "markdownDeprecationMessage": "已迁移至 ~/.novelwarden/config.json，此处仅作兼容兜底。"
+          "description": "單次 LLM 請求的空閒超時（毫秒）。流式還在吐字時不計時，卡住這麼久沒資料才中止。",
+          "markdownDeprecationMessage": "已遷移至 ~/.novelwarden/config.json，此處僅作相容兜底。"
         },
         "novel.provider": {
           "type": "string",
@@ -496,38 +496,38 @@
             "vscode-lm"
           ],
           "default": "openai",
-          "markdownDeprecationMessage": "已由 `novel.providers` + `novel.model` 取代。仅在 `novel.providers` 为空时作为兼容兜底。",
-          "description": "（旧版）使用哪个大模型服务商。"
+          "markdownDeprecationMessage": "已由 `novel.providers` + `novel.model` 取代。僅在 `novel.providers` 為空時作為相容兜底。",
+          "description": "（舊版）使用哪個大模型服務商。"
         },
         "novel.openai.baseUrl": {
           "type": "string",
           "default": "https://api.openai.com/v1",
-          "markdownDeprecationMessage": "已由 `novel.providers` 中各服务商的 `baseUrl` 取代。",
-          "description": "（旧版）OpenAI 兼容接口的 baseUrl。"
+          "markdownDeprecationMessage": "已由 `novel.providers` 中各服務商的 `baseUrl` 取代。",
+          "description": "（舊版）OpenAI 相容介面的 baseUrl。"
         },
         "novel.openai.model": {
           "type": "string",
           "default": "gpt-4o",
-          "markdownDeprecationMessage": "已由 `novel.providers` 中的模型清单取代。",
-          "description": "（旧版）OpenAI 兼容接口使用的模型名。"
+          "markdownDeprecationMessage": "已由 `novel.providers` 中的模型清單取代。",
+          "description": "（舊版）OpenAI 相容介面使用的模型名。"
         },
         "novel.anthropic.baseUrl": {
           "type": "string",
           "default": "https://api.anthropic.com",
-          "markdownDeprecationMessage": "已由 `novel.providers` 中各服务商的 `baseUrl` 取代。",
-          "description": "（旧版）Anthropic API baseUrl。"
+          "markdownDeprecationMessage": "已由 `novel.providers` 中各服務商的 `baseUrl` 取代。",
+          "description": "（舊版）Anthropic API baseUrl。"
         },
         "novel.anthropic.model": {
           "type": "string",
           "default": "claude-sonnet-4-5",
-          "markdownDeprecationMessage": "已由 `novel.providers` 中的模型清单取代。",
-          "description": "（旧版）Anthropic 使用的模型名。"
+          "markdownDeprecationMessage": "已由 `novel.providers` 中的模型清單取代。",
+          "description": "（舊版）Anthropic 使用的模型名。"
         },
         "novel.vscodeLm.family": {
           "type": "string",
           "default": "gpt-4o",
-          "markdownDeprecationMessage": "已由 `novel.providers` 中 kind 为 vscode-lm 的服务商取代。",
-          "description": "（旧版）VS Code LM API 选择的模型 family。"
+          "markdownDeprecationMessage": "已由 `novel.providers` 中 kind 為 vscode-lm 的服務商取代。",
+          "description": "（舊版）VS Code LM API 選擇的模型 family。"
         }
       }
     }

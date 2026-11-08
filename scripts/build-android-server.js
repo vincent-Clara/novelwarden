@@ -1,16 +1,16 @@
 /**
- * 把独立版打成**node 跑的单文件**（`server.cjs`），给 Android 壳当内置服务端。
+ * 把獨立版打成**node 跑的單檔案**（`server.cjs`），給 Android 殼當內建服務端。
  *
- * 别的出单文件的路都是 `bun build --compile`（独立版、桌面 sidecar、Docker），Android 上没有 Bun：
- * 壳里带的是 Termux 编的 node，所以这里用 esbuild 按 node 平台打包，`ws` 一起打进去
- * （它的两个可选加速模块 bufferutil / utf-8-validate 是原生模块，不带，`ws` 自己会退回纯 JS）。
- * 服务端在 node 上怎么监听见 src/shells/standalone/serve.ts。
+ * 別的出單檔案的路都是 `bun build --compile`（獨立版、桌面 sidecar、Docker），Android 上沒有 Bun：
+ * 殼裡帶的是 Termux 編的 node，所以這裡用 esbuild 按 node 平臺打包，`ws` 一起打進去
+ * （它的兩個可選加速模組 bufferutil / utf-8-validate 是原生模組，不帶，`ws` 自己會退回純 JS）。
+ * 服務端在 node 上怎麼監聽見 src/shells/standalone/serve.ts。
  *
- * 用法：node scripts/build-android-server.js <输出文件>
- *   先跑 embed-media（前端资源与版本号进程序），再打包。
+ * 用法：node scripts/build-android-server.js <輸出檔案>
+ *   先跑 embed-media（前端資源與版本號程序序），再打包。
  *
- * tests/integration/shells/nodeServer.test.js 也调 `bundleServer`，但传 `stubMedia`：
- * 测试并行跑，重新构建 dist/media 会和读它的 dom 测试撞车，而那组用例不看前端资源。
+ * tests/integration/shells/nodeServer.test.js 也調 `bundleServer`，但傳 `stubMedia`：
+ * 測試並行跑，重新構建 dist/media 會和讀它的 dom 測試撞車，而那組用例不看前端資源。
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -46,7 +46,7 @@ async function bundleServer({ outfile, stubMedia = false }) {
     bundle: true,
     platform: 'node',
     format: 'cjs',
-    // Termux 的 nodejs-lts 眼下是 24；CI 与测试跑在 22 上，取低的那个。
+    // Termux 的 nodejs-lts 眼下是 24；CI 與測試跑在 22 上，取低的那個。
     target: 'node22',
     external: ['bufferutil', 'utf-8-validate'],
     logLevel: 'warning',
@@ -57,7 +57,7 @@ async function bundleServer({ outfile, stubMedia = false }) {
 if (require.main === module) {
   const out = process.argv[2];
   if (!out) {
-    console.error('用法：node scripts/build-android-server.js <输出文件>');
+    console.error('用法：node scripts/build-android-server.js <輸出檔案>');
     process.exit(1);
   }
   const embed = spawnSync(process.execPath, [path.join(__dirname, 'embed-media.js')], { stdio: 'inherit' });

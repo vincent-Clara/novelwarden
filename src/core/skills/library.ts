@@ -1,28 +1,28 @@
 /**
- * 技能库：三个来源的技能从哪读、我的技能库怎么装与卸。
+ * 技能庫：三個來源的技能從哪讀、我的技能庫怎麼裝與卸。
  *
- * | 来源 | 在哪 | 谁往里放 |
+ * | 來源 | 在哪 | 誰往裡放 |
  * |---|---|---|
- * | 内置 | 仓库里的 [builtin/<名字>/](builtin/README.md)，构建时内嵌进程序 | 随应用发布，删不掉 |
- * | 我的技能库 | `~/.novelwarden/skills/<名字>/SKILL.md`，所有工程共用 | 设置页「技能」或 agent 从 GitHub 装；也可以手放 |
- * | 本工程 | `.novelwarden/skills/<名字>/SKILL.md`，跟着工程走、可进 Git | 作者手放 |
+ * | 內建 | 倉庫裡的 [builtin/<名字>/](builtin/README.md)，構建時內嵌程序序 | 隨應用釋出，刪不掉 |
+ * | 我的技能庫 | `~/.novelwarden/skills/<名字>/SKILL.md`，所有工程共用 | 設定頁「技能」或 agent 從 GitHub 裝；也可以手放 |
+ * | 本工程 | `.novelwarden/skills/<名字>/SKILL.md`，跟著工程走、可進 Git | 作者手放 |
  *
- * 三个来源都是**常规的技能目录**：`SKILL.md` 加上它引用的附带文件（`references/*.md` 这类）。
- * 读一份技能就是读 `SKILL.md`、再按引用把附带文件一层层读进来（{@link collectSkillFiles}），
- * 交给 `inspectSkillMarkdown` 判兼容、拼正文。目录里没被引用的文件不读。
+ * 三個來源都是**常規的技能目錄**：`SKILL.md` 加上它引用的附帶檔案（`references/*.md` 這類）。
+ * 讀一份技能就是讀 `SKILL.md`、再按引用把附帶檔案一層層讀進來（{@link collectSkillFiles}），
+ * 交給 `inspectSkillMarkdown` 判相容、拼正文。目錄裡沒被引用的檔案不讀。
  *
- * **每次都读盘**（与 `NovelProject` 的约定一样）：作者随时可能在编辑器里改一份技能，下一次
- * 生成就该用改过的那份。一次装配只读绑定的那一份，不扫全库。
+ * **每次都讀盤**（與 `NovelProject` 的約定一樣）：作者隨時可能在編輯器裡改一份技能，下一次
+ * 生成就該用改過的那份。一次裝配只讀繫結的那一份，不掃全庫。
  *
- * ## 容错
+ * ## 容錯
  *
- * 一份读不出来的技能不连累其余的（上游同样「单个无效不阻断其余」）；目录不存在就是没有；
- * 别的读目录错误记一条 warn、当作这个来源是空的——上游在这里直接抛，于是工程里一个读不了的
- * `.vela/skills` 会让该工程**每一个**工作流都起不来，哪怕一份技能都没绑。
+ * 一份讀不出來的技能不連累其餘的（上游同樣「單個無效不阻斷其餘」）；目錄不存在就是沒有；
+ * 別的讀目錄錯誤記一條 warn、當作這個來源是空的——上游在這裡直接拋，於是工程裡一個讀不了的
+ * `.vela/skills` 會讓該工程**每一個**工作流都起不來，哪怕一份技能都沒綁。
  *
- * **不跟链接**：符号链接的目录与文件一律跳过（上游 `app-data-controller.ts:285-309` 同样只认
- * 真目录），附带文件路径上的每一段也是。我的技能库在工程外，没有 workspace 网关替它守边界，
- * 这一条就是它的边界。
+ * **不跟連結**：符號連結的目錄與檔案一律跳過（上游 `app-data-controller.ts:285-309` 同樣只認
+ * 真目錄），附帶檔案路徑上的每一段也是。我的技能庫在工程外，沒有 workspace 閘道器替它守邊界，
+ * 這一條就是它的邊界。
  */
 import type { Dirent, Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
@@ -47,23 +47,23 @@ const log = scoped('技能');
 
 const SKILL_FILE = 'SKILL.md';
 
-/** 一份技能目录里的文件：相对路径（`/` 分隔）→ 文本。`SKILL.md` 本身也在里面。 */
+/** 一份技能目錄裡的檔案：相對路徑（`/` 分隔）→ 文字。`SKILL.md` 本身也在裡面。 */
 export type SkillFiles = Record<string, string>;
 
 export interface LoadedSkill {
-  /** `来源:名字`。 */
+  /** `來源:名字`。 */
   id: string;
   source: SkillSource;
-  /** id 里的名字。用户与工程技能就是目录名。 */
+  /** id 裡的名字。使用者與工程技能就是目錄名。 */
   name: string;
   inspection: SkillInspection;
-  /** 本工程技能在工程里的相对路径（明细与设置页上点得开）。其余来源没有。 */
+  /** 本工程技能在工程裡的相對路徑（明細與設定頁上點得開）。其餘來源沒有。 */
   relPath?: string;
-  /** 磁盘上那份 `SKILL.md` 的绝对路径。内置没有。 */
+  /** 磁碟上那份 `SKILL.md` 的絕對路徑。內建沒有。 */
   filePath?: string;
 }
 
-// ---------------------------------------------------------------- 我的技能库在哪
+// ---------------------------------------------------------------- 我的技能庫在哪
 
 let userDirOverride: string | undefined;
 
@@ -72,26 +72,26 @@ export function userSkillsDir(): string {
   return userDirOverride ?? path.join(homeDir(), 'skills');
 }
 
-/** 测试用：把「我的技能库」指到临时目录。传 undefined 复原。 */
+/** 測試用：把「我的技能庫」指到臨時目錄。傳 undefined 復原。 */
 export function setUserSkillsDir(dir: string | undefined): void {
   userDirOverride = dir;
 }
 
-/** 卸载的技能挪去哪：与技能库同级的 `.trash/skills/`（默认即 `~/.novelwarden/.trash/skills/`）。 */
+/** 解除安裝的技能挪去哪：與技能庫同級的 `.trash/skills/`（預設即 `~/.novelwarden/.trash/skills/`）。 */
 function userTrashDir(): string {
   return path.join(path.dirname(userSkillsDir()), '.trash', 'skills');
 }
 
-// ---------------------------------------------------------------- 读
+// ---------------------------------------------------------------- 讀
 
 function utf8Bytes(text: string): number {
   return Buffer.byteLength(text, 'utf8');
 }
 
 /**
- * 从 `SKILL.md` 出发，按引用把附带文件一层层读进来（附带文件里再引用的也读）。`read` 给相对路径、
- * 回文本，读不到回 undefined——磁盘与 GitHub 各给一个。只读能带的（文本、在技能目录里），读到
- * 上限（份数、字节）就停：多出来的不读，由 `inspectSkillMarkdown` 判「内容超过 64 KiB」。
+ * 從 `SKILL.md` 出發，按引用把附帶檔案一層層讀進來（附帶檔案裡再引用的也讀）。`read` 給相對路徑、
+ * 迴文字，讀不到回 undefined——磁碟與 GitHub 各給一個。只讀能帶的（文字、在技能目錄裡），讀到
+ * 上限（份數、位元組）就停：多出來的不讀，由 `inspectSkillMarkdown` 判「內容超過 64 KiB」。
  */
 export async function collectSkillFiles(
   raw: string,
@@ -118,7 +118,7 @@ export async function collectSkillFiles(
   return files;
 }
 
-/** 内置的不会变：读一次留着。 */
+/** 內建的不會變：讀一次留著。 */
 let builtinCache: readonly LoadedSkill[] | undefined;
 
 function builtins(): readonly LoadedSkill[] {
@@ -136,7 +136,7 @@ function builtins(): readonly LoadedSkill[] {
   return builtinCache;
 }
 
-/** 全部技能：内置 → 我的技能库 → 本工程（给了工程才扫）。各来源内按名字排。 */
+/** 全部技能：內建 → 我的技能庫 → 本工程（給了工程才掃）。各來源內按名字排。 */
 export async function listSkills(project?: NovelProject): Promise<LoadedSkill[]> {
   const [user, own] = await Promise.all([
     scan(userSkillsDir(), 'user'),
@@ -145,7 +145,7 @@ export async function listSkills(project?: NovelProject): Promise<LoadedSkill[]>
   return [...builtins(), ...user, ...own];
 }
 
-/** 按 id 读一份。找不到（没有、读不出、是链接、id 不合法）一律 undefined。 */
+/** 按 id 讀一份。找不到（沒有、讀不出、是連結、id 不合法）一律 undefined。 */
 export async function loadSkill(id: string, project?: NovelProject): Promise<LoadedSkill | undefined> {
   const parsed = parseSkillId(id);
   if (!parsed) {
@@ -167,20 +167,20 @@ async function scan(root: string, source: SkillSource, project?: NovelProject): 
     entries = await fs.readdir(root, { withFileTypes: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') {
-      log.warn(`读不了技能目录 ${root}，这个来源当作没有技能`, String((err as Error)?.message ?? err));
+      log.warn(`讀不了技能目錄 ${root}，這個來源當作沒有技能`, String((err as Error)?.message ?? err));
     }
     return [];
   }
   const out: LoadedSkill[] = [];
   for (const entry of entries) {
-    // Dirent 对符号链接报 isSymbolicLink、不报 isDirectory：链接在这里就被跳过了。
+    // Dirent 對符號連結報 isSymbolicLink、不報 isDirectory：連結在這裡就被跳過了。
     if (!entry.isDirectory()) {
       continue;
     }
     if (!isSkillName(entry.name)) {
       log.warn(
-        `技能目录「${entry.name}」的名字不合法，跳过`,
-        '名字要以字母或数字开头，只能含字母、数字、. _ -，最长 64 个字符。'
+        `技能目錄「${entry.name}」的名字不合法，跳過`,
+        '名字要以字母或數字開頭，只能含字母、數字、. _ -，最長 64 個字元。'
       );
       continue;
     }
@@ -189,7 +189,7 @@ async function scan(root: string, source: SkillSource, project?: NovelProject): 
       out.push(skill);
     }
   }
-  // 按码点排，不用 localeCompare：那个跟着系统区域走，中文名排在英文前还是后因机器而异。
+  // 按碼點排，不用 localeCompare：那個跟著系統區域走，中文名排在英文前還是後因機器而異。
   return out.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
@@ -221,13 +221,13 @@ async function readOne(
     };
   } catch (err) {
     if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') {
-      log.warn(`读不了技能 ${skillId(source, name)}`, String((err as Error)?.message ?? err));
+      log.warn(`讀不了技能 ${skillId(source, name)}`, String((err as Error)?.message ?? err));
     }
     return undefined;
   }
 }
 
-/** 技能目录里的一份附带文件。路径上任何一段是链接、不是普通文件、读不出来，都当没有。 */
+/** 技能目錄裡的一份附帶檔案。路徑上任何一段是連結、不是普通檔案、讀不出來，都當沒有。 */
 async function readAttachment(dir: string, rel: string): Promise<string | undefined> {
   let current = dir;
   try {
@@ -246,37 +246,37 @@ async function readAttachment(dir: string, rel: string): Promise<string | undefi
   }
 }
 
-// ---------------------------------------------------------------- 我的技能库：装与卸
+// ---------------------------------------------------------------- 我的技能庫：裝與卸
 
 /**
- * 把一份技能（`SKILL.md` 加附带文件）原样写进我的技能库。**同名的已经有了就报错退出**，不覆盖
- * （第 3 条；上游同样拒绝同名重装——要换新版先卸载旧的）。
+ * 把一份技能（`SKILL.md` 加附帶檔案）原樣寫進我的技能庫。**同名的已經有了就報錯退出**，不覆蓋
+ * （第 3 條；上游同樣拒絕同名重灌——要換新版先解除安裝舊的）。
  *
- * 兼容与否、是不是检查过的那一份，由调用方（[github.ts](github.ts)）把关；这里只管落盘。
+ * 相容與否、是不是檢查過的那一份，由呼叫方（[github.ts](github.ts)）把關；這裡只管落盤。
  */
 export async function installUserSkill(name: string, files: SkillFiles): Promise<LoadedSkill> {
   if (!isSkillName(name)) {
-    throw new Error(`技能名「${name}」不合法：要以字母或数字开头，只能含字母、数字、. _ -，最长 64 个字符。`);
+    throw new Error(`技能名「${name}」不合法：要以字母或數字開頭，只能含字母、數字、. _ -，最長 64 個字元。`);
   }
   if (typeof files[SKILL_FILE] !== 'string') {
-    throw new Error('没有 SKILL.md，不装。');
+    throw new Error('沒有 SKILL.md，不裝。');
   }
   const rels = Object.keys(files);
   const bad = rels.find((rel) => rel.split('/').some((seg) => !seg || seg === '.' || seg === '..' || seg.includes('\\')));
   if (bad !== undefined) {
-    throw new Error(`附带文件的路径「${bad}」不合法，不装。`);
+    throw new Error(`附帶檔案的路徑「${bad}」不合法，不裝。`);
   }
   const root = userSkillsDir();
   await fs.mkdir(root, { recursive: true });
   if ((await fs.lstat(root)).isSymbolicLink()) {
-    throw new Error(`${root} 是一个链接，不往里写。`);
+    throw new Error(`${root} 是一個連結，不往裡寫。`);
   }
   const dir = path.join(root, name);
   try {
     await fs.mkdir(dir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException)?.code === 'EEXIST') {
-      throw new Error(`我的技能库里已经有「${name}」了。要换新版，先卸载旧的。`);
+      throw new Error(`我的技能庫裡已經有「${name}」了。要換新版，先解除安裝舊的。`);
     }
     throw err;
   }
@@ -289,15 +289,15 @@ export async function installUserSkill(name: string, files: SkillFiles): Promise
   }
   const skill = await readOne(root, name, 'user');
   if (!skill) {
-    throw new Error(`「${name}」写进去之后读不回来。`);
+    throw new Error(`「${name}」寫進去之後讀不回來。`);
   }
-  log.info(`已装进我的技能库：${name}`, path.join(dir, SKILL_FILE));
+  log.info(`已裝進我的技能庫：${name}`, path.join(dir, SKILL_FILE));
   return skill;
 }
 
 /**
- * 从我的技能库卸载：**整个目录挪进回收站**（`.trash/skills/`，同名的加 `-2`），不真删（第 6 条
- * 的精神；上游是 `rmSync`）。返回落点；本来就没有时返回 undefined。
+ * 從我的技能庫解除安裝：**整個目錄挪進回收站**（`.trash/skills/`，同名的加 `-2`），不真刪（第 6 條
+ * 的精神；上游是 `rmSync`）。返回落點；本來就沒有時返回 undefined。
  */
 export async function uninstallUserSkill(name: string): Promise<string | undefined> {
   if (!isSkillName(name)) {
@@ -311,7 +311,7 @@ export async function uninstallUserSkill(name: string): Promise<string | undefin
     return undefined;
   }
   if (info.isSymbolicLink() || !info.isDirectory()) {
-    throw new Error(`${dir} 不是一个普通目录，不动它。`);
+    throw new Error(`${dir} 不是一個普通目錄，不動它。`);
   }
   const trash = userTrashDir();
   await fs.mkdir(trash, { recursive: true });
@@ -320,7 +320,7 @@ export async function uninstallUserSkill(name: string): Promise<string | undefin
     dest = path.join(trash, `${name}-${i}`);
   }
   await fs.rename(dir, dest);
-  log.info(`已从我的技能库卸载：${name}`, `挪到 ${dest}`);
+  log.info(`已從我的技能庫解除安裝：${name}`, `挪到 ${dest}`);
   return dest;
 }
 

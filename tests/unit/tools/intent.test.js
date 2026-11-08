@@ -1,19 +1,19 @@
 /**
- * 每个工具自报的**意图**：这一步是什么性质、问的时候怎么说。
+ * 每個工具自報的**意圖**：這一步是什麼性質、問的時候怎麼說。
  *
- * 从前这些话写在内置 agent 的 `policy.ts` 里（一个按工具名分支的 switch）。
- * 现在按 `gate` 档位决定问不问的是 MCP 执行端（`controller/mcp.ts`），
- * 而**说辞与它描述的那件事在同一个文件里**——改了 `write` 的行为，眼皮底下
- * 就是它要对作者说的话。
+ * 從前這些話寫在內建 agent 的 `policy.ts` 裡（一個按工具名分支的 switch）。
+ * 現在按 `gate` 檔位決定問不問的是 MCP 執行端（`controller/mcp.ts`），
+ * 而**說辭與它描述的那件事在同一個檔案裡**——改了 `write` 的行為，眼皮底下
+ * 就是它要對作者說的話。
  *
- * 两条不可配置的归档是产品承诺（AGENTS 第 25(a) 条），钉在这里：
+ * 兩條不可配置的歸檔是產品承諾（AGENTS 第 25(a) 條），釘在這裡：
  *
- * 1. **`write` 覆盖 = `reviewed`**——下游 `ws.write` 带 diff 请人过目，
- *    不该在它之前再问一句「确定吗」。
- * 2. **`edit` = `always`**——`ws.edit` 不走 diff，那一句确认就是它的 diff，
- *    任何调用方都不能免。
+ * 1. **`write` 覆蓋 = `reviewed`**——下游 `ws.write` 帶 diff 請人過目，
+ *    不該在它之前再問一句「確定嗎」。
+ * 2. **`edit` = `always`**——`ws.edit` 不走 diff，那一句確認就是它的 diff，
+ *    任何呼叫方都不能免。
  *
- * 这里不给 project（纯单测），名字退回路径本身。
+ * 這裡不給 project（純單測），名字退回路徑本身。
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -26,11 +26,11 @@ const intentOf = (name, args) => byName(name).intent(args);
 
 const PLOT = '.novelwarden/summaries/012-入宗.md';
 
-describe('读三件套：不问', () => {
+describe('讀三件套：不問', () => {
   for (const name of ['list', 'read', 'search']) {
-    test(`${name} 没有 intent，也不标 mutating / costly`, () => {
+    test(`${name} 沒有 intent，也不標 mutating / costly`, () => {
       const tool = byName(name);
-      // 注册表据此兜一个 auto——读工具不花钱不改东西，问一句只是让人麻木。
+      // 登錄檔據此兜一個 auto——讀工具不花錢不改東西，問一句只是讓人麻木。
       assert.equal(tool.intent, undefined);
       assert.equal(!!tool.mutating, false);
       assert.equal(!!tool.costly, false);
@@ -38,134 +38,134 @@ describe('读三件套：不问', () => {
   }
 });
 
-describe('generate：花钱但不写盘', () => {
-  const g = () => intentOf('generate', { target: PLOT, ask: '接住第 9 章那处伏笔' });
+describe('generate：花錢但不寫盤', () => {
+  const g = () => intentOf('generate', { target: PLOT, ask: '接住第 9 章那處伏筆' });
 
-  test('归 costly', () => {
+  test('歸 costly', () => {
     assert.equal(g().gate, 'costly');
   });
 
-  test('标了 costly，没标 mutating（它一个字都不落盘）', () => {
+  test('標了 costly，沒標 mutating（它一個字都不落盤）', () => {
     assert.equal(byName('generate').costly, true);
     assert.equal(!!byName('generate').mutating, false);
   });
 
-  // 「Agent 想调用 generate，允许吗」作者答不上来——他不知道会写到哪、花多少。
-  test('说清了会花钱', () => {
-    assert.ok(g().detail.includes('花钱'), g().detail);
+  // 「Agent 想呼叫 generate，允許嗎」作者答不上來——他不知道會寫到哪、花多少。
+  test('說清了會花錢', () => {
+    assert.ok(g().detail.includes('花錢'), g().detail);
   });
 
-  // 这一问是「要不要花钱生成」，落盘是另一问——产出之后当场还有一张卡。
-  test('说清了产出之后还会再问一次落盘', () => {
-    assert.ok(g().detail.includes('落盘'), g().detail);
+  // 這一問是「要不要花錢生成」，落盤是另一問——產出之後當場還有一張卡。
+  test('說清了產出之後還會再問一次落盤', () => {
+    assert.ok(g().detail.includes('落盤'), g().detail);
   });
 
-  test('说清了动的是哪一份', () => {
+  test('說清了動的是哪一份', () => {
     assert.ok(g().title.includes(PLOT), g().title);
   });
 
-  test('title 是动词短语，主语留给调用方加', () => {
+  test('title 是動詞短語，主語留給呼叫方加', () => {
     assert.ok(!g().title.startsWith('Agent'), g().title);
   });
 
-  // 按钮上一律是「确认」（`controller/gate.ts` 的 `PROCEED_ACTION`）：动词已经在
-  // title 上了，工具不必再各报一个。
-  test('不再自报按钮上的字', () => {
+  // 按鈕上一律是「確認」（`controller/gate.ts` 的 `PROCEED_ACTION`）：動詞已經在
+  // title 上了，工具不必再各報一個。
+  test('不再自報按鈕上的字', () => {
     assert.equal(g().proceed, undefined);
   });
 });
 
-describe('write 新建 / 追加：常规的动手前问一句', () => {
-  test('新建归 mutating', () => {
+describe('write 新建 / 追加：常規的動手前問一句', () => {
+  test('新建歸 mutating', () => {
     assert.equal(intentOf('write', { path: PLOT }).gate, 'mutating');
   });
 
-  test('追加与新建同一档', () => {
+  test('追加與新建同一檔', () => {
     assert.equal(intentOf('write', { path: PLOT, mode: 'append' }).gate, 'mutating');
   });
 
-  test('框上写清了写到哪、是新建还是追加', () => {
+  test('框上寫清了寫到哪、是新建還是追加', () => {
     const i = intentOf('write', { path: PLOT });
-    assert.ok(i.title.includes('写入'), i.title);
+    assert.ok(i.title.includes('寫入'), i.title);
     assert.ok(i.detail.includes(PLOT), i.detail);
     assert.ok(i.detail.includes('新建'), i.detail);
     assert.ok(intentOf('write', { path: PLOT, mode: 'append' }).detail.includes('追加'), 'append');
   });
 
-  test('不再自报按钮上的字', () => {
+  test('不再自報按鈕上的字', () => {
     assert.equal(intentOf('write', { path: PLOT }).proceed, undefined);
   });
 });
 
-// ★ 产品承诺，不是偏好设置。
-describe('write 覆盖：交给下游的覆盖审阅', () => {
-  test('归 reviewed（三种模式都不预先确认）', () => {
+// ★ 產品承諾，不是偏好設定。
+describe('write 覆蓋：交給下游的覆蓋審閱', () => {
+  test('歸 reviewed（三種模式都不預先確認）', () => {
     assert.equal(intentOf('write', { path: PLOT, mode: 'overwrite' }).gate, 'reviewed');
   });
 });
 
-// ★ 同上：edit 改的也是已有内容，而 ws.edit 不走 diff。
-describe('edit：任何模式都要问', () => {
+// ★ 同上：edit 改的也是已有內容，而 ws.edit 不走 diff。
+describe('edit：任何模式都要問', () => {
   const args = { path: PLOT, old: '林昭', new: '林昀' };
 
-  test('归 always', () => {
+  test('歸 always', () => {
     assert.equal(intentOf('edit', args).gate, 'always');
   });
 
-  // 不写出 old → new，作者只能凭工具名点确定，那不叫过目。
-  test('框里写出了原文与改成什么', () => {
+  // 不寫出 old → new，作者只能憑工具名點確定，那不叫過目。
+  test('框裡寫出了原文與改成什麼', () => {
     const i = intentOf('edit', args);
     assert.ok(i.detail.includes('林昭'), i.detail);
     assert.ok(i.detail.includes('林昀'), i.detail);
   });
 
-  test('删掉一段时说「删掉」而不是留空', () => {
-    assert.ok(intentOf('edit', { ...args, new: '' }).detail.includes('删掉'));
+  test('刪掉一段時說「刪掉」而不是留空', () => {
+    assert.ok(intentOf('edit', { ...args, new: '' }).detail.includes('刪掉'));
   });
 
-  test('all=true 时说清全文都改', () => {
-    assert.ok(intentOf('edit', { ...args, all: true }).detail.includes('所有出现的地方'));
+  test('all=true 時說清全文都改', () => {
+    assert.ok(intentOf('edit', { ...args, all: true }).detail.includes('所有出現的地方'));
   });
 
-  test('不再自报按钮上的字', () => {
+  test('不再自報按鈕上的字', () => {
     assert.equal(intentOf('edit', args).proceed, undefined);
   });
 });
 
-describe('带 action 的工程动作：缺省归 mutating', () => {
+describe('帶 action 的工程動作：預設歸 mutating', () => {
   const i = () => intentOf('pipeline', { action: 'batchPlots' });
 
-  test('归 mutating', () => {
+  test('歸 mutating', () => {
     assert.equal(i().gate, 'mutating');
   });
 
-  // 标题就是动作的说法，作者在框里读到的是「批量拆细纲」而不是一个英文动作名。
-  test('标题是那个动作的说法', () => {
-    assert.ok(i().title.startsWith('批量拆细纲'), i().title);
+  // 標題就是動作的說法，作者在框裡讀到的是「批次拆細綱」而不是一個英文動作名。
+  test('標題是那個動作的說法', () => {
+    assert.ok(i().title.startsWith('批次拆細綱'), i().title);
   });
 
-  // 这里不问（`mutating` 档），但 pipelineBatch 自己那个「预计调用 N 次」照弹。
-  test('调模型的动作提醒了随后还会告诉他调几次', () => {
-    assert.ok(i().detail.includes('预计调用几次'), i().detail);
+  // 這裡不問（`mutating` 檔），但 pipelineBatch 自己那個「預計呼叫 N 次」照彈。
+  test('調模型的動作提醒了隨後還會告訴他調幾次', () => {
+    assert.ok(i().detail.includes('預計呼叫幾次'), i().detail);
   });
 
-  test('不调模型的动作不提调用次数', () => {
-    assert.equal(intentOf('pipeline', { action: 'newPlot' }).detail.includes('预计调用几次'), false);
+  test('不調模型的動作不提呼叫次數', () => {
+    assert.equal(intentOf('pipeline', { action: 'newPlot' }).detail.includes('預計呼叫幾次'), false);
   });
 
-  test('作用对象（path / name）写进框里', () => {
+  test('作用物件（path / name）寫進框裡', () => {
     assert.ok(intentOf('summary', { action: 'finalize', path: PLOT }).detail.includes(PLOT));
     assert.ok(intentOf('characters', { action: 'create', name: '林昭' }).detail.includes('林昭'));
   });
 
-  // 认不出的动作执行时会被拒，但问的那一步不能因此放行。
-  test('认不出的动作也归 mutating，标题写着工具与动作名', () => {
+  // 認不出的動作執行時會被拒，但問的那一步不能因此放行。
+  test('認不出的動作也歸 mutating，標題寫著工具與動作名', () => {
     const x = intentOf('summary', { action: 'delete' });
     assert.equal(x.gate, 'mutating');
-    assert.equal(x.title, '执行 summary delete');
+    assert.equal(x.title, '執行 summary delete');
   });
 
-  test('技能的查与检查不问，装与绑每次都问', () => {
+  test('技能的查與檢查不問，裝與綁每次都問', () => {
     assert.deepEqual(
       [
         intentOf('skills', { action: 'list' }).gate,
@@ -178,8 +178,8 @@ describe('带 action 的工程动作：缺省归 mutating', () => {
   });
 });
 
-describe('长参数不整段摊进框里', () => {
-  test('超长的 old 会截断', () => {
+describe('長引數不整段攤進框裡', () => {
+  test('超長的 old 會截斷', () => {
     const long = '青'.repeat(200);
     const detail = intentOf('edit', { path: PLOT, old: long, new: 'x' }).detail;
     assert.ok(detail.includes('…'), detail.slice(0, 80));

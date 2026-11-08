@@ -1,15 +1,16 @@
+import { traditionalLabel } from '../model/labels';
 /**
- * `ChatController`：全部面板逻辑，按消息域拆在同目录模块里。收 `InMessage` → 调度 generation/、会话存储、
- * 创作目标切换、设置读写 → 广播 `OutMessage`；经 `ViewHost` 与视图宿主解耦，多个宿主可以同时挂。
+ * `ChatController`：全部面板邏輯，按訊息域拆在同目錄模組裡。收 `InMessage` → 排程 generation/、會話儲存、
+ * 創作目標切換、設定讀寫 → 廣播 `OutMessage`；經 `ViewHost` 與檢視宿主解耦，多個宿主可以同時掛。
  *
- * - **并发控制在这一层**（`beginGeneration` / `stopGeneration`，`busy` 就是 `currentAbort !== undefined`）：生成那一层
- *   无状态，单步与 MCP 调用共用同一把锁。
- * - **动手前那一句问也在这一层**（gate.ts：产物落盘、外部 agent 的 `always` 动作、写章前的一致性预检）：画成对话里
- *   的一张卡片，没答的记在 controller 上，重连时随全量状态重推。
- * - 跨层命令（chat.ts）：设定右键「展开…」、`/落定设定`、`/续写大纲` 临时把目标换过去，跑完经 `awayOf` /
- *   `returnTo` 回到原来的目标、阶段与能力（期间作者自己另选了目标就不动）。
- * - 其余按域分文件：写作体检 check.ts、全书查找替换 bookFind.ts（按请求叫停，同一时刻只有一次替换）、
- *   存档点 checkpoints.ts、设置 settings.ts、技能 skills.ts……
+ * - **併發控制在這一層**（`beginGeneration` / `stopGeneration`，`busy` 就是 `currentAbort !== undefined`）：生成那一層
+ *   無狀態，單步與 MCP 呼叫共用同一把鎖。
+ * - **動手前那一句問也在這一層**（gate.ts：產物落盤、外部 agent 的 `always` 動作、寫章前的一致性預檢）：畫成對話裡
+ *   的一張卡片，沒答的記在 controller 上，重連時隨全量狀態重推。
+ * - 跨層命令（chat.ts）：設定右鍵「展開…」、`/落定設定`、`/續寫大綱` 臨時把目標換過去，跑完經 `awayOf` /
+ *   `returnTo` 回到原來的目標、階段與能力（期間作者自己另選了目標就不動）。
+ * - 其餘按域分檔案：寫作體檢 check.ts、全書查詢替換 bookFind.ts（按請求叫停，同一時刻只有一次替換）、
+ *   存檔點 checkpoints.ts、設定 settings.ts、技能 skills.ts……
  */
 import { listAttachmentChoices, selectionAttachmentOf } from '../files/attachments';
 import { readConfig, settingsContextDetail } from '../config';
@@ -97,7 +98,7 @@ import { bookFind, bookReplace, cancelBookFind } from './bookFind';
 export { describeProvider } from './serialize';
 export { createMcpBackend } from './mcp';
 
-/** Webview 宿主需要提供的能力。侧边栏与编辑器面板各实现一份。 */
+/** Webview 宿主需要提供的能力。側邊欄與編輯器面板各實現一份。 */
 export interface ViewHost {
   readonly kind: 'sidebar' | 'editor';
   post(message: OutMessage): void;
@@ -106,86 +107,86 @@ export interface ViewHost {
 
 const log = scoped('面板');
 
-/** 「加载更早」一次翻多少条日志。与前端的行数上限同量级。 */
+/** 「載入更早」一次翻多少條日誌。與前端的行數上限同量級。 */
 const LOG_HISTORY_PAGE = 200;
 
 /**
- * 对话面板的全部逻辑。
+ * 對話面板的全部邏輯。
  *
- * 有意与宿主解耦：同一个 controller 既可以挂在侧边栏的 WebviewView 上，
- * 也可以挂在编辑器里的 WebviewPanel 上，两边看到的是同一个会话。
+ * 有意與宿主解耦：同一個 controller 既可以掛在側邊欄的 WebviewView 上，
+ * 也可以掛在編輯器裡的 WebviewPanel 上，兩邊看到的是同一個會話。
  *
- * 同包字段（无 private）只给 `controller/` 下的模块用，壳不要读。
+ * 同包欄位（無 private）只給 `controller/` 下的模組用，殼不要讀。
  */
 export class ChatController {
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   readonly project: NovelProject;
   /**
-   * 工程的唯一读写网关。agent 的只读工具吃它。
+   * 工程的唯一讀寫閘道器。agent 的只讀工具吃它。
    *
-   * 一个 controller 一份而不是每次现造：`Workspace` 本身无状态（它只是
-   * `NovelProject` 的门面），但造一份要传 project，散在各处等于把这层依赖
-   * 又复制了几遍。
-   * @internal controller/ 同包用；壳不要读。
+   * 一個 controller 一份而不是每次現造：`Workspace` 本身無狀態（它只是
+   * `NovelProject` 的門面），但造一份要傳 project，散在各處等於把這層依賴
+   * 又複製了幾遍。
+   * @internal controller/ 同包用；殼不要讀。
    */
   readonly workspace: Workspace;
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   readonly store: SessionStore;
   /**
-   * 尚未采纳的产物。**并发控制与它无关**——那是 `currentAbort` 的活。
-   * @internal controller/ 同包用；壳不要读。
+   * 尚未採納的產物。**併發控制與它無關**——那是 `currentAbort` 的活。
+   * @internal controller/ 同包用；殼不要讀。
    */
   readonly drafts = new DraftStore();
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   current: ChatSession;
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   tab: Tab = 'chat';
   /**
    * 正在跑的那次生成。
    *
-   * **并发控制是调度的责任**，不是生成的责任：`generation/` 整层无状态，对话页的
-   * 单步创作与 MCP 调用（`controller/mcp.ts`）共用这一个位。
+   * **併發控制是排程的責任**，不是生成的責任：`generation/` 整層無狀態，對話頁的
+   * 單步創作與 MCP 呼叫（`controller/mcp.ts`）共用這一個位。
    *
-   * 忙碌标记与取消是同一个状态：分成两个迟早会对不上，而对不上的表现是「停止按钮
-   * 点了没反应」。
+   * 忙碌標記與取消是同一個狀態：分成兩個遲早會對不上，而對不上的表現是「停止按鈕
+   * 點了沒反應」。
    */
   private currentAbort?: AbortController;
-  /** 尚未落盘的附件（用户已经 @ 了，但还没发送）。@internal 同包用。 */
+  /** 尚未落盤的附件（使用者已經 @ 了，但還沒傳送）。@internal 同包用。 */
   pending: Attachment[] = [];
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   readonly hosts = new Set<ViewHost>();
   /**
-   * 等着作者点头的权限询问（agent 那条路的闸门，见 [gate.ts](gate.ts)）。
+   * 等著作者點頭的許可權詢問（agent 那條路的閘門，見 [gate.ts](gate.ts)）。
    *
-   * 记在后端而不是前端，是因为**前端无状态**：网页刷新、webview 重建之后，
-   * 这几张卡片要靠 `resendFullState` 原样再推一遍——不然循环就停在一个谁也
-   * 看不见的等待上，界面只剩一个转不完的忙碌标记。
-   * @internal controller/ 同包用；壳不要读。
+   * 記在後端而不是前端，是因為**前端無狀態**：網頁重新整理、webview 重建之後，
+   * 這幾張卡片要靠 `resendFullState` 原樣再推一遍——不然迴圈就停在一個誰也
+   * 看不見的等待上，介面只剩一個轉不完的忙碌標記。
+   * @internal controller/ 同包用；殼不要讀。
    */
   readonly gates = new Map<string, PendingGate>();
-  /** 日志与任务的订阅，dispose 时要解掉——否则重开面板会留下往死通道推的 sink。 */
+  /** 日誌與任務的訂閱，dispose 時要解掉——否則重開面板會留下往死通道推的 sink。 */
   private readonly subscriptions: { dispose(): void }[] = [];
   /**
-   * 资源管理器里当前展开着的目录（工程内相对路径，空串是工程根）。
+   * 資源管理器裡當前展開著的目錄（工程內相對路徑，空串是工程根）。
    *
-   * 记在后端是为了让**工程变动时能主动重推**：作者在编辑器里新建一章、
-   * 或在外面动了盘上的文件，watcher 触发 pushState，这份集合让资源管理器
-   * 跟着刷新，不必等用户手动点一下折叠再展开。
-   * 前端每次发 `listDir` 都带全量，这里整体替换。
-   * @internal controller/ 同包用；壳不要读。
+   * 記在後端是為了讓**工程變動時能主動重推**：作者在編輯器裡新建一章、
+   * 或在外面動了盤上的檔案，watcher 觸發 pushState，這份集合讓資源管理器
+   * 跟著重新整理，不必等使用者手動點一下摺疊再展開。
+   * 前端每次發 `listDir` 都帶全量，這裡整體替換。
+   * @internal controller/ 同包用；殼不要讀。
    */
   watchedDirs: string[] = [];
   /**
-   * 打开一章时旁边并排开哪一份（2026-10-23 作者定）：上一次并排开的是草稿（工具栏「草稿」、章节右键「打开草稿」）
-   * 就开这一章的草稿，否则开细纲；工具栏「细纲」点过就换回细纲。只记在这个窗口的内存里，重启回到细纲。
-   * @internal controller/ 同包用；壳不要读。
+   * 開啟一章時旁邊並排開哪一份（2026-10-23 作者定）：上一次並排開的是草稿（工具欄「草稿」、章節右鍵「開啟草稿」）
+   * 就開這一章的草稿，否則開細綱；工具欄「細綱」點過就換回細綱。只記在這個視窗的記憶體裡，重啟回到細綱。
+   * @internal controller/ 同包用；殼不要讀。
    */
   companion: 'plot' | 'draft' = 'plot';
-  /** dispose 过了。异步挂载的订阅据此就地退订，不往死通道上挂。 */
+  /** dispose 過了。非同步掛載的訂閱據此就地退訂，不往死通道上掛。 */
   private disposed = false;
   /**
-   * 上一次推出去的章节索引（JSON）。`pushState` 每次都算一份（与目标下拉同一趟流水线索引，不多读盘），
-   * 内容没变就不推——作者每存一次盘就跑一次 `pushState`，绝大多数时候章节的顺序、状态、字数都没动。
+   * 上一次推出去的章節索引（JSON）。`pushState` 每次都算一份（與目標下拉同一趟流水線索引，不多讀盤），
+   * 內容沒變就不推——作者每存一次盤就跑一次 `pushState`，絕大多數時候章節的順序、狀態、字數都沒動。
    */
   private chapterIndexSig: string | undefined;
 
@@ -195,11 +196,11 @@ export class ChatController {
     this.store = new SessionStore(project);
     this.current = this.store.create();
 
-    // 日志实时推给前端：日志页在跑长任务时要跟着滚，不能只在切页时拉一次。
+    // 日誌實時推給前端：日誌頁在跑長任務時要跟著滾，不能只在切頁時拉一次。
     this.subscriptions.push(addLogSink((entry) => this.post({ type: 'log', entry })));
-    // 任务表变化 → 推快照。工程页的进度条与工具栏的忙碌标记都吃这一条。
+    // 任務表變化 → 推快照。工程頁的進度條與工具欄的忙碌標記都吃這一條。
     this.subscriptions.push(onTasksChanged(() => this.post({ type: 'tasks', tasks: activeTasks(project.root) })));
-    // 任务说完了那一句（D24）：在所有页签都看得见的提示条上说，带「打开第 N 章」。
+    // 任務說完了那一句（D24）：在所有頁籤都看得見的提示條上說，帶「開啟第 N 章」。
     this.subscriptions.push(
       onTaskFinished((t) => {
         if (visibleTo(t.owner, project.root)) {
@@ -207,10 +208,10 @@ export class ChatController {
         }
       })
     );
-    // 日志再落一份进工程库，重启之后仍查得到「昨晚那 76 章卡在哪」。
-    // 开库是异步的，而 controller 可能在开完之前就被 dispose 掉（用户刚打开
-    // 侧边栏又立刻关掉窗口）——那时必须就地退订，否则这个 sink 会永远挂着
-    // 往一个已经关掉的库里写。
+    // 日誌再落一份進工程庫，重啟之後仍查得到「昨晚那 76 章卡在哪」。
+    // 開庫是非同步的，而 controller 可能在開完之前就被 dispose 掉（使用者剛開啟
+    // 側邊欄又立刻關掉視窗）——那時必須就地退訂，否則這個 sink 會永遠掛著
+    // 往一個已經關掉的庫裡寫。
     void installLogPersistence(project).then((sub) => {
       if (this.disposed) {
         sub.dispose();
@@ -228,23 +229,23 @@ export class ChatController {
     this.hosts.delete(host);
   }
 
-  // ---------------------------------------------------------------- 并发控制
+  // ---------------------------------------------------------------- 併發控制
 
   /**
-   * 正在生成。前端的忙碌标记与「已有一个生成任务在进行中」都看这一个。
-   * @internal controller/ 同包用；壳不要读。
+   * 正在生成。前端的忙碌標記與「已有一個生成任務在進行中」都看這一個。
+   * @internal controller/ 同包用；殼不要讀。
    */
   get busy(): boolean {
     return this.currentAbort !== undefined;
   }
 
   /**
-   * 占住生成位。已经有一个在跑就返回 undefined——调用方据此拒掉本次请求。
+   * 佔住生成位。已經有一個在跑就返回 undefined——呼叫方據此拒掉本次請求。
    *
-   * 返回的 `release` 必须在 finally 里调：漏了的话这个 controller 从此
-   * 再也发不出第二条消息，而界面上只是一句莫名其妙的「已有一个生成任务
-   * 在进行中」。
-   * @internal controller/ 同包用；壳不要读。
+   * 返回的 `release` 必須在 finally 裡調：漏了的話這個 controller 從此
+   * 再也發不出第二條訊息，而介面上只是一句莫名其妙的「已有一個生成任務
+   * 在進行中」。
+   * @internal controller/ 同包用；殼不要讀。
    */
   beginGeneration(): { signal: AbortSignal; abort: () => void; release: () => void } | undefined {
     if (this.currentAbort) {
@@ -254,12 +255,12 @@ export class ChatController {
     this.currentAbort = abort;
     return {
       signal: abort.signal,
-      // 让占位方自己也能中断（agent 那条路要把 runTask 进度条上的「停止」
-      // 转接进来）。只 abort 自己那一份，不碰别人的。
+      // 讓佔位方自己也能中斷（agent 那條路要把 runTask 進度條上的「停止」
+      // 轉接進來）。只 abort 自己那一份，不碰別人的。
       abort: () => abort.abort(new CancelledError()),
       release: () => {
-        // 只清自己那一份：release 晚到时（上一次生成的收尾）不该把
-        // 刚开始的下一次取消掉。
+        // 只清自己那一份：release 晚到時（上一次生成的收尾）不該把
+        // 剛開始的下一次取消掉。
         if (this.currentAbort === abort) {
           this.currentAbort = undefined;
         }
@@ -267,10 +268,10 @@ export class ChatController {
     };
   }
 
-  /** 用户点了停止。没有在跑的就什么也不做。 */
+  /** 使用者點了停止。沒有在跑的就什麼也不做。 */
   stopGeneration(): void {
     if (this.currentAbort) {
-      log.info('用户点了停止');
+      log.info('使用者點了停止');
     }
     this.currentAbort?.abort(new CancelledError());
   }
@@ -278,64 +279,64 @@ export class ChatController {
   dispose(): void {
     this.disposed = true;
     this.currentAbort?.abort(new CancelledError());
-    // 还在等回答的权限卡片：面板都没了，没人答得了它。
+    // 還在等回答的許可權卡片：面板都沒了，沒人答得了它。
     cancelGates(this);
     for (const sub of this.subscriptions) {
       sub.dispose();
     }
     this.subscriptions.length = 0;
-    // 关库要在退订之后：日志 sink 的 dispose 会把攒着的最后一批 flush 掉，
-    // 反过来的话那几条就丢了——而崩溃前的最后几条恰恰最想看。
+    // 關庫要在退訂之後：日誌 sink 的 dispose 會把攢著的最後一批 flush 掉，
+    // 反過來的話那幾條就丟了——而崩潰前的最後幾條恰恰最想看。
     closeDatabase(this.project);
   }
 
-  /** 广播给所有已挂载的宿主，两个视图始终一致。@internal 同包用。 */
+  /** 廣播給所有已掛載的宿主，兩個檢視始終一致。@internal 同包用。 */
   post(message: OutMessage): void {
     for (const host of this.hosts) {
       host.post(message);
     }
   }
 
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   toast(message: string, level: 'info' | 'error' = 'info'): void {
     this.post({ type: 'toast', message, level });
   }
 
-  // ---------------------------------------------------------------- 消息入口
+  // ---------------------------------------------------------------- 訊息入口
 
   async handle(msg: InMessage): Promise<void> {
     try {
       await this.dispatch(msg);
     } catch (err) {
-      // 兜底解锁：`runTurn` 自己有 finally，走到这里说明是它之外的地方炸了。
-      // 不解的话这个面板从此发不出第二条消息，界面上只剩一句莫名其妙的
-      // 「已有一个生成任务在进行中」。
+      // 兜底解鎖：`runTurn` 自己有 finally，走到這裡說明是它之外的地方炸了。
+      // 不解的話這個面板從此發不出第二條訊息，介面上只剩一句莫名其妙的
+      // 「已有一個生成任務在進行中」。
       this.currentAbort = undefined;
       this.post({ type: 'busy', value: false });
-      // 未被下层接住的异常一律进日志：toast 五秒就没了，日志页留得住。
-      log.error(`处理消息 ${msg.type} 时出错：${describeError(err)}`, err);
+      // 未被下層接住的異常一律進日誌：toast 五秒就沒了，日誌頁留得住。
+      log.error(`處理訊息 ${traditionalLabel(msg.type)} 時出錯：${describeError(err)}`, err);
       this.toast(describeError(err), 'error');
     }
   }
 
   /**
-   * 重放当前页签的全部数据。新前端连接挂上来时调用——
-   * webview 被销毁重建或网页刷新/重连后，靠这一套消息即可恢复。
+   * 重放當前頁籤的全部資料。新前端連線掛上來時呼叫——
+   * webview 被銷燬重建或網頁重新整理/重連後，靠這一套訊息即可恢復。
    */
   async resendFullState(): Promise<void> {
     const snap = await this.snapshot();
     this.post({ type: 'init', state: snap.state });
-    // 新连上的前端手上什么都没有：章节索引与体检词表不论变没变都推一份。
+    // 新連上的前端手上什麼都沒有：章節索引與體檢詞表不論變沒變都推一份。
     this.pushChapterIndex(snap.chapters, true);
     await pushCheckTerms(this, { force: true, book: snap.book });
     this.post({ type: 'tab', tab: this.tab });
     this.post({ type: 'session', session: serializeSession(this.current) });
     this.post({ type: 'attachments', items: this.pending.map(serializeAttachment) });
     this.post({ type: 'busy', value: this.busy });
-    // 刷新页面时长任务多半还在跑，进度条必须立刻接上，别让人以为任务没了。
+    // 重新整理頁面時長任務多半還在跑，進度條必須立刻接上，別讓人以為任務沒了。
     this.post({ type: 'tasks', tasks: activeTasks(this.project.root) });
-    // 还没答的权限卡片也要跟着回来：它挂在会话的气泡上（上面那条 session 已经
-    // 把气泡带回来了），循环这会儿正卡在那里等回答。
+    // 還沒答的許可權卡片也要跟著回來：它掛在會話的氣泡上（上面那條 session 已經
+    // 把氣泡帶回來了），迴圈這會兒正卡在那裡等回答。
     resendGates(this);
     await this.pushTabData();
   }
@@ -372,8 +373,8 @@ export class ChatController {
         return;
 
       case 'requestPipeline':
-        // 指名要某一章的，就先切过去（那正是「点开另一章」的意思）；
-        // 不指名的是纯刷新，照当前目标推一份。
+        // 指名要某一章的，就先切過去（那正是「點開另一章」的意思）；
+        // 不指名的是純重新整理，照當前目標推一份。
         if (msg.plotRelPath && msg.plotRelPath !== plotOfTarget(this.current.target)) {
           await selectPlot(this, msg.plotRelPath);
         } else {
@@ -395,7 +396,7 @@ export class ChatController {
         if (idx === -1) {
           return;
         }
-        // 删用户消息时连同它的回复一起删——留着一条无源的回复没有意义。
+        // 刪使用者訊息時連同它的回覆一起刪——留著一條無源的回覆沒有意義。
         const drop = this.current.turns[idx].role === 'user' &&
           this.current.turns[idx + 1]?.role === 'assistant' ? 2 : 1;
         this.current.turns.splice(idx, drop);
@@ -414,8 +415,8 @@ export class ChatController {
             ? { text }
             : {
                 error: turn
-                  ? '这一轮没有留下完整上下文（这个功能加上之前的回复只存了清单）。'
-                  : '找不到这一轮，可能已经被删掉了。',
+                  ? '這一輪沒有留下完整上下文（這個功能加上之前的回覆只存了清單）。'
+                  : '找不到這一輪，可能已經被刪掉了。',
               }),
         });
         return;
@@ -447,13 +448,13 @@ export class ChatController {
       }
 
       case 'addSelection': {
-        // 内置编辑器里的选区由前端带上来（宿主取不到网页里的选区）；没带才交给宿主。
+        // 內建編輯器裡的選區由前端帶上來（宿主取不到網頁裡的選區）；沒帶才交給宿主。
         const sel = msg.selection;
         const att = sel?.text.trim()
           ? selectionAttachmentOf(sel.relPath, sel.text.trim(), { start: sel.start, end: sel.end })
           : await getHost().selectionAttachment(this.project);
         if (!att) {
-          this.toast('没有可加入的文本。', 'error');
+          this.toast('沒有可加入的文字。', 'error');
           return;
         }
         this.addAttachment(att);
@@ -466,11 +467,11 @@ export class ChatController {
 
       case 'openEditor':
       case 'reloadFile': {
-        // 有内置编辑器的宿主（独立版）走内置编辑器；插件壳没有，
-        // 回落到 openFile —— 那边打开的本来就是 VS Code 真正的编辑器。
+        // 有內建編輯器的宿主（獨立版）走內建編輯器；外掛殼沒有，
+        // 回落到 openFile —— 那邊開啟的本來就是 VS Code 真正的編輯器。
         const host = getHost();
         if (host.openInEditor) {
-          // reloadFile 不带 pane：重载哪一块由前端按 path 自己认。临时标签 / 原位换掉的标记原样带回。
+          // reloadFile 不帶 pane：過載哪一塊由前端按 path 自己認。臨時標籤 / 原位換掉的標記原樣帶回。
           await host.openInEditor(
             msg.path,
             msg.type === 'openEditor' ? msg.pane : undefined,
@@ -521,18 +522,18 @@ export class ChatController {
       case 'saveFile': {
         const host = getHost();
         if (!host.saveFromEditor) {
-          this.toast('当前环境没有内置编辑器。', 'error');
+          this.toast('當前環境沒有內建編輯器。', 'error');
           return;
         }
         await host.saveFromEditor(msg.path, msg.text, msg.baseHash, { recreate: msg.recreate === true });
-        // 保存的可能是章节正文，字数/定稿状态都会变。
+        // 儲存的可能是章節正文，字數/定稿狀態都會變。
         await this.pushState();
         return;
       }
 
       case 'checkEditorFiles': {
-        // 内置编辑器核对磁盘（定稿写回细纲、外部 agent 的 edit、外部编辑器改了文件之后）。
-        // 没有内置编辑器的宿主（插件）不会发这条；发了也只是什么都不做。
+        // 內建編輯器核對磁碟（定稿寫回細綱、外部 agent 的 edit、外部編輯器改了檔案之後）。
+        // 沒有內建編輯器的宿主（外掛）不會發這條；發了也只是什麼都不做。
         const host = getHost();
         if (host.checkEditorFiles) {
           await host.checkEditorFiles(Array.isArray(msg.files) ? msg.files : []);
@@ -544,7 +545,7 @@ export class ChatController {
         await (getHost().openExternal ?? getHost().openFile)(msg.path);
         return;
 
-      // 冲突时的对比合并与历史版本（controller/versions.ts）。都不写盘，结果经 editorReplace 换进编辑区。
+      // 衝突時的對比合併與歷史版本（controller/versions.ts）。都不寫盤，結果經 editorReplace 換進編輯區。
       case 'mergeWithDisk':
         await mergeWithDisk(this, msg.path, msg.text, msg.requestId);
         return;
@@ -558,7 +559,7 @@ export class ChatController {
         await saveVersion(this, msg.path, msg.quiet === true);
         return;
 
-      // 存档点（controller/checkpoints.ts）：整本书存一版、跟现在比、退回。
+      // 存檔點（controller/checkpoints.ts）：整本書存一版、跟現在比、退回。
       case 'listCheckpoints':
         await pushCheckpoints(this);
         return;
@@ -575,7 +576,7 @@ export class ChatController {
         await restoreCheckpointFor(this, msg.request);
         return;
 
-      // 全书查找替换（controller/bookFind.ts）：查找与预览只读；替换经网关逐份写，完了 pushState。
+      // 全書查詢替換（controller/bookFind.ts）：查詢與預覽只讀；替換經閘道器逐份寫，完了 pushState。
       case 'bookFind':
         await bookFind(this, msg.requestId, msg.query);
         return;
@@ -591,33 +592,33 @@ export class ChatController {
         return;
 
       case 'requestSummary':
-        // 只回给发问的那个前端就够了，但 post 是广播——多开一个面板时
-        // 另一边收到一份用不上的细纲浮窗，代价只是一次无害的缓存写入。
+        // 只回給發問的那個前端就夠了，但 post 是廣播——多開一個面板時
+        // 另一邊收到一份用不上的細綱浮窗，代價只是一次無害的快取寫入。
         this.post({ type: 'summary', summary: await buildPlotSummaryView(this.project, msg.plotRelPath) });
         return;
 
       case 'requestQuickOpen':
-        // 「转到…」（Ctrl+P）面板打开时要一份索引。回复是广播，前端认 requestId。
+        // 「轉到…」（Ctrl+P）面板開啟時要一份索引。回覆是廣播，前端認 requestId。
         this.post({ type: 'quickOpenIndex', requestId: msg.requestId, index: await buildQuickOpenIndex(this.project) });
         return;
 
       case 'editSensitiveWords':
-        // 内置编辑器的写作体检（controller/check.ts）：没有就新建模板，然后打开。
+        // 內建編輯器的寫作體檢（controller/check.ts）：沒有就新建模板，然後開啟。
         await editSensitiveWords(this);
         return;
 
       case 'requestThreadsOverview':
-        // 编辑区「叙事线总览」标签（叙事线重做三期）要矩阵：纯读盘、不调模型。回复是广播，前端认 requestId。
+        // 編輯區「敘事線總覽」標籤（敘事線重做三期）要矩陣：純讀盤、不調模型。回覆是廣播，前端認 requestId。
         this.post({ type: 'threadsOverview', requestId: msg.requestId, overview: await buildThreadsOverview(this.project) });
         return;
 
       case 'requestTimelineOverview':
-        // 编辑区「时间线总览」标签（2026-10-24）要数据：纯读盘、不调模型。回复是广播，前端认 requestId。
+        // 編輯區「時間線總覽」標籤（2026-10-24）要資料：純讀盤、不調模型。回覆是廣播，前端認 requestId。
         this.post({ type: 'timelineOverview', requestId: msg.requestId, overview: await buildTimelineOverview(this.project) });
         return;
 
       case 'requestNameIndex': {
-        // 编辑器「名词补全」要名词表。前端手上那份（`have`）还是最新的就只回指纹，不再发一遍表。
+        // 編輯器「名詞補全」要名詞表。前端手上那份（`have`）還是最新的就只回指紋，不再發一遍表。
         const index = await buildNameIndex(this.project);
         const sig = nameIndexSig(index);
         this.post({ type: 'nameIndex', requestId: msg.requestId, sig, ...(msg.have === sig ? {} : { index }) });
@@ -702,7 +703,7 @@ export class ChatController {
 
       case 'cancelTask':
         if (!cancelTask(msg.id)) {
-          // 任务刚好在这一刻结束：推一份新快照让前端把进度条收掉。
+          // 任務剛好在這一刻結束：推一份新快照讓前端把進度條收掉。
           this.post({ type: 'tasks', tasks: activeTasks(this.project.root) });
         }
         return;
@@ -718,9 +719,9 @@ export class ChatController {
         return;
 
       case 'requestLogHistory': {
-        // 只有这一条会查库。默认进日志页仍然只看内存缓冲，一次查询都不做。
+        // 只有這一條會查庫。預設進日誌頁仍然只看記憶體緩衝，一次查詢都不做。
         const entries = await readLogHistory(this.project, LOG_HISTORY_PAGE, msg.before);
-        // 取回来的比页大小少，说明再往前没有了——前端据此收掉按钮。
+        // 取回來的比頁大小少，說明再往前沒有了——前端據此收掉按鈕。
         this.post({ type: 'logHistory', entries, exhausted: entries.length < LOG_HISTORY_PAGE });
         return;
       }
@@ -731,16 +732,16 @@ export class ChatController {
         return;
 
       case 'promptResult':
-        // 由独立版壳在进入 controller 前截获（解弹窗）；插件永远不会收到。
+        // 由獨立版殼在進入 controller 前截獲（解彈窗）；外掛永遠不會收到。
         return;
 
       case 'gateResult':
-        // 作者在气泡里那张权限卡片上点了一颗按钮。认不出的 requestId 静默丢弃。
+        // 作者在氣泡裡那張許可權卡片上點了一顆按鈕。認不出的 requestId 靜默丟棄。
         resolveGate(this, msg.requestId, msg.verdict, typeof msg.remember === 'string' ? msg.remember : undefined);
         return;
 
-      // 工作区生命周期与本机目录：独立版由 WorkspaceHub 在进 controller
-      // 之前拦下。插件不会发这些消息。空分支避免 InMessage 联合漏网。
+      // 工作區生命週期與本機目錄：獨立版由 WorkspaceHub 在進 controller
+      // 之前攔下。外掛不會發這些訊息。空分支避免 InMessage 聯合漏網。
       case 'listHostDir':
       case 'createHostDir':
       case 'createProject':
@@ -756,17 +757,17 @@ export class ChatController {
     }
   }
 
-  // ---------------------------------------------------------------- 状态
+  // ---------------------------------------------------------------- 狀態
 
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   async buildState(): Promise<ViewState> {
     return (await this.snapshot()).state;
   }
 
   /**
-   * `ViewState` 与内置编辑器的章节索引：两样出自同一趟流水线索引（`buildPipelineIndex`，目标下拉框本来
-   * 就要它），章节索引只是从同一份 rows 里多投影几个字段。还不是小说工程时章节索引是空的。`book` 是那一趟读到的
-   * 小说配置，体检词表（`controller/check.ts`）拿它，不再读一遍 `config.md`。
+   * `ViewState` 與內建編輯器的章節索引：兩樣出自同一趟流水線索引（`buildPipelineIndex`，目標下拉框本來
+   * 就要它），章節索引只是從同一份 rows 裡多投影幾個欄位。還不是小說工程時章節索引是空的。`book` 是那一趟讀到的
+   * 小說配置，體檢詞表（`controller/check.ts`）拿它，不再讀一遍 `config.md`。
    */
   private async snapshot(): Promise<{ state: ViewState; chapters: ChapterIndexEntry[]; book?: BookConfig }> {
     const initialized = await this.project.isInitialized();
@@ -777,10 +778,10 @@ export class ChatController {
       label: c.label,
       group: c.group,
     }));
-    // 当前模型若是 vscode-lm 而宿主不支持（独立版），下拉里已过滤，需明确提示切换。
+    // 當前模型若是 vscode-lm 而宿主不支援（獨立版），下拉里已過濾，需明確提示切換。
     const lmOnlyIssue =
       config.active?.profile.kind === 'vscode-lm' && !host.supportsVscodeLm
-        ? '当前模型仅在 VS Code 内可用（Copilot），请在设置页切换到自建 API 的模型。'
+        ? '當前模型僅在 VS Code 內可用（Copilot），請在設定頁切換到自建 API 的模型。'
         : undefined;
 
     if (!initialized) {
@@ -801,9 +802,9 @@ export class ChatController {
         chapters: [],
       };
     }
-    // 目标下拉框：**一个章号一行**（细纲号 = 章号），顺序即时间线。
-    // `relPath` 是那一章细纲的路径——还没有细纲时是它应该在的位置，选中它就是
-    // 「去给这一章补规划」，`readPlot` 读不到会如实退化成空壳。
+    // 目標下拉框：**一個章號一行**（細綱號 = 章號），順序即時間線。
+    // `relPath` 是那一章細綱的路徑——還沒有細綱時是它應該在的位置，選中它就是
+    // 「去給這一章補規劃」，`readPlot` 讀不到會如實退化成空殼。
     const { rows: pipelineRows, config: book } = await buildPipelineIndex(this.project);
     const rows: ViewState['plots'] = pipelineRows.map((p) => ({
       no: p.no,
@@ -820,14 +821,14 @@ export class ChatController {
         staleCount: (await this.project.staleChapters()).length,
         model: config.model,
         modelLabel: describeProvider(config),
-        // 只在解析失败时给出说明——正常情况下不要在输入框下方堆红字。
+        // 只在解析失敗時給出說明——正常情況下不要在輸入框下方堆紅字。
         modelIssue:
           lmOnlyIssue ?? (config.active ? undefined : describeModelIssue(config.providers, config.model)),
         models,
         contextDetail: settingsContextDetail(),
         contextWindow: config.contextWindow,
         maxOutputTokens: config.maxOutputTokens,
-        // 流水线索引那一趟已经读过 config.md，不另读。
+        // 流水線索引那一趟已經讀過 config.md，不另讀。
         paragraphStyle: book.paragraphStyle ?? DEFAULT_PARAGRAPH_STYLE,
       },
       chapters: chapterIndexOf(pipelineRows),
@@ -836,10 +837,10 @@ export class ChatController {
   }
 
   /**
-   * 推章节索引（`chapterIndex`）。内容与上一次推的一样就不推；`force` 给新连上的前端。
+   * 推章節索引（`chapterIndex`）。內容與上一次推的一樣就不推；`force` 給新連上的前端。
    *
-   * 为什么单独一条、不塞进 `ViewState`：`state` 每次 `pushState` 都整份推，而章节索引绝大多数时候没变；
-   * 为什么不复用工程树：那棵树要额外读角色卡、设定、草稿、叙事线、出场索引，只在「工程」页签开着时才推。
+   * 為什麼單獨一條、不塞進 `ViewState`：`state` 每次 `pushState` 都整份推，而章節索引絕大多數時候沒變；
+   * 為什麼不復用工程樹：那棵樹要額外讀角色卡、設定、草稿、敘事線、出場索引，只在「工程」頁籤開著時才推。
    */
   private pushChapterIndex(chapters: ChapterIndexEntry[], force = false): void {
     const sig = JSON.stringify(chapters);
@@ -851,16 +852,16 @@ export class ChatController {
   }
 
   /**
-   * 工程内容变化时刷新（由 FileSystemWatcher、保存、工程页动作触发）。
+   * 工程內容變化時重新整理（由 FileSystemWatcher、儲存、工程頁動作觸發）。
    *
-   * 流水线条跟着一起推：写完正文、定稿完、在编辑器里手改了细纲，主按钮都得跟着
-   * 变。从前这里只推 state，做完一步主按钮还挂着上一步，再点只会报错。
-   * 它失败不该拖垮 state 那一份，所以单独兜住。
+   * 流水線條跟著一起推：寫完正文、定稿完、在編輯器裡手改了細綱，主按鈕都得跟著
+   * 變。從前這裡只推 state，做完一步主按鈕還掛著上一步，再點只會報錯。
+   * 它失敗不該拖垮 state 那一份，所以單獨兜住。
    */
   async pushState(): Promise<void> {
     this.project.invalidate();
     if (this.hosts.size > 0) {
-      // 一份快照发给所有宿主（从前每个宿主各建一遍，结果一样）；章节索引与体检词表跟着它，变了才推。
+      // 一份快照發給所有宿主（從前每個宿主各建一遍，結果一樣）；章節索引與體檢詞表跟著它，變了才推。
       const snap = await this.snapshot();
       for (const host of this.hosts) {
         host.post({ type: 'state', state: snap.state });
@@ -872,43 +873,43 @@ export class ChatController {
       try {
         await pushPipeline(this);
       } catch (err) {
-        log.warn(`刷新流水线失败：${describeError(err)}`, err);
+        log.warn(`重新整理流水線失敗：${describeError(err)}`, err);
       }
     }
     await this.pushTabData();
   }
 
   /**
-   * 补齐当前页签需要的数据。
-   * 只推可见页签的——工程页要遍历全部章节算定稿状态，
-   * 每保存一次正文都跑一遍没必要。
-   * @internal controller/ 同包用；壳不要读。
+   * 補齊當前頁籤需要的資料。
+   * 只推可見頁籤的——工程頁要遍歷全部章節算定稿狀態，
+   * 每儲存一次正文都跑一遍沒必要。
+   * @internal controller/ 同包用；殼不要讀。
    */
   async pushTabData(): Promise<void> {
     if (this.tab === 'project') {
       await this.pushProject();
     } else if (this.tab === 'files') {
-      // 资源管理器只重推前端说过它关心的那些目录；一个都没登记（刚切过来、
-      // 前端还没发 listDir）时什么也不做，等那条消息到了自然会推。
+      // 資源管理器只重推前端說過它關心的那些目錄；一個都沒登記（剛切過來、
+      // 前端還沒發 listDir）時什麼也不做，等那條訊息到了自然會推。
       await pushDirListings(this, this.watchedDirs);
     } else if (this.tab === 'history') {
       await this.pushSessions();
     } else if (this.tab === 'settings') {
       await pushSettings(this);
-      // 「技能」那一页每次都重扫：作者可能刚往 .novelwarden/skills/ 里放了一份。
+      // 「技能」那一頁每次都重掃：作者可能剛往 .novelwarden/skills/ 裡放了一份。
       await pushSkillsTo(this, this);
     } else if (this.tab === 'logs') {
-      // 切到日志页时补一份全量；此后靠 sink 增量追加。
+      // 切到日誌頁時補一份全量；此後靠 sink 增量追加。
       this.post({ type: 'logs', entries: recentLogs() });
     }
   }
 
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   async pushProject(): Promise<void> {
     this.post({ type: 'project', tree: await buildProjectTree(this.project) });
   }
 
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   async pushSessions(): Promise<void> {
     const list = await this.store.list();
     this.post({
@@ -926,17 +927,17 @@ export class ChatController {
 
   // ---------------------------------------------------------------- 附件
 
-  /** @internal controller/ 同包用；壳不要读。 */
+  /** @internal controller/ 同包用；殼不要讀。 */
   addAttachment(att: Attachment): void {
     if (this.pending.some((a) => a.id === att.id)) {
-      this.toast('已经引用过这一项了。');
+      this.toast('已經引用過這一項了。');
       return;
     }
     this.pending.push(att);
     this.post({ type: 'attachments', items: this.pending.map(serializeAttachment) });
   }
 
-  /** 供命令直接调用：把当前选区加入待发送上下文。 */
+  /** 供命令直接呼叫：把當前選區加入待傳送上下文。 */
   async addSelectionFromCommand(): Promise<boolean> {
     const att = await getHost().selectionAttachment(this.project);
     if (!att) {
@@ -949,7 +950,7 @@ export class ChatController {
     return true;
   }
 
-  /** 供命令直接调用：切到某个页签。 */
+  /** 供命令直接呼叫：切到某個頁籤。 */
   async showTab(tab: Tab): Promise<void> {
     this.tab = tab;
     this.post({ type: 'tab', tab });
@@ -959,7 +960,7 @@ export class ChatController {
     }
   }
 
-  /** 供命令直接调用：新建会话。 */
+  /** 供命令直接呼叫：新建會話。 */
   async newSessionFromCommand(): Promise<void> {
     await newSession(this);
     for (const host of this.hosts) {
@@ -968,10 +969,10 @@ export class ChatController {
   }
 
   /**
-   * 供命令直接调用：新建一章并进入它当前该做的那一步。
+   * 供命令直接呼叫：新建一章並進入它當前該做的那一步。
    *
-   * 复用工程页那条 `projectAction` 分支而不是直接调 `newPlotFlow`：
-   * 「建完落到剧情层」是这个动作的一部分，命令面板与页面按钮不该分叉。
+   * 複用工程頁那條 `projectAction` 分支而不是直接調 `newPlotFlow`：
+   * 「建完落到劇情層」是這個動作的一部分，命令面板與頁面按鈕不該分叉。
    */
   async newPlotFromCommand(): Promise<void> {
     await projectAction(this, 'newPlot');

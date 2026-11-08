@@ -13,22 +13,22 @@ import { Workspace } from '../workspace';
 const log = scoped('角色卡');
 
 /**
- * 角色卡的两条维护动作：清理别名、合并重复卡。
+ * 角色卡的兩條維護動作：清理別名、合併重複卡。
  *
- * 它们**不调模型**，纯本地整理，为的是收拾一类已经落盘的历史脏数据：
+ * 它們**不調模型**，純本地整理，為的是收拾一類已經落盤的歷史髒資料：
  *
- * - 别名并集只进不出，模型吐出的 `她`/`姐姐`/`少女` 一旦进了卡就再也出不去；
- *   更糟的是有时会混进**别人的名字**，而角色卡的名字与别名会随摘要提示词发给
- *   模型，等于反复教它认错人。
- * - 摘要里同一个人两种写法（`方源` / `古月方源`）曾让「全部建卡」建出两张卡。
- *   根因已在 [../identity.ts](../identity.ts) 修掉，但已经建出来的卡还在。
+ * - 別名並集只進不出，模型吐出的 `她`/`姐姐`/`少女` 一旦進了卡就再也出不去；
+ *   更糟的是有時會混進**別人的名字**，而角色卡的名字與別名會隨摘要提示詞發給
+ *   模型，等於反覆教它認錯人。
+ * - 摘要裡同一個人兩種寫法（`方源` / `古月方源`）曾讓「全部建卡」建出兩張卡。
+ *   根因已在 [../identity.ts](../identity.ts) 修掉，但已經建出來的卡還在。
  *
- * 两条动作都只改 frontmatter（经 `rewriteFrontmatter`），**作者手写的正文一个
- * 字节都不动**；被合并掉的卡按「不真删」搬进 `.novelwarden/.trash/`。写回与搬走都经网关（`write`
- * 传 `review: false`——动手前的确认框就是那一问；`remove`），守卫照过，改写之前的旧卡存一版历史（AGENTS 第 7 条）。
+ * 兩條動作都只改 frontmatter（經 `rewriteFrontmatter`），**作者手寫的正文一個
+ * 位元組都不動**；被合併掉的卡按「不真刪」搬進 `.novelwarden/.trash/`。寫回與搬走都經閘道器（`write`
+ * 傳 `review: false`——動手前的確認框就是那一問；`remove`），守衛照過，改寫之前的舊卡存一版歷史（AGENTS 第 7 條）。
  */
 
-// ---------------------------------------------------------------- 清理别名
+// ---------------------------------------------------------------- 清理別名
 
 interface AliasCleanup {
   card: CharacterCard;
@@ -37,15 +37,15 @@ interface AliasCleanup {
 }
 
 /**
- * 扫全部角色卡，删掉不是「专属称呼」的别名。
+ * 掃全部角色卡，刪掉不是「專屬稱呼」的別名。
  *
- * 判据有两条：[../naming.ts](../naming.ts) 的泛称过滤，外加「这个别名是另一张卡
- * 的正式名」——后者是最有害的一种，它会让两个角色的出场章互相串。
+ * 判據有兩條：[../naming.ts](../naming.ts) 的泛稱過濾，外加「這個別名是另一張卡
+ * 的正式名」——後者是最有害的一種，它會讓兩個角色的出場章互相串。
  */
 export async function cleanCharacterAliases(project: NovelProject): Promise<void> {
   const cards = await project.listCharacters();
   if (cards.length === 0) {
-    getHost().toast('还没有角色卡。');
+    getHost().toast('還沒有角色卡。');
     return;
   }
 
@@ -64,7 +64,7 @@ export async function cleanCharacterAliases(project: NovelProject): Promise<void
     for (const alias of sanitizeAliases(card.aliases, card.name)) {
       const owner = nameOwner.get(normalizeName(alias));
       if (owner && owner.slug !== card.slug) {
-        dropped.push({ alias, reason: `是「${owner.name}」这张卡的正式名` });
+        dropped.push({ alias, reason: `是「${owner.name}」這張卡的正式名` });
         continue;
       }
       keep.push(alias);
@@ -75,35 +75,35 @@ export async function cleanCharacterAliases(project: NovelProject): Promise<void
   }
 
   if (plans.length === 0) {
-    log.info('角色卡别名检查通过', `${cards.length} 张卡，没有需要清理的称呼`);
-    getHost().toast(`${cards.length} 张角色卡的别名都是专属称呼，无需清理。`);
+    log.info('角色卡別名檢查通過', `${cards.length} 張卡，沒有需要清理的稱呼`);
+    getHost().toast(`${cards.length} 張角色卡的別名都是專屬稱呼，無需清理。`);
     return;
   }
 
   const total = plans.reduce((sum, p) => sum + p.dropped.length, 0);
   const samples = plans
     .slice(0, 6)
-    .map((p) => `「${p.card.name}」删 ${p.dropped.map((d) => d.alias).join('、')}`);
+    .map((p) => `「${p.card.name}」刪 ${p.dropped.map((d) => d.alias).join('、')}`);
   const pick = await getHost().confirm(
-    `${plans.length} 张角色卡里有 ${total} 个不该当别名的称呼，现在清理？`,
+    `${plans.length} 張角色卡裡有 ${total} 個不該當別名的稱呼，現在清理？`,
     ['清理'],
     {
       modal: true,
       detail: [
-        '代词（她）、亲属称谓（姐姐）、泛称（少女／丫头）、描述短语（满身血迹的少女），'
-          + '以及被误填成别名的**其他角色的名字**——它们会让程序把两个人认成一个。',
-        samples.join('\n') + (plans.length > samples.length ? `\n……另有 ${plans.length - samples.length} 张` : ''),
-        '不调模型。只改 frontmatter 的 aliases 字段，正文一个字都不动。',
+        '代詞（她）、親屬稱謂（姐姐）、泛稱（少女／丫頭）、描述短語（滿身血跡的少女），'
+          + '以及被誤填成別名的**其他角色的名字**——它們會讓程式把兩個人認成一個。',
+        samples.join('\n') + (plans.length > samples.length ? `\n……另有 ${plans.length - samples.length} 張` : ''),
+        '不調模型。只改 frontmatter 的 aliases 欄位，正文一個字都不動。',
       ].join('\n\n'),
     }
   );
   if (pick !== '清理') {
-    log.info('用户取消了别名清理');
+    log.info('使用者取消了別名清理');
     return;
   }
 
   await runTask(
-    '清理角色卡别名',
+    '清理角色卡別名',
     async ({ signal, report }) => {
       const startedAt = Date.now();
       const ws = new Workspace(project);
@@ -111,7 +111,7 @@ export async function cleanCharacterAliases(project: NovelProject): Promise<void
       let failed = 0;
       for (const plan of plans) {
         if (signal.aborted) {
-          log.warn(`清理被取消，已处理 ${done}/${plans.length} 张`);
+          log.warn(`清理被取消，已處理 ${done}/${plans.length} 張`);
           break;
         }
         report({ message: `「${plan.card.name}」`, current: done, total: plans.length });
@@ -119,50 +119,50 @@ export async function cleanCharacterAliases(project: NovelProject): Promise<void
         const rewritten = rewriteFrontmatter(await readText(abs), { aliases: plan.keep });
         if (!rewritten) {
           failed++;
-          log.warn(`「${plan.card.name}」没有 frontmatter，跳过`, plan.card.relPath);
+          log.warn(`「${plan.card.name}」沒有 frontmatter，跳過`, plan.card.relPath);
           continue;
         }
-        // 经网关写（第 7 条）：守卫照过，覆盖之前旧卡存一版历史（删掉的称呼找得回来）；不弹审阅——上面的确认框就是那一问。
+        // 經閘道器寫（第 7 條）：守衛照過，覆蓋之前舊卡存一版歷史（刪掉的稱呼找得回來）；不彈審閱——上面的確認框就是那一問。
         await ws.write(plan.card.relPath, { text: rewritten }, { mode: 'overwrite', review: false });
         done++;
         log.info(
-          `「${plan.card.name}」删掉 ${plan.dropped.length} 个称呼`,
+          `「${plan.card.name}」刪掉 ${plan.dropped.length} 個稱呼`,
           plan.dropped.map((d) => `${d.alias}（${d.reason}）`).join('、')
         );
       }
       project.invalidate();
       report({ message: '完成', current: plans.length, total: plans.length });
-      log.info('别名清理结束', `${done} 张已改${failed > 0 ? `，${failed} 张跳过` : ''}｜用时 ${elapsed(startedAt)}`);
-      getHost().toast(`已清理 ${done} 张角色卡的别名。`);
+      log.info('別名清理結束', `${done} 張已改${failed > 0 ? `，${failed} 張跳過` : ''}｜用時 ${elapsed(startedAt)}`);
+      getHost().toast(`已清理 ${done} 張角色卡的別名。`);
     },
     { scope: '角色卡' }
   );
 }
 
-// ---------------------------------------------------------------- 合并重复卡
+// ---------------------------------------------------------------- 合併重複卡
 
-/** 一组疑似同一个人的角色卡。 */
+/** 一組疑似同一個人的角色卡。 */
 export interface DuplicateGroup {
   cards: CharacterCard[];
-  /** 证据说明，直接进确认框。 */
+  /** 證據說明，直接進確認框。 */
   evidence: string;
-  /** 证据强度：`summary` 有据可查（摘要聚类、正式名撞车、称谓卡挂着真名），`naming` 只是名字长得像。 */
+  /** 證據強度：`summary` 有據可查（摘要聚類、正式名撞車、稱謂卡掛著真名），`naming` 只是名字長得像。 */
   strength: 'summary' | 'naming';
 }
 
 /**
- * 找出疑似重复的角色卡。导出供冒烟测试直接验证判据。
+ * 找出疑似重複的角色卡。匯出供冒煙測試直接驗證判據。
  *
- * 三类候选，强度不同：
+ * 三類候選，強度不同：
  *
- * - **摘要证据**：几章摘要互相声明这几个称呼是同一个人，且从没在同一章里
- *   各自出场。这是 [../identity.ts](../identity.ts) 的聚类结论，可靠。
- * - **称谓卡**：卡名是剧作称谓（`反派`，[../model/naming.ts](../model/naming.ts)），别名里
- *   挂着另一张卡的正式名——提取角色时模型把称谓当了名字、把真名塞进别名，同一个人建了两张。
- *   这是按别名认卡的唯一一处：称谓本身不是任何人的名字，不会把两个真人认成一个。
- * - **名字包含**：一张卡的名字是另一张的后缀（`古月赤城` ⊃ `赤城`）。
- *   只能算提示——`学堂家老 / 刑堂家老` 也满足，那是两个人。所以凡是被
- *   同章共现否掉的一律不列，剩下的也标明「只是名字像」。
+ * - **摘要證據**：幾章摘要互相宣告這幾個稱呼是同一個人，且從沒在同一章裡
+ *   各自出場。這是 [../identity.ts](../identity.ts) 的聚類結論，可靠。
+ * - **稱謂卡**：卡名是劇作稱謂（`反派`，[../model/naming.ts](../model/naming.ts)），別名裡
+ *   掛著另一張卡的正式名——提取角色時模型把稱謂當了名字、把真名塞進別名，同一個人建了兩張。
+ *   這是按別名認卡的唯一一處：稱謂本身不是任何人的名字，不會把兩個真人認成一個。
+ * - **名字包含**：一張卡的名字是另一張的字尾（`古月赤城` ⊃ `赤城`）。
+ *   只能算提示——`學堂家老 / 刑堂家老` 也滿足，那是兩個人。所以凡是被
+ *   同章共現否掉的一律不列，剩下的也標明「只是名字像」。
  */
 export async function findDuplicateCards(project: NovelProject): Promise<DuplicateGroup[]> {
   const cards = await project.listCharacters();
@@ -170,13 +170,13 @@ export async function findDuplicateCards(project: NovelProject): Promise<Duplica
   const identity = buildIdentityGroups(chapters);
 
   /**
-   * 称呼 → 角色卡，**只认正式名**。
+   * 稱呼 → 角色卡，**只認正式名**。
    *
-   * 刻意不看 aliases：卡上的别名恰恰是这条流程要收拾的脏数据，拿它来认卡会
-   * 反噬——实战里方源的卡挂着 `方正`、方正的卡挂着 `方源`，按别名认卡会把
-   * 这对孪生姐弟报成「同一个人的两张卡」，正是最不能犯的错。
-   * 真是同一个人的重复卡，它的正式名必然在摘要里出现过（卡就是照那个名字
-   * 建出来的），所以只认正式名并不损失召回。
+   * 刻意不看 aliases：卡上的別名恰恰是這條流程要收拾的髒資料，拿它來認卡會
+   * 反噬——實戰裡方源的卡掛著 `方正`、方正的卡掛著 `方源`，按別名認卡會把
+   * 這對孿生姐弟報成「同一個人的兩張卡」，正是最不能犯的錯。
+   * 真是同一個人的重複卡，它的正式名必然在摘要裡出現過（卡就是照那個名字
+   * 建出來的），所以只認正式名並不損失召回。
    */
   const cardByName = new Map<string, CharacterCard>();
   for (const card of cards) {
@@ -190,7 +190,7 @@ export async function findDuplicateCards(project: NovelProject): Promise<Duplica
   const groups: DuplicateGroup[] = [];
   const paired = new Set<string>();
 
-  // ---- 1. 摘要聚类：一个组里落进了多张卡 ----
+  // ---- 1. 摘要聚類：一個組裡落進了多張卡 ----
   for (const group of identity.groups) {
     const owners: CharacterCard[] = [];
     for (const name of group.names) {
@@ -204,12 +204,12 @@ export async function findDuplicateCards(project: NovelProject): Promise<Duplica
       groups.push({
         cards: owners,
         strength: 'summary',
-        evidence: `摘要里 ${group.names.slice(0, 5).join('、')} 指的是同一个人（共 ${group.chapters.length} 章），却分成了 ${owners.length} 张卡。`,
+        evidence: `摘要裡 ${group.names.slice(0, 5).join('、')} 指的是同一個人（共 ${group.chapters.length} 章），卻分成了 ${owners.length} 張卡。`,
       });
     }
   }
 
-  // ---- 2. 称谓卡挂着真名 ----
+  // ---- 2. 稱謂卡掛著真名 ----
   for (const card of cards.filter((c) => isRoleLabel(c.name))) {
     const owners: CharacterCard[] = [];
     for (const alias of card.aliases) {
@@ -218,7 +218,7 @@ export async function findDuplicateCards(project: NovelProject): Promise<Duplica
         owners.push(owner);
       }
     }
-    // 别名里挂了两个真人的名字就说不清是谁，交给作者自己看，不列。
+    // 別名裡掛了兩個真人的名字就說不清是誰，交給作者自己看，不列。
     if (owners.length !== 1) {
       continue;
     }
@@ -226,7 +226,7 @@ export async function findDuplicateCards(project: NovelProject): Promise<Duplica
     groups.push({
       cards: [owners[0], card],
       strength: 'summary',
-      evidence: `「${card.name}」是剧作称谓、不是名字，它的别名「${owners[0].name}」是另一张卡的正式名，多半是同一个人。`,
+      evidence: `「${card.name}」是劇作稱謂、不是名字，它的別名「${owners[0].name}」是另一張卡的正式名，多半是同一個人。`,
     });
   }
 
@@ -243,12 +243,12 @@ export async function findDuplicateCards(project: NovelProject): Promise<Duplica
       groups.push({
         cards: [a, b],
         strength: 'naming',
-        evidence: `「${a.name}」的名字以「${b.name}」结尾，可能是同一个人的两种写法——但摘要里没有证据，请自行判断。`,
+        evidence: `「${a.name}」的名字以「${b.name}」結尾，可能是同一個人的兩種寫法——但摘要裡沒有證據，請自行判斷。`,
       });
     }
   }
 
-  // 已有卡的正式名撞车也算重复（摘要里可能一次都没出现过）。
+  // 已有卡的正式名撞車也算重複（摘要裡可能一次都沒出現過）。
   const index = await buildCastIndex(project);
   for (const conflict of index.conflicts.filter((c) => c.kind === 'name')) {
     const owners = conflict.slugs.map((s) => bySlug.get(s)).filter((c): c is CharacterCard => !!c);
@@ -257,12 +257,12 @@ export async function findDuplicateCards(project: NovelProject): Promise<Duplica
       groups.push({
         cards: owners,
         strength: 'summary',
-        evidence: `这几张卡都声明自己叫「${conflict.name}」。`,
+        evidence: `這幾張卡都宣告自己叫「${conflict.name}」。`,
       });
     }
   }
 
-  // 证据强的排前面，戏份重的再靠前。
+  // 證據強的排前面，戲份重的再靠前。
   return groups.sort(
     (x, y) =>
       (x.strength === y.strength ? 0 : x.strength === 'summary' ? -1 : 1) ||
@@ -279,88 +279,88 @@ function pairKey(a: string, b: string): string {
 }
 
 /**
- * 查找并合并重复角色卡——工程页「角色」分组的右键动作。
+ * 查詢並合併重複角色卡——工程頁「角色」分組的右鍵動作。
  *
- * 逐组问作者保留哪一张，**绝不自动决定**：证据再强也只是启发式，
- * 把两个角色错并成一个远比多一张卡难收拾。
+ * 逐組問作者保留哪一張，**絕不自動決定**：證據再強也只是啟發式，
+ * 把兩個角色錯併成一個遠比多一張卡難收拾。
  */
 export async function mergeDuplicateCharacterCards(project: NovelProject): Promise<void> {
   const groups = await findDuplicateCards(project);
-  // 名字是称谓、又对不上任何一张真名卡的：没法替作者并，只能请作者改名或删掉。
+  // 名字是稱謂、又對不上任何一張真名卡的：沒法替作者並，只能請作者改名或刪掉。
   const grouped = new Set(groups.flatMap((g) => g.cards.map((c) => c.slug)));
   const labelOnly = (await project.listCharacters()).filter((c) => isRoleLabel(c.name) && !grouped.has(c.slug));
   const labelHint =
     labelOnly.length > 0
-      ? `${labelOnly.map((c) => `「${c.name}」`).join('')}的名字是剧作称谓、找不到真名那张卡，请改成真名或删掉：` +
+      ? `${labelOnly.map((c) => `「${c.name}」`).join('')}的名字是劇作稱謂、找不到真名那張卡，請改成真名或刪掉：` +
         labelOnly.map((c) => c.relPath).join('、')
       : '';
   if (labelOnly.length > 0) {
-    log.warn('有角色卡的名字是剧作称谓', labelHint);
+    log.warn('有角色卡的名字是劇作稱謂', labelHint);
   }
   if (groups.length === 0) {
-    log.info('没有发现重复角色卡');
-    getHost().toast(labelHint ? `没有发现重复的角色卡。${labelHint}` : '没有发现重复的角色卡。');
+    log.info('沒有發現重複角色卡');
+    getHost().toast(labelHint ? `沒有發現重複的角色卡。${labelHint}` : '沒有發現重複的角色卡。');
     return;
   }
 
   const strong = groups.filter((g) => g.strength === 'summary').length;
   const pick = await getHost().confirm(
-    `发现 ${groups.length} 组疑似重复的角色卡，逐组处理？`,
-    ['逐组处理'],
+    `發現 ${groups.length} 組疑似重複的角色卡，逐組處理？`,
+    ['逐組處理'],
     {
       modal: true,
       detail: [
         groups
           .slice(0, 8)
           .map((g) => `${g.strength === 'summary' ? '●' : '○'} ${g.cards.map((c) => `「${c.name}」`).join(' / ')}`)
-          .join('\n') + (groups.length > 8 ? `\n……另有 ${groups.length - 8} 组` : ''),
-        `● ${strong} 组有摘要证据，○ ${groups.length - strong} 组只是名字像，需要你自己判断。`,
-        '不调模型。每组都会先问保留哪一张；被合并的卡搬进 .novelwarden/.trash/，可手动找回。'
-          + '注意：**被合并卡的正文小节不会自动融合**，合并后建议对保留的卡跑一次「从头重建角色卡」。',
+          .join('\n') + (groups.length > 8 ? `\n……另有 ${groups.length - 8} 組` : ''),
+        `● ${strong} 組有摘要證據，○ ${groups.length - strong} 組只是名字像，需要你自己判斷。`,
+        '不調模型。每組都會先問保留哪一張；被合併的卡搬進 .novelwarden/.trash/，可手動找回。'
+          + '注意：**被合併卡的正文小節不會自動融合**，合併後建議對保留的卡跑一次「從頭重建角色卡」。',
         labelHint,
       ]
         .filter(Boolean)
         .join('\n\n'),
     }
   );
-  if (pick !== '逐组处理') {
-    log.info('用户取消了重复卡合并');
+  if (pick !== '逐組處理') {
+    log.info('使用者取消了重複卡合併');
     return;
   }
 
   let merged = 0;
   let skipped = 0;
-  /** 已经被并掉的卡。同一张卡可能出现在两组候选里，第二次轮到它时文件已经不在了。 */
+  /** 已經被並掉的卡。同一張卡可能出現在兩組候選裡，第二次輪到它時檔案已經不在了。 */
   const gone = new Set<string>();
 
   for (const group of groups) {
     const alive = group.cards.filter((c) => !gone.has(c.slug));
     if (alive.length < 2) {
-      log.info('跳过一组重复卡', `${group.cards.map((c) => c.name).join(' / ')}｜其中的卡已在上一组里被合并`);
+      log.info('跳過一組重複卡', `${group.cards.map((c) => c.name).join(' / ')}｜其中的卡已在上一組裡被合併`);
       continue;
     }
-    // 戏份重的排前面：多半就是该保留的那张。名字是称谓的（`反派`）永远排最后——该留的是真名那张。
+    // 戲份重的排前面：多半就是該保留的那張。名字是稱謂的（`反派`）永遠排最後——該留的是真名那張。
     const sorted = [...alive].sort(
       (a, b) => Number(isRoleLabel(a.name)) - Number(isRoleLabel(b.name)) || b.appearsIn.length - a.appearsIn.length
     );
-    // 按钮太多的模态框没法看。只让前几张当候选，其余照样会被并进去（详情里列全）。
+    // 按鈕太多的模態框沒法看。只讓前幾張當候選，其餘照樣會被並進去（詳情裡列全）。
     const choices = sorted.slice(0, 4);
     const labels = choices.map((c) => `保留「${c.name}」`);
-    const choice = await getHost().confirm(`合并 ${sorted.map((c) => `「${c.name}」`).join(' / ')}？`, labels, {
+    const choice = await getHost().confirm(`合併 ${sorted.map((c) => `「${c.name}」`).join(' / ')}？`, labels, {
       modal: true,
       detail: [
         group.evidence,
         sorted
           .map(
             (c) =>
-              `「${c.name}」：${c.relPath}｜出场 ${c.appearsIn.length} 章｜已读到第 ${c.updatedThrough ?? 0} 章｜` +
-              `别名 ${c.aliases.length > 0 ? c.aliases.join('、') : '无'}`
+              `「${c.name}」：${c.relPath}｜出場 ${c.appearsIn.length} 章｜已讀到第 ${c.updatedThrough ?? 0} 章｜` +
+              `別名 ${c.aliases.length > 0 ? c.aliases.join('、') : '無'}`
           )
           .join('\n'),
         sorted.length > choices.length
-          ? `本组有 ${sorted.length} 张卡，按钮只列出出场最多的 ${choices.length} 张；选中哪一张，其余 ${sorted.length - 1} 张都会并进去。`
+          ? `本組有 ${sorted.length} 張卡，按鈕只列出出場最多的 ${choices.length} 張；選中哪一張，其餘 ${sorted.length - 1} 張都會並進去。`
           : '',
-        '选中的那张保留并吸收其余卡的别名/标签/出场章；其余卡搬进回收站。取消则跳过这一组。',
+        '選中的那張保留並吸收其餘卡的別名/標籤/出場章；其餘卡搬進回收站。取消則跳過這一組。',
       ]
         .filter(Boolean)
         .join('\n\n'),
@@ -368,7 +368,7 @@ export async function mergeDuplicateCharacterCards(project: NovelProject): Promi
     const keeper = choices[labels.indexOf(choice ?? '')];
     if (!keeper) {
       skipped++;
-      log.info('跳过一组重复卡', sorted.map((c) => c.name).join(' / '));
+      log.info('跳過一組重複卡', sorted.map((c) => c.name).join(' / '));
       continue;
     }
     const losers = sorted.filter((c) => c.slug !== keeper.slug);
@@ -379,12 +379,12 @@ export async function mergeDuplicateCharacterCards(project: NovelProject): Promi
   }
 
   project.invalidate();
-  const summary = `合并 ${merged} 组${skipped > 0 ? `，跳过 ${skipped} 组` : ''}`;
-  log.info('重复角色卡处理结束', summary);
+  const summary = `合併 ${merged} 組${skipped > 0 ? `，跳過 ${skipped} 組` : ''}`;
+  log.info('重複角色卡處理結束', summary);
   getHost().toast(`${summary}。`);
 }
 
-/** 把 losers 并进 keeper：元数据取并集，loser 的文件搬进回收站。返回是否成功。 */
+/** 把 losers 並進 keeper：後設資料取並集，loser 的檔案搬進回收站。返回是否成功。 */
 async function mergeInto(project: NovelProject, keeper: CharacterCard, losers: CharacterCard[]): Promise<boolean> {
   const aliases = sanitizeAliases(
     [...keeper.aliases, ...losers.flatMap((l) => [l.name, ...l.aliases])],
@@ -396,9 +396,9 @@ async function mergeInto(project: NovelProject, keeper: CharacterCard, losers: C
   );
 
   /**
-   * 「已读到」是一条水位线，越过去的章永远不会被重读。keeper 从没读过
-   * loser 那些章，所以水位线必须退回**第一章没读过的之前**，否则合进来的
-   * 出场章会被增量更新整批跳过，而界面上看不出任何异常。
+   * 「已讀到」是一條水位線，越過去的章永遠不會被重讀。keeper 從沒讀過
+   * loser 那些章，所以水位線必須退回**第一章沒讀過的之前**，否則合進來的
+   * 出場章會被增量更新整批跳過，而介面上看不出任何異常。
    */
   const unread = appearsIn.filter((o) => !keeper.appearsIn.includes(o));
   const updatedThrough = Math.min(keeper.updatedThrough ?? 0, unread.length > 0 ? Math.min(...unread) - 1 : Number.POSITIVE_INFINITY);
@@ -407,31 +407,31 @@ async function mergeInto(project: NovelProject, keeper: CharacterCard, losers: C
   const rewritten = rewriteFrontmatter(await readText(abs), {
     aliases,
     tags,
-    // frontmatter 里数组统一按字符串写；渲染出来是 `appearsIn: [2, 3, 5]`，与既有格式一致。
+    // frontmatter 裡陣列統一按字串寫；渲染出來是 `appearsIn: [2, 3, 5]`，與既有格式一致。
     appearsIn: appearsIn.map(String),
     firstAppear: appearsIn[0] ?? keeper.firstAppear,
     lastSeen: appearsIn[appearsIn.length - 1] ?? keeper.lastSeen,
     updatedThrough,
   });
   if (!rewritten) {
-    log.error(`「${keeper.name}」没有 frontmatter，合并中止`, keeper.relPath);
-    getHost().toast(`「${keeper.name}」的角色卡缺少 frontmatter，无法合并。`, 'error');
+    log.error(`「${keeper.name}」沒有 frontmatter，合併中止`, keeper.relPath);
+    getHost().toast(`「${keeper.name}」的角色卡缺少 frontmatter，無法合併。`, 'error');
     return false;
   }
-  // 经网关写（第 7 条）：守卫照过，覆盖之前旧卡存一版历史；不弹审阅——逐组的「保留「…」」就是那一问。
+  // 經閘道器寫（第 7 條）：守衛照過，覆蓋之前舊卡存一版歷史；不彈審閱——逐組的「保留「…」」就是那一問。
   const ws = new Workspace(project);
   await ws.write(keeper.relPath, { text: rewritten }, { mode: 'overwrite', review: false });
 
   for (const loser of losers) {
-    // 经网关删：搬进 `.trash/` 并保留原相对路径（第 6 条，落点与工程页的删除同一套 `trashPathFor`）。
+    // 經閘道器刪：搬進 `.trash/` 並保留原相對路徑（第 6 條，落點與工程頁的刪除同一套 `trashPathFor`）。
     await ws.remove(loser.relPath);
-    log.info(`「${loser.name}」已并入「${keeper.name}」`, `原卡移到回收站：${loser.relPath}`);
+    log.info(`「${loser.name}」已併入「${keeper.name}」`, `原卡移到回收站：${loser.relPath}`);
   }
 
   log.info(
-    `「${keeper.name}」合并完成`,
-    `别名 ${aliases.length} 个｜出场 ${appearsIn.length} 章｜「已读到」退回第 ${updatedThrough} 章` +
-      `${unread.length > 0 ? `（新并入 ${unread.length} 章未读，建议跑一次更新）` : ''}`
+    `「${keeper.name}」合併完成`,
+    `別名 ${aliases.length} 個｜出場 ${appearsIn.length} 章｜「已讀到」退回第 ${updatedThrough} 章` +
+      `${unread.length > 0 ? `（新併入 ${unread.length} 章未讀，建議跑一次更新）` : ''}`
   );
   return true;
 }

@@ -1,25 +1,25 @@
 /**
- * MCP 的执行端：**外部 agent 的一次工具调用，落到当前打开的这个工程上。**
+ * MCP 的執行端：**外部 agent 的一次工具呼叫，落到當前開啟的這個工程上。**
  *
- * 协议在 [mcp/server.ts](../mcp/server.ts)，它只认 {@link McpBackend}。这里把那两个方法绑到
- * 一个 `ChatController` 上。每次调用各自做完，没有循环：
+ * 協議在 [mcp/server.ts](../mcp/server.ts)，它只認 {@link McpBackend}。這裡把那兩個方法綁到
+ * 一個 `ChatController` 上。每次呼叫各自做完，沒有迴圈：
  *
- * | 调用的性质（工具自报的 `gate`） | 这里做什么 |
+ * | 呼叫的性質（工具自報的 `gate`） | 這裡做什麼 |
  * |---|---|
- * | `auto`（list / read / search、查技能） | 直接跑，只进日志。不占生成位、不进对话页 |
- * | 其余（generate / write / edit / run） | 占生成位、走 `runTask`（看得见、能停），在对话页挂一条工具条 |
- * | `always`（edit、装/绑技能、改技能文件） | 另外**先在对话页问作者一句**（[gate.ts](gate.ts)） |
- * | 产出了草稿（generate） | **当场问一句写不写**（第 19 条），结论接在返回后面 |
+ * | `auto`（list / read / search、查技能） | 直接跑，只進日誌。不佔生成位、不進對話頁 |
+ * | 其餘（generate / write / edit / run） | 佔生成位、走 `runTask`（看得見、能停），在對話頁掛一條工具條 |
+ * | `always`（edit、裝/綁技能、改技能檔案） | 另外**先在對話頁問作者一句**（[gate.ts](gate.ts)） |
+ * | 產出了草稿（generate） | **當場問一句寫不寫**（第 19 條），結論接在返回後面 |
  *
- * 宿主（Claude Code 之类）自己还有一层「要不要让它调这个工具」的权限；那一层管的是
- * 「让不让调」，这里的两问管的是「下游没有 diff 的改动」与「产物落盘」——第 19 / 25 条的
- * 承诺不交给宿主的配置。覆盖已有内容走 workspace 的覆盖审阅，与这里无关，任何路径都在。
+ * 宿主（Claude Code 之類）自己還有一層「要不要讓它調這個工具」的許可權；那一層管的是
+ * 「讓不讓調」，這裡的兩問管的是「下游沒有 diff 的改動」與「產物落盤」——第 19 / 25 條的
+ * 承諾不交給宿主的配置。覆蓋已有內容走 workspace 的覆蓋審閱，與這裡無關，任何路徑都在。
  *
- * ## 对话页上的样子
+ * ## 對話頁上的樣子
  *
- * 外部 agent 的调用挂在当前会话里一个标着 MCP 的气泡上，连着几次调用接在同一个气泡里，
- * 作者在中间说了话就另起一个。正文照旧流进那一条工具条下的卡片（`toolDelta`），**不回给
- * 外部 agent**：它拿到的只有形状与 draftId（`tools/novel/generate.ts`）。
+ * 外部 agent 的呼叫掛在當前會話裡一個標著 MCP 的氣泡上，連著幾次呼叫接在同一個氣泡裡，
+ * 作者在中間說了話就另起一個。正文照舊流進那一條工具條下的卡片（`toolDelta`），**不回給
+ * 外部 agent**：它拿到的只有形狀與 draftId（`tools/novel/generate.ts`）。
  */
 import type { ChatController } from './index';
 import type { McpBackend, McpCallResult } from '../mcp/server';
@@ -36,17 +36,17 @@ import { serializeSession, serializeTurn } from './serialize';
 
 const log = scoped('MCP');
 
-/** 参数那一段的上限。路径与查询词都短，几百字够看，一大段内嵌文本没必要全留。 */
+/** 引數那一段的上限。路徑與查詢詞都短，幾百字夠看，一大段內嵌文字沒必要全留。 */
 const ARGS_LIMIT = 800;
-/** 返回那一段的上限。工具按契约本就回短文本，这道闸只防写坏了的那一个。 */
+/** 返回那一段的上限。工具按契約本就回短文字，這道閘只防寫壞了的那一個。 */
 const RESULT_LIMIT = 2000;
 /**
- * `generate` 产出的正文上限。这是**产物本身**（一章三千字、一份大纲六千字），截短了那张卡
- * 就没意义了；仍然要有个头：它随会话落盘。
+ * `generate` 產出的正文上限。這是**產物本身**（一章三千字、一份大綱六千字），截短了那張卡
+ * 就沒意義了；仍然要有個頭：它隨會話落盤。
  */
 const OUTPUT_LIMIT = 20000;
 
-/** 把这个工程端给 MCP。**每次调用现取**当前会话：作者可能在中途换了会话。 */
+/** 把這個工程端給 MCP。**每次呼叫現取**當前會話：作者可能在中途換了會話。 */
 export function createMcpBackend(c: ChatController): McpBackend {
   return {
     brief: () => buildStateBrief(c.project, c.current.target),
@@ -69,24 +69,24 @@ async function callTool(
   });
   const intent = tools.intent(name, args);
 
-  // 查询：不花钱不改东西，挂上对话页只会把作者要看的那几条淹掉。认不出的名字也走这条——
-  // 注册表会回一句「没有叫 X 的工具，可用的是…」。
+  // 查詢：不花錢不改東西，掛上對話頁只會把作者要看的那幾條淹掉。認不出的名字也走這條——
+  // 登錄檔會回一句「沒有叫 X 的工具，可用的是…」。
   if (!intent || intent.gate === 'auto') {
     const r = await tools.invoke(name, args, quietRun(signal));
     return { text: r.text, isError: !r.ok };
   }
 
-  // 参数本来就不对的调用当场回话：不占锁、不挂气泡，更不在对话页问一句「改「」里的一段文字」。
+  // 引數本來就不對的呼叫當場回話：不佔鎖、不掛氣泡，更不在對話頁問一句「改「」裡的一段文字」。
   const issue = tools.check(name, args);
   if (issue) {
     return { text: issue, isError: true };
   }
 
-  // 与对话页的单步创作共用同一把锁：两条路同时跑会让草稿与流式内容互相盖。
+  // 與對話頁的單步創作共用同一把鎖：兩條路同時跑會讓草稿與流式內容互相蓋。
   const lease = c.beginGeneration();
   if (!lease) {
     return {
-      text: 'Novelwarden 的对话页里正在跑另一个生成任务。等它结束再试，或者请作者先停掉它。',
+      text: 'Novelwarden 的對話頁里正在跑另一個生成任務。等它結束再試，或者請作者先停掉它。',
       isError: true,
     };
   }
@@ -104,7 +104,7 @@ async function callTool(
     name,
     title: intent.title,
     ok: false,
-    summary: '进行中…',
+    summary: '進行中…',
     elapsedMs: 0,
     argsText: describeArgs(args),
   };
@@ -123,7 +123,7 @@ async function callTool(
     return await runTask(
       'MCP',
       async (task) => {
-        // 进度条上的「停止」与对话页的「停止」是同一件事。
+        // 進度條上的「停止」與對話頁的「停止」是同一件事。
         if (task.signal.aborted) {
           relay();
         } else {
@@ -134,7 +134,7 @@ async function callTool(
         if (intent.gate === 'always') {
           const declined = await askFirst(c, turn.id, row, intent, lease.signal);
           if (declined) {
-            settleRow(c, turn.id, row, { ok: true, summary: '作者没有同意', elapsedMs: 0, text: declined });
+            settleRow(c, turn.id, row, { ok: true, summary: '作者沒有同意', elapsedMs: 0, text: declined });
             return { text: declined, isError: false };
           }
         }
@@ -146,7 +146,7 @@ async function callTool(
             row.output = (row.output ?? '') + delta;
             c.post({ type: 'toolDelta', turnId: turn.id, callId: row.callId, text: delta });
           },
-          usage: { record: (calls) => log.info(`${name} 调了 ${calls} 次模型`) },
+          usage: { record: (calls) => log.info(`${name} 調了 ${calls} 次模型`) },
         });
         settleRow(c, turn.id, row, {
           ok: r.ok,
@@ -155,8 +155,8 @@ async function callTool(
           text: r.text,
         });
 
-        // 产出了东西就当场问一句写不写（第 19 条）。结论要回给外部 agent：不说的话它不知道
-        // 那份产物落没落盘，下一步多半是再生成一遍。
+        // 產出了東西就當場問一句寫不寫（第 19 條）。結論要回給外部 agent：不說的話它不知道
+        // 那份產物落沒落盤，下一步多半是再生成一遍。
         const note = r.draftIds.length > 0 ? await adopt(c, turn.id, row, r.draftIds, lease.signal) : '';
         return { text: note ? `${r.text}\n\n${note}` : r.text, isError: !r.ok };
       },
@@ -164,9 +164,9 @@ async function callTool(
     );
   } catch (err) {
     const message = describeError(err);
-    log.warn(`MCP 调用 ${name} 失败`, message);
+    log.warn(`MCP 呼叫 ${name} 失敗`, message);
     settleRow(c, turn.id, row, { ok: false, summary: message, elapsedMs: 0, text: message });
-    return { text: `执行失败：${message}`, isError: true };
+    return { text: `執行失敗：${message}`, isError: true };
   } finally {
     signal.removeEventListener('abort', relay);
     if (row.output) {
@@ -176,13 +176,13 @@ async function callTool(
     c.post({ type: 'busy', value: false });
     c.post({ type: 'turnDone', turn: serializeTurn(turn) });
     await persist(c);
-    // write / edit / run 会真的改磁盘，流水线必须刷。
+    // write / edit / run 會真的改磁碟，流水線必須刷。
     await pushPipeline(c);
     c.post({ type: 'session', session: serializeSession(c.current) });
   }
 }
 
-/** 查询那一条路的 `ToolRun`：没人看，说的话进日志。 */
+/** 查詢那一條路的 `ToolRun`：沒人看，說的話進日誌。 */
 function quietRun(signal: AbortSignal): ToolRun {
   return {
     signal,
@@ -192,8 +192,8 @@ function quietRun(signal: AbortSignal): ToolRun {
 }
 
 /**
- * 这次调用挂在哪个气泡上：会话最后一轮就是 MCP 的气泡就接着用，否则另起一个。
- * 作者在中间说过话，那就是另一段事了。
+ * 這次呼叫掛在哪個氣泡上：會話最後一輪就是 MCP 的氣泡就接著用，否則另起一個。
+ * 作者在中間說過話，那就是另一段事了。
  */
 function openTurn(c: ChatController): ChatTurn {
   const turns = c.current.turns;
@@ -208,9 +208,9 @@ function openTurn(c: ChatController): ChatTurn {
 }
 
 /**
- * `always` 那一档：动手前先问。同意返回 undefined，否则返回回给外部 agent 的那句话。
+ * `always` 那一檔：動手前先問。同意返回 undefined，否則返回回給外部 agent 的那句話。
  *
- * **必须有信息量**：只回一句「被拒绝」，它多半会把同一个动作再发一遍。
+ * **必須有資訊量**：只回一句「被拒絕」，它多半會把同一個動作再發一遍。
  */
 async function askFirst(
   c: ChatController,
@@ -234,13 +234,13 @@ async function askFirst(
   if (verdict === 'proceed') {
     return undefined;
   }
-  log.info(`作者${verdict === 'skip' ? '跳过了' : '没有回答'} ${row.name}`, intent.title);
+  log.info(`作者${verdict === 'skip' ? '跳過了' : '沒有回答'} ${row.name}`, intent.title);
   return verdict === 'skip'
-    ? `作者跳过了这一步（${intent.title}），它没有执行，磁盘上什么都没变。**不要重试同一个动作**——换个做法，或者问问他想怎么做。`
-    : `这一步（${intent.title}）被取消了，没有执行。不要再发起新的动作，把已经做到哪、还差什么说清楚就行。`;
+    ? `作者跳過了這一步（${intent.title}），它沒有執行，磁碟上什麼都沒變。**不要重試同一個動作**——換個做法，或者問問他想怎麼做。`
+    : `這一步（${intent.title}）被取消了，沒有執行。不要再發起新的動作，把已經做到哪、還差什麼說清楚就行。`;
 }
 
-/** 产出的草稿：当场问一句写不写。返回接在工具结果后面的那句话。 */
+/** 產出的草稿：當場問一句寫不寫。返回接在工具結果後面的那句話。 */
 async function adopt(
   c: ChatController,
   turnId: string,
@@ -252,7 +252,7 @@ async function adopt(
   const draft = c.drafts.get(draftId);
   const art = draft?.artifact ? await describeArtifactOf(c, draft.raw, draft) : undefined;
   if (!draft || !art) {
-    // 解析不出可落盘的形状（讨论类的产出）：没什么可写的，不问。
+    // 解析不出可落盤的形狀（討論類的產出）：沒什麼可寫的，不問。
     return '';
   }
   c.current.drafts = c.drafts.bySession(c.current.id);
@@ -262,16 +262,16 @@ async function adopt(
     art,
     byAgent: true,
     callId: row.callId,
-    // **不打开文件**：外部 agent 可能连着写好几份，一次次抢编辑器。
+    // **不開啟檔案**：外部 agent 可能連著寫好幾份，一次次搶編輯器。
     open: false,
     signal,
   });
-  // 决定记在那条工具条上，随会话留住——翻回来看得出「这一份我当时没要」。
-  row.summary = `${row.summary} · ${r.relPath ? `已写入 ${r.relPath}` : '未采纳'}`;
+  // 決定記在那條工具條上，隨會話留住——翻回來看得出「這一份我當時沒要」。
+  row.summary = `${row.summary} · ${r.relPath ? `已寫入 ${r.relPath}` : '未採納'}`;
   postRow(c, turnId, row);
   return r.relPath
-    ? `${r.message}这份产物已经落盘，**不要再写一遍**。`
-    : `${r.message}**不要重复生成同一份**——问问作者要改什么。`;
+    ? `${r.message}這份產物已經落盤，**不要再寫一遍**。`
+    : `${r.message}**不要重複生成同一份**——問問作者要改什麼。`;
 }
 
 function settleRow(
@@ -301,12 +301,12 @@ function postRow(c: ChatController, turnId: string, row: TurnToolCall): void {
   });
 }
 
-/** 截一段给界面看的文本。**说出自己截了**（第 2 条：不静默截断）。 */
+/** 截一段給介面看的文字。**說出自己截了**（第 2 條：不靜默截斷）。 */
 function clip(text: string, limit: number): string {
   const trimmed = text.trimEnd();
   return trimmed.length <= limit
     ? trimmed
-    : `${trimmed.slice(0, limit)}\n…（还有 ${trimmed.length - limit} 字，已截断）`;
+    : `${trimmed.slice(0, limit)}\n…（還有 ${trimmed.length - limit} 字，已截斷）`;
 }
 
 function describeArgs(args: Record<string, unknown>): string | undefined {

@@ -1,12 +1,12 @@
 /**
- * 上下文装配器。
+ * 上下文裝配器。
  *
- * 这里只剩三件事：**算预算、按配方跑一遍层、把存活的条目拼成 messages**。
- * 「带什么」在 [recipes.ts](recipes.ts)，「怎么取」在 [layers/](layers/index.ts)。
+ * 這裡只剩三件事：**算預算、按配方跑一遍層、把存活的條目拼成 messages**。
+ * 「帶什麼」在 [recipes.ts](recipes.ts)，「怎麼取」在 [layers/](layers/index.ts)。
  *
- * 装配顺序即优先级：配方靠前的层先拿预算，靠后的可能被降级或丢弃。
- * 任何装不下的条目都会以 dropped/degraded 的形式留在 items 里——
- * **绝不静默丢弃**，作者需要知道这次没带上什么。
+ * 裝配順序即優先順序：配方靠前的層先拿預算，靠後的可能被降級或丟棄。
+ * 任何裝不下的條目都會以 dropped/degraded 的形式留在 items 裡——
+ * **絕不靜默丟棄**，作者需要知道這次沒帶上什麼。
  */
 import { ChatMessage } from '../llm/provider';
 import { contextLimitsOf, normalizeContextDetail } from '../model/contextDetail';
@@ -60,10 +60,10 @@ export async function buildContext(
     items,
     excluded,
 
-    /** 尝试把一条内容放进预算。放不下就按 note 记为 dropped。 */
+    /** 嘗試把一條內容放進預算。放不下就按 note 記為 dropped。 */
     admit(item, opts = {}) {
       if (excluded.has(item.id)) {
-        const rejected: ContextItem = { ...item, text: '', tokens: 0, status: 'excluded', note: '已被手动排除' };
+        const rejected: ContextItem = { ...item, text: '', tokens: 0, status: 'excluded', note: '已被手動排除' };
         items.push(rejected);
         return rejected;
       }
@@ -74,7 +74,7 @@ export async function buildContext(
           text: '',
           tokens: 0,
           status: 'dropped',
-          note: `预算不足（需 ${tokens} token，剩 ${Math.max(0, assembly.remaining)}）`,
+          note: `預算不足（需 ${tokens} token，剩 ${Math.max(0, assembly.remaining)}）`,
         };
         items.push(dropped);
         return dropped;
@@ -97,8 +97,8 @@ export async function buildContext(
     scratch: { evidence: new Map<number, ContextItem>() },
   };
 
-  // 强制项可能已经吃掉全部预算，后续条目自然会被判 dropped——这是有意的：
-  // 系统提示、用户这句话、本层产物本来就比「早前第 3 章的细纲」重要。
+  // 強制項可能已經吃掉全部預算，後續條目自然會被判 dropped——這是有意的：
+  // 系統提示、使用者這句話、本層產物本來就比「早前第 3 章的細綱」重要。
   for (const spec of recipe) {
     await LAYERS[spec.layer](assembly, spec);
   }
@@ -109,14 +109,14 @@ export async function buildContext(
   return { messages, items, usedTokens, budget, budgetClampedByProvider, detail };
 }
 
-// ---------------------------------------------------------------- 组装
+// ---------------------------------------------------------------- 組裝
 
 /**
- * 条目 → messages。
+ * 條目 → messages。
  *
- * 段落顺序即「读的顺序」：背景知识在前，本层产物在中间，用户这一轮的要求
- * 与输出契约压在最后——模型对末尾的指令最敏感，把「现在请你做什么」放在
- * 十万字前文之前，等于让它读完全书再回头猜要干嘛。
+ * 段落順序即「讀的順序」：背景知識在前，本層產物在中間，使用者這一輪的要求
+ * 與輸出契約壓在最後——模型對末尾的指令最敏感，把「現在請你做什麼」放在
+ * 十萬字前文之前，等於讓它讀完全書再回頭猜要幹嘛。
  */
 function assembleMessages(
   items: ContextItem[],
@@ -128,11 +128,11 @@ function assembleMessages(
   const join = (list: ContextItem[]): string => list.map((i) => i.text.trim()).join('\n\n');
 
   const { stage, capability } = request.action;
-  /** 正文出稿：只有这一种情况才谈「接下去写」「目标字数」。 */
+  /** 正文出稿：只有這一種情況才談「接下去寫」「目標字數」。 */
   const writing = stage === 'manuscript' && capability === 'generate';
-  /** 审稿（五期）：几段材料的标题要说清哪些是已经发生的事、哪些不是。 */
+  /** 審稿（五期）：幾段材料的標題要說清哪些是已經發生的事、哪些不是。 */
   const reviewing = capability === 'review';
-  /** 按审稿意见修稿（五期）。 */
+  /** 按審稿意見修稿（五期）。 */
   const revising = writing && request.writeMode === 'revise';
 
   const messages: ChatMessage[] = [];
@@ -141,8 +141,8 @@ function assembleMessages(
     messages.push({ role: 'system', content: system.text });
   }
 
-  // 历史对话作为真正的多轮消息发出，而不是塞进一段文本里——
-  // 模型对 role 交替的理解远好于「以下是我们之前的对话」。
+  // 歷史對話作為真正的多輪訊息發出，而不是塞進一段文字裡——
+  // 模型對 role 交替的理解遠好於「以下是我們之前的對話」。
   const historyById = new Map((request.history ?? []).map((t) => [`history:${t.id}`, t]));
   for (const item of pick('history')) {
     const turn = historyById.get(item.id);
@@ -158,21 +158,21 @@ function assembleMessages(
     }
   };
 
-  // 写作技能排在最前面（上游 `base-command.ts:63` 同样拼在第一条用户消息的开头）：它是补充的
-  // 写作方法，自带一句「作者事实和后续输出合同始终优先」，后面的每一节都比它说了算。
+  // 寫作技能排在最前面（上游 `base-command.ts:63` 同樣拼在第一條使用者訊息的開頭）：它是補充的
+  // 寫作方法，自帶一句「作者事實和後續輸出合同始終優先」，後面的每一節都比它說了算。
   const skillBlock = pick('skill')[0];
   if (skillBlock) {
     sections.push(skillBlock.text.trim());
   }
 
-  section('# 文风指南（务必贴合）', pick('style'));
-  section('# 全局要求（每一章都要遵守）', pick('guidance'));
-  section('# 故事架构', pick('setting'));
-  section('# 全文大纲', pick('globalSummary'));
-  section('# 情节大纲', pick('outlineDoc'));
-  section('# 故事结构指导', pick('guide'));
-  section('# 相关角色设定', pick('character'));
-  // 设定（设定名录）：整条带的在前、空行隔开；只带一句话的并成一张清单跟在后面，一行一条。
+  section('# 文風指南（務必貼合）', pick('style'));
+  section('# 全域要求（每一章都要遵守）', pick('guidance'));
+  section('# 故事架構', pick('setting'));
+  section('# 全文大綱', pick('globalSummary'));
+  section('# 情節大綱', pick('outlineDoc'));
+  section('# 故事結構指導', pick('guide'));
+  section('# 相關角色設定', pick('character'));
+  // 設定（設定名錄）：整條帶的在前、空行隔開；只帶一句話的併成一張清單跟在後面，一行一條。
   const loreItems = pick('lore');
   const loreLines = loreItems.filter((i) => i.text.trimStart().startsWith('- '));
   const loreFull = loreItems.filter((i) => !loreLines.includes(i));
@@ -180,40 +180,40 @@ function assembleMessages(
     const parts = [
       join(loreFull),
       loreLines.length > 0
-        ? `其余相关设定（只列一句话；提到它们时沿用这些名字）：\n${loreLines.map((i) => i.text.trim()).join('\n')}`
+        ? `其餘相關設定（只列一句話；提到它們時沿用這些名字）：\n${loreLines.map((i) => i.text.trim()).join('\n')}`
         : '',
     ].filter(Boolean);
-    sections.push(`# 相关世界观设定\n\n${parts.join('\n\n')}`);
+    sections.push(`# 相關世界觀設定\n\n${parts.join('\n\n')}`);
   }
-  // 细纲与正文都由远及近排列，读起来是正序的时间线。写正文时只带前几章（`plotPrev`），不再带更早几十章。
-  section('# 前几章细纲（前情，不要在本章重演；标「计划」的还没定稿，不一定是正文写成的样子）', pick('plotSummary'));
-  // 证据原文排在细纲后面、前文正文前面：读的时候是「细纲这么说 → 原文是这样写的 → 紧挨着的那几章」。
-  // 说法移植自上游 chapter-materials.ts:223-227（「索引、摘要和 currentState 都不是作者事实」）。
+  // 細綱與正文都由遠及近排列，讀起來是正序的時間線。寫正文時只帶前幾章（`plotPrev`），不再帶更早幾十章。
+  section('# 前幾章細綱（前情，不要在本章重演；標「計劃」的還沒定稿，不一定是正文寫成的樣子）', pick('plotSummary'));
+  // 證據原文排在細綱後面、前文正文前面：讀的時候是「細綱這麼說 → 原文是這樣寫的 → 緊挨著的那幾章」。
+  // 說法移植自上游 chapter-materials.ts:223-227（「索引、摘要和 currentState 都不是作者事實」）。
   section(
-    '# 定稿原文片段（前情以这些原文为准；细纲、角色状态与它有出入时信原文）',
+    '# 定稿原文片段（前情以這些原文為準；細綱、角色狀態與它有出入時信原文）',
     pick('evidence').slice().sort(byNoAsc)
   );
-  // 审稿对照的前情：上游标的是「已确认定稿历史｜唯一已发生事实源」（RV:212-227）。
-  section('# 前几章的连续性事实（已定稿，已经发生的事）', pick('facts').slice().sort(byNoAsc));
+  // 審稿對照的前情：上游標的是「已確認定稿歷史｜唯一已發生事實源」（RV:212-227）。
+  section('# 前幾章的連續性事實（已定稿，已經發生的事）', pick('facts').slice().sort(byNoAsc));
 
-  // 叙事线（叙事线重做）：一条一行，按要紧程度排（层里排好了，不按章号）。排在前情后面、前文正文前面：
-  // 读的时候是「前面发生了什么 → 哪几条线还开着 → 紧挨着的那几章」。说法的后半句是这一层存在的
-  // 另一半理由——模型知道第 18 章要揭开什么，写第 3 章时最顺手的就是提前揭开。审稿只带伏笔那一半，换个说法。
-  // 拆细纲（叙事线二期）：线在前、没收的伏笔另起一段（标签是「伏笔 · 」的那几条），标题说清这一节是拿来照着排的。
-  // 故事时间（2026-10-24）：叙事线那一层登记的一条，单独成一节、放在叙事线前面——日期是从时间线现算的，模型照着接、不用自己算。
+  // 敘事線（敘事線重做）：一條一行，按要緊程度排（層裡排好了，不按章號）。排在前情後面、前文正文前面：
+  // 讀的時候是「前面發生了什麼 → 哪幾條線還開著 → 緊挨著的那幾章」。說法的後半句是這一層存在的
+  // 另一半理由——模型知道第 18 章要揭開什麼，寫第 3 章時最順手的就是提前揭開。審稿只帶伏筆那一半，換個說法。
+  // 拆細綱（敘事線二期）：線在前、沒收的伏筆另起一段（標籤是「伏筆 · 」的那幾條），標題說清這一節是拿來照著排的。
+  // 故事時間（2026-10-24）：敘事線那一層登記的一條，單獨成一節、放在敘事線前面——日期是從時間線現算的，模型照著接、不用自己算。
   const storyTime = pick('thread').filter((i) => i.label === STORY_TIME_LABEL);
   if (storyTime.length > 0) {
-    sections.push(`# 故事时间（日期由前文推算，照着接，不要和前面打架）\n\n${storyTime.map((i) => i.text.trim()).join('\n')}`);
+    sections.push(`# 故事時間（日期由前文推算，照著接，不要和前面打架）\n\n${storyTime.map((i) => i.text.trim()).join('\n')}`);
   }
   const threadLines = pick('thread').filter((i) => i.label !== STORY_TIME_LABEL);
   if (threadLines.length > 0 && stage === 'plot') {
-    const lines = threadLines.filter((i) => !i.label.startsWith('伏笔 · '));
-    const fores = threadLines.filter((i) => i.label.startsWith('伏笔 · '));
+    const lines = threadLines.filter((i) => !i.label.startsWith('伏筆 · '));
+    const fores = threadLines.filter((i) => i.label.startsWith('伏筆 · '));
     sections.push(
       [
-        '# 叙事线（照着排：该推进的线推进、该收的伏笔安排在某一章收；没到回收章的不要提前揭开，还没到开始那一章的线不要提前开）',
+        '# 敘事線（照著排：該推進的線推進、該收的伏筆安排在某一章收；沒到回收章的不要提前揭開，還沒到開始那一章的線不要提前開）',
         lines.length > 0 ? lines.map((i) => i.text.trim()).join('\n') : '',
-        fores.length > 0 ? `没收的伏笔：\n${fores.map((i) => i.text.trim()).join('\n')}` : '',
+        fores.length > 0 ? `沒收的伏筆：\n${fores.map((i) => i.text.trim()).join('\n')}` : '',
       ]
         .filter(Boolean)
         .join('\n\n')
@@ -222,8 +222,8 @@ function assembleMessages(
     sections.push(
       `${
         reviewing
-          ? '# 没收的伏笔（审稿对照：计划在本章收的写到没有；没到回收章的有没有提前揭开）'
-          : '# 进行中的叙事线（只作提醒：以本章细纲为准，细纲没写到的线不要硬塞；没到回收章的伏笔不许提前揭开）'
+          ? '# 沒收的伏筆（審稿對照：計劃在本章收的寫到沒有；沒到回收章的有沒有提前揭開）'
+          : '# 進行中的敘事線（只作提醒：以本章細綱為準，細綱沒寫到的線不要硬塞；沒到回收章的伏筆不許提前揭開）'
       }\n\n${threadLines.map((i) => i.text.trim()).join('\n')}`
     );
   }
@@ -233,82 +233,82 @@ function assembleMessages(
 
   const prevTail = pick('prevTail')[0];
   if (prevTail) {
-    // 「不可重演」：上游的说法是「只作边界，不可重演」（PT:810）。模型拿到上一章结尾之后
-    // 最常见的失败不是接不上，是从那里把最后一场重新演一遍（context/replay.ts 写完再查一次）。
+    // 「不可重演」：上游的說法是「只作邊界，不可重演」（PT:810）。模型拿到上一章結尾之後
+    // 最常見的失敗不是接不上，是從那裡把最後一場重新演一遍（context/replay.ts 寫完再查一次）。
     sections.push(
       writing && !revising
-        ? `# 上一章结尾原文（只作边界，不可重演）\n\n这是上一章已经写完的结尾。本章从它的最终状态之后无缝接下去，不要重写、摘要或回放这一段。\n\n${prevTail.text}`
-        : `# 上一章结尾原文\n\n${prevTail.text}`
+        ? `# 上一章結尾原文（只作邊界，不可重演）\n\n這是上一章已經寫完的結尾。本章從它的最終狀態之後無縫接下去，不要重寫、摘要或回放這一段。\n\n${prevTail.text}`
+        : `# 上一章結尾原文\n\n${prevTail.text}`
     );
   } else if (writing && fullText.length > 0 && items.some((i) => i.kind === 'prevTail' && i.status === 'dropped')) {
-    // 结尾片段被整章正文取代时，仍要点明接续位置。**只在确实被取代时说**：上一章
-    // 根本没有正文（只排了细纲）时这里没有结尾片段可言，最后一份全文是更早的某一章，
-    // 说「从它的结尾接下去」等于让模型跳过中间那一章的事件。
+    // 結尾片段被整章正文取代時，仍要點明接續位置。**只在確實被取代時說**：上一章
+    // 根本沒有正文（只排了細綱）時這裡沒有結尾片段可言，最後一份全文是更早的某一章，
+    // 說「從它的結尾接下去」等於讓模型跳過中間那一章的事件。
     const last = fullText[fullText.length - 1];
     sections.push(
-      `你要从上面「${last.label.replace(' · 正文', '')}」结尾的最终状态之后无缝接下去，不要重演它的结尾。`
+      `你要從上面「${last.label.replace(' · 正文', '')}」結尾的最終狀態之後無縫接下去，不要重演它的結尾。`
     );
   }
 
-  // 从已写正文整理（拆书 A）：要整理的东西本身。排在前序细纲一览与本层产物之前、紧挨着指令——
-  // 读的时候是「已经写成了这些 → 已经整理到哪 → 现在把这几章整理出来」。层里按装进去的顺序排
-  // （设定那一组先节选、后全书梗概），不按章号重排。
-  section('# 已写正文（作者已经写成的权威事实：这一次是从中整理，不是创作）', pick('written'));
+  // 從已寫正文整理（拆書 A）：要整理的東西本身。排在前序細綱一覽與本層產物之前、緊挨著指令——
+  // 讀的時候是「已經寫成了這些 → 已經整理到哪 → 現在把這幾章整理出來」。層裡按裝進去的順序排
+  // （設定那一組先節選、後全書梗概），不按章號重排。
+  section('# 已寫正文（作者已經寫成的權威事實：這一次是從中整理，不是創作）', pick('written'));
 
-  // 已经排好的目录进度：细纲批次要紧接着它的最后一章往下排。
-  section('# 前序细纲一览（已生成的目录进度）', pick('plotList'));
+  // 已經排好的目錄進度：細綱批次要緊接著它的最後一章往下排。
+  section('# 前序細綱一覽（已生成的目錄進度）', pick('plotList'));
 
-  // 单条设定（展开，完善设定 2026-10-19）：定稿记录 → 已排细纲 → 这一条本身，紧挨着指令。读的时候是
-  // 「已经写进正文的（不能推翻）→ 接下来要它做什么 → 它现在写到哪了」。
-  section('# 定稿过的记录（已经写进正文的事实，不能推翻）', pick('loreRecord'));
-  section('# 已排细纲里用到它的地方（计划，还没写成正文；这一条要撑得住这些情节）', pick('lorePlan'));
-  section('# 当前这一条设定（现有内容；作者写过的只补、只细化，不删）', pick('loreSelf'));
+  // 單條設定（展開，完善設定 2026-10-19）：定稿記錄 → 已排細綱 → 這一條本身，緊挨著指令。讀的時候是
+  // 「已經寫進正文的（不能推翻）→ 接下來要它做什麼 → 它現在寫到哪了」。
+  section('# 定稿過的記錄（已經寫進正文的事實，不能推翻）', pick('loreRecord'));
+  section('# 已排細綱裡用到它的地方（計劃，還沒寫成正文；這一條要撐得住這些情節）', pick('lorePlan'));
+  section('# 當前這一條設定（現有內容；作者寫過的只補、只細化，不刪）', pick('loreSelf'));
 
-  // 本层产物紧挨着指令：这一章的细纲才是这一轮真正要动的东西。
-  section('# 细纲', pick('plot'));
+  // 本層產物緊挨著指令：這一章的細綱才是這一輪真正要動的東西。
+  section('# 細綱', pick('plot'));
 
-  // 写正文的边界：后面几章要发生的事。紧跟在本章细纲后面，读的时候就是「这一章写到这为止」。
-  // 审稿时同一份东西换个说法（上游 `planningMaterial` 的「当前及未来蓝图/计划｜非既定历史」）。
+  // 寫正文的邊界：後面幾章要發生的事。緊跟在本章細綱後面，讀的時候就是「這一章寫到這為止」。
+  // 審稿時同一份東西換個說法（上游 `planningMaterial` 的「當前及未來藍圖/計劃｜非既定歷史」）。
   section(
     reviewing
-      ? '# 后续章节计划（非既定历史：这些事还没有发生，只用来判断本章有没有提前写掉）'
-      : '# 后续章节预告（仅供了解后续剧情发力点，绝对不要在本章提前写出这些内容）',
+      ? '# 後續章節計劃（非既定歷史：這些事還沒有發生，只用來判斷本章有沒有提前寫掉）'
+      : '# 後續章節預告（僅供瞭解後續劇情發力點，絕對不要在本章提前寫出這些內容）',
     pick('boundary')
   );
 
-  // 审的就是它：紧挨着契约，引文从这里逐字摘。
-  section('# 待审正文', pick('chapterFull'));
+  // 審的就是它：緊挨著契約，引文從這裡逐字摘。
+  section('# 待審正文', pick('chapterFull'));
 
-  // 「接着写」从这里往下接：离指令最近，接的是哪一句一眼看得到。
+  // 「接著寫」從這裡往下接：離指令最近，接的是哪一句一眼看得到。
   section(
-    revising ? '# 已修订正文（末尾，从这里接着输出）' : '# 本章已写正文（末尾，你要从这里接着写）',
+    revising ? '# 已修訂正文（末尾，從這裡接著輸出）' : '# 本章已寫正文（末尾，你要從這裡接著寫）',
     pick('chapterSoFar')
   );
 
-  // 用户 @ 的引用也紧挨着他的指令放——他多半正是要针对这些内容提要求。
-  section('# 我引用的内容（请针对这些内容作答）', pick('attachment'));
+  // 使用者 @ 的引用也緊挨著他的指令放——他多半正是要針對這些內容提要求。
+  section('# 我引用的內容（請針對這些內容作答）', pick('attachment'));
 
   const askText = pick('ask')[0]?.text ?? request.ask;
   const requirements: string[] = [
-    `${askHeading(request.action, facts)}\n\n${askText.trim() || '（没有额外要求，按上面的设定与契约来。）'}`,
+    `${askHeading(request.action, facts)}\n\n${askText.trim() || '（沒有額外要求，按上面的設定與契約來。）'}`,
   ];
   if (request.extraInstruction?.trim()) {
-    requirements.push(`额外要求：${request.extraInstruction.trim()}`);
+    requirements.push(`額外要求：${request.extraInstruction.trim()}`);
   }
   sections.push(requirements.join('\n\n'));
 
   const revision = pick('revision')[0];
   if (revision) {
-    // 修稿不说「重写」：它要的是清单指到的那几处改掉、其余一字不动（契约里说清）。
+    // 修稿不說「重寫」：它要的是清單指到的那幾處改掉、其餘一字不動（契約裡說清）。
     sections.push(
       revising
-        ? `# 待修稿原文与审稿意见\n\n${revision.text}`
-        : `# 修订要求\n\n${revision.text}\n\n请基于上一版重写，采纳修改意见，保留其中写得好的部分。`
+        ? `# 待修稿原文與審稿意見\n\n${revision.text}`
+        : `# 修訂要求\n\n${revision.text}\n\n請基於上一版重寫，採納修改意見，保留其中寫得好的部分。`
     );
   }
 
-  // target 也要给：架构层五件同属一个阶段，契约要看是哪一件。写正文时目标字数也在契约里
-  // （篇幅合同 ±20%），从前这里另有一行「约 N 字（±15%）」，两个比例作者与模型都分不清哪个算数。
+  // target 也要給：架構層五件同屬一個階段，契約要看是哪一件。寫正文時目標字數也在契約裡
+  // （篇幅合同 ±20%），從前這裡另有一行「約 N 字（±15%）」，兩個比例作者與模型都分不清哪個算數。
   sections.push(buildOutputContract(request.action, facts));
 
   messages.push({ role: 'user', content: sections.join('\n\n---\n\n') });
@@ -325,12 +325,12 @@ function noOf(item: ContextItem): number {
 }
 
 /**
- * 已经写了正文的书，生成架构几件一律照正文整理（`derive`）：凭一句话编出来的设定与已写的章对不上，
- * 后面每一章却都要读它。从已写正文补齐自己带着 `derive`，这里补上补齐架构、对话页与 MCP 的单件生成。
- * 角色图谱除外：已写正文的书照定稿过的细纲建卡（features/characterCard.ts），不走身份清单那条链。
- * 设定清单同理：有正文的书这一件本来就算填过（`isLoreListFilled`），设定从定稿里长、从名录建条目；
- * 作者硬要重排一份时照新书的清单链走，不另编一套「照正文整理」的合同。
- * 单条设定（展开）也不走这条：它的原料本来就是定稿过的记录（`loreMaterial` 层），合同是往前想，不是照正文整理。
+ * 已經寫了正文的書，生成架構幾件一律照正文整理（`derive`）：憑一句話編出來的設定與已寫的章對不上，
+ * 後面每一章卻都要讀它。從已寫正文補齊自己帶著 `derive`，這裡補上補齊架構、對話頁與 MCP 的單件生成。
+ * 角色圖譜除外：已寫正文的書照定稿過的細綱建卡（features/characterCard.ts），不走身份清單那條鏈。
+ * 設定清單同理：有正文的書這一件本來就算填過（`isLoreListFilled`），設定從定稿里長、從名錄建條目；
+ * 作者硬要重排一份時照新書的清單鏈走，不另編一套「照正文整理」的合同。
+ * 單條設定（展開）也不走這條：它的原料本來就是定稿過的記錄（`loreMaterial` 層），合同是往前想，不是照正文整理。
  */
 async function settingFromText(project: NovelProject, request: BuildRequest): Promise<BuildRequest> {
   const { action, target } = request;

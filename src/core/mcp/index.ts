@@ -1,9 +1,9 @@
 /**
- * Novelwarden 的 MCP 入口：工具清单 + 说明 + HTTP 传输，壳只要给出「当前工程的执行端」。
+ * Novelwarden 的 MCP 入口：工具清單 + 說明 + HTTP 傳輸，殼只要給出「當前工程的執行端」。
  *
  * ```ts
  * const mcp = createNovelMcp((project) => hub.mcpBackend(project));
- * // fetch 里：if (url.pathname === '/mcp') return mcp.handle(req);
+ * // fetch 裡：if (url.pathname === '/mcp') return mcp.handle(req);
  * ```
  */
 import { NOVEL_TOOLS } from '../tools/novel';
@@ -18,10 +18,10 @@ export { McpServer, McpSession, PROTOCOL_VERSIONS } from './server';
 export type { McpBackend, McpCallResult } from './server';
 export { MCP_INSTRUCTIONS } from './instructions';
 
-/** 挂在独立版服务上的路径。 */
+/** 掛在獨立版服務上的路徑。 */
 export const MCP_PATH = '/mcp';
 
-/** `serverInfo.version`。只给客户端日志看，不参与任何判断。 */
+/** `serverInfo.version`。只給客戶端日誌看，不參與任何判斷。 */
 const SERVER_VERSION = '0.1.0';
 
 export function createNovelMcp(backend: (project?: string) => McpBackend | undefined, opts: McpHttpOptions = {}): McpHttpHandler {

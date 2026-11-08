@@ -1,16 +1,16 @@
 /**
- * 正文层的 `evidence` 层（四期，D18）：写正文时不拿细纲当事实，拿定稿过的细纲里连续性事实的
- * 证据原句回到前面各章的正文里，带那几段原文。
+ * 正文層的 `evidence` 層（四期，D18）：寫正文時不拿細綱當事實，拿定稿過的細綱裡連續性事實的
+ * 證據原句回到前面各章的正文裡，帶那幾段原文。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 前 5 章的事实全取，更早的只取涉及本章角色的 | D18：近的都相关，远的只有与本章的人有关的才相关 |
- * | 带的是证据所在的那一段与前后各一段 | 原文才是作者认可的那一版 |
- * | 只认 sourceHash 对得上正文的细纲：定稿之后正文又改过的章不带 | 证据句多半已不在原处，事实本身也可能正是改掉的那一处 |
- * | 定稿对得上、但某条证据定位不到的换成事实原句，标 degraded | 第 2 条：不静默截断 |
- * | 整章正文已经进来的章不再单独带片段 | 同一段原文带两遍只是贵 |
- * | 上一章没定稿（或定稿之后正文又改过），明细里说清 | D23：不挡路，但不静默 |
- * | 一共 6000 字、最多 12 章，放不下的写原因 | 上游 MATERIAL_BUDGET_CHARS；第 2 条 |
+ * | 前 5 章的事實全取，更早的只取涉及本章角色的 | D18：近的都相關，遠的只有與本章的人有關的才相關 |
+ * | 帶的是證據所在的那一段與前後各一段 | 原文才是作者認可的那一版 |
+ * | 只認 sourceHash 對得上正文的細綱：定稿之後正文又改過的章不帶 | 證據句多半已不在原處，事實本身也可能正是改掉的那一處 |
+ * | 定稿對得上、但某條證據定位不到的換成事實原句，標 degraded | 第 2 條：不靜默截斷 |
+ * | 整章正文已經進來的章不再單獨帶片段 | 同一段原文帶兩遍只是貴 |
+ * | 上一章沒定稿（或定稿之後正文又改過），明細裡說清 | D23：不擋路，但不靜默 |
+ * | 一共 6000 字、最多 12 章，放不下的寫原因 | 上游 MATERIAL_BUDGET_CHARS；第 2 條 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -42,18 +42,18 @@ function chapterText(no, extra = '') {
   return [
     `# 第${no}章`,
     '',
-    `第${no}章开头，雨还在下。`,
+    `第${no}章開頭，雨還在下。`,
     '',
-    `林昭在第${no}章把第${no}块令牌塞进怀里。${extra}`,
+    `林昭在第${no}章把第${no}塊令牌塞進懷裡。${extra}`,
     '',
-    `沈氏在第${no}章锁上了第${no}道门。`,
+    `沈氏在第${no}章鎖上了第${no}道門。`,
     '',
-    `第${no}章结尾，风停了。`,
+    `第${no}章結尾，風停了。`,
     '',
   ].join('\n');
 }
 
-/** 要写的那一章的细纲（计划）：计划出场林昭。 */
+/** 要寫的那一章的細綱（計劃）：計劃出場林昭。 */
 function plotText(no) {
   return [
     '---',
@@ -68,15 +68,15 @@ function plotText(no) {
     '',
     '往下查。',
     '',
-    '## 出场人物',
+    '## 出場人物',
     '',
     '林昭',
     '',
-    '## 关键事件',
+    '## 關鍵事件',
     '',
-    '林昭去井边。',
+    '林昭去井邊。',
     '',
-    '## 看点',
+    '## 看點',
     '',
     '- 井底有人。',
     '',
@@ -94,16 +94,16 @@ before(() => {
   bundle.host.initHost(makeFakeHost().host);
 });
 
-/** 建工程：第 1..n 章正文，`summarized` 里的章写定稿过的细纲（sourceHash 对得上），第 n+1 章排好细纲（计划）。 */
+/** 建工程：第 1..n 章正文，`summarized` 裡的章寫定稿過的細綱（sourceHash 對得上），第 n+1 章排好細綱（計劃）。 */
 async function setup(prefix, n, summarized, opts = {}) {
-  const t = await makeTempProject(bundle.project, { prefix, title: '证据测试' });
+  const t = await makeTempProject(bundle.project, { prefix, title: '證據測試' });
   for (let no = 1; no <= n; no++) {
     t.write(CH(no), opts.text ? opts.text(no) : chapterText(no));
   }
   t.write(PLOT(n + 1), plotText(n + 1));
   t.write(
     '.novelwarden/characters/林昭.md',
-    `---\nname: 林昭\naliases: [阿昭]\ntags: [主角]\nstateThrough: ${opts.stateThrough ?? 6}\n---\n\n# 林昭\n\n## 身份\n\n孤儿\n`
+    `---\nname: 林昭\naliases: [阿昭]\ntags: [主角]\nstateThrough: ${opts.stateThrough ?? 6}\n---\n\n# 林昭\n\n## 身份\n\n孤兒\n`
   );
   t.project.invalidate();
   const chapters = await t.project.listChapters();
@@ -112,12 +112,12 @@ async function setup(prefix, n, summarized, opts = {}) {
     const facts = opts.facts
       ? opts.facts(no)
       : [
-          `- 林昭收起第${no}块令牌 〔证据：「林昭在第${no}章把第${no}块令牌塞进怀里。」〕`,
-          `- 沈氏锁上第${no}道门 〔证据：「沈氏在第${no}章锁上了第${no}道门。」〕`,
+          `- 林昭收起第${no}塊令牌 〔證據：「林昭在第${no}章把第${no}塊令牌塞進懷裡。」〕`,
+          `- 沈氏鎖上第${no}道門 〔證據：「沈氏在第${no}章鎖上了第${no}道門。」〕`,
         ];
     t.write(
       PLOT(no),
-      `---\nno: ${no}\ntitle: 第${no}章\nsourceHash: ${ch.contentHash}\ncast: [林昭, 沈氏]\n---\n\n# 第${no}章 第${no}章\n\n## 梗概\n\n第${no}章的事。\n\n## 出场人物\n\n林昭、沈氏\n\n## 连续性事实\n\n${facts.join('\n')}\n`
+      `---\nno: ${no}\ntitle: 第${no}章\nsourceHash: ${ch.contentHash}\ncast: [林昭, 沈氏]\n---\n\n# 第${no}章 第${no}章\n\n## 梗概\n\n第${no}章的事。\n\n## 出場人物\n\n林昭、沈氏\n\n## 連續性事實\n\n${facts.join('\n')}\n`
     );
   }
   t.project.invalidate();
@@ -132,69 +132,69 @@ async function build(t, no, extra) {
   );
 }
 
-describe('evidence · 写第 9 章（前 8 章写过，第 8 章还没定稿）', () => {
+describe('evidence · 寫第 9 章（前 8 章寫過，第 8 章還沒定稿）', () => {
   let t;
   let b;
   let byId;
 
   before(async () => {
     t = await setup('evidence', 8, [1, 2, 3, 4, 5, 6, 7]);
-    // 第 6 章定稿之后作者改了一句：细纲的 sourceHash 对不上正文了。
-    t.write(CH(6), chapterText(6).replace('塞进怀里', '揣进了怀里'));
-    // 第 5 章定稿对得上，但作者手改了细纲里一条事实的证据句：这一条在正文里定位不到。
-    t.write(PLOT(5), t.read(PLOT(5)).replace('「林昭在第5章把第5块令牌塞进怀里。」', '「林昭在第5章把令牌揣好。」'));
+    // 第 6 章定稿之後作者改了一句：細綱的 sourceHash 對不上正文了。
+    t.write(CH(6), chapterText(6).replace('塞進懷裡', '揣進了懷裡'));
+    // 第 5 章定稿對得上，但作者手改了細綱裡一條事實的證據句：這一條在正文裡定位不到。
+    t.write(PLOT(5), t.read(PLOT(5)).replace('「林昭在第5章把第5塊令牌塞進懷裡。」', '「林昭在第5章把令牌揣好。」'));
     t.project.invalidate();
     b = await build(t, 9);
     byId = new Map(b.items.filter((i) => i.kind === 'evidence').map((i) => [i.id, i]));
   });
   after(() => cleanup(t.dir, bundle.db));
 
-  test('前 5 章里定过稿、对得上的都带了；更早的也带了（涉及本章角色林昭）', () => {
+  test('前 5 章裡定過稿、對得上的都帶了；更早的也帶了（涉及本章角色林昭）', () => {
     for (const no of [1, 2, 3, 4, 5]) {
       assert.ok(['included', 'degraded'].includes(byId.get(`evidence:${no}`)?.status), `第 ${no} 章：${JSON.stringify(byId.get(`evidence:${no}`))}`);
     }
-    assert.match(byId.get('evidence:5').note, /^2 条连续性事实/);
-    assert.match(byId.get('evidence:3').note, /^1 条涉及本章角色的连续性事实/);
+    assert.match(byId.get('evidence:5').note, /^2 條連續性事實/);
+    assert.match(byId.get('evidence:3').note, /^1 條涉及本章角色的連續性事實/);
   });
 
-  test('带的是证据所在那一段与前后各一段', () => {
+  test('帶的是證據所在那一段與前後各一段', () => {
     const text = byId.get('evidence:4').text;
-    assert.match(text, /林昭在第4章把第4块令牌塞进怀里/);
-    assert.match(text, /第4章开头/);
-    assert.match(text, /第4章结尾/);
+    assert.match(text, /林昭在第4章把第4塊令牌塞進懷裡/);
+    assert.match(text, /第4章開頭/);
+    assert.match(text, /第4章結尾/);
   });
 
-  test('第 6 章定稿之后正文又改过：细纲的事实不作数，不带它的片段', () => {
+  test('第 6 章定稿之後正文又改過：細綱的事實不作數，不帶它的片段', () => {
     assert.equal(byId.get('evidence:6'), undefined);
   });
 
-  test('定稿对得上、但定位不到的那条换成事实原句，标 degraded 并写明', () => {
+  test('定稿對得上、但定位不到的那條換成事實原句，標 degraded 並寫明', () => {
     const e = byId.get('evidence:5');
     assert.equal(e.status, 'degraded');
-    assert.match(e.note, /1 条证据在正文里找不到.*换成事实原句/);
-    assert.match(e.text, /- 林昭收起第5块令牌/);
-    assert.match(e.text, /沈氏在第5章锁上了第5道门/);
+    assert.match(e.note, /1 條證據在正文裡找不到.*換成事實原句/);
+    assert.match(e.text, /- 林昭收起第5塊令牌/);
+    assert.match(e.text, /沈氏在第5章鎖上了第5道門/);
   });
 
-  test('第 7 章的整章正文进来了：它的片段不再单独带', () => {
+  test('第 7 章的整章正文進來了：它的片段不再單獨帶', () => {
     const e = byId.get('evidence:7');
     assert.equal(e.status, 'dropped');
     assert.match(e.note, /整章正文已完整注入/);
     assert.ok(b.items.some((i) => i.id === 'manuscriptFull:7' && i.status === 'included'));
   });
 
-  test('D23：第 8 章还没定稿，明细里写明，角色状态截至第几章', () => {
+  test('D23：第 8 章還沒定稿，明細裡寫明，角色狀態截至第幾章', () => {
     const e = byId.get('evidence:8');
     assert.equal(e.status, 'dropped');
-    assert.equal(e.note, '第 8 章还没同步：没有连续性事实，角色状态截至第 6 章');
+    assert.equal(e.note, '第 8 章還沒同步：沒有連續性事實，角色狀態截至第 6 章');
   });
 
-  test('角色卡的说明带「状态截至第 K 章」', () => {
+  test('角色卡的說明帶「狀態截至第 K 章」', () => {
     const card = b.items.find((i) => i.id === 'character:林昭');
-    assert.match(card.note, /状态截至第 6 章/);
+    assert.match(card.note, /狀態截至第 6 章/);
   });
 
-  test('消息里一节，按章号正序', () => {
+  test('訊息裡一節，按章號正序', () => {
     const user = b.messages[b.messages.length - 1].content;
     const at = user.indexOf('# 定稿原文片段');
     assert.ok(at > 0);
@@ -202,7 +202,7 @@ describe('evidence · 写第 9 章（前 8 章写过，第 8 章还没定稿）'
     assert.ok(section.indexOf('【第 1 章') < section.indexOf('【第 5 章'), section.slice(0, 400));
   });
 
-  test('续写那几轮不带这一层', async () => {
+  test('續寫那幾輪不帶這一層', async () => {
     const c = await bundle.builder.buildContext(
       t.project,
       {
@@ -210,7 +210,7 @@ describe('evidence · 写第 9 章（前 8 章写过，第 8 章还没定稿）'
         target: { kind: 'manuscript', plotRelPath: PLOT(9) },
         ask: '',
         targetWords: 1200,
-        step: { kind: 'continuation', tail: '已写的末尾', written: 600, remaining: 600, recovery: false },
+        step: { kind: 'continuation', tail: '已寫的末尾', written: 600, remaining: 600, recovery: false },
       },
       config()
     );
@@ -218,51 +218,51 @@ describe('evidence · 写第 9 章（前 8 章写过，第 8 章还没定稿）'
   });
 });
 
-describe('evidence · 上一章定稿之后正文又改过', () => {
+describe('evidence · 上一章定稿之後正文又改過', () => {
   let t;
   let b;
   before(async () => {
     t = await setup('evidence-stale-prev', 8, [1, 2, 3, 4, 5, 6, 7, 8]);
-    t.write(CH(8), chapterText(8, '他回头看了一眼。'));
+    t.write(CH(8), chapterText(8, '他回頭看了一眼。'));
     t.project.invalidate();
     b = await build(t, 9);
   });
   after(() => cleanup(t.dir, bundle.db));
 
-  test('D23：明细里写明事实不作数，角色状态截至第几章', () => {
+  test('D23：明細裡寫明事實不作數，角色狀態截至第幾章', () => {
     const e = b.items.find((i) => i.id === 'evidence:8');
     assert.equal(e.status, 'dropped');
-    assert.equal(e.note, '第 8 章同步之后正文又改过：连续性事实不作数，角色状态截至第 6 章');
+    assert.equal(e.note, '第 8 章同步之後正文又改過：連續性事實不作數，角色狀態截至第 6 章');
   });
 });
 
-describe('evidence · 更早的章只取涉及本章角色的事实', () => {
+describe('evidence · 更早的章只取涉及本章角色的事實', () => {
   let t;
   let b;
   before(async () => {
     t = await setup('evidence-names', 8, [1, 2, 3, 4, 5, 6, 7, 8], {
-      facts: (no) => (no <= 3 ? [`- 沈氏锁上第${no}道门 〔证据：「沈氏在第${no}章锁上了第${no}道门。」〕`] : [`- 林昭收起第${no}块令牌 〔证据：「林昭在第${no}章把第${no}块令牌塞进怀里。」〕`]),
+      facts: (no) => (no <= 3 ? [`- 沈氏鎖上第${no}道門 〔證據：「沈氏在第${no}章鎖上了第${no}道門。」〕`] : [`- 林昭收起第${no}塊令牌 〔證據：「林昭在第${no}章把第${no}塊令牌塞進懷裡。」〕`]),
     });
     b = await build(t, 9, { contextOverrides: { fullTextChapters: 0 } });
   });
   after(() => cleanup(t.dir, bundle.db));
 
-  test('第 1–3 章的事实只关于沈氏：不带；第 4–8 章全带', () => {
+  test('第 1–3 章的事實只關於沈氏：不帶；第 4–8 章全帶', () => {
     const nos = b.items.filter((i) => i.kind === 'evidence' && i.status === 'included').map((i) => Number(i.id.split(':')[1]));
     assert.deepEqual(nos.sort((x, y) => x - y), [4, 5, 6, 7, 8]);
   });
 
-  // 顺手修掉的老问题：`slice(-0)` 等于 `slice(0)`，设成 0 反而把前面每一章都整章塞进来。
-  test('「注入完整原文章数」设成 0：一章全文都不带', () => {
+  // 順手修掉的老問題：`slice(-0)` 等於 `slice(0)`，設成 0 反而把前面每一章都整章塞進來。
+  test('「注入完整原文章數」設成 0：一章全文都不帶', () => {
     assert.deepEqual(b.items.filter((i) => i.kind === 'manuscriptFull'), []);
   });
 });
 
 describe('evidence · 一共 6000 字、最多 12 章', () => {
-  test('放不下的章 dropped，写明是封顶了', async () => {
-    const long = '长'.repeat(700);
+  test('放不下的章 dropped，寫明是封頂了', async () => {
+    const long = '長'.repeat(700);
     const t = await setup('evidence-cap', 8, [1, 2, 3, 4, 5, 6, 7, 8], {
-      text: (no) => chapterText(no).replace('开头，雨还在下。', `开头，${long}`).replace('结尾，风停了。', `结尾，${long}`),
+      text: (no) => chapterText(no).replace('開頭，雨還在下。', `開頭，${long}`).replace('結尾，風停了。', `結尾，${long}`),
     });
     const b = await build(t, 9, { contextOverrides: { fullTextChapters: 0 } });
     const ev = b.items.filter((i) => i.kind === 'evidence');
@@ -271,11 +271,11 @@ describe('evidence · 一共 6000 字、最多 12 章', () => {
     assert.ok(kept.reduce((sum, i) => sum + i.text.length, 0) <= 6000);
     const dropped = ev.filter((i) => i.status === 'dropped');
     assert.ok(dropped.length > 0);
-    assert.match(dropped[0].note, /一共只带 6000 字/);
+    assert.match(dropped[0].note, /一共只帶 6000 字/);
     cleanup(t.dir, bundle.db);
   });
 
-  test('最多从 12 章里取', async () => {
+  test('最多從 12 章裡取', async () => {
     const t = await setup('evidence-twelve', 19, Array.from({ length: 19 }, (_, i) => i + 1));
     const b = await build(t, 20, { contextOverrides: { fullTextChapters: 0 } });
     const nos = b.items.filter((i) => i.kind === 'evidence' && i.status === 'included').map((i) => Number(i.id.split(':')[1]));

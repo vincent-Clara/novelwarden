@@ -1,20 +1,20 @@
 /**
- * 行内副标题（别名、设定关键词等）的悬停浮窗。
+ * 行內副標題（別名、設定關鍵詞等）的懸停浮窗。
  *
- * 别名太多时副标题会被 CSS 截断（`max-width: 50%` + 省略号），正名不再被
- * 挤没，但被省略号吃掉的别名只能靠这只浮窗看全。
+ * 別名太多時副標題會被 CSS 截斷（`max-width: 50%` + 省略號），正名不再被
+ * 擠沒，但被省略號吃掉的別名只能靠這隻浮窗看全。
  *
- * 与 `summaryTip.ts` 的区别：
- * - **只展示不互动**：一行文字，没有滚动、没有选中复制，所以 `pointer-events:
- *   none`，鼠标永远落不进来，收起不需要宽限期。
- * - **只在真的截断时才弹**：`scrollWidth > clientWidth` 才说明有内容被吃掉，
- *   全文都看得见时弹窗只是复读一遍。
+ * 與 `summaryTip.ts` 的區別：
+ * - **只展示不互動**：一行文字，沒有滾動、沒有選中複製，所以 `pointer-events:
+ *   none`，滑鼠永遠落不進來，收起不需要寬限期。
+ * - **只在真的截斷時才彈**：`scrollWidth > clientWidth` 才說明有內容被吃掉，
+ *   全文都看得見時彈窗只是復讀一遍。
  *
- * 定位在 [../tip.ts](../tip.ts)，四只浮窗共用一份。这里传 `minHeight: 0` 关掉
- * 「压高度」那一步：浮窗只有一行、滚不动，压出来的 max-height 等于把字截掉。
+ * 定位在 [../tip.ts](../tip.ts)，四隻浮窗共用一份。這裡傳 `minHeight: 0` 關掉
+ * 「壓高度」那一步：浮窗只有一行、滾不動，壓出來的 max-height 等於把字截掉。
  *
- * **触屏**：兼容鼠标事件不当悬停（`touch.ts`）；入口是长按那一行弹的菜单最前面一项「看完整说明」（只在说明真的被截断时
- * 给），弹出来是钉住的，按在别处就收。
+ * **觸屏**：相容滑鼠事件不當懸停（`touch.ts`）；入口是長按那一行彈的選單最前面一項「看完整說明」（只在說明真的被截斷時
+ * 給），彈出來是釘住的，按在別處就收。
  */
 import { el as mk, closestFrom } from '../../dom';
 import type { MenuContext, MenuItem } from '../../globals';
@@ -27,21 +27,21 @@ const HOVER_DELAY_MS = 350;
 const CLOSE_DELAY_MS = 150;
 
 let tip: HTMLElement | null = null;
-/** 钉住的（触屏的入口）：收起时撤掉「按在外面就收」的监听。 */
+/** 釘住的（觸屏的入口）：收起時撤掉「按在外面就收」的監聽。 */
 let unpin: (() => void) | null = null;
-/** 当前浮窗对应的副标题（浮窗开着时再次悬停它不该关掉重开）。 */
+/** 當前浮窗對應的副標題（浮窗開著時再次懸停它不該關掉重開）。 */
 let tipTarget: HTMLElement | null = null;
-/** 正在等延迟的那一个副标题（延迟到点时用它定位）。 */
+/** 正在等延遲的那一個副標題（延遲到點時用它定位）。 */
 let hoverTarget: HTMLElement | null = null;
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** 文本真的被省略号截断了吗？全文可见就不必弹浮窗。 */
+/** 文字真的被省略號截斷了嗎？全文可見就不必彈浮窗。 */
 function isTruncated(node: HTMLElement): boolean {
   return node.scrollWidth > node.clientWidth;
 }
 
-/** 立刻收起。滚动 / Esc / 重渲染用这个，不给宽限。 */
+/** 立刻收起。滾動 / Esc / 重渲染用這個，不給寬限。 */
 export function hideDetailTip(): void {
   if (hoverTimer) {
     clearTimeout(hoverTimer);
@@ -61,7 +61,7 @@ export function hideDetailTip(): void {
   }
 }
 
-/** 长按一行：这一行的说明被截断了就给「看完整说明」。 */
+/** 長按一行：這一行的說明被截斷了就給「看完整說明」。 */
 function peekItems(at: MenuContext): MenuItem[] {
   const row = at.target?.closest<HTMLElement>('.row');
   const detail = row?.querySelector<HTMLElement>('.row-detail');
@@ -70,7 +70,7 @@ function peekItems(at: MenuContext): MenuItem[] {
   }
   return [
     {
-      label: '看完整说明',
+      label: '看完整說明',
       run: () => {
         hideDetailTip();
         if (detail.isConnected) {
@@ -82,7 +82,7 @@ function peekItems(at: MenuContext): MenuItem[] {
   ];
 }
 
-/** 鼠标挪到别处：给一点宽限再收，鼠标在副标题上微动不会闪。 */
+/** 滑鼠挪到別處：給一點寬限再收，滑鼠在副標題上微動不會閃。 */
 function scheduleHide(): void {
   if (closeTimer) {
     clearTimeout(closeTimer);
@@ -93,10 +93,10 @@ function scheduleHide(): void {
   }, CLOSE_DELAY_MS);
 }
 
-/** 悬停在某个副标题上：截断就延迟后弹浮窗，没截断就什么都不做。 */
+/** 懸停在某個副標題上：截斷就延遲後彈浮窗，沒截斷就什麼都不做。 */
 function scheduleShow(node: HTMLElement): void {
-  // mouseover 在行内子元素之间移动时也会冒泡上来。浮窗正开着、或已经在
-  // 为同一个副标题计时时都别重置——否则光标在字上微动一下就闪掉/无限延长。
+  // mouseover 在行內子元素之間移動時也會冒泡上來。浮窗正開著、或已經在
+  // 為同一個副標題計時時都別重置——否則游標在字上微動一下就閃掉/無限延長。
   if (tipTarget === node || hoverTarget === node) {
     return;
   }
@@ -107,7 +107,7 @@ function scheduleShow(node: HTMLElement): void {
   hoverTarget = node;
   hoverTimer = setTimeout(() => {
     hoverTimer = null;
-    // 延迟期间行可能被重渲染丢弃，那就不弹了。
+    // 延遲期間行可能被重渲染丟棄，那就不彈了。
     if (!hoverTarget?.isConnected) {
       hoverTarget = null;
       return;
@@ -117,7 +117,7 @@ function scheduleShow(node: HTMLElement): void {
   }, HOVER_DELAY_MS);
 }
 
-/** 建出浮窗并贴在副标题的下方/上方。 */
+/** 建出浮窗並貼在副標題的下方/上方。 */
 function showTip(node: HTMLElement): void {
   const box = mk('div', 'detail-tip', node.textContent ?? '');
   document.body.appendChild(box);
@@ -127,12 +127,12 @@ function showTip(node: HTMLElement): void {
 }
 
 export function installDetailTip(): void {
-  // 事件委托挂在 projectBody 上：树每次重渲染都换掉全部行，
-  // 逐行 addEventListener 会随重渲染次数堆积（与 summaryTip 同一套取舍）。
+  // 事件委託掛在 projectBody 上：樹每次重渲染都換掉全部行，
+  // 逐行 addEventListener 會隨重渲染次數堆積（與 summaryTip 同一套取捨）。
   onTouchPeek(peekItems);
 
   el.projectBody.addEventListener('mouseover', (e) => {
-    // 手指点一下之后补发的兼容鼠标事件不是悬停；钉住的浮窗也不跟鼠标走。
+    // 手指點一下之後補發的相容滑鼠事件不是懸停；釘住的浮窗也不跟滑鼠走。
     if (lastPointerWasTouch() || unpin) {
       return;
     }
@@ -150,11 +150,11 @@ export function installDetailTip(): void {
     }
   });
 
-  // 右键菜单弹出来时浮窗该让路，两个都是 fixed 会叠在一起。
+  // 右鍵選單彈出來時浮窗該讓路，兩個都是 fixed 會疊在一起。
   el.projectBody.addEventListener('contextmenu', hideDetailTip);
 
-  // 浮窗是 fixed 的，页面一滚就和目标行脱节（与右键菜单同一个理由）。
-  // 捕获阶段才收得到内部容器（.project-body）的滚动。
+  // 浮窗是 fixed 的，頁面一滾就和目標行脫節（與右鍵選單同一個理由）。
+  // 捕獲階段才收得到內部容器（.project-body）的滾動。
   document.addEventListener(
     'scroll',
     (e) => {

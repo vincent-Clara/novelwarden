@@ -1,25 +1,25 @@
 /**
- * 名词高亮与悬停浮窗（独立版内置编辑器）。**不调模型**（第 4 条）：名词表是后端读盘给的那一份，认名字是找字。
+ * 名詞高亮與懸停浮窗（獨立版內建編輯器）。**不調模型**（第 4 條）：名詞表是後端讀盤給的那一份，認名字是找字。
  *
- * - **名词图层**：正文、草稿、细纲、角色卡、设定、情节大纲与叙事线（与名词补全同一份白名单 `completionApplies`，看后端给
- *   的 `kind`）里，角色名与设定名各铺一层淡底色，设定名录里出现过、还没建条目的名字画虚下划线（⚑）——高亮镜像层的
- *   `names` 图层。什么时候重算、打字 / 输入法组字 / 撤销时画着的那几段怎么跟上、两万字以上节流，与写作体检同一套
- *   （`liveLayer.ts`）；哪几段是名字在 `namesCore.ts` 的 `nameRanges`（长的优先、一个字的不认、卡自己那一份里不标它自己）。
- * - **悬停浮窗**：鼠标在一个名字上停 {@link HOVER_DELAY_MS} 毫秒，贴着鼠标弹一个小框：名字、类型（角色 / 设定的分类 /
- *   未建条目）、别名命中时写「这里写的是……」、一句话简介（卡或条目里现成的那一句），底下一行说 Ctrl+点击能打开什么。
- *   镜像层不接鼠标，鼠标底下是哪个名字靠 `highlight.ts` 的 `rangeAtPoint` 量镜像，再按那一段的字认回表里那一条。框本身
- *   `pointer-events: none`，不挡鼠标；打字、滚动、按下鼠标、移开、输入法组字、换文件就收起。按住鼠标拖选区时不弹。
- * - **Ctrl+点击**（Mac 上 ⌘+点击，Mac 的 Ctrl+点击是右键）：在这一块编辑区打开它的角色卡或设定条目（`openEditor`，正常
- *   标签，与「转到…」一样）；未建条目没有文件，说一句。按着 Ctrl 指着能打开的名字时鼠标变成手形。
- * - **右键一个名字**：菜单最前面一项「打开「林昭」的角色卡」（`api.ts` 的 `addAreaMenu`），未建条目不给。
- * - **触屏**：手指没有悬停，点一下之后补发的兼容鼠标事件也不当悬停（`touch.ts`）。**手指点在名字上**（光标照常落在那儿）
- *   就弹同一只浮窗，底下一颗「打开角色卡 / 设定条目」（手指长按在正文里走系统的选字菜单，没有我们那一项，见 view/menu.ts）；
- *   再点一下别处、打字、滚动、失焦就收。不做成点一下就打开卡片（点正文是要放光标、要看的是这个名字本身）。
- *   软键盘弹着（正在打字，body 挂 `kb-open`）时点名字不弹：那是在挪光标，浮窗只会盖住底下两行。
+ * - **名詞圖層**：正文、草稿、細綱、角色卡、設定、情節大綱與敘事線（與名詞補全同一份白名單 `completionApplies`，看後端給
+ *   的 `kind`）裡，角色名與設定名各鋪一層淡底色，設定名錄裡出現過、還沒建條目的名字畫虛下劃線（⚑）——高亮映象層的
+ *   `names` 圖層。什麼時候重算、打字 / 輸入法組字 / 撤銷時畫著的那幾段怎麼跟上、兩萬字以上節流，與寫作體檢同一套
+ *   （`liveLayer.ts`）；哪幾段是名字在 `namesCore.ts` 的 `nameRanges`（長的優先、一個字的不認、卡自己那一份裡不標它自己）。
+ * - **懸停浮窗**：滑鼠在一個名字上停 {@link HOVER_DELAY_MS} 毫秒，貼著滑鼠彈一個小框：名字、型別（角色 / 設定的分類 /
+ *   未建條目）、別名命中時寫「這裡寫的是……」、一句話簡介（卡或條目裡現成的那一句），底下一行說 Ctrl+點選能開啟什麼。
+ *   映象層不接滑鼠，滑鼠底下是哪個名字靠 `highlight.ts` 的 `rangeAtPoint` 量映象，再按那一段的字認回表裡那一條。框本身
+ *   `pointer-events: none`，不擋滑鼠；打字、滾動、按下滑鼠、移開、輸入法組字、換檔案就收起。按住滑鼠拖選區時不彈。
+ * - **Ctrl+點選**（Mac 上 ⌘+點選，Mac 的 Ctrl+點選是右鍵）：在這一塊編輯區開啟它的角色卡或設定條目（`openEditor`，正常
+ *   標籤，與「轉到…」一樣）；未建條目沒有檔案，說一句。按著 Ctrl 指著能開啟的名字時滑鼠變成手形。
+ * - **右鍵一個名字**：選單最前面一項「開啟「林昭」的角色卡」（`api.ts` 的 `addAreaMenu`），未建條目不給。
+ * - **觸屏**：手指沒有懸停，點一下之後補發的相容滑鼠事件也不當懸停（`touch.ts`）。**手指點在名字上**（游標照常落在那兒）
+ *   就彈同一只浮窗，底下一顆「開啟角色卡 / 設定條目」（手指長按在正文裡走系統的選字選單，沒有我們那一項，見 view/menu.ts）；
+ *   再點一下別處、打字、滾動、失焦就收。不做成點一下就開啟卡片（點正文是要放游標、要看的是這個名字本身）。
+ *   軟鍵盤彈著（正在打字，body 掛 `kb-open`）時點名字不彈：那是在挪游標，浮窗只會蓋住底下兩行。
  *
- * 名词表与补全是同一份（`names.ts` 管收发：带指纹问、没变只回指纹、磁盘上变过才算过期），这里只在当前文件归这一层管时
- * 要，表换了整层重画。开关在「视图 → 名词高亮」（缺省开 ⚑，`novelforge.editor.prefs` 的 `nameHighlight`，只认明明白白
- * 的 `false`）；关着时不画，也不弹浮窗（浮窗靠画着的那一层认名字）。超过 30 万字的文件不画（镜像层的上限）。
+ * 名詞表與補全是同一份（`names.ts` 管收發：帶指紋問、沒變只回指紋、磁碟上變過才算過期），這裡只在當前檔案歸這一層管時
+ * 要，表換了整層重畫。開關在「檢視 → 名詞高亮」（預設開 ⚑，`novelforge.editor.prefs` 的 `nameHighlight`，只認明明白白
+ * 的 `false`）；關著時不畫，也不彈浮窗（浮窗靠畫著的那一層認名字）。超過 30 萬字的檔案不畫（映象層的上限）。
  */
 import { el } from '../dom';
 import { toast } from '../globals';
@@ -41,11 +41,11 @@ import { addAreaMenu } from './api';
 import { isMacPlatform } from './shortcuts';
 import { panes } from './store';
 
-/** 高亮镜像层上的图层名。 */
+/** 高亮映象層上的圖層名。 */
 export const NAMES_LAYER = 'names';
-/** 鼠标在一个名字上停多久才弹浮窗。 */
+/** 滑鼠在一個名字上停多久才彈浮窗。 */
 export const HOVER_DELAY_MS = 400;
-/** 偏好里那一项的键。 */
+/** 偏好裡那一項的鍵。 */
 const PREF_KEY = 'nameHighlight';
 
 // ---------------------------------------------------------------- 偏好
@@ -62,11 +62,11 @@ function setEnabled(on: boolean): void {
   }
 }
 
-// ---------------------------------------------------------------- 认名字
+// ---------------------------------------------------------------- 認名字
 
 let matcher: { catalog: NameCatalog; matcher: NameMatcher } | null = null;
 
-/** 手上那份表切好的匹配表（表换了重切）。还没有表时 null。 */
+/** 手上那份表切好的匹配表（表換了重切）。還沒有表時 null。 */
 function currentMatcher(): NameMatcher | null {
   const catalog = currentNameCatalog();
   if (!catalog) {
@@ -79,7 +79,7 @@ function currentMatcher(): NameMatcher | null {
   return matcher.matcher;
 }
 
-/** 每份文件上一次认出来的（哪一份文字、哪一张表），`render` 时文字没变就不重找。 */
+/** 每份檔案上一次認出來的（哪一份文字、哪一張表），`render` 時文字沒變就不重找。 */
 const found = new WeakMap<OpenFile, { draft: string; matcher: NameMatcher; ranges: HighlightRange[] }>();
 
 function rangesOf(file: OpenFile, text: string): HighlightRange[] {
@@ -88,7 +88,7 @@ function rangesOf(file: OpenFile, text: string): HighlightRange[] {
   }
   const m = currentMatcher();
   if (!m) {
-    // 还没有表：要一份，到了整层重画（onNameCatalog）。
+    // 還沒有表：要一份，到了整層重畫（onNameCatalog）。
     refreshNameIndex();
     return [];
   }
@@ -103,7 +103,7 @@ function rangesOf(file: OpenFile, text: string): HighlightRange[] {
 
 let layer: LiveLayer | undefined;
 
-/** 鼠标底下那个名字：画着的那一段与它在表里的那一条。 */
+/** 滑鼠底下那個名字：畫著的那一段與它在表裡的那一條。 */
 function nameAt(pane: Pane, x: number, y: number): { range: HighlightRange; item: NameItem } | undefined {
   const m = currentMatcher();
   if (!enabled || !m || pane.isPreviewing()) {
@@ -117,7 +117,7 @@ function nameAt(pane: Pane, x: number, y: number): { range: HighlightRange; item
 // ---------------------------------------------------------------- 浮窗
 
 let tip: HTMLElement | null = null;
-/** 浮窗正在说的（或等着要说的）是哪一块的哪一段。 */
+/** 浮窗正在說的（或等著要說的）是哪一塊的哪一段。 */
 let current: { pane: Pane; start: number; end: number } | null = null;
 let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -140,16 +140,16 @@ function buildTip(item: NameItem, written: string, touch = false, open?: () => v
   const box = el('div', `nm-tip nm-${item.source}`);
   box.setAttribute('role', 'tooltip');
   const head = el('div', 'nm-head');
-  head.append(el('span', 'nm-name', item.name), el('span', 'nm-badge', item.source === 'unfiled' ? `${item.badge} · 未建条目` : item.badge));
+  head.append(el('span', 'nm-name', item.name), el('span', 'nm-badge', item.source === 'unfiled' ? `${item.badge} · 未建條目` : item.badge));
   box.appendChild(head);
   if (written.toLowerCase() !== item.name.toLowerCase()) {
-    box.appendChild(el('div', 'nm-alias', `这里写的是「${written}」`));
+    box.appendChild(el('div', 'nm-alias', `這裡寫的是「${written}」`));
   }
-  box.appendChild(item.brief ? el('div', 'nm-brief', item.brief) : el('div', 'nm-brief nm-empty', '还没有一句话简介'));
-  const what = item.source === 'character' ? '角色卡' : '设定条目';
+  box.appendChild(item.brief ? el('div', 'nm-brief', item.brief) : el('div', 'nm-brief nm-empty', '還沒有一句話簡介'));
+  const what = item.source === 'character' ? '角色卡' : '設定條目';
   if (item.path && touch && open) {
-    // 手指点出来的浮窗：底下是一颗按钮。按下去不夺焦点——正文区一失焦浮窗就收了，点不到它。
-    const btn = el('button', 'chip-btn nm-open', `打开${what}`);
+    // 手指點出來的浮窗：底下是一顆按鈕。按下去不奪焦點——正文區一失焦浮窗就收了，點不到它。
+    const btn = el('button', 'chip-btn nm-open', `開啟${what}`);
     btn.type = 'button';
     for (const type of ['pointerdown', 'mousedown'] as const) {
       btn.addEventListener(type, (e) => e.preventDefault());
@@ -162,11 +162,11 @@ function buildTip(item: NameItem, written: string, touch = false, open?: () => v
     box.appendChild(btn);
     return box;
   }
-  box.appendChild(el('div', 'nm-foot', item.path ? `${modLabel()}+点击打开${what}` : '设定名录里出现过，还没建条目'));
+  box.appendChild(el('div', 'nm-foot', item.path ? `${modLabel()}+點選開啟${what}` : '設定名錄裡出現過，還沒建條目'));
   return box;
 }
 
-/** 贴着鼠标摆：鼠标下面一点，靠近底边翻到上面，横向夹进视口。 */
+/** 貼著滑鼠擺：滑鼠下面一點，靠近底邊翻到上面，橫向夾進視口。 */
 function placeTip(box: HTMLElement, x: number, y: number): void {
   const gap = 18;
   const width = box.offsetWidth;
@@ -187,7 +187,7 @@ function showTip(pane: Pane, hit: { range: HighlightRange; item: NameItem }, x: 
   placeTip(tip, x, y);
 }
 
-/** 手指点在一个名字上：光标照常落下，同时弹它的浮窗（触屏没有悬停）。点别处、打字、滚动、失焦照旧收起；正在打字时不弹。 */
+/** 手指點在一個名字上：游標照常落下，同時彈它的浮窗（觸屏沒有懸停）。點別處、打字、滾動、失焦照舊收起；正在打字時不彈。 */
 function onTap(pane: Pane, e: MouseEvent): void {
   if (!isTouchEvent(e) || layer?.composing(pane)) {
     return;
@@ -202,12 +202,12 @@ function onTap(pane: Pane, e: MouseEvent): void {
   tappedTip = true;
 }
 
-/** 正开着的浮窗是手指点出来的（软键盘弹出来、页面变矮时要跟着那个名字挪）。 */
+/** 正開著的浮窗是手指點出來的（軟鍵盤彈出來、頁面變矮時要跟著那個名字挪）。 */
 let tappedTip = false;
 
 /**
- * 手指点出来的浮窗跟着名字挪：点一下正文，软键盘随即弹出来，页面变矮、编辑区收起章节条与工具栏（narrow.css），名字挪了地方，
- * 浮窗还停在点下去的那个坐标上（多半已经在键盘底下）。窗口尺寸变了就按那个名字现在的位置重摆，量不出来或滚出了编辑区就收起。
+ * 手指點出來的浮窗跟著名字挪：點一下正文，軟鍵盤隨即彈出來，頁面變矮、編輯區收起章節條與工具欄（narrow.css），名字挪了地方，
+ * 浮窗還停在點下去的那個座標上（多半已經在鍵盤底下）。視窗尺寸變了就按那個名字現在的位置重擺，量不出來或滾出了編輯區就收起。
  */
 function followTappedTip(): void {
   if (!tip || !tappedTip || !current) {
@@ -229,20 +229,20 @@ function followTappedTip(): void {
   placeTip(tip, rect.left + area.clientLeft + pos.left - area.scrollLeft + 12, top + pos.height / 2);
 }
 
-/** 右键一个能打开的名字：菜单最前面给「打开「林昭」的角色卡」。未建条目没有文件，不给。 */
+/** 右鍵一個能開啟的名字：選單最前面給「開啟「林昭」的角色卡」。未建條目沒有檔案，不給。 */
 function menuItems(pane: Pane, at: { x: number; y: number }): MenuItem[] {
   const hit = nameAt(pane, at.x, at.y);
   const path = hit?.item.path;
   if (!hit || !path) {
     return [];
   }
-  const what = hit.item.source === 'character' ? '角色卡' : '设定条目';
-  return [{ label: `打开「${hit.item.name}」的${what}`, run: () => post({ type: 'openEditor', path, pane: pane.id }) }];
+  const what = hit.item.source === 'character' ? '角色卡' : '設定條目';
+  return [{ label: `開啟「${hit.item.name}」的${what}`, run: () => post({ type: 'openEditor', path, pane: pane.id }) }];
 }
 
-// ---------------------------------------------------------------- 鼠标
+// ---------------------------------------------------------------- 滑鼠
 
-/** 最近一次鼠标在哪块、哪儿（下一帧量）。 */
+/** 最近一次滑鼠在哪塊、哪兒（下一幀量）。 */
 let pointer: { pane: Pane; x: number; y: number; mod: boolean; dragging: boolean } | null = null;
 let frame: number | undefined;
 
@@ -254,7 +254,7 @@ function setLinkCursor(pane: Pane, on: boolean): void {
   pane.area.classList.toggle('nm-link', on);
 }
 
-/** 量鼠标底下是不是名字：换了一个就重新计时，离开了就收起。 */
+/** 量滑鼠底下是不是名字：換了一個就重新計時，離開了就收起。 */
 function probe(): void {
   frame = undefined;
   const p = pointer;
@@ -277,7 +277,7 @@ function probe(): void {
   const { x, y } = p;
   timer = setTimeout(() => {
     timer = undefined;
-    // 停够了：再认一次（这期间可能打了字、滚了），还是它才弹。
+    // 停夠了：再認一次（這期間可能打了字、滾了），還是它才彈。
     const again = nameAt(p.pane, x, y);
     if (current && again && again.range.start === current.start && again.range.end === current.end) {
       showTip(p.pane, again, x, y);
@@ -288,7 +288,7 @@ function probe(): void {
 }
 
 function onMove(pane: Pane, e: MouseEvent): void {
-  // 手指点一下之后补发的兼容 mousemove 不是悬停（手指的浮窗走 onTap）。
+  // 手指點一下之後補發的相容 mousemove 不是懸停（手指的浮窗走 onTap）。
   if (lastPointerWasTouch()) {
     return;
   }
@@ -298,7 +298,7 @@ function onMove(pane: Pane, e: MouseEvent): void {
   }
 }
 
-/** Ctrl+点击（Mac 上 ⌘+点击）一个名字：打开它的卡或条目。不是名字照常（放光标）。 */
+/** Ctrl+點選（Mac 上 ⌘+點選）一個名字：開啟它的卡或條目。不是名字照常（放游標）。 */
 function onDown(pane: Pane, e: MouseEvent): void {
   hideTip();
   if (e.button !== 0 || !modHeld(e)) {
@@ -311,7 +311,7 @@ function onDown(pane: Pane, e: MouseEvent): void {
   e.preventDefault();
   setLinkCursor(pane, false);
   if (!hit.item.path) {
-    toast(`「${hit.item.name}」还没建条目（设定名录里出现过的名字）。`);
+    toast(`「${hit.item.name}」還沒建條目（設定名錄裡出現過的名字）。`);
     return;
   }
   post({ type: 'openEditor', path: hit.item.path, pane: pane.id });
@@ -331,15 +331,15 @@ function hook(pane: Pane): void {
   area.addEventListener('mouseleave', () => {
     pointer = null;
     setLinkCursor(pane, false);
-    // 手指点出来的浮窗不跟鼠标走：点完之后补发的兼容 mouseleave 不收它（点别处、打字、滚动照旧收）。
+    // 手指點出來的浮窗不跟滑鼠走：點完之後補發的相容 mouseleave 不收它（點別處、打字、滾動照舊收）。
     if (!lastPointerWasTouch()) {
       hideTip();
     }
   });
-  // 右键（长按）弹菜单时也收：两样都是 fixed 的，叠在一起谁都读不清。
+  // 右鍵（長按）彈選單時也收：兩樣都是 fixed 的，疊在一起誰都讀不清。
   for (const type of ['keydown', 'scroll', 'wheel', 'compositionstart', 'blur', 'contextmenu'] as const) {
     area.addEventListener(type, (e) => {
-      // 光按下修饰键不算（按住 Ctrl 正是要点它）。
+      // 光按下修飾鍵不算（按住 Ctrl 正是要點它）。
       if (e instanceof KeyboardEvent && ['Control', 'Meta', 'Shift', 'Alt'].includes(e.key)) {
         return;
       }
@@ -350,7 +350,7 @@ function hook(pane: Pane): void {
   }
 }
 
-/** 按下 / 松开 Ctrl（⌘）时鼠标没动：手形跟着变。 */
+/** 按下 / 鬆開 Ctrl（⌘）時滑鼠沒動：手形跟著變。 */
 function onModKey(e: KeyboardEvent): void {
   const p = pointer;
   if (!p || (e.key !== 'Control' && e.key !== 'Meta')) {
@@ -365,11 +365,11 @@ function onModKey(e: KeyboardEvent): void {
   }
 }
 
-// ---------------------------------------------------------------- 装配
+// ---------------------------------------------------------------- 裝配
 
 let post: (msg: InMessage) => void = () => {};
 
-/** 当前正对着一份归这一层管的文件（要不要问名词表）。 */
+/** 當前正對著一份歸這一層管的檔案（要不要問名詞表）。 */
 function wantsIndex(): boolean {
   return (
     enabled &&
@@ -380,7 +380,7 @@ function wantsIndex(): boolean {
   );
 }
 
-/** 装一次（`index.ts`，在 `installNames` 之后：名词表的收发归它）。 */
+/** 裝一次（`index.ts`，在 `installNames` 之後：名詞表的收發歸它）。 */
 export function installNameMarks(send: (msg: InMessage) => void): void {
   post = send;
   trackPointer();
@@ -413,16 +413,16 @@ export function installNameMarks(send: (msg: InMessage) => void): void {
   document.addEventListener('keydown', onModKey, true);
   document.addEventListener('keyup', onModKey, true);
   window.addEventListener('blur', hideTip);
-  // 软键盘弹出 / 收起：页面变矮又变高，手指点出来的浮窗跟着名字挪（下一帧，等新排版落定）。
+  // 軟鍵盤彈出 / 收起：頁面變矮又變高，手指點出來的浮窗跟著名字挪（下一幀，等新排版落定）。
   window.addEventListener('resize', () => nextFrame(followTappedTip));
 
-  // 表换了（到了新的一份、换工程作废）：整层按新表重画。
+  // 表換了（到了新的一份、換工程作廢）：整層按新表重畫。
   onNameCatalog(() => {
     hideTip();
     layer?.recheckAll();
   });
 
-  // 磁盘上变过（names.ts 先记一笔过期）：正对着要画的文件就再问一次，没变的话后端只回指纹。
+  // 磁碟上變過（names.ts 先記一筆過期）：正對著要畫的檔案就再問一次，沒變的話後端只回指紋。
   onMessage((msg) => {
     if (msg.type === 'state' && wantsIndex()) {
       queueMicrotask(refreshNameIndex);

@@ -1,17 +1,17 @@
 /**
- * 写作体检的口径（独立版内置编辑器，`check.ts` 装配）。**纯函数、零 DOM**，`tests/unit/editor/checkCore.test.js` 钉着。
+ * 寫作體檢的口徑（獨立版內建編輯器，`check.ts` 裝配）。**純函式、零 DOM**，`tests/unit/editor/checkCore.test.js` 釘著。
  *
- * 四类，都只在正文（章节与草稿）上查：
+ * 四類，都只在正文（章節與草稿）上查：
  *
- * | 类别 | 词从哪来 | 怎么找 | 算几个问题 |
+ * | 類別 | 詞從哪來 | 怎麼找 | 算幾個問題 |
  * |---|---|---|---|
- * | 禁用词 | 后端推来的 `banned`（`style.md` 禁用词表 + 全局要求里禁止的词 + 古代题材的现代说法） | `locateTerms`，**区分大小写**——与写完一章之后的 `countBanned` 同一个函数 | 每一处算一个 |
- * | 敏感词 | 后端推来的 `sensitive`（`.novelwarden/sensitive.txt`） | `locateTerms` 的 `foldCase`：英文不分大小写、全角当半角 | 每一处算一个 |
- * | 比喻词 | `SIMILE_WORDS`（与生成链同一张表） | `locateTerms`（`countSimiles` 也建在它上面） | **全章超过 `SIMILE_LIMIT` 才算**，算超出的那几个；没超不高亮 |
- * | 英文缩写 | 正文本身 | `latinAcronymRanges`（`latinAcronyms` 建在它上面） | 每一处算一个 |
+ * | 禁用詞 | 後端推來的 `banned`（`style.md` 禁用詞表 + 全域要求裡禁止的詞 + 古代題材的現代說法） | `locateTerms`，**區分大小寫**——與寫完一章之後的 `countBanned` 同一個函式 | 每一處算一個 |
+ * | 敏感詞 | 後端推來的 `sensitive`（`.novelwarden/sensitive.txt`） | `locateTerms` 的 `foldCase`：英文不分大小寫、全形當半形 | 每一處算一個 |
+ * | 比喻詞 | `SIMILE_WORDS`（與生成鏈同一張表） | `locateTerms`（`countSimiles` 也建在它上面） | **全章超過 `SIMILE_LIMIT` 才算**，算超出的那幾個；沒超不高亮 |
+ * | 英文縮寫 | 正文字身 | `latinAcronymRanges`（`latinAcronyms` 建在它上面） | 每一處算一個 |
  *
- * 同一段字可以同时落在几类里（禁用词「能量」也写进了敏感词表），各算各的、各画各的样子；同一个词出现几次就有几处。
- * 找位置的函数都在 core 的 `model/manuscriptCheck.ts`，这里只按类别收拢、排顺序、算替换。
+ * 同一段字可以同時落在幾類裡（禁用詞「能量」也寫進了敏感詞表），各算各的、各畫各的樣子；同一個詞出現幾次就有幾處。
+ * 找位置的函式都在 core 的 `model/manuscriptCheck.ts`，這裡只按類別收攏、排順序、算替換。
  */
 import { SIMILE_LIMIT, SIMILE_WORDS, latinAcronymRanges, locateTerms } from '../protocol';
 import type { CheckSensitiveTerm } from '../protocol';
@@ -19,17 +19,17 @@ import type { TextChange } from './history';
 
 export type CheckCategory = 'sensitive' | 'banned' | 'simile' | 'acronym';
 
-/** 面板里从上到下的顺序：敏感词（发不出去）→ 禁用词 → 比喻词 → 英文缩写（只是提示）。 */
+/** 面板裡從上到下的順序：敏感詞（發不出去）→ 禁用詞 → 比喻詞 → 英文縮寫（只是提示）。 */
 export const CHECK_CATEGORIES: readonly CheckCategory[] = ['sensitive', 'banned', 'simile', 'acronym'];
 
 export const CHECK_LABEL: Record<CheckCategory, string> = {
-  sensitive: '敏感词',
-  banned: '禁用词',
-  simile: '比喻词',
-  acronym: '英文缩写',
+  sensitive: '敏感詞',
+  banned: '禁用詞',
+  simile: '比喻詞',
+  acronym: '英文縮寫',
 };
 
-/** 高亮镜像层上各类的 class（颜色在 `css/standalone/check.css`）。 */
+/** 高亮映象層上各類的 class（顏色在 `css/standalone/check.css`）。 */
 export const CHECK_CLASS: Record<CheckCategory, string> = {
   sensitive: 'ed-hl-chk-sensitive',
   banned: 'ed-hl-chk-banned',
@@ -37,7 +37,7 @@ export const CHECK_CLASS: Record<CheckCategory, string> = {
   acronym: 'ed-hl-chk-acronym',
 };
 
-/** 后端推来的那两份词（`checkTerms`）。 */
+/** 後端推來的那兩份詞（`checkTerms`）。 */
 export interface CheckVocab {
   banned: readonly string[];
   sensitive: readonly CheckSensitiveTerm[];
@@ -45,31 +45,31 @@ export interface CheckVocab {
 
 export const EMPTY_VOCAB: CheckVocab = Object.freeze({ banned: [], sensitive: [] });
 
-/** 一个词在这一份正文里的全部位置。 */
+/** 一個詞在這一份正文裡的全部位置。 */
 export interface CheckEntry {
   category: CheckCategory;
-  /** 词表里的写法（缩写是折成半角的写法）。 */
+  /** 詞表裡的寫法（縮寫是折成半形的寫法）。 */
   term: string;
-  /** 每一处的起点（`area.value` 的下标），升序。 */
+  /** 每一處的起點（`area.value` 的下標），升序。 */
   offsets: number[];
-  /** 每一处多长（UTF-16 下标）。折大小写一个字换一个字，所以各处一样长。 */
+  /** 每一處多長（UTF-16 下標）。折大小寫一個字換一個字，所以各處一樣長。 */
   length: number;
-  /** 敏感词表里写了的替换词。 */
+  /** 敏感詞表裡寫了的替換詞。 */
   replacement?: string;
 }
 
 export interface CheckResult {
-  /** 有命中的词，按 {@link CHECK_CATEGORIES} 的类别顺序，同一类里次数多的在前、一样多的按先出现的。 */
+  /** 有命中的詞，按 {@link CHECK_CATEGORIES} 的類別順序，同一類裡次數多的在前、一樣多的按先出現的。 */
   entries: CheckEntry[];
-  /** 比喻词全章合计几次、上限、超出几次（没超是 0）。 */
+  /** 比喻詞全章合計幾次、上限、超出幾次（沒超是 0）。 */
   similes: { total: number; limit: number; over: number };
-  /** 每一类算几个问题（比喻词算超出的那几个）。 */
+  /** 每一類算幾個問題（比喻詞算超出的那幾個）。 */
   counts: Record<CheckCategory, number>;
-  /** 一共几个问题（状态栏「体检 N」的 N）。 */
+  /** 一共幾個問題（狀態列「體檢 N」的 N）。 */
   total: number;
 }
 
-/** 按类别收拢、排顺序。 */
+/** 按類別收攏、排順序。 */
 function sortEntries(list: CheckEntry[]): CheckEntry[] {
   return list.sort(
     (a, b) =>
@@ -79,7 +79,7 @@ function sortEntries(list: CheckEntry[]): CheckEntry[] {
   );
 }
 
-/** 体检一份正文。 */
+/** 體檢一份正文。 */
 export function runCheck(text: string, vocab: CheckVocab = EMPTY_VOCAB): CheckResult {
   const entries: CheckEntry[] = [];
   const counts: Record<CheckCategory, number> = { sensitive: 0, banned: 0, simile: 0, acronym: 0 };
@@ -141,14 +141,14 @@ export function runCheck(text: string, vocab: CheckVocab = EMPTY_VOCAB): CheckRe
   };
 }
 
-/** 一段要涂色的字（与 `highlight.ts` 的 `HighlightRange` 同一个形状）。 */
+/** 一段要塗色的字（與 `highlight.ts` 的 `HighlightRange` 同一個形狀）。 */
 export interface CheckRange {
   start: number;
   end: number;
   cls: string;
 }
 
-/** 画到高亮镜像层 `check` 图层上的那几段，按起点排。比喻词没超上限时 `runCheck` 根本不给它们。 */
+/** 畫到高亮映象層 `check` 圖層上的那幾段，按起點排。比喻詞沒超上限時 `runCheck` 根本不給它們。 */
 export function checkRanges(result: CheckResult): CheckRange[] {
   const out: CheckRange[] = [];
   for (const e of result.entries) {
@@ -159,7 +159,7 @@ export function checkRanges(result: CheckResult): CheckRange[] {
   return out.sort((a, b) => a.start - b.start || a.end - b.end || (a.cls < b.cls ? -1 : a.cls > b.cls ? 1 : 0));
 }
 
-/** 两份范围是不是一模一样（一样就不必再画一遍）。 */
+/** 兩份範圍是不是一模一樣（一樣就不必再畫一遍）。 */
 export function sameRanges(a: readonly CheckRange[], b: readonly CheckRange[]): boolean {
   if (a.length !== b.length) {
     return false;
@@ -173,8 +173,8 @@ export function sameRanges(a: readonly CheckRange[], b: readonly CheckRange[]): 
 }
 
 /**
- * 一处改动之后各段跟着平移；压在改动上的那几段丢掉。**与 `highlight.ts` 平移图层是同一条规则**——
- * 编辑器记着「镜像层上此刻画的是哪几段」，与它对得上才知道要不要再画一遍。
+ * 一處改動之後各段跟著平移；壓在改動上的那幾段丟掉。**與 `highlight.ts` 平移圖層是同一條規則**——
+ * 編輯器記著「映象層上此刻畫的是哪幾段」，與它對得上才知道要不要再畫一遍。
  */
 export function shiftRanges(ranges: readonly CheckRange[], change: TextChange): CheckRange[] {
   const removedEnd = change.at + change.removed.length;
@@ -191,8 +191,8 @@ export function shiftRanges(ranges: readonly CheckRange[], change: TextChange): 
 }
 
 /**
- * 两份文字差在哪一段（公共前缀与后缀之外的那一段）。撤销 / 重做、输入法组字中途这些不带改动的变化，靠它把已经
- * 画着的那几段挪到新位置——不重找，也不乱跳。一样时 undefined。
+ * 兩份文字差在哪一段（公共字首與字尾之外的那一段）。撤銷 / 重做、輸入法組字中途這些不帶改動的變化，靠它把已經
+ * 畫著的那幾段挪到新位置——不重找，也不亂跳。一樣時 undefined。
  */
 export function diffChange(before: string, after: string): TextChange | undefined {
   if (before === after) {
@@ -213,14 +213,14 @@ export function diffChange(before: string, after: string): TextChange | undefine
   return { at: head, removed: before.slice(head, before.length - tail), inserted: after.slice(head, after.length - tail) };
 }
 
-/** 选区正好是这个词的第几处；不是任何一处时 -1。 */
+/** 選區正好是這個詞的第幾處；不是任何一處時 -1。 */
 export function occurrenceAt(entry: Pick<CheckEntry, 'offsets' | 'length'>, start: number, end: number): number {
   return end - start === entry.length ? entry.offsets.indexOf(start) : -1;
 }
 
 /**
- * 点一下这个词要跳到第几处：选区正好是第 k 处就跳到第 k+1 处；否则跳到光标之后（含光标处）的第一处；到底了绕回第一处。
- * 一处都没有时 -1。
+ * 點一下這個詞要跳到第幾處：選區正好是第 k 處就跳到第 k+1 處；否則跳到游標之後（含游標處）的第一處；到底了繞回第一處。
+ * 一處都沒有時 -1。
  */
 export function nextOccurrence(entry: Pick<CheckEntry, 'offsets' | 'length'>, start: number, end: number): number {
   const n = entry.offsets.length;
@@ -235,7 +235,7 @@ export function nextOccurrence(entry: Pick<CheckEntry, 'offsets' | 'length'>, st
   return i >= 0 ? i : 0;
 }
 
-/** 本文件全部替换要改的那一段：从第一处到最后一处（编辑器拿它调一次 `applyEdit`，只记一步撤销）。 */
+/** 本檔案全部替換要改的那一段：從第一處到最後一處（編輯器拿它調一次 `applyEdit`，只記一步撤銷）。 */
 export interface CheckReplaceEdit {
   start: number;
   end: number;
@@ -244,8 +244,8 @@ export interface CheckReplaceEdit {
 }
 
 /**
- * 把这个词的每一处都换成 `replacement`，算出「第一处到最后一处那一段」的新文字——与查找替换的「全部替换」
- * （`findCore.replaceAllIn`）同一个形状、同一条路（一次 `applyEdit`）。位置用体检找出来的那几处，高亮在哪就换哪。
+ * 把這個詞的每一處都換成 `replacement`，算出「第一處到最後一處那一段」的新文字——與查詢替換的「全部替換」
+ * （`findCore.replaceAllIn`）同一個形狀、同一條路（一次 `applyEdit`）。位置用體檢找出來的那幾處，高亮在哪就換哪。
  */
 export function replaceAllEdit(
   text: string,
@@ -260,7 +260,7 @@ export function replaceAllEdit(
   let last = offsets[0];
   for (const at of offsets) {
     if (at < last) {
-      continue; // 叠在上一处里面的（同一个词不会，防一手坏数据）。
+      continue; // 疊在上一處裡面的（同一個詞不會，防一手壞資料）。
     }
     parts.push(text.slice(last, at), replacement);
     last = at + entry.length;
@@ -268,13 +268,13 @@ export function replaceAllEdit(
   return { start: offsets[0], end: last, text: parts.join(''), count: parts.length / 2 };
 }
 
-/** 「体检 3」那一格的悬停提示里那一句：各类几个。 */
+/** 「體檢 3」那一格的懸停提示裡那一句：各類幾個。 */
 export function describeCounts(result: CheckResult): string {
   const parts: string[] = [];
   for (const c of CHECK_CATEGORIES) {
     const n = result.counts[c];
     if (n > 0) {
-      parts.push(c === 'simile' ? `比喻词超出 ${n} 个` : `${CHECK_LABEL[c]} ${n} 处`);
+      parts.push(c === 'simile' ? `比喻詞超出 ${n} 個` : `${CHECK_LABEL[c]} ${n} 處`);
     }
   }
   return parts.join(' · ');

@@ -1,12 +1,12 @@
-# Android app 的构建。两种用法：
-# - 手动点（workflow_dispatch）：日常验证「还能编出来」、拿去手机上试，产物只进 artifact。
-# - 发版时由 release.yml 调用（release: true）：产物交给 release 汇总。
+# Android app 的構建。兩種用法：
+# - 手動點（workflow_dispatch）：日常驗證「還能編出來」、拿去手機上試，產物只進 artifact。
+# - 發版時由 release.yml 呼叫（release: true）：產物交給 release 彙總。
 #
-# 两种都用仓库 secrets 里的发版密钥签名：CI 上的 debug 签名每次构建都是新生成的一把，两次的包不能互相覆盖安装，
-# 每试一次都得先卸载，app 私有目录里的配置与 API Key 跟着没了。手动点时没有密钥才退回 debug 签名（并警告）；发版时没有就停下。
+# 兩種都用倉庫 secrets 裡的發版金鑰簽名：CI 上的 debug 簽名每次構建都是新生成的一把，兩次的包不能互相覆蓋安裝，
+# 每試一次都得先解除安裝，app 私有目錄裡的配置與 API Key 跟著沒了。手動點時沒有金鑰才退回 debug 簽名（並警告）；發版時沒有就停下。
 #
-# 为什么在 CI 上编：Google 的 aapt2 只出 x86_64，开发机是 arm64；ubuntu runner 自带 Android SDK。
-# 打包本身见 src/shells/android/scripts/build.sh：独立版打成 node 单文件进 assets，Termux 的 node 进 jniLibs。
+# 為什麼在 CI 上編：Google 的 aapt2 只出 x86_64，開發機是 arm64；ubuntu runner 自帶 Android SDK。
+# 打包本身見 src/shells/android/scripts/build.sh：獨立版打成 node 單檔案進 assets，Termux 的 node 進 jniLibs。
 name: android
 
 on:
@@ -49,8 +49,8 @@ jobs:
 
       - run: npm ci
 
-      # 闸门：壳不该掩盖核心的问题。测试挂了就不要出包。
-      - name: 跑测试
+      # 閘門：殼不該掩蓋核心的問題。測試掛了就不要出包。
+      - name: 跑測試
         run: npm test
 
       - name: 打包
@@ -67,10 +67,10 @@ jobs:
             rm -f "$NOVELFORGE_KEYSTORE"
             cp src/shells/android/app/build/outputs/apk/release/app-release.apk novelwarden-android.apk
           elif [ "$RELEASE" = "true" ]; then
-            echo "::error::仓库 secrets 里缺 NOVELFORGE_KEYSTORE_BASE64 / NOVELFORGE_KEYSTORE_PASSWORD（Android 发版密钥）"
+            echo "::error::倉庫 secrets 裡缺 NOVELFORGE_KEYSTORE_BASE64 / NOVELFORGE_KEYSTORE_PASSWORD（Android 發版金鑰）"
             exit 1
           else
-            echo "::warning::没有发版密钥，出的是 debug 签名的包：和发版的包签名不同，不能互相覆盖安装"
+            echo "::warning::沒有發版金鑰，出的是 debug 簽名的包：和發版的包簽名不同，不能互相覆蓋安裝"
             src/shells/android/scripts/build.sh debug
             cp src/shells/android/app/build/outputs/apk/debug/app-debug.apk novelwarden-android-debug.apk
           fi

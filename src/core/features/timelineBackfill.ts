@@ -1,21 +1,21 @@
 /**
- * 从正文补推、重推故事时间（2026-10-24，设计见 docs/design/plans/2026-10-24-story-timeline.md「二」，同日重做见
- * docs/design/plans/2026-10-24-story-timeline-rework.md「四」）：同步时单独一次推的是那一章；这里一批一批补上、重来。
+ * 從正文補推、重推故事時間（2026-10-24，設計見 docs/design/plans/2026-10-24-story-timeline.md「二」，同日重做見
+ * docs/design/plans/2026-10-24-story-timeline-rework.md「四」）：同步時單獨一次推的是那一章；這裡一批一批補上、重來。
  *
  * ```
- * 第 a–a+4 章（一批，最多 5 章，按字数切）→ 写 1 次、转写 1–2 次（features/storyTime.ts 的 judgeTimes）→ 写进 threads/时间线.md → 下一批 → ……
+ * 第 a–a+4 章（一批，最多 5 章，按字數切）→ 寫 1 次、轉寫 1–2 次（features/storyTime.ts 的 judgeTimes）→ 寫進 threads/时间线.md → 下一批 → ……
  * ```
  *
- * - **补推**（`fill`）：同步过、正文没再改过、时间线里还没有这一行（或还是机器写的 `+?`〔推不出〕）的章。重做之后**不再要求叙事线
- *   判过**（作者定的第 4 条）：时间和叙事线各算各的，「从正文补记叙事线」也不再顺带推时间。
- * - **重推**（`refresh`）：同步过、正文没再改过、这一行不是作者写的章（没有的、机器写的），可以只要一段（`range`）。机器写的行照新推的换，
- *   作者写的、认不出的一行不动（第 28 条）。v0.2.6 推坏的那些用它重来。
- * - **串行**：后一批要看前一批推出来的「前面几章的时间」。
- * - **一批没成就停**（同补记 ⚑10）：已写的留着，失败挂在时间线文件上（第 16 条），再点一次从那一章接着；都成了才清。
- * - 走「定稿」档（`plotSummary`）的池，同同步；转写（2026-10-25 起）走「转写」那一档。不带思考深度（第 26 条）。开跑前存存档点。不给外部 agent（⚑8：MCP 的同步本来就推，这两样是
- *   工程页上的维护动作）。
+ * - **補推**（`fill`）：同步過、正文沒再改過、時間線裡還沒有這一行（或還是機器寫的 `+?`〔推不出〕）的章。重做之後**不再要求敘事線
+ *   判過**（作者定的第 4 條）：時間和敘事線各算各的，「從正文補記敘事線」也不再順帶推時間。
+ * - **重推**（`refresh`）：同步過、正文沒再改過、這一行不是作者寫的章（沒有的、機器寫的），可以只要一段（`range`）。機器寫的行照新推的換，
+ *   作者寫的、認不出的一行不動（第 28 條）。v0.2.6 推壞的那些用它重來。
+ * - **序列**：後一批要看前一批推出來的「前面幾章的時間」。
+ * - **一批沒成就停**（同補記 ⚑10）：已寫的留著，失敗掛在時間線檔案上（第 16 條），再點一次從那一章接著；都成了才清。
+ * - 走「定稿」檔（`plotSummary`）的池，同同步；轉寫（2026-10-25 起）走「轉寫」那一檔。不帶思考深度（第 26 條）。開跑前存存檔點。不給外部 agent（⚑8：MCP 的同步本來就推，這兩樣是
+ *   工程頁上的維護動作）。
  *
- * 入口：工程页「叙事线」页签「时间线」组——标题旁「补推时间」「重推」、右键一章「重推这一章」「从这一章起重推」。
+ * 入口：工程頁「敘事線」頁籤「時間線」組——標題旁「補推時間」「重推」、右鍵一章「重推這一章」「從這一章起重推」。
  */
 import { getHost } from '../host';
 import { CancelledError } from '../llm/provider';
@@ -35,39 +35,39 @@ import { TIME_CHAPTER_CHARS, judgeTimes, timeCallsOf } from './storyTime';
 import { poolTranscriber } from './poolIO';
 import { TranscribeCall } from './transcribe';
 
-const log = scoped('故事时间');
+const log = scoped('故事時間');
 
-/** 补推的任务名：前端看它在不在跑（media/src/view/project/threads.ts 一字不差）。 */
-export const TIMELINE_BACKFILL_TASK = '从正文补推故事时间';
-/** 重推的任务名（同上）。 */
-export const TIMELINE_REFRESH_TASK = '重推故事时间';
-/** 失败记录的 op：补推、重推一批没成（挂在时间线文件上）。 */
+/** 補推的任務名：前端看它在不在跑（media/src/view/project/threads.ts 一字不差）。 */
+export const TIMELINE_BACKFILL_TASK = '從正文補推故事時間';
+/** 重推的任務名（同上）。 */
+export const TIMELINE_REFRESH_TASK = '重推故事時間';
+/** 失敗記錄的 op：補推、重推一批沒成（掛在時間線檔案上）。 */
 export const TIMELINE_BACKFILL_OP = 'timelineBackfill';
-/** 一批最多几章（⚑7）。 */
+/** 一批最多幾章（⚑7）。 */
 export const TIME_BATCH_CHAPTERS = 5;
-/** 一批最多多少字的正文（按章的字数切批；确认框报的次数就按它算）。 */
+/** 一批最多多少字的正文（按章的字數切批；確認框報的次數就按它算）。 */
 export const TIME_BATCH_CHARS = 24000;
 
-/** 推哪几章（零调用，{@link planTimeline}）。 */
+/** 推哪幾章（零呼叫，{@link planTimeline}）。 */
 export interface TimelinePlan {
   mode: TimelineWriteMode;
-  /** 要推的章，按章号切好批。 */
+  /** 要推的章，按章號切好批。 */
   batches: Chapter[][];
-  /** 其中时间线里已经有、会照新推的换掉的机器行（重推）。 */
+  /** 其中時間線裡已經有、會照新推的換掉的機器行（重推）。 */
   replacing: number[];
-  /** 时间线里是作者写的、这一次不碰的章（重推；认不出的行也算作者的）。 */
+  /** 時間線裡是作者寫的、這一次不碰的章（重推；認不出的行也算作者的）。 */
   authored: number[];
-  /** 时间线里没有（或要换）、这一次推不了的章：同步之后正文又改过。 */
+  /** 時間線裡沒有（或要換）、這一次推不了的章：同步之後正文又改過。 */
   stale: number[];
   calls: CallEstimate;
 }
 
-/** 推 `batches` 批：一批写 1 次、转写模型照抄成 JSON 1 次（2026-10-25 起），转写不合格重转 1 次。 */
+/** 推 `batches` 批：一批寫 1 次、轉寫模型照抄成 JSON 1 次（2026-10-25 起），轉寫不合格重轉 1 次。 */
 export function timelineBatchCalls(batches: number): CallEstimate {
-  return { low: 2 * batches, high: 2 * batches, max: 3 * batches, why: '每批写 1 次、转写模型照抄成 JSON 1 次；转写不合格重转 1 次' };
+  return { low: 2 * batches, high: 2 * batches, max: 3 * batches, why: '每批寫 1 次、轉寫模型照抄成 JSON 1 次；轉寫不合格重轉 1 次' };
 }
 
-/** 按章号切批：最多 {@link TIME_BATCH_CHAPTERS} 章、合计不超过 {@link TIME_BATCH_CHARS} 字（一章本身太长的单独一批）；不连号的地方断开。 */
+/** 按章號切批：最多 {@link TIME_BATCH_CHAPTERS} 章、合計不超過 {@link TIME_BATCH_CHARS} 字（一章本身太長的單獨一批）；不連號的地方斷開。 */
 export function batchTimeChapters(chapters: readonly Chapter[]): Chapter[][] {
   const batches: Chapter[][] = [];
   let cur: Chapter[] = [];
@@ -90,8 +90,8 @@ export function batchTimeChapters(chapters: readonly Chapter[]): Chapter[][] {
 }
 
 /**
- * 要推哪几章。`fill`：没有这一行、或还是机器写的 `+?`〔推不出〕；`refresh`：没有这一行、或是机器写的（`range` 之内）。都只要同步过、
- * 正文没再改过的章。同号的正文有两份时认路径排序第一份（与补记、总览同一个口径）。
+ * 要推哪幾章。`fill`：沒有這一行、或還是機器寫的 `+?`〔推不出〕；`refresh`：沒有這一行、或是機器寫的（`range` 之內）。都只要同步過、
+ * 正文沒再改過的章。同號的正文有兩份時認路徑排序第一份（與補記、總覽同一個口徑）。
  */
 export async function planTimeline(
   project: NovelProject,
@@ -149,25 +149,25 @@ export async function planTimeline(
   return { mode, batches, replacing: mode === 'refresh' ? replacing : [], authored, stale, calls: timelineBatchCalls(batches.length) };
 }
 
-/** {@link runTimeline} 的结果。 */
+/** {@link runTimeline} 的結果。 */
 export interface TimelineRunOutcome {
   calls: number;
-  /** 写进时间线的章（推出来了的、推不出记了 `+?` 的都算）。 */
+  /** 寫進時間線的章（推出來了的、推不出記了 `+?` 的都算）。 */
   written: number[];
-  /** 其中推不出的章（记了 `+?`）。 */
+  /** 其中推不出的章（記了 `+?`）。 */
   unknown: number[];
-  /** 其中正文写明了日子的章。 */
+  /** 其中正文寫明瞭日子的章。 */
   dated: number[];
-  /** 模型漏了的章（这一批里没给它的那一项），再点一次会补。 */
+  /** 模型漏了的章（這一批裡沒給它的那一項），再點一次會補。 */
   missed: number[];
-  /** 停在这一批：调用没成（失败挂在时间线文件上）。 */
+  /** 停在這一批：呼叫沒成（失敗掛在時間線檔案上）。 */
   failed?: { from: number; reason: string };
   cancelled?: boolean;
-  /** 停下时还没走到的章。 */
+  /** 停下時還沒走到的章。 */
   left: number[];
 }
 
-/** 按 {@link planTimeline} 的结果一批一批推。**不弹框、不开任务、不抛**（取消单列）：确认与进度条归调用方。 */
+/** 按 {@link planTimeline} 的結果一批一批推。**不彈框、不開任務、不拋**（取消單列）：確認與進度條歸呼叫方。 */
 export async function runTimeline(
   project: NovelProject,
   plan: TimelinePlan,
@@ -175,7 +175,7 @@ export async function runTimeline(
     pool: Pick<ModelPool, 'run' | 'primaryBudget'>;
     signal: AbortSignal;
     report: (p: { message?: string; current?: number; total?: number }) => void;
-    /** 转写那一次怎么调（2026-10-25 起）。缺省走「转写」那一档，那一档没有可用的模型时用 `pool`。 */
+    /** 轉寫那一次怎麼調（2026-10-25 起）。預設走「轉寫」那一檔，那一檔沒有可用的模型時用 `pool`。 */
     transcribe?: TranscribeCall;
   }
 ): Promise<TimelineRunOutcome> {
@@ -183,7 +183,7 @@ export async function runTimeline(
   const transcribe = opts.transcribe ?? poolTranscriber(signal, pool);
   const out: TimelineRunOutcome = { calls: 0, written: [], unknown: [], dated: [], missed: [], left: [] };
   const rel = project.relPath(project.timelinePath);
-  const verb = plan.mode === 'refresh' ? '重推' : '补推';
+  const verb = plan.mode === 'refresh' ? '重推' : '補推';
   const total = plan.batches.length;
   for (let i = 0; i < total; i++) {
     const batch = plan.batches[i];
@@ -196,14 +196,14 @@ export async function runTimeline(
     const where = describeChapterRuns(batch.map((c) => c.order));
     report({ message: where, current: i, total });
     try {
-      // 「前面几章的时间」按此刻盘上的时间线算：前一批刚写进去的也算上（judgeTimes 里读）。
+      // 「前面幾章的時間」按此刻盤上的時間線算：前一批剛寫進去的也算上（judgeTimes 裡讀）。
       const { results, calls } = await judgeTimes(project, batch, {
         run: (what, fn) => pool.run(what, fn),
         budget: pool.primaryBudget,
         signal,
         transcribe,
         mode: plan.mode,
-        label: `${verb}时间 · ${where}`,
+        label: `${verb}時間 · ${where}`,
       });
       out.calls += calls;
       for (const r of results) {
@@ -220,26 +220,26 @@ export async function runTimeline(
         }
       }
     } catch (err) {
-      // 请求发出去了钱就花了：读不出来的带着写与转写的实数，别的错（取消、网络）算写的那 1 次。
+      // 請求發出去了錢就花了：讀不出來的帶著寫與轉寫的實數，別的錯（取消、網路）算寫的那 1 次。
       out.calls += timeCallsOf(err);
       if (err instanceof CancelledError || signal.aborted) {
         out.cancelled = true;
         out.left = rest();
         break;
       }
-      // 一批没成就停：后一批要看这一批的结果，系统性的失败也不白调后面几十章。
+      // 一批沒成就停：後一批要看這一批的結果，系統性的失敗也不白調後面幾十章。
       const reason = describeError(err);
       out.failed = { from: batch[0].order, reason };
       out.left = rest();
-      log.warn(`${verb}故事时间停在${where}：${reason}`, err);
+      log.warn(`${verb}故事時間停在${where}：${reason}`, err);
       await recordFailure(project, {
         scope: '叙事线',
         targetKind: 'threads',
         targetKey: rel,
         severity: 'error',
         op: TIMELINE_BACKFILL_OP,
-        message: `${verb}故事时间停在第 ${batch[0].order} 章：${reason}`,
-        detail: `已经推出来的留在时间线里。在叙事线页签「时间线」组再点一次「${plan.mode === 'refresh' ? '重推' : '补推时间'}」，会从这一章接着推。`,
+        message: `${verb}故事時間停在第 ${batch[0].order} 章：${reason}`,
+        detail: `已經推出來的留在時間線裡。在敘事線頁籤「時間線」組再點一次「${plan.mode === 'refresh' ? '重推' : '補推時間'}」，會從這一章接著推。`,
       });
       break;
     }
@@ -252,36 +252,36 @@ export async function runTimeline(
 }
 
 /**
- * 完成提示（第 2 条：说清楚）：「补推故事时间：推了 12 章（第 1–12 章），其中第 4 章正文写明了日子，第 7、9 章推不出（按紧接上一章算，
- * 可以在时间线组里改）」，模型漏了的、停在哪、跳过的跟在后面。
+ * 完成提示（第 2 條：說清楚）：「補推故事時間：推了 12 章（第 1–12 章），其中第 4 章正文寫明瞭日子，第 7、9 章推不出（按緊接上一章算，
+ * 可以在時間線組裡改）」，模型漏了的、停在哪、跳過的跟在後面。
  */
 export function describeTimelineRun(o: TimelineRunOutcome, plan: Pick<TimelinePlan, 'mode' | 'stale' | 'authored'>): string {
-  const verb = plan.mode === 'refresh' ? '重推' : '补推';
+  const verb = plan.mode === 'refresh' ? '重推' : '補推';
   const parts = [
-    `${verb}故事时间：${o.written.length > 0 ? `推了 ${o.written.length} 章（${describeChapterRuns(o.written)}）` : '一章都没写进去'}`,
-    o.dated.length > 0 ? `其中${describeChapterRuns(o.dated)}正文写明了日子，按它对齐` : '',
-    o.unknown.length > 0 ? `${describeChapterRuns(o.unknown)}推不出，按紧接上一章算，可以在时间线组里改` : '',
-    o.missed.length > 0 ? `模型漏了${describeChapterRuns(o.missed)}，再点一次补上` : '',
+    `${verb}故事時間：${o.written.length > 0 ? `推了 ${o.written.length} 章（${describeChapterRuns(o.written)}）` : '一章都沒寫進去'}`,
+    o.dated.length > 0 ? `其中${describeChapterRuns(o.dated)}正文寫明瞭日子，按它對齊` : '',
+    o.unknown.length > 0 ? `${describeChapterRuns(o.unknown)}推不出，按緊接上一章算，可以在時間線組裡改` : '',
+    o.missed.length > 0 ? `模型漏了${describeChapterRuns(o.missed)}，再點一次補上` : '',
     o.failed
-      ? `第 ${o.failed.from} 章那一批没成（${o.failed.reason}），停在那里${o.left.length > 0 ? `，${describeChapterRuns(o.left)}没推` : ''}；再点一次接着推`
+      ? `第 ${o.failed.from} 章那一批沒成（${o.failed.reason}），停在那裡${o.left.length > 0 ? `，${describeChapterRuns(o.left)}沒推` : ''}；再點一次接著推`
       : o.cancelled && o.left.length > 0
-        ? `取消了，${describeChapterRuns(o.left)}没推`
+        ? `取消了，${describeChapterRuns(o.left)}沒推`
         : '',
-    plan.authored.length > 0 ? `${describeChapterRuns(plan.authored)}是你定的，没动` : '',
-    plan.stale.length > 0 ? `${describeChapterRuns(plan.stale)}同步之后正文又改过，没推（同步时会一起推）` : '',
+    plan.authored.length > 0 ? `${describeChapterRuns(plan.authored)}是你定的，沒動` : '',
+    plan.stale.length > 0 ? `${describeChapterRuns(plan.stale)}同步之後正文又改過，沒推（同步時會一起推）` : '',
   ];
   return `${parts.filter(Boolean).join('；')}。`;
 }
 
-/** 工程页「补推时间」：先问一句（章数与次数），再按批串行补推。返回实际调用次数。 */
+/** 工程頁「補推時間」：先問一句（章數與次數），再按批序列補推。返回實際呼叫次數。 */
 export async function backfillTimeline(project: NovelProject): Promise<number> {
   return timelineAction(project, 'fill');
 }
 
 /**
- * 工程页「重推」（2026-10-24 重做）：`range` 缺席是全部，右键一章「重推这一章」是 `{ from: n, to: n }`、「从这一章起重推」是第 n 章到
- * 时间线组里的最后一章。
- * 先问一句（章数、会换掉几行、你写的几行不动、次数），再按批串行重推。返回实际调用次数。
+ * 工程頁「重推」（2026-10-24 重做）：`range` 缺席是全部，右鍵一章「重推這一章」是 `{ from: n, to: n }`、「從這一章起重推」是第 n 章到
+ * 時間線組裡的最後一章。
+ * 先問一句（章數、會換掉幾行、你寫的幾行不動、次數），再按批序列重推。返回實際呼叫次數。
  */
 export async function refreshTimeline(project: NovelProject, range: { from?: number; to?: number } = {}): Promise<number> {
   return timelineAction(project, 'refresh', range);
@@ -292,73 +292,73 @@ async function timelineAction(project: NovelProject, mode: TimelineWriteMode, ra
   project.invalidate();
   const plan = await planTimeline(project, mode, range);
   const chapters = plan.batches.flat();
-  const verb = mode === 'refresh' ? '重推' : '补推';
+  const verb = mode === 'refresh' ? '重推' : '補推';
   const scope =
     range.from === undefined ? '' : range.to === range.from ? `第 ${range.from} 章` : range.to !== undefined ? `第 ${range.from}–${range.to} 章` : `第 ${range.from} 章起`;
   if (chapters.length === 0) {
     const why = [
-      plan.authored.length > 0 ? `${describeChapterRuns(plan.authored)}是你定的（机器不动）` : '',
-      plan.stale.length > 0 ? `${describeChapterRuns(plan.stale)}同步之后正文又改过（先同步，同步时会一起推）` : '',
+      plan.authored.length > 0 ? `${describeChapterRuns(plan.authored)}是你定的（機器不動）` : '',
+      plan.stale.length > 0 ? `${describeChapterRuns(plan.stale)}同步之後正文又改過（先同步，同步時會一起推）` : '',
     ].filter(Boolean);
     host.toast(
       why.length > 0
-        ? `${scope}没有可以${verb}时间的章：${why.join('；')}。`
+        ? `${scope}沒有可以${verb}時間的章：${why.join('；')}。`
         : mode === 'refresh'
-          ? `${scope}没有同步过的章可以重推。`
-          : '同步过的章在时间线里都有了，没有要补推的。要重来，点「重推」。'
+          ? `${scope}沒有同步過的章可以重推。`
+          : '同步過的章在時間線裡都有了，沒有要補推的。要重來，點「重推」。'
     );
     return 0;
   }
   const where = describeChapterRuns(chapters.map((c) => c.order));
   const rel = project.relPath(project.timelinePath);
-  const action = mode === 'refresh' ? '开始重推' : '开始补推';
+  const action = mode === 'refresh' ? '開始重推' : '開始補推';
   const answer = await askCall({
     message:
       mode === 'refresh'
-        ? `重推故事时间：${where}，按章号几章一批重新判每章比上一章晚几天、章里跳了几天、正文写明的日子，${describeCalls(plan.calls)}。现在重推？`
-        : `从正文补推故事时间：${where}同步过，时间线里还没有它们（或还推不出）。按章号几章一批判每章比上一章晚几天，${describeCalls(plan.calls)}。现在补推？`,
+        ? `重推故事時間：${where}，按章號幾章一批重新判每章比上一章晚幾天、章裡跳了幾天、正文寫明的日子，${describeCalls(plan.calls)}。現在重推？`
+        : `從正文補推故事時間：${where}同步過，時間線裡還沒有它們（或還推不出）。按章號幾章一批判每章比上一章晚幾天，${describeCalls(plan.calls)}。現在補推？`,
     actions: [action],
     detail: [
-      `共 ${chapters.length} 章，分 ${plan.batches.length} 批（一批最多 ${TIME_BATCH_CHAPTERS} 章），按章号一批一批往后推（后一批要看前一批推出来的时间），可以随时停下，已经推出来的留着；一批没成就停在那里，再点一次从那里接着推。`,
+      `共 ${chapters.length} 章，分 ${plan.batches.length} 批（一批最多 ${TIME_BATCH_CHAPTERS} 章），按章號一批一批往後推（後一批要看前一批推出來的時間），可以隨時停下，已經推出來的留著；一批沒成就停在那裡，再點一次從那裡接著推。`,
       mode === 'refresh'
-        ? `会换掉 ${plan.replacing.length} 行机器写的（行尾带〔依据〕〔推测〕〔推不出〕的）${plan.authored.length > 0 ? `；${describeChapterRuns(plan.authored)}是你定的，一个字不动` : ''}。你改过值、却还留着行尾那一段的行分不出是你改的，也会被换——想保住就删掉行尾那一段，或者在时间线组里右键「改时间」。开跑前先存一个存档点。`
-        : `只往 ${rel} 里填空：没有的写上，推不出的「+?」重推；你写的行一个字不动。`,
-      '日期按 start 现算，在叙事线页签与总览里看。',
-      plan.stale.length > 0 ? `${describeChapterRuns(plan.stale)}同步之后正文又改过，这一次不推——先同步，同步时会一起推。` : '',
+        ? `會換掉 ${plan.replacing.length} 行機器寫的（行尾帶〔依據〕〔推測〕〔推不出〕的）${plan.authored.length > 0 ? `；${describeChapterRuns(plan.authored)}是你定的，一個字不動` : ''}。你改過值、卻還留著行尾那一段的行分不出是你改的，也會被換——想保住就刪掉行尾那一段，或者在時間線組裡右鍵「改時間」。開跑前先存一個存檔點。`
+        : `只往 ${rel} 裡填空：沒有的寫上，推不出的「+?」重推；你寫的行一個字不動。`,
+      '日期按 start 現算，在敘事線頁籤與總覽裡看。',
+      plan.stale.length > 0 ? `${describeChapterRuns(plan.stale)}同步之後正文又改過，這一次不推——先同步，同步時會一起推。` : '',
     ]
       .filter(Boolean)
       .join('\n'),
     tasks: ['plotSummary', 'transcribe'],
-    // 只送正文、前面几章的时间与上一章的结尾，不看上下文详细度。
+    // 只送正文、前面幾章的時間與上一章的結尾，不看上下文詳細度。
     contextDetail: false,
   });
   if (answer?.action !== action) {
-    log.info(`作者没有开始${verb}故事时间`);
+    log.info(`作者沒有開始${verb}故事時間`);
     return 0;
   }
   return withCallChoice(answer.choice, async () => {
     const pool = await createModelPool({ task: 'plotSummary', concurrent: false });
     if (!pool) {
-      log.error(`没有可用的模型，${verb}故事时间中止`);
+      log.error(`沒有可用的模型，${verb}故事時間中止`);
       return 0;
     }
-    log.info(`开始${verb}故事时间`, `${where}｜${plan.batches.length} 批｜${pool.label}`);
+    log.info(`開始${verb}故事時間`, `${where}｜${plan.batches.length} 批｜${pool.label}`);
     let calls = 0;
     await runTask(
       mode === 'refresh' ? TIMELINE_REFRESH_TASK : TIMELINE_BACKFILL_TASK,
       async ({ signal, report }) => {
-        await checkpointBefore(project, `${verb}故事时间之前（${where}）`);
+        await checkpointBefore(project, `${verb}故事時間之前（${where}）`);
         const startedAt = Date.now();
         const o = await runTimeline(project, plan, { pool, signal, report });
         calls = o.calls;
         const text = describeTimelineRun(o, plan);
-        log.info(`${verb}故事时间结束`, `${text}｜调用 ${o.calls} 次，总耗时 ${elapsed(startedAt)}`);
+        log.info(`${verb}故事時間結束`, `${text}｜呼叫 ${o.calls} 次，總耗時 ${elapsed(startedAt)}`);
         if (o.cancelled && o.written.length === 0) {
           return;
         }
         host.toast(text, o.failed ? 'error' : 'info');
       },
-      { scope: '故事时间' }
+      { scope: '故事時間' }
     );
     return calls;
   });

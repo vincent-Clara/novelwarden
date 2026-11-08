@@ -1,56 +1,56 @@
 /**
- * 「名词补全」的匹配与排序（角色名、地名……），外加「名词高亮」在正文里认名字。**纯函数、零 DOM**：装配（按键、
- * 弹出框、插入）在 `names.ts`，名词图层与悬停浮窗在 `nameMarks.ts`；从光标前取查询词、按开头匹配、排序、边打边弹的
- * 判定、插入时替换哪一段、正文里哪几段是名字都在这里，单测见 `tests/unit/editor/namesCore.test.js`。
+ * 「名詞補全」的匹配與排序（角色名、地名……），外加「名詞高亮」在正文裡認名字。**純函式、零 DOM**：裝配（按鍵、
+ * 彈出框、插入）在 `names.ts`，名詞圖層與懸停浮窗在 `nameMarks.ts`；從游標前取查詢詞、按開頭匹配、排序、邊打邊彈的
+ * 判定、插入時替換哪一段、正文裡哪幾段是名字都在這裡，單測見 `tests/unit/editor/namesCore.test.js`。
  *
- * ## 查询词：中文没有词边界
+ * ## 查詢詞：中文沒有詞邊界
  *
- * 从光标往前取 1~{@link MAX_QUERY} 个字（碰到空白、标点就停），挑**能匹配上某个名字开头的最长那段**
- * （{@link queryBefore}）：「他看见林」认「林」，「青云」认「青云」。什么都匹配不上就是空查询——手动按键时列全部。
+ * 從游標往前取 1~{@link MAX_QUERY} 個字（碰到空白、標點就停），挑**能匹配上某個名字開頭的最長那段**
+ * （{@link queryBefore}）：「他看見林」認「林」，「青雲」認「青雲」。什麼都匹配不上就是空查詢——手動按鍵時列全部。
  *
- * ## 匹配与排序（{@link matchNames}）
+ * ## 匹配與排序（{@link matchNames}）
  *
- * - **只认开头**：查询词是正名或某个别名（角色别名、设定关键词）的开头，不分大小写。一个名词只列一行：正名对得上就是
- *   正名，否则第一个对得上的别名（显示「别名 → 正名」，插入的是那个别名）。拼音首字母不认——`/` 命令面板的拼音键是
- *   每条命令手写的，没有现成的汉字转拼音表可复用（⚑）。
- * - **最近在本文件出现的排前面**：光标（准确说是查询词开头）往前 {@link RECENT_BEFORE} 字里出现过的，越近越前；只在
- *   光标后面 {@link RECENT_AFTER} 字里出现过的其次；都没出现过的最后。同一档里角色 → 设定 → 未建条目，正名先于别名，
- *   短的先于长的，最后按表里的先后。
+ * - **只認開頭**：查詢詞是正名或某個別名（角色別名、設定關鍵詞）的開頭，不分大小寫。一個名詞只列一行：正名對得上就是
+ *   正名，否則第一個對得上的別名（顯示「別名 → 正名」，插入的是那個別名）。拼音首字母不認——`/` 命令面板的拼音鍵是
+ *   每條命令手寫的，沒有現成的漢字轉拼音表可複用（⚑）。
+ * - **最近在本檔案出現的排前面**：游標（準確說是查詢詞開頭）往前 {@link RECENT_BEFORE} 字裡出現過的，越近越前；只在
+ *   游標後面 {@link RECENT_AFTER} 字裡出現過的其次；都沒出現過的最後。同一檔裡角色 → 設定 → 未建條目，正名先於別名，
+ *   短的先於長的，最後按表裡的先後。
  *
- * ## 边打边弹（{@link autoPopQuery}，⚑）
+ * ## 邊打邊彈（{@link autoPopQuery}，⚑）
  *
- * 只认打字与输入法上屏（带 `change` 的那一下，组字中途不算）、刚插入了字、没有选区；查询词至少
- * {@link AUTO_MIN_CHARS} 个字；**已经打完整了不弹**（查询词正好是某个名字或别名）；名字剩下那截已经在光标后面的不算。
+ * 只認打字與輸入法上屏（帶 `change` 的那一下，組字中途不算）、剛插入了字、沒有選區；查詢詞至少
+ * {@link AUTO_MIN_CHARS} 個字；**已經打完整了不彈**（查詢詞正好是某個名字或別名）；名字剩下那截已經在游標後面的不算。
  *
- * ## 名词高亮：正文里哪几段是名字（{@link nameRanges}）
+ * ## 名詞高亮：正文裡哪幾段是名字（{@link nameRanges}）
  *
- * 与补全同一张表、同一套叫法（正名与别名，不分大小写），一趟扫完（`locateTerms`）。
- * - **长的优先、不重叠**：「林昭阳」不会被认成「林昭」加一个「阳」；同一处起头的取最长的那个叫法。
- * - **一个字的叫法不认**（⚑）：「道」「气」这样的设定一标就是满屏。后端给的别名本来就不收一个字的，这里连正名一起挡。
- * - **英文叫法要整词**：前后挨着字母或数字的不算（「Lin」不认「Linear」里那一截）。中文没有词边界，照认。
- * - **卡或条目自己那一份里不标它自己**（⚑）：角色卡通篇是这个人的名字，标出来只是满屏的底色。
- * - 两条叫法撞了（角色的别名正好是某条设定的关键词）：表里排前面的那条算（角色 → 设定 → 未建条目）。
+ * 與補全同一張表、同一套叫法（正名與別名，不分大小寫），一趟掃完（`locateTerms`）。
+ * - **長的優先、不重疊**：「林昭陽」不會被認成「林昭」加一個「陽」；同一處起頭的取最長的那個叫法。
+ * - **一個字的叫法不認**（⚑）：「道」「氣」這樣的設定一標就是滿屏。後端給的別名本來就不收一個字的，這裡連正名一起擋。
+ * - **英文叫法要整詞**：前後挨著字母或數字的不算（「Lin」不認「Linear」裡那一截）。中文沒有詞邊界，照認。
+ * - **卡或條目自己那一份裡不標它自己**（⚑）：角色卡通篇是這個人的名字，標出來只是滿屏的底色。
+ * - 兩條叫法撞了（角色的別名正好是某條設定的關鍵詞）：表裡排前面的那條算（角色 → 設定 → 未建條目）。
  */
 import { foldLatin, locateTerms } from '../protocol';
 import type { NameEntry, NameIndex, NameSource } from '../protocol';
 import type { TextChange } from './history';
 
-/** 从光标往前最多取几个字当查询词。 */
+/** 從游標往前最多取幾個字當查詢詞。 */
 export const MAX_QUERY = 4;
-/** 边打边弹：查询词至少几个字（⚑ 2：一个字时「林」「沈」这类常用字一打就弹，太吵）。 */
+/** 邊打邊彈：查詢詞至少幾個字（⚑ 2：一個字時「林」「沈」這類常用字一打就彈，太吵）。 */
 export const AUTO_MIN_CHARS = 2;
-/** 弹出框一次最多列几条。 */
+/** 彈出框一次最多列幾條。 */
 export const NAME_LIST_LIMIT = 50;
-/** 「最近在本文件出现」往前看多少字。 */
+/** 「最近在本檔案出現」往前看多少字。 */
 export const RECENT_BEFORE = 20_000;
-/** 往后看多少字（前面没出现过、后面出现过的排在第二档）。 */
+/** 往後看多少字（前面沒出現過、後面出現過的排在第二檔）。 */
 export const RECENT_AFTER = 5_000;
 
 /**
- * 哪些文件补全：正文（章节、草稿）、细纲、角色卡、设定条目，外加情节大纲与叙事线（⚑）——作者会写到名字的
- * Markdown。小说配置、故事前提、世界观后端都给 `setting`，分不出哪份是配置，一律不补；敏感词表（`sensitive`，
- * `.novelwarden/sensitive.txt`，写作体检读它）、文风、全文大纲、技能、别的文件不补。是白名单：以后新加的种类缺省不补。
- * 看后端给的 `kind`，前端不拿路径猜。
+ * 哪些檔案補全：正文（章節、草稿）、細綱、角色卡、設定條目，外加情節大綱與敘事線（⚑）——作者會寫到名字的
+ * Markdown。小說配置、故事前提、世界觀後端都給 `setting`，分不出哪份是配置，一律不補；敏感詞表（`sensitive`，
+ * `.novelwarden/sensitive.txt`，寫作體檢讀它）、文風、全文大綱、技能、別的檔案不補。是白名單：以後新加的種類預設不補。
+ * 看後端給的 `kind`，前端不拿路徑猜。
  */
 const COMPLETION_KINDS: ReadonlySet<string> = new Set(['chapter', 'draft', 'plot', 'character', 'lore', 'outline', 'threads']);
 
@@ -58,20 +58,20 @@ export function completionApplies(kind: string | undefined): boolean {
   return !!kind && COMPLETION_KINDS.has(kind);
 }
 
-/** 同一档里的先后：角色、设定、未建条目。 */
+/** 同一檔裡的先後：角色、設定、未建條目。 */
 const SOURCE_ORDER: Record<NameSource, number> = { character: 0, lore: 1, unfiled: 2 };
 
-/** 一个叫法（正名或别名）。 */
+/** 一個叫法（正名或別名）。 */
 export interface NameForm {
   text: string;
-  /** 小写，比较用。 */
+  /** 小寫，比較用。 */
   lower: string;
   alias: boolean;
 }
 
-/** 表里的一条（切好的）。 */
+/** 表裡的一條（切好的）。 */
 export interface NameItem {
-  /** 在表里的先后。 */
+  /** 在表裡的先後。 */
   order: number;
   name: string;
   aliases: string[];
@@ -79,22 +79,22 @@ export interface NameItem {
   category: string;
   brief: string;
   path?: string;
-  /** 类型那一格：角色卡写「角色」，设定与未建条目写分类，没有分类写「设定」。 */
+  /** 型別那一格：角色卡寫「角色」，設定與未建條目寫分類，沒有分類寫「設定」。 */
   badge: string;
-  /** 正名在前，别名按原来的先后。 */
+  /** 正名在前，別名按原來的先後。 */
   forms: NameForm[];
 }
 
 export interface NameCatalog {
   items: NameItem[];
-  /** 小写的前 1~{@link MAX_QUERY} 个字：有没有哪个叫法这样开头（取查询词用）。 */
+  /** 小寫的前 1~{@link MAX_QUERY} 個字：有沒有哪個叫法這樣開頭（取查詢詞用）。 */
   prefixes: Set<string>;
-  /** 小写的完整叫法（判「打完整了」用）。 */
+  /** 小寫的完整叫法（判「打完整了」用）。 */
   exact: Set<string>;
   initialized: boolean;
 }
 
-/** 把后端给的表切好。表到了做一次，之后每打一个字只查不切。 */
+/** 把後端給的表切好。表到了做一次，之後每打一個字只查不切。 */
 export function buildNameCatalog(index: NameIndex | undefined): NameCatalog {
   const items: NameItem[] = [];
   const prefixes = new Set<string>();
@@ -141,27 +141,27 @@ function toItem(entry: NameEntry, order: number): NameItem | undefined {
     category,
     brief: entry.brief ?? '',
     ...(entry.path ? { path: entry.path } : {}),
-    badge: source === 'character' ? '角色' : category || '设定',
+    badge: source === 'character' ? '角色' : category || '設定',
     forms,
   };
 }
 
-// ---------------------------------------------------------------- 查询词
+// ---------------------------------------------------------------- 查詢詞
 
-/** 名字里会出现的字：文字、数字、附加符号，外加外文名里的间隔号与连字符、撇号。 */
+/** 名字裡會出現的字：文字、數字、附加符號，外加外文名裡的間隔號與連字元、撇號。 */
 const NAME_CHAR = /^[\p{L}\p{N}\p{M}·・•‧'’-]$/u;
 
 export function isNameChar(ch: string): boolean {
   return NAME_CHAR.test(ch);
 }
 
-/** 一段文字的查询词与它在全文里的起点（`area.value` 的下标）。`query` 是空串时 `start` 就是光标。 */
+/** 一段文字的查詢詞與它在全文裡的起點（`area.value` 的下標）。`query` 是空串時 `start` 就是游標。 */
 export interface NameQuery {
   query: string;
   start: number;
 }
 
-/** 光标前那几个名字里会出现的字（至多 `max` 个，按码位），碰到别的就停。 */
+/** 游標前那幾個名字裡會出現的字（至多 `max` 個，按碼位），碰到別的就停。 */
 function charsBefore(text: string, caret: number, max: number): string[] {
   const out: string[] = [];
   let pos = Math.max(0, Math.min(caret, text.length));
@@ -185,7 +185,7 @@ function charsBefore(text: string, caret: number, max: number): string[] {
 }
 
 /**
- * 从光标往前取 1~{@link MAX_QUERY} 个字，挑能匹配上某个名字（或别名）开头的最长那段；一段都匹配不上给空查询。
+ * 從游標往前取 1~{@link MAX_QUERY} 個字，挑能匹配上某個名字（或別名）開頭的最長那段；一段都匹配不上給空查詢。
  */
 export function queryBefore(catalog: NameCatalog, text: string, caret: number): NameQuery {
   const at = Math.max(0, Math.min(caret, text.length));
@@ -199,7 +199,7 @@ export function queryBefore(catalog: NameCatalog, text: string, caret: number): 
   return { query: '', start: at };
 }
 
-/** `start` 到光标那一段还是不是一个查询词（全是名字里的字）。手动弹出之后接着打字时用：碰到空白、标点就收起。 */
+/** `start` 到游標那一段還是不是一個查詢詞（全是名字裡的字）。手動彈出之後接著打字時用：碰到空白、標點就收起。 */
 export function queryBetween(text: string, start: number, caret: number): string | undefined {
   if (caret < start || start < 0 || caret > text.length) {
     return undefined;
@@ -213,43 +213,43 @@ export function queryBetween(text: string, start: number, caret: number): string
   return query;
 }
 
-// ---------------------------------------------------------------- 匹配与排序
+// ---------------------------------------------------------------- 匹配與排序
 
-/** 弹出框里的一行。 */
+/** 彈出框裡的一行。 */
 export interface NameCandidate {
   item: NameItem;
-  /** 显示并插入的那个叫法：正名对得上就是正名，否则第一个对得上的别名。空查询时是正名。 */
+  /** 顯示並插入的那個叫法：正名對得上就是正名，否則第一個對得上的別名。空查詢時是正名。 */
   form: string;
   viaAlias: boolean;
-  /** `form` 里要高亮的字（码位下标）：查询词那几个。 */
+  /** `form` 裡要高亮的字（碼位下標）：查詢詞那幾個。 */
   hits: number[];
-  /** 0：查询词之前出现过；1：只在光标后面出现过；2：都没出现过。 */
+  /** 0：查詢詞之前出現過；1：只在游標後面出現過；2：都沒出現過。 */
   rank: number;
-  /** 同一档里的远近：越大越近。 */
+  /** 同一檔裡的遠近：越大越近。 */
   near: number;
 }
 
 export interface MatchOptions {
-  /** 当前文件的全部文字与查询词的起点、光标（算「最近出现」用）。 */
+  /** 當前檔案的全部文字與查詢詞的起點、游標（算「最近出現」用）。 */
   text: string;
   start: number;
   caret: number;
-  /** 最多列几条（缺省 {@link NAME_LIST_LIMIT}）。 */
+  /** 最多列幾條（預設 {@link NAME_LIST_LIMIT}）。 */
   limit?: number;
   /**
-   * 只要还没打完的（边打边弹）：叫法比查询词长、剩下那截不在光标后面。正好是查询词的那个叫法不列，
-   * 那一个名词还有别的叫法对得上的照样列。
+   * 只要還沒打完的（邊打邊彈）：叫法比查詢詞長、剩下那截不在游標後面。正好是查詢詞的那個叫法不列，
+   * 那一個名詞還有別的叫法對得上的照樣列。
    */
   unfinished?: boolean;
 }
 
 export interface MatchResult {
   items: NameCandidate[];
-  /** 一共对上几条（超过上限时比 `items` 多）。 */
+  /** 一共對上幾條（超過上限時比 `items` 多）。 */
   total: number;
 }
 
-/** 按开头匹配、排序。空查询列全部（手动按键时）。 */
+/** 按開頭匹配、排序。空查詢列全部（手動按鍵時）。 */
 export function matchNames(catalog: NameCatalog, query: string, opts: MatchOptions): MatchResult {
   const lower = query.toLowerCase();
   const qLen = Array.from(query).length;
@@ -273,7 +273,7 @@ export function matchNames(catalog: NameCatalog, query: string, opts: MatchOptio
     }
   }
 
-  // 「最近出现」：查询词开头之前那一段（不含正在打的这几个字）与光标之后那一段，各小写一次。
+  // 「最近出現」：查詢詞開頭之前那一段（不含正在打的這幾個字）與游標之後那一段，各小寫一次。
   const before = opts.text.slice(Math.max(0, opts.start - RECENT_BEFORE), Math.max(0, opts.start)).toLowerCase();
   const later = opts.text.slice(opts.caret, opts.caret + RECENT_AFTER).toLowerCase();
   for (const c of found) {
@@ -311,25 +311,25 @@ function compareCandidates(a: NameCandidate, b: NameCandidate): number {
   );
 }
 
-// ---------------------------------------------------------------- 边打边弹
+// ---------------------------------------------------------------- 邊打邊彈
 
-/** 内容变化那一下（`onEditorChange` 的 `edit`）里判定要用的几样。 */
+/** 內容變化那一下（`onEditorChange` 的 `edit`）裡判定要用的幾樣。 */
 export interface AutoPopInput {
   /** `typing` / `composition` / `program` / …（`api.ts` 的 `EditSource`）。 */
   source: string;
-  /** 这一处改动；组字中途没有。 */
+  /** 這一處改動；組字中途沒有。 */
   change?: TextChange;
-  /** 改动之后的全文与选区。 */
+  /** 改動之後的全文與選區。 */
   text: string;
   selectionStart: number;
   selectionEnd: number;
-  /** 输入法正在组字。 */
+  /** 輸入法正在組字。 */
   composing?: boolean;
 }
 
 /**
- * 光标前这几个字该不该弹（不看是怎么打出来的）：查询词至少 {@link AUTO_MIN_CHARS} 个字、不是哪个叫法的全称、
- * 还有没打完的叫法。该弹给查询词，不该弹给 undefined。边打边弹开着时，弹出框还开着、作者退格了也用它重判。
+ * 游標前這幾個字該不該彈（不看是怎麼打出來的）：查詢詞至少 {@link AUTO_MIN_CHARS} 個字、不是哪個叫法的全稱、
+ * 還有沒打完的叫法。該彈給查詢詞，不該彈給 undefined。邊打邊彈開著時，彈出框還開著、作者退格了也用它重判。
  */
 export function autoQueryAt(catalog: NameCatalog, text: string, caret: number): NameQuery | undefined {
   const q = queryBefore(catalog, text, caret);
@@ -341,8 +341,8 @@ export function autoQueryAt(catalog: NameCatalog, text: string, caret: number): 
 }
 
 /**
- * 边打边弹：这一下改动之后要不要弹。只认打字与输入法上屏（带 `change`）、刚插入了字、光标就在插进来的字后面、
- * 没有选区；组字中途、删字、粘贴、程序改写、撤销一律不弹。
+ * 邊打邊彈：這一下改動之後要不要彈。只認打字與輸入法上屏（帶 `change`）、剛插入了字、游標就在插進來的字後面、
+ * 沒有選區；組字中途、刪字、貼上、程式改寫、撤銷一律不彈。
  */
 export function autoPopQuery(catalog: NameCatalog, ev: AutoPopInput): NameQuery | undefined {
   if (ev.composing || (ev.source !== 'typing' && ev.source !== 'composition')) {
@@ -357,7 +357,7 @@ export function autoPopQuery(catalog: NameCatalog, ev: AutoPopInput): NameQuery 
 
 // ---------------------------------------------------------------- 插入
 
-/** 接受一条时换掉哪一段、换成什么、光标落在哪。 */
+/** 接受一條時換掉哪一段、換成什麼、游標落在哪。 */
 export interface NameInsertion {
   start: number;
   end: number;
@@ -366,8 +366,8 @@ export interface NameInsertion {
 }
 
 /**
- * 换掉作者已经打的那几个字（查询词，从 `start` 到光标；有选区时连选中的一起），补成整个叫法；光标落在名字后面。
- * 光标后面的字一个不动。
+ * 換掉作者已經打的那幾個字（查詢詞，從 `start` 到游標；有選區時連選中的一起），補成整個叫法；游標落在名字後面。
+ * 游標後面的字一個不動。
  */
 export function insertionFor(start: number, selectionStart: number, selectionEnd: number, form: string): NameInsertion {
   const from = Math.min(start, selectionStart);
@@ -375,20 +375,20 @@ export function insertionFor(start: number, selectionStart: number, selectionEnd
   return { start: from, end, text: form, caret: from + form.length };
 }
 
-// ---------------------------------------------------------------- 名词高亮
+// ---------------------------------------------------------------- 名詞高亮
 
-/** 名词图层上各来源的 class（颜色在 `css/standalone/names.css`）：角色、设定条目画淡底色，未建条目画虚下划线。 */
+/** 名詞圖層上各來源的 class（顏色在 `css/standalone/names.css`）：角色、設定條目畫淡底色，未建條目畫虛下劃線。 */
 export const NAME_MARK_CLASS: Readonly<Record<NameSource, string>> = {
   character: 'ed-hl-name-character',
   lore: 'ed-hl-name-lore',
   unfiled: 'ed-hl-name-unfiled',
 };
 
-/** 正文里认名字用的那张表。表到了做一次，之后每次重算只查不建。 */
+/** 正文裡認名字用的那張表。表到了做一次，之後每次重算只查不建。 */
 export interface NameMatcher {
-  /** 要找的叫法（原样，`locateTerms` 折大小写去找）。 */
+  /** 要找的叫法（原樣，`locateTerms` 折大小寫去找）。 */
   terms: string[];
-  /** 折过大小写的叫法 → 哪一条（撞了的取表里排前面的）。 */
+  /** 折過大小寫的叫法 → 哪一條（撞了的取表裡排前面的）。 */
   byForm: Map<string, NameItem>;
 }
 
@@ -418,12 +418,12 @@ export function buildNameMatcher(catalog: NameCatalog): NameMatcher {
   return { terms, byForm };
 }
 
-/** 这一段字是表里哪一条的叫法（悬停时按镜像层上那一段的字认回去）。 */
+/** 這一段字是表裡哪一條的叫法（懸停時按映象層上那一段的字認回去）。 */
 export function nameItemOf(matcher: NameMatcher, text: string): NameItem | undefined {
   return matcher.byForm.get(foldLatin(text));
 }
 
-/** 英文叫法前后挨着字母、数字就不是这个名字。 */
+/** 英文叫法前後挨著字母、數字就不是這個名字。 */
 function wholeWord(text: string, start: number, end: number): boolean {
   if (LATIN_WORD.test(text[start]) && start > 0 && LATIN_WORD.test(text[start - 1])) {
     return false;
@@ -432,8 +432,8 @@ function wholeWord(text: string, start: number, end: number): boolean {
 }
 
 /**
- * 正文里哪几段是名字（见文件头「名词高亮」）。`selfPath`：正在看的这份文件——是某张卡或某个条目自己时，不标它自己。
- * 按位置排好、互不重叠。
+ * 正文裡哪幾段是名字（見檔案頭「名詞高亮」）。`selfPath`：正在看的這份檔案——是某張卡或某個條目自己時，不標它自己。
+ * 按位置排好、互不重疊。
  */
 export function nameRanges(matcher: NameMatcher, text: string, selfPath?: string): NameRange[] {
   if (matcher.terms.length === 0 || !text) {

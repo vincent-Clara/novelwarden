@@ -1,13 +1,13 @@
 <!--
-  桌面 app 图标的源文件，`tauri icon` 从它生成 icons/ 下的全部尺寸与格式。
-  改了图标就重跑：npx tauri icon src-tauri/icons/source.svg
+  桌面 app 圖示的原始檔，`tauri icon` 從它生成 icons/ 下的全部尺寸與格式。
+  改了圖示就重跑：npx tauri icon src-tauri/icons/source.svg
 
-  与 media/icon.svg 是同一个书本符号，但**不能直接拿那个文件当 app 图标**：
-  那是给 VS Code 活动栏用的单色线稿（stroke="currentColor"，靠继承色），
-  单独渲染出来既没有颜色、又只有几根细线，在任务栏和桌面上几乎看不见。
-  所以这里补上品牌蓝的圆角底板，线稿改成白色。
-  （src/standalone/server.ts 处理 favicon 时踩过同一个坑，那边的解法是把
-  currentColor 换成品牌蓝。）
+  與 media/icon.svg 是同一個書本符號，但**不能直接拿那個檔案當 app 圖示**：
+  那是給 VS Code 活動欄用的單色線稿（stroke="currentColor"，靠繼承色），
+  單獨渲染出來既沒有顏色、又只有幾根細線，在工作列和桌面上幾乎看不見。
+  所以這裡補上品牌藍的圓角底板，線稿改成白色。
+  （src/standalone/server.ts 處理 favicon 時踩過同一個坑，那邊的解法是把
+  currentColor 換成品牌藍。）
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <rect width="1024" height="1024" rx="228" fill="#0078d4"/>

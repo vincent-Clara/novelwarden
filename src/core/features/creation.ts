@@ -1,19 +1,19 @@
 /**
- * 设置页的连接测试 + 两个输出小工具。
+ * 設定頁的連線測試 + 兩個輸出小工具。
  *
- * 这个文件从前是 `CreationSession`——一个类同时管四件事：有没有在生成、
- * 装配上下文、解析产物、落盘（六条分支）。四件事各自搬走之后它就没了：
+ * 這個檔案從前是 `CreationSession`——一個類同時管四件事：有沒有在生成、
+ * 裝配上下文、解析產物、落盤（六條分支）。四件事各自搬走之後它就沒了：
  *
- * | 从前的职责 | 现在在哪 |
+ * | 從前的職責 | 現在在哪 |
  * |---|---|
- * | `currentAbort` 并发控制 | `controller/index.ts`（那是**调度**的责任） |
- * | 装配 + 调模型 + 解析 | `generation/generate.ts`（无状态，收 signal） |
- * | `acceptArtifact` 六条分支 | `generation/accept.ts`（守卫在 `workspace/`） |
+ * | `currentAbort` 併發控制 | `controller/index.ts`（那是**排程**的責任） |
+ * | 裝配 + 調模型 + 解析 | `generation/generate.ts`（無狀態，收 signal） |
+ * | `acceptArtifact` 六條分支 | `generation/accept.ts`（守衛在 `workspace/`） |
  * | `preview()` | `generation/generate.ts` 的 `previewContext` |
  *
- * 留在这里的三样东西都跟创作编排没关系：`testConnection` 是设置页的活，
- * `cleanOutput` / `suggestTitle` 是纯文本工具（前者还被 `pipelineBatch.ts`
- * 用着）。
+ * 留在這裡的三樣東西都跟創作編排沒關係：`testConnection` 是設定頁的活，
+ * `cleanOutput` / `suggestTitle` 是純文字工具（前者還被 `pipelineBatch.ts`
+ * 用著）。
  */
 import { buildProvider } from '../llm/registry';
 import { readConfig } from '../config';
@@ -27,26 +27,26 @@ import {
   withDraftProvider,
 } from '../model/providers';
 
-const log = scoped('创作');
+const log = scoped('創作');
 
 /**
- * 发一个最小请求验证配置能不能用。
- * 设置页的「测试连接」——比让用户先写半章再发现 Key 填错好得多。
+ * 發一個最小請求驗證配置能不能用。
+ * 設定頁的「測試連線」——比讓使用者先寫半章再發現 Key 填錯好得多。
  *
- * **严格用指定的那个模型**，不走分档池、不 fallback（第 12 条）：测的就是
- * 「这一个能不能用」，换成别的答案毫无意义。
+ * **嚴格用指定的那個模型**，不走分檔池、不 fallback（第 12 條）：測的就是
+ * 「這一個能不能用」，換成別的答案毫無意義。
  *
- * @param ref 要测的模型引用；留空则测当前选中的。
- * @param draft 设置页屏幕上那份尚未保存的服务商配置。给了就以它为准——
- *   「新加的模型必须先保存才能测」对用户毫无道理，而且保存一份没验过的
- *   配置正是测试想要避免的事。
+ * @param ref 要測的模型引用；留空則測當前選中的。
+ * @param draft 設定頁螢幕上那份尚未儲存的服務商配置。給了就以它為準——
+ *   「新加的模型必須先儲存才能測」對使用者毫無道理，而且儲存一份沒驗過的
+ *   配置正是測試想要避免的事。
  */
 export async function testConnection(
   ref?: string,
   draft?: ProviderProfile
 ): Promise<{ ok: boolean; message: string }> {
   const config = readConfig();
-  // 草稿只补充、不替换：其余服务商仍用已保存的，这样 ref 指向别家时照样能解析。
+  // 草稿只補充、不替換：其餘服務商仍用已儲存的，這樣 ref 指向別家時照樣能解析。
   const providers = withDraftProvider(config.providers, draft);
   const active = ref ? resolveModelRef(providers, ref) : config.active;
   if (!active) {
@@ -56,47 +56,47 @@ export async function testConnection(
   if (!provider) {
     return {
       ok: false,
-      message: `未配置「${providerLabel(active.profile)}」的 API Key，已取消测试。`,
+      message: `未配置「${providerLabel(active.profile)}」的 API Key，已取消測試。`,
     };
   }
-  log.info(`测试连接 ${active.ref}`, provider.label);
+  log.info(`測試連線 ${active.ref}`, provider.label);
   const startedAt = Date.now();
   const abort = new AbortController();
   try {
     let reply = '';
     for await (const ev of provider.stream(
-      [{ role: 'user', content: '回复两个字：收到' }],
+      [{ role: 'user', content: '回覆兩個字：收到' }],
       { maxOutputTokens: active.model.maxOutputTokens ?? config.maxOutputTokens, temperature: 0, timeoutMs: 30000, signal: abort.signal }
     )) {
       if (ev.type !== 'text') {
         continue;
       }
       reply += ev.text;
-      // 拿到任何内容就算通了，不必等它说完。
+      // 拿到任何內容就算通了，不必等它說完。
       if (reply.trim().length >= 2) {
         break;
       }
     }
     if (reply.trim()) {
-      log.info(`${active.ref} 连接正常`, `回复「${reply.trim().slice(0, 20)}」，用时 ${elapsed(startedAt)}`);
-      return { ok: true, message: `${active.ref} 连接正常：${provider.label} 回复「${reply.trim().slice(0, 20)}」` };
+      log.info(`${active.ref} 連線正常`, `回覆「${reply.trim().slice(0, 20)}」，用時 ${elapsed(startedAt)}`);
+      return { ok: true, message: `${active.ref} 連線正常：${provider.label} 回覆「${reply.trim().slice(0, 20)}」` };
     }
-    log.warn(`${active.ref} 连接成功但没有返回内容`, `用时 ${elapsed(startedAt)}，检查模型名是否正确`);
-    return { ok: false, message: `${active.ref} 连接成功但没有返回内容，检查模型名是否正确。` };
+    log.warn(`${active.ref} 連線成功但沒有返回內容`, `用時 ${elapsed(startedAt)}，檢查模型名是否正確`);
+    return { ok: false, message: `${active.ref} 連線成功但沒有返回內容，檢查模型名是否正確。` };
   } catch (err) {
-    log.error(`${active.ref} 连接失败：${describeError(err)}`, err);
+    log.error(`${active.ref} 連線失敗：${describeError(err)}`, err);
     return { ok: false, message: `${active.ref}：${describeError(err)}` };
   }
 }
 
-// ---------------------------------------------------------------- 输出清理
+// ---------------------------------------------------------------- 輸出清理
 
 /**
- * 清理模型输出里常见的赘余：包裹的代码块、开场白、被要求不写却仍写出的标题。
- * 只做保守清理，不改动正文本身。
+ * 清理模型輸出裡常見的贅餘：包裹的程式碼塊、開場白、被要求不寫卻仍寫出的標題。
+ * 只做保守清理，不改動正文字身。
  *
- * **只对正文层用**。在 JSON 产物上跑这几条正则会切坏结构——产物里的
- * ``` 由 `parse.ts` 的 `stripCodeFence` 在解析时处理。
+ * **只對正文層用**。在 JSON 產物上跑這幾條正則會切壞結構——產物裡的
+ * ``` 由 `parse.ts` 的 `stripCodeFence` 在解析時處理。
  */
 export function cleanOutput(text: string): string {
   let out = text.trim();
@@ -106,22 +106,22 @@ export function cleanOutput(text: string): string {
     out = fence[1].trim();
   }
 
-  // 开头的「好的，以下是……」之类
-  out = out.replace(/^(好的|没问题|明白了)[^\n]{0,40}[:：]\s*\r?\n+/, '');
+  // 開頭的「好的，以下是……」之類
+  out = out.replace(/^(好的|(?:没|沒)(?:问|問)(?:题|題)|明白了)[^\n]{0,40}[:：]\s*\r?\n+/, '');
   out = out.replace(/^(以下是|下面是)[^\n]{0,40}[:：]?\s*\r?\n+/, '');
 
-  // 开头的章节标题行（我们在 prompt 里禁止了，但模型常忍不住）
+  // 開頭的章節標題行（我們在 prompt 裡禁止了，但模型常忍不住）
   out = out.replace(/^#{1,6}\s*第?\s*[\d一二三四五六七八九十百]+\s*章[^\n]*\r?\n+/, '');
   out = out.replace(/^第\s*[\d一二三四五六七八九十百]+\s*章[ 　]*[^\n]{0,20}\r?\n+/, '');
 
-  // 结尾的字数统计/创作说明
-  out = out.replace(/\r?\n+[（(]?\s*(本章|全文|以上)?\s*(约|共)?\s*\d+\s*字\s*[)）]?\s*$/, '');
+  // 結尾的字數統計/創作說明
+  out = out.replace(/\r?\n+[（(]?\s*(本章|全文|以上)?\s*((?:约|約)|共)?\s*\d+\s*字\s*[)）]?\s*$/, '');
   out = out.replace(/\r?\n+[-—]{3,}[\s\S]*$/, (m) => (m.length < 200 ? '' : m));
 
   return out.trim();
 }
 
-/** 给新章节起个默认标题：优先用纲要首句。 */
+/** 給新章節起個預設標題：優先用綱要首句。 */
 export function suggestTitle(outline: string, order: number): string {
   const firstLine = outline
     .split(/\r?\n/)

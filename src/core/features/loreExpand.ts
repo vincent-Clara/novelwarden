@@ -1,5 +1,6 @@
+import { traditionalLabel } from '../model/labels';
 /**
- * 展开一条设定（完善设定，2026-10-19）的解码、规范化与气泡往返。**纯函数、绝不抛。**
+ * 展開一條設定（完善設定，2026-10-19）的解碼、規範化與氣泡往返。**純函式、絕不拋。**
  *
  * 合同（context/loreExpandPrompt.ts）：
  *
@@ -10,20 +11,20 @@
  *   "questions": ["…"] }
  * ```
  *
- * 程序这一侧的校验不加调用（设计稿 §1「合同」）：一句话截 {@link LORE_ENTRY_LIMITS}.brief 字；明面三节按上限截
- * （合计 {@link LORE_ENTRY_LIMITS}.body，做法同设定清单的 `normalizeLoreBody`），暗设另截
- * {@link LORE_ENTRY_LIMITS}.暗设；新关键词过 `cleanLoreKeywords`；`children` 丢掉名字已有条目的、是人名的、
- * 重名的，最多 {@link LORE_EXPAND_LIMITS}.children 条；`questions` 最多 {@link LORE_EXPAND_LIMITS}.questions 条、
- * 每条截 {@link LORE_EXPAND_LIMITS}.question 字。
+ * 程式這一側的校驗不加呼叫（設計稿 §1「合同」）：一句話截 {@link LORE_ENTRY_LIMITS}.brief 字；明面三節按上限截
+ * （合計 {@link LORE_ENTRY_LIMITS}.body，做法同設定清單的 `normalizeLoreBody`），暗設另截
+ * {@link LORE_ENTRY_LIMITS}.暗設；新關鍵詞過 `cleanLoreKeywords`；`children` 丟掉名字已有條目的、是人名的、
+ * 重名的，最多 {@link LORE_EXPAND_LIMITS}.children 條；`questions` 最多 {@link LORE_EXPAND_LIMITS}.questions 條、
+ * 每條截 {@link LORE_EXPAND_LIMITS}.question 字。
  *
- * **解析不了就没有产物**，不做全文兜底：条目被一段没解析开的原文盖掉，比没写更糟（同定稿）。
+ * **解析不了就沒有產物**，不做全文兜底：條目被一段沒解析開的原文蓋掉，比沒寫更糟（同定稿）。
  *
- * ## 气泡里放的就是将要落盘的样子
+ * ## 氣泡裡放的就是將要落盤的樣子
  *
- * 生成链（generation/structured.ts 的 `completeLoreExpand`）解码之后把规范化结果交给气泡
- * （{@link renderLoreExpansion}，与合同同一个形状），采纳时拿气泡里当下的文本重新解析（作者可能改过，
- * {@link parseLoreExpansion}）。往返不丢字段：`questions` 也在里面——它只上卡片，不写进任何文件
- * （generation/accept.ts 的 `acceptLoreEntries` 不读它）。
+ * 生成鏈（generation/structured.ts 的 `completeLoreExpand`）解碼之後把規範化結果交給氣泡
+ * （{@link renderLoreExpansion}，與合同同一個形狀），採納時拿氣泡裡當下的文字重新解析（作者可能改過，
+ * {@link parseLoreExpansion}）。往返不丟欄位：`questions` 也在裡面——它只上卡片，不寫進任何檔案
+ * （generation/accept.ts 的 `acceptLoreEntries` 不讀它）。
  */
 import { hasContent, pickSections } from '../model/markdown';
 import {
@@ -43,48 +44,48 @@ import { stripCodeFence, stripTrailingCommas } from './parse';
 import { parseJson, singleJsonObject } from './structuredJson';
 
 /**
- * 一条要落盘的设定（`loreEntries` 产物里的一项）。展开时第一项是目标条目（带 `relPath`，按路径认、不按标题——
- * 展开不改名），其余是建议拆出来的子条目（没有 `relPath`，正文空着，落盘时建空条目）。
+ * 一條要落盤的設定（`loreEntries` 產物裡的一項）。展開時第一項是目標條目（帶 `relPath`，按路徑認、不按標題——
+ * 展開不改名），其餘是建議拆出來的子條目（沒有 `relPath`，正文空著，落盤時建空條目）。
  */
 export interface LoreDraft {
-  /** 已有条目的工程相对路径；要新建的没有。 */
+  /** 已有條目的工程相對路徑；要新建的沒有。 */
   relPath?: string;
   title: string;
-  /** 分类（相对 `lore/` 的目录）。目标条目以它实际所在的目录为准，这里是空串。 */
+  /** 分類（相對 `lore/` 的目錄）。目標條目以它實際所在的目錄為準，這裡是空串。 */
   category: string;
   keywords: string[];
   brief: string;
-  /** 正文：明面三节，有暗设时最后一节是 `## 暗设`。子条目是空串。 */
+  /** 正文：明面三節，有暗設時最後一節是 `## 暗設`。子條目是空串。 */
   body: string;
 }
 
-/** 建议拆出来的一条子条目：只有名字、分类、一句话。 */
+/** 建議拆出來的一條子條目：只有名字、分類、一句話。 */
 export interface LoreChild {
   name: string;
   category: string;
   brief: string;
 }
 
-/** 规范化之后的一份展开。 */
+/** 規範化之後的一份展開。 */
 export interface LoreExpansion {
   brief: string;
-  /** 模型这一次给的关键词（已过滤），落盘时并进已有的（只增不减）。 */
+  /** 模型這一次給的關鍵詞（已過濾），落盤時並進已有的（只增不減）。 */
   keywords: string[];
-  /** 正文：明面三节 + 可选的 `## 暗设`。 */
+  /** 正文：明面三節 + 可選的 `## 暗設`。 */
   body: string;
   children: LoreChild[];
   questions: string[];
 }
 
-/** 解码要对照的已有东西。不给就只做形状上的校验（采纳时拿气泡文本重新解析，那时不读盘）。 */
+/** 解碼要對照的已有東西。不給就只做形狀上的校驗（採納時拿氣泡文字重新解析，那時不讀盤）。 */
 export interface LoreExpandKnown {
-  /** 目标条目的标题：子条目不许与它同名，关键词里去掉它。 */
+  /** 目標條目的標題：子條目不許與它同名，關鍵詞裡去掉它。 */
   title: string;
-  /** 全部条目（含目标条目）：子条目名字已有条目的丢掉；别的条目的标题不进关键词。 */
+  /** 全部條目（含目標條目）：子條目名字已有條目的丟掉；別的條目的標題不進關鍵詞。 */
   entries: readonly LoreEntry[];
-  /** 角色卡上的名字与别称：人不是设定，不进关键词、不拆成子条目。 */
+  /** 角色卡上的名字與別稱：人不是設定，不進關鍵詞、不拆成子條目。 */
   people: readonly string[];
-  /** 名录里另记着、还没建条目的名字：不进关键词（同建条目、整合）。 */
+  /** 名錄裡另記著、還沒建條目的名字：不進關鍵詞（同建條目、整合）。 */
   recorded: readonly string[];
 }
 
@@ -96,7 +97,7 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v.trim() : typeof v === 'number' && Number.isFinite(v) ? String(v) : '';
 }
 
-/** 压成一行、按字（不按 UTF-16 码元）截到 `max`。 */
+/** 壓成一行、按字（不按 UTF-16 碼元）截到 `max`。 */
 function clip(value: string, max: number): string {
   return Array.from(value.replace(/\s+/g, ' ').trim()).slice(0, max).join('');
 }
@@ -105,7 +106,7 @@ function length(value: string): number {
   return Array.from(value.replace(/\s+/g, ' ').trim()).length;
 }
 
-/** 字符串数组；写成一个字符串时按 `sep` 拆开。 */
+/** 字串陣列；寫成一個字串時按 `sep` 拆開。 */
 function strings(v: unknown, sep: RegExp): string[] {
   if (Array.isArray(v)) {
     return v.map(str).filter(Boolean);
@@ -115,8 +116,8 @@ function strings(v: unknown, sep: RegExp): string[] {
 }
 
 /**
- * 最外层那个对象：整段就是 JSON → 唯一一个完整对象 → 去掉 `]` `}` 前多出来的逗号再试一次（模型最常见的
- * 语法错，不改任何值，不必为它调一次模型）。都不行返回 undefined。展开与落定设定共用（`loreJsonObject`）。
+ * 最外層那個物件：整段就是 JSON → 唯一一個完整物件 → 去掉 `]` `}` 前多出來的逗號再試一次（模型最常見的
+ * 語法錯，不改任何值，不必為它調一次模型）。都不行返回 undefined。展開與落定設定共用（`loreJsonObject`）。
  */
 export function loreJsonObject(text: string): Record<string, unknown> | undefined {
   const whole = parseJson(text);
@@ -131,7 +132,7 @@ export function loreJsonObject(text: string): Record<string, unknown> | undefine
   return fixed && typeof fixed === 'object' && !Array.isArray(fixed) ? (fixed as Record<string, unknown>) : undefined;
 }
 
-/** 模型没包一层 `body`、直接把几节写成顶层字段时（`{brief, 概要, 规则与边界, …}`）。 */
+/** 模型沒包一層 `body`、直接把幾節寫成頂層欄位時（`{brief, 概要, 規則與邊界, …}`）。 */
 function bodyValueOf(o: Record<string, unknown>): unknown {
   if (o.body !== undefined) {
     return o.body;
@@ -142,14 +143,14 @@ function bodyValueOf(o: Record<string, unknown>): unknown {
   return LORE_BODY_KEYS.some((k) => o[k] !== undefined) ? o : undefined;
 }
 
-/** 一节的文字：数组按行接起来。 */
+/** 一節的文字：陣列按行接起來。 */
 function sectionText(v: unknown): string {
   return Array.isArray(v) ? v.map(str).filter(Boolean).join('\n') : str(v);
 }
 
 /**
- * 正文拆成明面与暗设：给成对象按键取（暗设认 `暗设` / `hidden`，也认写在顶层的），给成 Markdown 按
- * 「暗设」开头的二级标题切（`splitLoreHidden`，与条目的认法同一份）。
+ * 正文拆成明面與暗設：給成物件按鍵取（暗設認 `暗设` / `hidden`，也認寫在頂層的），給成 Markdown 按
+ * 「暗設」開頭的二級標題切（`splitLoreHidden`，與條目的認法同一份）。
  */
 function splitBody(value: unknown, o: Record<string, unknown>): { visible: unknown; hidden: string } {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -162,27 +163,27 @@ function splitBody(value: unknown, o: Record<string, unknown>): { visible: unkno
   return { visible: split.visible, hidden: split.hidden || sectionText(o[LORE_HIDDEN_KEY] ?? o.hidden) };
 }
 
-/** 「（未交代）」「无」「没有」这类写法当没有暗设。 */
-const NO_HIDDEN = /^[（(]?\s*(?:未交代|无|暂无|没有|空)\s*[)）]?$/u;
+/** 「（未交代）」「無」「沒有」這類寫法當沒有暗設。 */
+const NO_HIDDEN = /^[（(]?\s*(?:未交代|(?:无|無)|(?:暂|暫)(?:无|無)|(?:没|沒)有|空)\s*[)）]?$/u;
 
 /**
- * 解码一份展开。`known` 给了就按磁盘上的东西过滤（生成链里那一次）；不给只做形状上的校验与截断
- * （采纳时拿气泡文本重新解析）。明面三节一节内容都没有算解析不了。
+ * 解碼一份展開。`known` 給了就按磁碟上的東西過濾（生成鏈裡那一次）；不給只做形狀上的校驗與截斷
+ * （採納時拿氣泡文字重新解析）。明面三節一節內容都沒有算解析不了。
  */
 export function decodeLoreExpansion(text: string, known?: LoreExpandKnown): LoreExpandDecode {
   const o = loreJsonObject(text);
   if (!o) {
-    return { ok: false, message: '不是 {"brief","keywords","body",…} 形状的 JSON 对象' };
+    return { ok: false, message: '不是 {"brief","keywords","body",…} 形狀的 JSON 物件' };
   }
   const warnings: string[] = [];
   const body = decodeLoreBody(o, warnings);
   if (!body) {
-    return { ok: false, message: '正文三节（概要 / 规则与边界 / 现状）一节内容都没有' };
+    return { ok: false, message: '正文三節（概要 / 規則與邊界 / 現狀）一節內容都沒有' };
   }
 
   const rawBrief = str(o.brief ?? o.一句话 ?? o.简介);
   if (length(rawBrief) > LORE_ENTRY_LIMITS.brief) {
-    warnings.push(`一句话超过 ${LORE_ENTRY_LIMITS.brief} 字，已截断`);
+    warnings.push(`一句話超過 ${LORE_ENTRY_LIMITS.brief} 字，已截斷`);
   }
   const brief = clip(rawBrief, LORE_ENTRY_LIMITS.brief);
 
@@ -193,9 +194,9 @@ export function decodeLoreExpansion(text: string, known?: LoreExpandKnown): Lore
 }
 
 /**
- * 一条的正文：明面三节按上限截（合计 {@link LORE_ENTRY_LIMITS}.body，做法同设定清单的 `normalizeLoreBody`），
- * 暗设另截 {@link LORE_ENTRY_LIMITS}.暗设，有就接在最后一节 `## 暗设`。明面一节内容都没有返回空串。截了什么写进
- * `warnings`，`who` 是前缀（落定设定一次好几条，说清是哪一条）。展开与落定设定（features/loreSettle.ts）共用。
+ * 一條的正文：明面三節按上限截（合計 {@link LORE_ENTRY_LIMITS}.body，做法同設定清單的 `normalizeLoreBody`），
+ * 暗設另截 {@link LORE_ENTRY_LIMITS}.暗設，有就接在最後一節 `## 暗設`。明面一節內容都沒有返回空串。截了什麼寫進
+ * `warnings`，`who` 是字首（落定設定一次好幾條，說清是哪一條）。展開與落定設定（features/loreSettle.ts）共用。
  */
 export function decodeLoreBody(o: Record<string, unknown>, warnings: string[], who = ''): string {
   const { visible, hidden: rawHidden } = splitBody(bodyValueOf(o), o);
@@ -205,20 +206,20 @@ export function decodeLoreBody(o: Record<string, unknown>, warnings: string[], w
   }
   if (clipped) {
     warnings.push(
-      `${who}正文超长，已截断（每节不超过 ${LORE_BODY_KEYS.map((k) => LORE_ENTRY_LIMITS[k]).join(' / ')} 字，合计不超过 ${LORE_ENTRY_LIMITS.body} 字）`
+      `${who}正文超長，已截斷（每節不超過 ${LORE_BODY_KEYS.map((k) => LORE_ENTRY_LIMITS[k]).join(' / ')} 字，合計不超過 ${LORE_ENTRY_LIMITS.body} 字）`
     );
   }
   const hiddenText = hasContent(rawHidden) && !NO_HIDDEN.test(rawHidden.trim()) ? rawHidden.trim() : '';
   const hidden = Array.from(hiddenText).slice(0, LORE_ENTRY_LIMITS.暗设).join('').trim();
   if (hidden.length < hiddenText.length) {
-    warnings.push(`${who}暗设超过 ${LORE_ENTRY_LIMITS.暗设} 字，已截断`);
+    warnings.push(`${who}暗設超過 ${LORE_ENTRY_LIMITS.暗设} 字，已截斷`);
   }
-  return hidden ? `${visibleBody}\n\n## ${LORE_HIDDEN_KEY}\n${hidden}` : visibleBody;
+  return hidden ? `${visibleBody}\n\n## ${traditionalLabel(LORE_HIDDEN_KEY)}\n${hidden}` : visibleBody;
 }
 
 /**
- * 关键词：截长、去重、去掉与本条同名的，最多 {@link LORE_EXPAND_LIMITS}.keywords 个。有 `known` 时再过
- * `cleanLoreKeywords`：人名、别的条目的标题（含这一次建议拆出去的子条目——那是别的东西）、名录里另记着的名字都不要。
+ * 關鍵詞：截長、去重、去掉與本條同名的，最多 {@link LORE_EXPAND_LIMITS}.keywords 個。有 `known` 時再過
+ * `cleanLoreKeywords`：人名、別的條目的標題（含這一次建議拆出去的子條目——那是別的東西）、名錄裡另記著的名字都不要。
  */
 function decodeKeywords(raw: readonly string[], children: readonly LoreChild[], known?: LoreExpandKnown): string[] {
   const words = raw.map((k) => clip(k, LORE_LINE_LIMITS.name)).filter(Boolean);
@@ -234,8 +235,8 @@ function decodeKeywords(raw: readonly string[], children: readonly LoreChild[], 
 }
 
 /**
- * 子条目：只收名字、分类、一句话。名字截长；与本条同名的、重名的丢掉；有 `known` 时名字（或关键词）已被
- * 已有条目占了的、是角色卡上的人的也丢掉（落盘时按磁盘再认一遍）。最多 {@link LORE_EXPAND_LIMITS}.children 条。
+ * 子條目：只收名字、分類、一句話。名字截長；與本條同名的、重名的丟掉；有 `known` 時名字（或關鍵詞）已被
+ * 已有條目佔了的、是角色卡上的人的也丟掉（落盤時按磁碟再認一遍）。最多 {@link LORE_EXPAND_LIMITS}.children 條。
  */
 function decodeChildren(raw: unknown, known: LoreExpandKnown | undefined, warnings: string[]): LoreChild[] {
   const rows = Array.isArray(raw) ? raw : [];
@@ -252,16 +253,16 @@ function decodeChildren(raw: unknown, known: LoreExpandKnown | undefined, warnin
       continue;
     }
     if (people.has(key)) {
-      warnings.push(`建议拆出的「${name}」是角色卡上的人，人不是设定，丢掉`);
+      warnings.push(`建議拆出的「${name}」是角色卡上的人，人不是設定，丟掉`);
       continue;
     }
     if (lookup?.find(name)) {
-      warnings.push(`建议拆出的「${name}」已经有条目了（${lookup.find(name)!.title}），不另建`);
+      warnings.push(`建議拆出的「${name}」已經有條目了（${lookup.find(name)!.title}），不另建`);
       continue;
     }
     seen.add(key);
     if (out.length >= LORE_EXPAND_LIMITS.children) {
-      warnings.push(`建议拆出的子条目超过 ${LORE_EXPAND_LIMITS.children} 条，「${name}」及之后的没收`);
+      warnings.push(`建議拆出的子條目超過 ${LORE_EXPAND_LIMITS.children} 條，「${name}」及之後的沒收`);
       break;
     }
     out.push({
@@ -274,11 +275,11 @@ function decodeChildren(raw: unknown, known: LoreExpandKnown | undefined, warnin
 }
 
 /**
- * 还没定的问题：一条一行，去重，每条截 {@link LORE_EXPAND_LIMITS}.question 字，最多 {@link LORE_EXPAND_LIMITS}.questions 条。
- * 展开与落定设定共用。
+ * 還沒定的問題：一條一行，去重，每條截 {@link LORE_EXPAND_LIMITS}.question 字，最多 {@link LORE_EXPAND_LIMITS}.questions 條。
+ * 展開與落定設定共用。
  */
 export function decodeLoreQuestions(raw: unknown, warnings: string[]): string[] {
-  // 问题里常有逗号，写成一个字符串时只按换行拆。
+  // 問題裡常有逗號，寫成一個字串時只按換行拆。
   const list = strings(raw, /\n+/).map((q) => q.replace(/^\s*(?:[-*·•]|\d+[.、)．])\s*/u, ''));
   const out: string[] = [];
   const seen = new Set<string>();
@@ -292,14 +293,14 @@ export function decodeLoreQuestions(raw: unknown, warnings: string[]): string[] 
     out.push(text);
   }
   if (out.length > LORE_EXPAND_LIMITS.questions) {
-    warnings.push(`还没定的问题有 ${out.length} 条，只留前 ${LORE_EXPAND_LIMITS.questions} 条`);
+    warnings.push(`還沒定的問題有 ${out.length} 條，只留前 ${LORE_EXPAND_LIMITS.questions} 條`);
   }
   return out.slice(0, LORE_EXPAND_LIMITS.questions);
 }
 
 /**
- * 规范化输出：生成链最后交给气泡的那一份，也是采纳时重新解析的那一份。与合同同一个形状——作者在气泡里改了
- * 再点写入，走的是同一个 {@link decodeLoreExpansion}。
+ * 規範化輸出：生成鏈最後交給氣泡的那一份，也是採納時重新解析的那一份。與合同同一個形狀——作者在氣泡裡改了
+ * 再點寫入，走的是同一個 {@link decodeLoreExpansion}。
  */
 export function renderLoreExpansion(e: LoreExpansion): string {
   const { visible, hidden } = splitLoreHidden(e.body);
@@ -318,9 +319,9 @@ export function renderLoreExpansion(e: LoreExpansion): string {
 }
 
 /**
- * 气泡文本 → `loreEntries` 产物的两样：目标条目在第一项（按 `relPath` 认，标题取文件名，落盘时以磁盘上的
- * 标题为准），其余是子条目（关键词就是名字本身，正文空着）。解析不了是空的——采纳时据此说「解析不出」，
- * 不写任何东西。
+ * 氣泡文字 → `loreEntries` 產物的兩樣：目標條目在第一項（按 `relPath` 認，標題取檔名，落盤時以磁碟上的
+ * 標題為準），其餘是子條目（關鍵詞就是名字本身，正文空著）。解析不了是空的——採納時據此說「解析不出」，
+ * 不寫任何東西。
  */
 export function parseLoreExpansion(text: string, relPath: string): { entries: LoreDraft[]; questions: string[] } {
   const decoded = decodeLoreExpansion(text);

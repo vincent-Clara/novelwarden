@@ -1,4 +1,4 @@
-/* 提示条。 */
+/* 提示條。 */
 
 .toast {
   position: fixed;
@@ -19,7 +19,7 @@
   border-color: var(--vscode-inputValidation-errorBorder);
 }
 
-/* 任务做完时的「打开第 3 章」（D24）：接在那句话后面，点了就开那一章。 */
+/* 任務做完時的「開啟第 3 章」（D24）：接在那句話後面，點了就開那一章。 */
 .toast-action {
   margin-left: 10px;
   font-weight: 600;

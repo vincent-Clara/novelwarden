@@ -1,33 +1,33 @@
 /**
- * 统一入口守卫。**六处各带一部分保护、谁也不认识谁**的局面到此为止。
+ * 統一入口守衛。**六處各帶一部分保護、誰也不認識誰**的局面到此為止。
  *
- * 从前的分布：
+ * 從前的分佈：
  *
- * | 位置 | 带哪些保护 |
+ * | 位置 | 帶哪些保護 |
  * | --- | --- |
- * | `files/fileOps.ts` | 区界限、同名不覆盖、`.trash` |
- * | `files/fileEditing.ts` | 工程根包含、扩展名白名单、大小上限、内容 hash 乐观锁 |
- * | `files/projectFiles.ts` | 工程根包含、`isProtectedPath`、同名不覆盖 |
+ * | `files/fileOps.ts` | 區界限、同名不覆蓋、`.trash` |
+ * | `files/fileEditing.ts` | 工程根包含、副檔名白名單、大小上限、內容 hash 樂觀鎖 |
+ * | `files/projectFiles.ts` | 工程根包含、`isProtectedPath`、同名不覆蓋 |
  * | `features/creation.ts` | `confirmOverwrite` / `reviewReplace` |
  *
- * 这就是为什么从前不敢给 agent 一个 `write`。八条守卫收进这一份，
- * `workspace/index.ts` 的每个写盘方法全过一遍，**新代码不许绕过这里直接
+ * 這就是為什麼從前不敢給 agent 一個 `write`。八條守衛收進這一份，
+ * `workspace/index.ts` 的每個寫盤方法全過一遍，**新程式碼不許繞過這裡直接
  * `fs.writeFile`**。
  *
- * | # | 守卫 | 触发时怎么办 |
+ * | # | 守衛 | 觸發時怎麼辦 |
  * |---|---|---|
- * | 1 | 路径规范化（绝对路径 / `..` 逃逸 / 空串） | `WsError('outOfRoot')` |
- * | 2 | 工程根包含检查（解析成绝对路径再比一次） | `WsError('outOfRoot')` |
- * | 3 | 固定目录保护（改名/删除） | `WsError('protected')` |
- * | 4 | `.trash/` 内容不可**改**（读得到，作者要能找回东西）；历史版本 `.novelwarden/history/`（旧工程 `.novelforge/history/`）写不进去（同样读得到） | `WsError('inTrash')` / `WsError('inHistory')` |
- * | 5 | 大小上限 2MB（读、写各一次） | `WsError('tooLarge')` |
- * | 6 | 同名不覆盖（`mode: 'create'`） | `WsError('exists')` |
- * | 7 | 覆盖前审阅（`reviewReplace` 或确认框） | 用户拒绝 → 调用方 `{skipped:true}` |
- * | 8 | 内容 hash 乐观锁 | `WsConflictError(diskText, diskHash)` |
+ * | 1 | 路徑規範化（絕對路徑 / `..` 逃逸 / 空串） | `WsError('outOfRoot')` |
+ * | 2 | 工程根包含檢查（解析成絕對路徑再比一次） | `WsError('outOfRoot')` |
+ * | 3 | 固定目錄保護（改名/刪除） | `WsError('protected')` |
+ * | 4 | `.trash/` 內容不可**改**（讀得到，作者要能找回東西）；歷史版本 `.novelwarden/history/`（舊工程 `.novelforge/history/`）寫不進去（同樣讀得到） | `WsError('inTrash')` / `WsError('inHistory')` |
+ * | 5 | 大小上限 2MB（讀、寫各一次） | `WsError('tooLarge')` |
+ * | 6 | 同名不覆蓋（`mode: 'create'`） | `WsError('exists')` |
+ * | 7 | 覆蓋前審閱（`reviewReplace` 或確認框） | 使用者拒絕 → 呼叫方 `{skipped:true}` |
+ * | 8 | 內容 hash 樂觀鎖 | `WsConflictError(diskText, diskHash)` |
  *
- * **区界限不在这里**：`fileOps` 的三区约束（章节挪不进角色目录）是**工程页
- * 的产品承诺**，比这里的工程根约束更严。那一层留在 `fileOps` 里，先判区再
- * 调网关。
+ * **區界限不在這裡**：`fileOps` 的三區約束（章節挪不進角色目錄）是**工程頁
+ * 的產品承諾**，比這裡的工程根約束更嚴。那一層留在 `fileOps` 裡，先判區再
+ * 調閘道器。
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -37,15 +37,15 @@ import { hash } from '../model/fs';
 import { LEGACY_NOVEL_DIRS, NOVEL_DIR, NovelProject } from '../model/project';
 import { normalizeRel } from './kind';
 
-const log = scoped('工作区');
+const log = scoped('工作區');
 
 export type WsErrorCode =
   | 'outOfRoot'
   | 'protected'
   | 'inTrash'
-  /** 历史版本（`.novelwarden/history/`，旧工程是 `.novelforge/history/`）里写不进去：那是网关自己存的副本。读得到。 */
+  /** 歷史版本（`.novelwarden/history/`，舊工程是 `.novelforge/history/`）裡寫不進去：那是閘道器自己存的副本。讀得到。 */
   | 'inHistory'
-  /** 目录复制进它自己里面。 */
+  /** 目錄複製進它自己裡面。 */
   | 'intoSelf'
   | 'tooLarge'
   | 'exists'
@@ -54,7 +54,7 @@ export type WsErrorCode =
   | 'notUnique'
   | 'conflict';
 
-/** 守卫拒绝的统一形状。`code` 是给调用方分支用的，`message` 直接进 toast。 */
+/** 守衛拒絕的統一形狀。`code` 是給呼叫方分支用的，`message` 直接進 toast。 */
 export class WsError extends Error {
   readonly name = 'WsError';
   constructor(
@@ -66,64 +66,64 @@ export class WsError extends Error {
 }
 
 /**
- * 乐观锁失败：磁盘上的内容与调用方的基线不一致。
+ * 樂觀鎖失敗：磁碟上的內容與呼叫方的基線不一致。
  *
- * 带上磁盘版本交回前端由用户取舍——**绝不静默覆盖**（AGENTS 第 3 条）。
+ * 帶上磁碟版本交回前端由使用者取捨——**絕不靜默覆蓋**（AGENTS 第 3 條）。
  */
 export class WsConflictError extends WsError {
   constructor(
     readonly diskText: string,
     readonly diskHash: string
   ) {
-    super('conflict', '文件已被外部修改，保存已取消。');
+    super('conflict', '檔案已被外部修改，儲存已取消。');
   }
 }
 
 /**
- * 单文件大小上限。再大就不进编辑器、也不进网关——一个 textarea 装不下，
- * 塞进模型上下文更是纯烧钱。
+ * 單檔案大小上限。再大就不進編輯器、也不進閘道器——一個 textarea 裝不下，
+ * 塞進模型上下文更是純燒錢。
  */
 export const MAX_EDITABLE_BYTES = 2 * 1024 * 1024;
 
 /**
- * 元数据目录名，从新到旧。旧工程没迁移时数据在旧目录里——**两个都保护**，
- * 免得哪条文件操作把作者还没迁移的那一份整个搬走或删掉。
+ * 後設資料目錄名，從新到舊。舊工程沒遷移時資料在舊目錄裡——**兩個都保護**，
+ * 免得哪條檔案操作把作者還沒遷移的那一份整個搬走或刪掉。
  */
 const METADATA_DIRS = [NOVEL_DIR, ...LEGACY_NOVEL_DIRS];
 
 /**
- * 元数据目录下被代码写死名字的那些子目录。改了名就等于那批数据凭空消失，
- * **而界面上只会显示「还没生成过」**。所以这里列的是全部固定子目录，
- * 不只是作者常看见的那几个。
+ * 後設資料目錄下被程式碼寫死名字的那些子目錄。改了名就等於那批資料憑空消失，
+ * **而介面上只會顯示「還沒生成過」**。所以這裡列的是全部固定子目錄，
+ * 不只是作者常看見的那幾個。
  */
 const METADATA_SUBDIRS = [
   'characters',
   'lore',
   'summaries',
-  // 叙事线：一条线一个文件（model/threadFile.ts）。整个目录搬走或删掉，所有线一起「还没排过」。
+  // 敘事線：一條線一個檔案（model/threadFile.ts）。整個目錄搬走或刪掉，所有線一起「還沒排過」。
   'threads',
   'skills',
-  // 场景、卷、中转站三层都已经删掉（见 model/pipeline.ts 的文件头），细纲也从 `plots/`
-  // 搬进了 `summaries/`，但老工程磁盘上那几个目录还在，而且是作者的文件。留在这张表里，
-  // 免得哪条文件操作把它们整棵删掉——代码不再读它们，不等于可以替作者处置它们。
+  // 場景、卷、中轉站三層都已經刪掉（見 model/pipeline.ts 的檔案頭），細綱也從 `plots/`
+  // 搬進了 `summaries/`，但老工程磁碟上那幾個目錄還在，而且是作者的檔案。留在這張表裡，
+  // 免得哪條檔案操作把它們整棵刪掉——程式碼不再讀它們，不等於可以替作者處置它們。
   'plots',
   'scenes',
   'volumes',
   'manuscripts',
   'sessions',
   '.trash',
-  // 历史版本：网关自己存的副本（workspace/history.ts）。整个目录搬走或删掉，所有文件的历史一起没了。
+  // 歷史版本：閘道器自己存的副本（workspace/history.ts）。整個目錄搬走或刪掉，所有檔案的歷史一起沒了。
   'history',
-  // 存档点（workspace/checkpoints.ts）：内部文件，本来就碰不到；列在这里与历史版本一样多一道保险。
+  // 存檔點（workspace/checkpoints.ts）：內部檔案，本來就碰不到；列在這裡與歷史版本一樣多一道保險。
   'checkpoints',
 ];
 
 /**
- * 工程的固定目录：改名/搬走会让工程结构散架（章节索引、草稿镜像、
- * 元数据与会话）。
+ * 工程的固定目錄：改名/搬走會讓工程結構散架（章節索引、草稿映象、
+ * 後設資料與會話）。
  *
- * 元数据目录按**磁盘上实际存在的那个**（{@link NovelProject.novelDirName}）与两级旧名字一起算：
- * 旧工程没迁移时读写落在旧目录，作者也不该经由文件页把它搬走。
+ * 後設資料目錄按**磁碟上實際存在的那個**（{@link NovelProject.novelDirName}）與兩級舊名字一起算：
+ * 舊工程沒遷移時讀寫落在舊目錄，作者也不該經由檔案頁把它搬走。
  */
 export function isProtectedPath(project: NovelProject, relPath: string): boolean {
   const rel = normalizeRel(relPath);
@@ -140,19 +140,19 @@ export function isProtectedPath(project: NovelProject, relPath: string): boolean
   return fixed.has(rel);
 }
 
-/** 工程库的文件名。改名前的库（`novelforge.db`）不删，也一样当内部文件。 */
+/** 工程庫的檔名。改名前的庫（`novelforge.db`）不刪，也一樣當內部檔案。 */
 const DB_FILES = ['novelwarden.db', 'novelforge.db'];
 const DB_SUFFIXES = ['', '-wal', '-shm', '-journal'];
-/** 三个元数据目录下的两种库文件名（连同 WAL 带出的后缀）。 */
+/** 三個後設資料目錄下的兩種庫檔名（連同 WAL 帶出的字尾）。 */
 const DB_PATHS = new Set(
   METADATA_DIRS.flatMap((dir) => DB_FILES.flatMap((name) => DB_SUFFIXES.map((suffix) => `${dir}/${name}${suffix}`)))
 );
 
 /**
- * Novelwarden 自己的内部文件：工程库（`novelwarden.db` 与 WAL 模式带出的 `-wal` / `-shm`，
- * 旧库 `novelforge.db` 同理）、会话记录与存档点。
- * 它们不是作品内容，读出来是二进制乱码、对话流水或一堆按 hash 命名的对象，改坏了是整页起不来、存档点退不回去。
- * 所以列目录、搜索里看不见，读当不存在，写、改、搬一律拒绝。存档点只经「存档点」面板看（workspace/checkpoints.ts）。
+ * Novelwarden 自己的內部檔案：工程庫（`novelwarden.db` 與 WAL 模式帶出的 `-wal` / `-shm`，
+ * 舊庫 `novelforge.db` 同理）、會話記錄與存檔點。
+ * 它們不是作品內容，讀出來是二進位制亂碼、對話流水或一堆按 hash 命名的物件，改壞了是整頁起不來、存檔點退不回去。
+ * 所以列目錄、搜尋裡看不見，讀當不存在，寫、改、搬一律拒絕。存檔點只經「存檔點」面板看（workspace/checkpoints.ts）。
  */
 export function isInternalPath(project: NovelProject, rel: string): boolean {
   if (DB_PATHS.has(rel)) {
@@ -168,19 +168,19 @@ export function isInternalPath(project: NovelProject, rel: string): boolean {
   );
 }
 
-/** 回收站目录（新旧元数据目录都认）。`.trash/` 里躺着刚删掉的东西，不是操作对象。 */
+/** 回收站目錄（新舊後設資料目錄都認）。`.trash/` 裡躺著剛刪掉的東西，不是操作物件。 */
 function trashDirs(project: NovelProject): string[] {
   return [...new Set([project.relPath(project.trashDir), ...METADATA_DIRS.map((dir) => `${dir}/.trash`)])];
 }
 
-/** 这条路径在回收站里（当前工程的，或旧元数据目录下的）。 */
+/** 這條路徑在回收站裡（當前工程的，或舊後設資料目錄下的）。 */
 export function isInTrash(project: NovelProject, rel: string): boolean {
   return trashDirs(project).some((trash) => rel === trash || rel.startsWith(`${trash}/`));
 }
 
 /**
- * 这条路径在历史版本里（`.novelwarden/history/`，旧工程是 `.novelforge/history/`；见 workspace/history.ts）。那是一份份旧稿：检索跳过它，
- * 与回收站同一个理由——搜出来的不是现在的书。新旧目录都认。
+ * 這條路徑在歷史版本裡（`.novelwarden/history/`，舊工程是 `.novelforge/history/`；見 workspace/history.ts）。那是一份份舊稿：檢索跳過它，
+ * 與回收站同一個理由——搜出來的不是現在的書。新舊目錄都認。
  */
 export function isInHistory(project: NovelProject, rel: string): boolean {
   const history = [
@@ -190,60 +190,60 @@ export function isInHistory(project: NovelProject, rel: string): boolean {
 }
 
 /**
- * 守卫 1 + 2：相对路径 → 绝对路径，并保证不逃出工程根。
+ * 守衛 1 + 2：相對路徑 → 絕對路徑，並保證不逃出工程根。
  *
- * 两道各拦一半：`normalizeRel` 挡的是字面上的越界（`../`、`C:\`、空串），
- * 这里挡的是**归一化之后仍然逃出去**的（`a/../../b`）与工程根自己。
- * 只做逻辑路径包含检查（不解析 symlink）：本机单用户场景下够了，
- * realpath 会让每次读写多一次系统调用。
+ * 兩道各攔一半：`normalizeRel` 擋的是字面上的越界（`../`、`C:\`、空串），
+ * 這裡擋的是**歸一化之後仍然逃出去**的（`a/../../b`）與工程根自己。
+ * 只做邏輯路徑包含檢查（不解析 symlink）：本機單使用者場景下夠了，
+ * realpath 會讓每次讀寫多一次系統呼叫。
  *
- * 只收 `root` 而不是整个 `NovelProject`：目录列举（`files/fileTree.ts`）
- * 手里只有一个路径字符串，它要的也正是这一条判据。
+ * 只收 `root` 而不是整個 `NovelProject`：目錄列舉（`files/fileTree.ts`）
+ * 手裡只有一個路徑字串，它要的也正是這一條判據。
  */
 export function resolveInRoot(root: string, relPath: string): string {
   const rel = normalizeRel(relPath);
   if (rel === undefined) {
-    throw new WsError('outOfRoot', `路径超出工程目录：${relPath}`);
+    throw new WsError('outOfRoot', `路徑超出工程目錄：${relPath}`);
   }
   const base = path.resolve(root);
   const abs = path.resolve(base, rel);
   const back = path.relative(base, abs);
   if (back === '' || back.startsWith('..') || path.isAbsolute(back)) {
-    throw new WsError('outOfRoot', `路径超出工程目录：${relPath}`);
+    throw new WsError('outOfRoot', `路徑超出工程目錄：${relPath}`);
   }
   return abs;
 }
 
-/** 绝对路径 → 工程内相对路径（正斜杠，跨平台一致）。 */
+/** 絕對路徑 → 工程內相對路徑（正斜槓，跨平臺一致）。 */
 export function toRelPosix(root: string, absPath: string): string {
   return path.relative(path.resolve(root), absPath).replace(/\\/g, '/');
 }
 
 /**
- * 读之前过一遍：返回绝对路径。
+ * 讀之前過一遍：返回絕對路徑。
  *
- * **回收站里的东西读得到**——作者要能翻进去找回删掉的稿子。不可操作的是
- * 改名/删除/写入，见 `guardMutate` / `guardWrite`。
+ * **回收站裡的東西讀得到**——作者要能翻進去找回刪掉的稿子。不可操作的是
+ * 改名/刪除/寫入，見 `guardMutate` / `guardWrite`。
  */
 export async function guardRead(project: NovelProject, relPath: string): Promise<string> {
   const abs = resolveInRoot(project.root, relPath);
   if (isInternalPath(project, normalizeRel(relPath)!)) {
-    throw new WsError('notFound', `文件不存在：${relPath}`);
+    throw new WsError('notFound', `檔案不存在：${relPath}`);
   }
 
   let stat: import('node:fs').Stats;
   try {
     stat = await fs.stat(abs);
   } catch {
-    throw new WsError('notFound', `文件不存在：${relPath}`);
+    throw new WsError('notFound', `檔案不存在：${relPath}`);
   }
   if (!stat.isFile()) {
-    throw new WsError('notFile', `不是文件：${relPath}`);
+    throw new WsError('notFile', `不是檔案：${relPath}`);
   }
   if (stat.size > MAX_EDITABLE_BYTES) {
     throw new WsError(
       'tooLarge',
-      `文件超过 ${Math.round(MAX_EDITABLE_BYTES / 1024 / 1024)} MB，不读：${relPath}`
+      `檔案超過 ${Math.round(MAX_EDITABLE_BYTES / 1024 / 1024)} MB，不讀：${relPath}`
     );
   }
   return abs;
@@ -251,24 +251,24 @@ export async function guardRead(project: NovelProject, relPath: string): Promise
 
 export interface GuardWriteOptions {
   mode: 'create' | 'overwrite' | 'append';
-  /** 乐观锁基线。给了就比对，磁盘变过报冲突。 */
+  /** 樂觀鎖基線。給了就比對，磁碟變過報衝突。 */
   baseHash?: string;
-  /** 要写的内容。给了就一并做大小检查——写超限的东西不该等到落盘才发现。 */
+  /** 要寫的內容。給了就一併做大小檢查——寫超限的東西不該等到落盤才發現。 */
   text?: string;
 }
 
 export interface GuardWriteResult {
   abs: string;
   existed: boolean;
-  /** 目标已存在时的当前内容。供覆盖审阅比对，省掉调用方再读一次。 */
+  /** 目標已存在時的當前內容。供覆蓋審閱比對，省掉呼叫方再讀一次。 */
   current?: string;
 }
 
 /**
- * 写之前过一遍。返回绝对路径与「目标是否已存在」。
+ * 寫之前過一遍。返回絕對路徑與「目標是否已存在」。
  *
- * 检查顺序是有意的：越界 → 内部文件 / 回收站 / 历史版本 → 大小 → 存在性 → 同名 → 乐观锁。
- * 先拦最便宜、最致命的，最后才读盘。
+ * 檢查順序是有意的：越界 → 內部檔案 / 回收站 / 歷史版本 → 大小 → 存在性 → 同名 → 樂觀鎖。
+ * 先攔最便宜、最致命的，最後才讀盤。
  */
 export async function guardWrite(
   project: NovelProject,
@@ -280,7 +280,7 @@ export async function guardWrite(
 
   guardArea(project, rel);
   if (opts.text !== undefined && Buffer.byteLength(opts.text, 'utf8') > MAX_EDITABLE_BYTES) {
-    throw new WsError('tooLarge', '内容超过大小上限，未写入。');
+    throw new WsError('tooLarge', '內容超過大小上限，未寫入。');
   }
 
   let stat: import('node:fs').Stats | undefined;
@@ -290,7 +290,7 @@ export async function guardWrite(
     stat = undefined;
   }
   if (stat && !stat.isFile()) {
-    throw new WsError('notFile', `目标不是文件：${rel}`);
+    throw new WsError('notFile', `目標不是檔案：${rel}`);
   }
   if (stat && opts.mode === 'create') {
     throw new WsError('exists', `已存在：${rel}`);
@@ -301,14 +301,14 @@ export async function guardWrite(
     current = await fs.readFile(abs, 'utf8');
   }
 
-  // 守卫 8：磁盘上的当前 hash 与基线不一致 = 作者在别处改过（或另一个标签页
-  // 存过）。**文件被删了不算冲突**，当作新建处理——逐字沿用 fileEditing 的行为。
+  // 守衛 8：磁碟上的當前 hash 與基線不一致 = 作者在別處改過（或另一個標籤頁
+  // 存過）。**檔案被刪了不算衝突**，當作新建處理——逐字沿用 fileEditing 的行為。
   if (opts.baseHash && current !== undefined) {
     const diskHash = hash(current);
     if (diskHash !== opts.baseHash) {
       log.warn(
-        `写入被拒：${rel} 在磁盘上已被改过`,
-        `基线 ${opts.baseHash}，磁盘 ${diskHash}。已把磁盘版本交回调用方由用户取舍，未覆盖。`
+        `寫入被拒：${rel} 在磁碟上已被改過`,
+        `基線 ${opts.baseHash}，磁碟 ${diskHash}。已把磁碟版本交回呼用方由使用者取捨，未覆蓋。`
       );
       throw new WsConflictError(current, diskHash);
     }
@@ -318,30 +318,30 @@ export async function guardWrite(
 }
 
 /**
- * 写、建、复制的落点共用的一道：这三处**不是作者的操作对象**，什么都写不进去——
+ * 寫、建、複製的落點共用的一道：這三處**不是作者的操作物件**，什麼都寫不進去——
  *
- * - Novelwarden 自己的内部文件（会话、工程库、存档点）：`protected`
- * - 回收站：`inTrash`（里面躺着删掉的东西，往里写等于伪造一份「删掉过的」）
- * - 历史版本：`inHistory`（网关自己存的副本；往里塞文件，「历史」面板里就多出一份作者从没存过的「旧版」）
+ * - Novelwarden 自己的內部檔案（會話、工程庫、存檔點）：`protected`
+ * - 回收站：`inTrash`（裡面躺著刪掉的東西，往裡寫等於偽造一份「刪掉過的」）
+ * - 歷史版本：`inHistory`（閘道器自己存的副本；往裡塞檔案，「歷史」面板裡就多出一份作者從沒存過的「舊版」）
  *
- * 三处都**读得到**（会话与存档点除外，它们读当不存在）：回收站与历史版本是作者找回东西的地方。
+ * 三處都**讀得到**（會話與存檔點除外，它們讀當不存在）：回收站與歷史版本是作者找回東西的地方。
  */
 function guardArea(project: NovelProject, rel: string): void {
   if (isInternalPath(project, rel)) {
-    throw new WsError('protected', `「${rel}」是 Novelwarden 自己的内部文件，不能写。`);
+    throw new WsError('protected', `「${rel}」是 Novelwarden 自己的內部檔案，不能寫。`);
   }
   if (isInTrash(project, rel)) {
-    throw new WsError('inTrash', `回收站里的内容不能写：${rel}`);
+    throw new WsError('inTrash', `回收站裡的內容不能寫：${rel}`);
   }
   if (isInHistory(project, rel)) {
-    throw new WsError('inHistory', `历史版本是网关自己存的副本，不能往里写：${rel}`);
+    throw new WsError('inHistory', `歷史版本是閘道器自己存的副本，不能往裡寫：${rel}`);
   }
 }
 
 /**
- * 新建一个东西（目录，或复制出来的一份）之前过一遍：越界、写不进去的三处（{@link guardArea}）、落点上已经有东西。
- * 与 `guardWrite` 的 `mode: 'create'` 同一套，只是**落点上有什么都算同名**——目录也算（`guardWrite` 把它报成
- * `notFile`，对「建一个目录」「复制一个目录过去」来说那句话说反了）。返回绝对路径。
+ * 新建一個東西（目錄，或複製出來的一份）之前過一遍：越界、寫不進去的三處（{@link guardArea}）、落點上已經有東西。
+ * 與 `guardWrite` 的 `mode: 'create'` 同一套，只是**落點上有什麼都算同名**——目錄也算（`guardWrite` 把它報成
+ * `notFile`，對「建一個目錄」「複製一個目錄過去」來說那句話說反了）。返回絕對路徑。
  */
 export async function guardCreate(project: NovelProject, relPath: string): Promise<string> {
   const abs = resolveInRoot(project.root, relPath);
@@ -356,11 +356,11 @@ export async function guardCreate(project: NovelProject, relPath: string): Promi
 }
 
 /**
- * 复制的来源过一遍：在工程内、存在、不是符号链接、不是固定目录（整个 `chapters/`、`.novelwarden/` 这种复制一份出来只是一堆
- * 重号的章，与文件页从前的规矩一样不收）、不是内部文件（会话与工程库读当不存在，也就复制不出来）。
+ * 複製的來源過一遍：在工程內、存在、不是符號連結、不是固定目錄（整個 `chapters/`、`.novelwarden/` 這種複製一份出來只是一堆
+ * 重號的章，與檔案頁從前的規矩一樣不收）、不是內部檔案（會話與工程庫讀當不存在，也就複製不出來）。
  *
- * **回收站与历史版本里的东西可以复制出来**：复制只读来源，读得到就复制得出来——这是在工程里找回一份的入口，
- * 回收站与历史一个字节都不动（搬出来仍然不行，那是改回收站，见 `guardMutate`）。
+ * **回收站與歷史版本裡的東西可以複製出來**：複製只讀來源，讀得到就複製得出來——這是在工程裡找回一份的入口，
+ * 回收站與歷史一個位元組都不動（搬出來仍然不行，那是改回收站，見 `guardMutate`）。
  */
 export async function guardCopySource(
   project: NovelProject,
@@ -369,10 +369,10 @@ export async function guardCopySource(
   const abs = resolveInRoot(project.root, relPath);
   const rel = normalizeRel(relPath)!;
   if (isProtectedPath(project, rel)) {
-    throw new WsError('protected', `「${rel}」是工程的固定目录，不能整个复制。`);
+    throw new WsError('protected', `「${rel}」是工程的固定目錄，不能整個複製。`);
   }
   if (isInternalPath(project, rel)) {
-    throw new WsError('protected', `「${rel}」是 Novelwarden 自己的内部文件，不能复制。`);
+    throw new WsError('protected', `「${rel}」是 Novelwarden 自己的內部檔案，不能複製。`);
   }
   let stat: import('node:fs').Stats;
   try {
@@ -380,30 +380,30 @@ export async function guardCopySource(
   } catch {
     throw new WsError('notFound', `找不到：${rel}`);
   }
-  // 符号链接不跟：链到工程外的东西不该被抄进工程（守卫 2 只比逻辑路径，不解析链接）。
+  // 符號連結不跟：鏈到工程外的東西不該被抄進工程（守衛 2 只比邏輯路徑，不解析連結）。
   if (stat.isSymbolicLink()) {
-    throw new WsError('notFile', `「${rel}」是符号链接，不复制。`);
+    throw new WsError('notFile', `「${rel}」是符號連結，不復制。`);
   }
   return { abs, rel, isDir: stat.isDirectory() };
 }
 
 /**
- * 改名/移动/删除之前过一遍。比读多两条：保护路径、回收站。
+ * 改名/移動/刪除之前過一遍。比讀多兩條：保護路徑、回收站。
  *
- * 目录也是合法对象（搬 `chapters/卷一/` 是正常操作），所以不判 `isFile`。
+ * 目錄也是合法物件（搬 `chapters/卷一/` 是正常操作），所以不判 `isFile`。
  */
 export async function guardMutate(project: NovelProject, relPath: string): Promise<string> {
   const abs = resolveInRoot(project.root, relPath);
   const rel = normalizeRel(relPath)!;
 
   if (isProtectedPath(project, rel)) {
-    throw new WsError('protected', `「${rel}」是工程的固定目录，不能改名或搬走。`);
+    throw new WsError('protected', `「${rel}」是工程的固定目錄，不能改名或搬走。`);
   }
   if (isInternalPath(project, rel)) {
-    throw new WsError('protected', `「${rel}」是 Novelwarden 自己的内部文件，不能改名、搬走或删除。`);
+    throw new WsError('protected', `「${rel}」是 Novelwarden 自己的內部檔案，不能改名、搬走或刪除。`);
   }
   if (isInTrash(project, rel)) {
-    throw new WsError('inTrash', `回收站里的内容不能操作：${rel}`);
+    throw new WsError('inTrash', `回收站裡的內容不能操作：${rel}`);
   }
   try {
     await fs.stat(abs);
@@ -414,17 +414,17 @@ export async function guardMutate(project: NovelProject, relPath: string): Promi
 }
 
 /**
- * 覆盖前审阅。返回「可以写了吗」，以及要写的是哪一份。
+ * 覆蓋前審閱。返回「可以寫了嗎」，以及要寫的是哪一份。
  *
- * 有 `reviewReplace` 的宿主开 diff：插件是 diff 编辑器，作者能逐行看清改了什么；独立版是
- * 段级 diff / 合并视图（五期 W11），作者可以逐段挑、手改，交回来的 `text` 就是他挑过的那一份，
- * 写它而不是新版全文。没有的宿主退化成一个带字数对比的确认框。**都没有确认就不写。**
+ * 有 `reviewReplace` 的宿主開 diff：外掛是 diff 編輯器，作者能逐行看清改了什麼；獨立版是
+ * 段級 diff / 合併檢視（五期 W11），作者可以逐段挑、手改，交回來的 `text` 就是他挑過的那一份，
+ * 寫它而不是新版全文。沒有的宿主退化成一個帶字數對比的確認框。**都沒有確認就不寫。**
  *
- * 内容一模一样时不问——一字未变还弹个框，只会让人以为自己点错了。
+ * 內容一模一樣時不問——一字未變還彈個框，只會讓人以為自己點錯了。
  *
- * 逐字搬自 `features/creation.ts` 的 `confirmOverwrite`：那两句文案
- * （`「${what}」已经有内容了，用新版本覆盖？`、`现有 N 字，新版 M 字`）
- * **是产品承诺的一部分，不要改措辞**。
+ * 逐字搬自 `features/creation.ts` 的 `confirmOverwrite`：那兩句文案
+ * （`「${what}」已經有內容了，用新版本覆蓋？`、`現有 N 字，新版 M 字`）
+ * **是產品承諾的一部分，不要改措辭**。
  */
 export async function reviewOverwrite(
   what: string,
@@ -439,21 +439,21 @@ export async function reviewOverwrite(
   const host = getHost();
   const answer = host.reviewReplace ? await host.reviewReplace(what, current, next, relPath, { merge: true }) : undefined;
   if (typeof answer === 'object') {
-    // 作者在合并视图里挑过：挑完与现有的一字不差（全保留原样）也照样算「写了」——落盘是幂等的。
-    log.info(`按合并结果覆盖${what}`, `${answer.merged.length} 字（新版 ${next.length} 字，现有 ${current.length} 字）`);
+    // 作者在合併檢視裡挑過：挑完與現有的一字不差（全保留原樣）也照樣算「寫了」——落盤是冪等的。
+    log.info(`按合併結果覆蓋${what}`, `${answer.merged.length} 字（新版 ${next.length} 字，現有 ${current.length} 字）`);
     return { ok: true, text: answer.merged };
   }
   const verdict = host.reviewReplace
     ? answer
     : await host
-        .confirm(`「${what}」已经有内容了，用新版本覆盖？`, ['覆盖', '保留原样'], {
+        .confirm(`「${what}」已經有內容了，用新版本覆蓋？`, ['覆蓋', '保留原樣'], {
           modal: true,
-          detail: `现有 ${current.length} 字，新版 ${next.length} 字。\n${relPath}`,
+          detail: `現有 ${current.length} 字，新版 ${next.length} 字。\n${relPath}`,
         })
-        .then((pick) => (pick === '覆盖' ? 'apply' : pick === '保留原样' ? 'discard' : undefined));
+        .then((pick) => (pick === '覆蓋' ? 'apply' : pick === '保留原樣' ? 'discard' : undefined));
 
   if (verdict !== 'apply') {
-    log.info(`未覆盖${what}`, verdict === 'discard' ? '用户选择保留原样' : '用户取消');
+    log.info(`未覆蓋${what}`, verdict === 'discard' ? '使用者選擇保留原樣' : '使用者取消');
     return { ok: false };
   }
   return { ok: true };

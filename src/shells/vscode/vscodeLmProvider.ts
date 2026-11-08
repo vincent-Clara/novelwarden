@@ -11,11 +11,11 @@ import {
 } from '../../core/llm/provider';
 
 /**
- * 基于 VS Code Language Model API（复用 Copilot 订阅）。
+ * 基於 VS Code Language Model API（複用 Copilot 訂閱）。
  *
- * 两点与自建 API 不同：
- * 1. 没有独立的 system 角色，系统提示会并入首条 user 消息；
- * 2. 有硬性的 maxInputTokens 配额，装配器需要据此收紧预算。
+ * 兩點與自建 API 不同：
+ * 1. 沒有獨立的 system 角色，系統提示會併入首條 user 訊息；
+ * 2. 有硬性的 maxInputTokens 配額，裝配器需要據此收緊預算。
  */
 export class VsCodeLmProvider implements LlmProvider {
   readonly id = 'vscode-lm' as const;
@@ -24,7 +24,7 @@ export class VsCodeLmProvider implements LlmProvider {
 
   /**
    * @param family 模型 family，如 `gpt-4o`、`claude-3.5-sonnet`。
-   * @param providerName 服务商显示名，用于错误提示里指名道姓。
+   * @param providerName 服務商顯示名，用於錯誤提示裡指名道姓。
    */
   constructor(
     private readonly family: string,
@@ -41,11 +41,11 @@ export class VsCodeLmProvider implements LlmProvider {
     }
     let models = await vscode.lm.selectChatModels({ family: this.family });
     if (models.length === 0) {
-      // family 填错或该模型不可用时，退而选任意可用模型，避免直接卡死。
+      // family 填錯或該模型不可用時，退而選任意可用模型，避免直接卡死。
       models = await vscode.lm.selectChatModels();
       if (models.length === 0) {
         throw new LlmError(
-          '没有可用的 VS Code 语言模型。请确认已安装并登录 GitHub Copilot，或在设置页改用自建 API 的服务商。'
+          '沒有可用的 VS Code 語言模型。請確認已安裝並登入 GitHub Copilot，或在設定頁改用自建 API 的服務商。'
         );
       }
       void vscode.window.showWarningMessage(
@@ -65,16 +65,16 @@ export class VsCodeLmProvider implements LlmProvider {
   }
 
   /**
-   * `options.thinking` 在这里**没有落点**：VS Code 语言模型 API 不暴露思考深度
-   * （请求体由 Copilot 那侧拼），所以对话页选的那一档对这种服务商无效。不报错
-   * 也不警告——作者选一个 Copilot 模型时要的就是「用订阅额度」，为一个这条路上
-   * 压根不存在的旋钮弹提示只是噪声。
+   * `options.thinking` 在這裡**沒有落點**：VS Code 語言模型 API 不暴露思考深度
+   * （請求體由 Copilot 那側拼），所以對話頁選的那一檔對這種服務商無效。不報錯
+   * 也不警告——作者選一個 Copilot 模型時要的就是「用訂閱額度」，為一個這條路上
+   * 壓根不存在的旋鈕彈提示只是噪聲。
    */
   async *stream(messages: ChatMessage[], options: StreamOptions): AsyncIterable<StreamEvent> {
     const model = await this.resolveModel();
     const { signal, dispose, poke } = makeAbortSignal(options);
     const source = new vscode.CancellationTokenSource();
-    // core 侧已统一为 AbortSignal，这里桥接回语言模型 API 需要的 token。
+    // core 側已統一為 AbortSignal，這裡橋接回語言模型 API 需要的 token。
     const onAbort = () => source.cancel();
     if (signal.aborted) {
       onAbort();
@@ -86,7 +86,7 @@ export class VsCodeLmProvider implements LlmProvider {
       const response = await model.sendRequest(
         toLmMessages(messages),
         {
-          justification: 'Novelwarden 需要调用语言模型续写小说正文。',
+          justification: 'Novelwarden 需要呼叫語言模型續寫小說正文。',
         },
         source.token
       );
@@ -108,7 +108,7 @@ export class VsCodeLmProvider implements LlmProvider {
       if (err instanceof vscode.LanguageModelError) {
         throw new LlmError(translateLmError(err));
       }
-      throw new LlmError(`VS Code 语言模型请求失败：${err instanceof Error ? err.message : String(err)}`, err);
+      throw new LlmError(`VS Code 語言模型請求失敗：${err instanceof Error ? err.message : String(err)}`, err);
     } finally {
       dispose();
       signal.removeEventListener('abort', onAbort);
@@ -118,10 +118,10 @@ export class VsCodeLmProvider implements LlmProvider {
 }
 
 /**
- * `ChatMessage[]` → VS Code 的消息数组。
+ * `ChatMessage[]` → VS Code 的訊息陣列。
  *
- * **系统提示并进首条 user** 是这个 provider 的特点而不是缺陷：LM API 根本
- * 没有 system 角色，不并进去这段提示就丢了。
+ * **系統提示並進首條 user** 是這個 provider 的特點而不是缺陷：LM API 根本
+ * 沒有 system 角色，不並進去這段提示就丟了。
  */
 function toLmMessages(messages: ChatMessage[]): vscode.LanguageModelChatMessage[] {
   const systemText = messages
@@ -153,12 +153,12 @@ function toLmMessages(messages: ChatMessage[]): vscode.LanguageModelChatMessage[
 function translateLmError(err: vscode.LanguageModelError): string {
   switch (err.code) {
     case vscode.LanguageModelError.NoPermissions.name:
-      return '未获得使用该语言模型的授权，请在弹出的确认框中允许 Novelwarden 使用 Copilot 模型。';
+      return '未獲得使用該語言模型的授權，請在彈出的確認框中允許 Novelwarden 使用 Copilot 模型。';
     case vscode.LanguageModelError.Blocked.name:
-      return '请求被模型的内容策略拦截。可尝试调整纲要措辞，或在设置页切换到自建 API 的模型。';
+      return '請求被模型的內容策略攔截。可嘗試調整綱要措辭，或在設定頁切換到自建 API 的模型。';
     case vscode.LanguageModelError.NotFound.name:
-      return '找不到指定的语言模型，请在设置页检查该服务商下配置的模型 family。';
+      return '找不到指定的語言模型，請在設定頁檢查該服務商下配置的模型 family。';
     default:
-      return `VS Code 语言模型错误：${err.message}`;
+      return `VS Code 語言模型錯誤：${err.message}`;
   }
 }

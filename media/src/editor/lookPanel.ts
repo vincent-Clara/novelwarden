@@ -1,16 +1,16 @@
 /**
- * 外观面板（「视图 → 外观设置…」）：正文字体、字号、行距、版心宽度、主题。改了**当场生效**，「恢复默认」把排版
- * 那四项放回缺省（主题另记在 `novelforge.theme`，不跟着变 ⚑）。
+ * 外觀面板（「檢視 → 外觀設定…」）：正文字型、字號、行距、版心寬度、主題。改了**當場生效**，「恢復預設」把排版
+ * 那四項放回預設（主題另記在 `novelforge.theme`，不跟著變 ⚑）。
  *
- * 写法与样式照 `dialog.ts`：DOM 现造现拆、页面模板里没有它，面板外观复用 `css/view/modal.css` 那一套
- * （`.modal` / `.modal-head` / `.modal-body` / `.modal-foot`，按钮 `.primary` / `.secondary`），焦点进面板、
- * 关掉之后回到打开之前的地方，`Esc` 关。**与 `dialog.ts` 不同的一处**：它不是模态的——改字号要一边改一边看正文，
- * 所以外面那一层不是 `.modal-overlay`（别的模块拿「有没有 `.modal-overlay` 开着」判断有没有弹窗，`Ctrl+P` 会因此
- * 不开），而是透明、不拦点击的 `.ed-look-overlay`（只有面板本身接得住），面板靠右上，正文照样能点、能滚、能打字；
- * 也不算「有对话框开着」（不拦自动保存）。同一时刻只有一个，再打开只是把焦点放回来。
+ * 寫法與樣式照 `dialog.ts`：DOM 現造現拆、頁面模板裡沒有它，面板外觀複用 `css/view/modal.css` 那一套
+ * （`.modal` / `.modal-head` / `.modal-body` / `.modal-foot`，按鈕 `.primary` / `.secondary`），焦點進面板、
+ * 關掉之後回到開啟之前的地方，`Esc` 關。**與 `dialog.ts` 不同的一處**：它不是模態的——改字號要一邊改一邊看正文，
+ * 所以外面那一層不是 `.modal-overlay`（別的模組拿「有沒有 `.modal-overlay` 開著」判斷有沒有彈窗，`Ctrl+P` 會因此
+ * 不開），而是透明、不攔點選的 `.ed-look-overlay`（只有面板本身接得住），面板靠右上，正文照樣能點、能滾、能打字；
+ * 也不算「有對話方塊開著」（不攔自動儲存）。同一時刻只有一個，再開啟只是把焦點放回來。
  *
- * 段间距不单列一项（⚑）：textarea 画不出段与段之间的额外间距，镜像层又必须与它排得一模一样；空行分段时段间距
- * 就是那一行空行（跟着行距变），段首缩进的格式本来就不空行。面板上用一句话说清楚。
+ * 段間距不單列一項（⚑）：textarea 畫不出段與段之間的額外間距，映象層又必須與它排得一模一樣；空行分段時段間距
+ * 就是那一行空行（跟著行距變），段首縮排的格式本來就不空行。面板上用一句話說清楚。
  */
 import { el } from '../dom';
 import { currentLook, onLookChange, resetLook, setLook } from './look';
@@ -27,12 +27,12 @@ interface Panel {
 
 let panel: Panel | undefined;
 
-/** 面板开着没有。 */
+/** 面板開著沒有。 */
 export function isLookPanelOpen(): boolean {
   return !!panel;
 }
 
-/** 打开外观面板（已经开着就把焦点放回去）。 */
+/** 開啟外觀面板（已經開著就把焦點放回去）。 */
 export function openLookPanel(): void {
   if (panel) {
     panel.focusFirst();
@@ -41,7 +41,7 @@ export function openLookPanel(): void {
   panel = buildPanel();
 }
 
-/** 关掉外观面板。 */
+/** 關掉外觀面板。 */
 export function closeLookPanel(): void {
   panel?.overlay.remove();
   panel = undefined;
@@ -57,30 +57,30 @@ function buildPanel(): Panel {
   box.setAttribute('aria-labelledby', titleId);
 
   const head = el('div', 'modal-head');
-  const title = el('span', 'modal-title', '外观');
+  const title = el('span', 'modal-title', '外觀');
   title.id = titleId;
   const x = el('button', 'icon-btn ed-look-x', '×');
   x.type = 'button';
-  x.title = '关闭（Esc）';
+  x.title = '關閉（Esc）';
   head.append(title, x);
 
   const body = el('div', 'modal-body');
 
-  // ---- 正文字体
+  // ---- 正文字型
   const font = el('select', 'ed-look-font');
   for (const choice of FONT_CHOICES) {
     const opt = el('option', undefined, choice.label);
     opt.value = choice.id;
-    // 下拉框里每一项用它自己的字体写（浏览器支持就看得出差别，不支持也无害）。
+    // 下拉框裡每一項用它自己的字型寫（瀏覽器支援就看得出差別，不支援也無害）。
     opt.style.fontFamily = choice.stack;
     font.appendChild(opt);
   }
   font.addEventListener('change', () => setLook({ fontFamily: normalizeFont(font.value) }));
 
-  // ---- 字号：− [15] px +
+  // ---- 字號：− [15] px +
   const sizeDec = el('button', 'secondary ed-look-size-dec', '−');
   sizeDec.type = 'button';
-  sizeDec.title = `缩小（编辑区里 ${shortcutLabel('zoomOut')}）`;
+  sizeDec.title = `縮小（編輯區裡 ${shortcutLabel('zoomOut')}）`;
   const size = el('input', 'ed-look-size');
   size.type = 'number';
   size.min = String(FONT_SIZE.min);
@@ -88,10 +88,10 @@ function buildPanel(): Panel {
   size.step = String(FONT_SIZE.step);
   const sizeInc = el('button', 'secondary ed-look-size-inc', '+');
   sizeInc.type = 'button';
-  sizeInc.title = `放大（编辑区里 ${shortcutLabel('zoomIn')}）`;
+  sizeInc.title = `放大（編輯區裡 ${shortcutLabel('zoomIn')}）`;
   sizeDec.addEventListener('click', () => setLook({ fontSize: currentLook().fontSize - FONT_SIZE.step }));
   sizeInc.addEventListener('click', () => setLook({ fontSize: currentLook().fontSize + FONT_SIZE.step }));
-  // 打字时不跟（打「18」的那个「1」会被夹成 12）；按回车、离开输入框时才认，认完写回校验后的值。清空了不算数。
+  // 打字時不跟（打「18」的那個「1」會被夾成 12）；按回車、離開輸入框時才認，認完寫回校驗後的值。清空了不算數。
   size.addEventListener('change', () => {
     const value = Number(size.value);
     if (size.value.trim() !== '' && Number.isFinite(value)) {
@@ -102,7 +102,7 @@ function buildPanel(): Panel {
   const sizeRow = el('span', 'ed-look-inline');
   sizeRow.append(sizeDec, size, el('span', 'ed-look-unit', 'px'), sizeInc);
 
-  // ---- 行距：滑块 + 当前值
+  // ---- 行距：滑塊 + 當前值
   const line = el('input', 'ed-look-line');
   line.type = 'range';
   line.min = String(LINE_HEIGHT.min);
@@ -113,11 +113,11 @@ function buildPanel(): Panel {
   const lineRow = el('span', 'ed-look-inline');
   lineRow.append(line, lineValue);
 
-  // ---- 版心宽度
+  // ---- 版心寬度
   const measure = el('select', 'ed-look-measure');
   measure.addEventListener('change', () => setLook({ measure: Number(measure.value) }));
 
-  // ---- 主题：三颗单选
+  // ---- 主題：三顆單選
   const themes = el('span', 'ed-look-inline ed-look-theme');
   themes.setAttribute('role', 'radiogroup');
   const themeName = `edLookTheme${Date.now().toString(36)}`;
@@ -138,24 +138,24 @@ function buildPanel(): Panel {
   });
 
   body.append(
-    row('正文字体', font),
-    row('字号', sizeRow),
+    row('正文字型', font),
+    row('字號', sizeRow),
     row('行距', lineRow),
-    row('版心宽度', measure, '宽屏时这一栏居中；「铺满」就是占满编辑区。'),
+    row('版心寬度', measure, '寬屏時這一欄居中；「鋪滿」就是佔滿編輯區。'),
     el(
       'p',
       'hint ed-look-note',
-      '段间距跟着分段格式走：空行分段时就是那一行空行（随行距变），段首缩进不空行。'
+      '段間距跟著分段格式走：空行分段時就是那一行空行（隨行距變），段首縮排不空行。'
     ),
-    row('主题', themes, '护眼是米黄底色，整个界面一起换。')
+    row('主題', themes, '護眼是米黃底色，整個介面一起換。')
   );
 
   const foot = el('div', 'modal-foot');
-  const reset = el('button', 'secondary ed-look-reset', '恢复默认');
+  const reset = el('button', 'secondary ed-look-reset', '恢復預設');
   reset.type = 'button';
-  reset.title = '字体、字号、行距、版心回到缺省（主题不变）';
+  reset.title = '字型、字號、行距、版心回到預設（主題不變）';
   reset.addEventListener('click', () => resetLook());
-  const close = el('button', 'primary ed-look-close', '关闭');
+  const close = el('button', 'primary ed-look-close', '關閉');
   close.type = 'button';
   foot.append(reset, el('span', 'spacer'), close);
   body.appendChild(foot);
@@ -173,7 +173,7 @@ function buildPanel(): Panel {
     sizeInc.disabled = look.fontSize >= FONT_SIZE.max;
     line.value = String(look.lineHeight);
     lineValue.textContent = look.lineHeight.toFixed(2);
-    // 手改偏好写了一个不在几档里的宽度：也列出来，选中它。
+    // 手改偏好寫了一個不在幾檔裡的寬度：也列出來，選中它。
     const values: number[] = [...MEASURE.presets];
     if (!values.includes(look.measure)) {
       values.push(look.measure);
@@ -199,7 +199,7 @@ function buildPanel(): Panel {
     if (e.isComposing || e.keyCode === 229 || e.key !== 'Escape') {
       return;
     }
-    // 面板开着时 Esc 只收面板（不连带退出专注模式、不收查找条）。
+    // 面板開著時 Esc 只收面板（不連帶退出專注模式、不收查詢條）。
     e.preventDefault();
     e.stopPropagation();
     finish();
@@ -223,7 +223,7 @@ function buildPanel(): Panel {
   return { overlay, box, focusFirst: () => font.focus() };
 }
 
-/** 一行：左边标签，右边控件，底下可选一行小字。控件没有自己的 `<label>`，名字挂在 aria-label 上。 */
+/** 一行：左邊標籤，右邊控制元件，底下可選一行小字。控制元件沒有自己的 `<label>`，名字掛在 aria-label 上。 */
 function row(label: string, control: HTMLElement, note?: string): HTMLElement {
   const wrap = el('div', 'ed-look-row');
   const name = el('span', 'ed-look-label', label);

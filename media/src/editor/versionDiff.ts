@@ -1,23 +1,23 @@
 /**
- * 「版本」的对比标签（独立版的内置编辑器）：左边一版、右边现在（或后一版），按行比，一处改动里逐字标出删了什么、
- * 加了什么。在「版本」侧栏（`versions.ts`）里点一行就开在这里，不经预览、不弹窗。比的口径在 `versionDiffCore.ts`。
+ * 「版本」的對比標籤（獨立版的內建編輯器）：左邊一版、右邊現在（或後一版），按行比，一處改動裡逐字標出刪了什麼、
+ * 加了什麼。在「版本」側欄（`versions.ts`）裡點一行就開在這裡，不經預覽、不彈窗。比的口徑在 `versionDiffCore.ts`。
  *
- * - **一个不对应文件的特殊标签**（`store.ts` 的 `SpecialTab`，同「叙事线总览」），**只有一个**：再点别的一行就换掉里面
- *   的内容（像 VS Code 的预览标签）；开在那份文件所在的那一块里。**不进刷新恢复**（`transient`）：看的是哪两版只在这一页里记着。
- * - **三种比法**：一版 ↔ 现在（缺省：右边是编辑器里那一份，没保存的也算）；一版 ↔ 它后面一版（侧栏右键「跟后一版比」：
- *   看那一次改了什么，两边都是存下的，只能看）；磁盘上的 ↔ 编辑器里的（侧栏最上面那一行「还没保存的改动」）。全书改动里
- *   存档点之后新建的左边是空的、之后删掉的右边是空的（`empty`，只能看）。
- * - **右边是现在、那份文件却没开着**（全书改动、存档点弹窗里点的）：先开成临时标签（`openEditor` 带 `preview`），等它进了
- *   编辑区再开对比标签——用回、恢复都要改编辑区里那一份。
- * - **跟得上**：右边是编辑器里那一份时，那份文件一改（这里放回一处、另一块里在打字、磁盘上的新版进来、保存）就重比；
- *   藏着时只记一笔，下次显示再比。那份文件关掉了就照实说，不拿旧的比。
- * - **用回这一处 / 恢复整份**（只在右边是编辑器里那一份时有）：只换编辑区里的内容——一步撤销、成为未保存、**不写盘**（第 3 条）。
- *   换之前先发一条不说话的 `saveVersion { quiet }`：放回的内容一存盘（开着自动保存时停笔两秒就存）就盖掉磁盘上那一份，节流
- *   可能不存它。用回一处要改的那份文件就藏在这个标签后面（`applyEdit` 只作用于当前文件）：同一个任务里切过去、改、再切回来，
- *   中间不画，看不出闪；对比区滚到哪先记下、切回来放回去（藏起来那一下滚动位置会丢）。「恢复整份」换完停在那份文件上。
- * - **没改的折起来**：每处改动前后各留一行，中间相同的折成「⋯ 相同的 N 段 ⋯」，点开就展开（重比之后照旧展开着）。
+ * - **一個不對應檔案的特殊標籤**（`store.ts` 的 `SpecialTab`，同「敘事線總覽」），**只有一個**：再點別的一行就換掉裡面
+ *   的內容（像 VS Code 的預覽標籤）；開在那份檔案所在的那一塊裡。**不進重新整理恢復**（`transient`）：看的是哪兩版只在這一頁裡記著。
+ * - **三種比法**：一版 ↔ 現在（預設：右邊是編輯器裡那一份，沒儲存的也算）；一版 ↔ 它後面一版（側欄右鍵「跟後一版比」：
+ *   看那一次改了什麼，兩邊都是存下的，只能看）；磁碟上的 ↔ 編輯器裡的（側欄最上面那一行「還沒儲存的改動」）。全書改動裡
+ *   存檔點之後新建的左邊是空的、之後刪掉的右邊是空的（`empty`，只能看）。
+ * - **右邊是現在、那份檔案卻沒開著**（全書改動、存檔點彈窗裡點的）：先開成臨時標籤（`openEditor` 帶 `preview`），等它進了
+ *   編輯區再開對比標籤——用回、恢復都要改編輯區裡那一份。
+ * - **跟得上**：右邊是編輯器裡那一份時，那份檔案一改（這裡放回一處、另一塊裡在打字、磁碟上的新版進來、儲存）就重比；
+ *   藏著時只記一筆，下次顯示再比。那份檔案關掉了就照實說，不拿舊的比。
+ * - **用回這一處 / 恢復整份**（只在右邊是編輯器裡那一份時有）：只換編輯區裡的內容——一步撤銷、成為未儲存、**不寫盤**（第 3 條）。
+ *   換之前先發一條不說話的 `saveVersion { quiet }`：放回的內容一存檔（開著自動儲存時停筆兩秒就存）就蓋掉磁碟上那一份，節流
+ *   可能不存它。用回一處要改的那份檔案就藏在這個標籤後面（`applyEdit` 只作用於當前檔案）：同一個任務裡切過去、改、再切回來，
+ *   中間不畫，看不出閃；對比區滾到哪先記下、切回來放回去（藏起來那一下滾動位置會丟）。「恢復整份」換完停在那份檔案上。
+ * - **沒改的折起來**：每處改動前後各留一行，中間相同的折成「⋯ 相同的 N 段 ⋯」，點開就展開（重比之後照舊展開著）。
  *
- * 用户内容一律 `textContent`。样式在 `css/standalone/versions.css`。
+ * 使用者內容一律 `textContent`。樣式在 `css/standalone/versions.css`。
  */
 import { el, setHidden } from '../dom';
 import { onContextMenu, toast } from '../globals';
@@ -32,22 +32,22 @@ import type { Pane } from './store';
 import { blockText, charDiff, diffLines, normalizeEol, onlyWhitespace, revertEdit } from './versionDiffCore';
 import type { DiffBlock, LineDiff } from './versionDiffCore';
 
-/** 特殊标签的 id。 */
+/** 特殊標籤的 id。 */
 export const VERSION_DIFF_TAB = 'version-diff';
 
-/** 一版：读它用的 id，标题上怎么说。 */
+/** 一版：讀它用的 id，標題上怎麼說。 */
 export interface VersionRef {
   id: string;
   label: string;
 }
 
 /**
- * 要比的两边。左边 `disk`：磁盘上的（上次保存的那一份）；右边 `now`：编辑器里的；`empty`：那一边没有这份文件（存档点里
- * 还没有、现在已经删了）。
+ * 要比的兩邊。左邊 `disk`：磁碟上的（上次儲存的那一份）；右邊 `now`：編輯器裡的；`empty`：那一邊沒有這份檔案（存檔點裡
+ * 還沒有、現在已經刪了）。
  */
 export interface DiffRequest {
   path: string;
-  /** 标签与标题上写的文件名。 */
+  /** 標籤與標題上寫的檔名。 */
   name: string;
   left: VersionRef | 'disk' | 'empty';
   right: VersionRef | 'now' | 'empty';
@@ -55,11 +55,11 @@ export interface DiffRequest {
 
 type Side = DiffRequest['left'] | DiffRequest['right'];
 
-/** 每处改动前后各留几行没改的。 */
+/** 每處改動前後各留幾行沒改的。 */
 const CONTEXT = 1;
-/** 编辑器里那一份变了之后停多久再比（连着打字只比一次）。 */
+/** 編輯器裡那一份變了之後停多久再比（連著打字只比一次）。 */
 const REDIFF_MS = 200;
-/** 读过的版本全文最多记几份（快照、存档点里的那一份都不会变，记着不用再要）。 */
+/** 讀過的版本全文最多記幾份（快照、存檔點裡的那一份都不會變，記著不用再要）。 */
 const TEXT_CACHE = 20;
 
 interface View {
@@ -77,35 +77,35 @@ interface View {
 
 let post: (msg: InMessage) => void = () => {};
 let view: View | undefined;
-/** 显示在哪一块。 */
+/** 顯示在哪一塊。 */
 let host: Pane | undefined;
 let req: DiffRequest | undefined;
-/** 两边的全文（`now` 那边每次从编辑区取，不记）。undefined = 还在路上；`error` = 读不到。 */
+/** 兩邊的全文（`now` 那邊每次從編輯區取，不記）。undefined = 還在路上；`error` = 讀不到。 */
 let leftText: string | undefined;
 let rightText: string | undefined;
 let loadError: string | undefined;
-/** 上一次画的那一份比较，与画的时候编辑器里那份的文字（用回一处之前核对：变了就重比，不拿旧下标改）。 */
+/** 上一次畫的那一份比較，與畫的時候編輯器裡那份的文字（用回一處之前核對：變了就重比，不拿舊下標改）。 */
 let shownDiff: LineDiff | undefined;
 let shownRight: string | undefined;
-/** 展开了的那几截相同的（按左边第一行的行号认：重比之后左边不变，照旧展开着）。 */
+/** 展開了的那幾截相同的（按左邊第一行的行號認：重比之後左邊不變，照舊展開著）。 */
 const expanded = new Set<number>();
-/** 上一处 / 下一处停在第几处（-1 = 还没停过）。 */
+/** 上一處 / 下一處停在第幾處（-1 = 還沒停過）。 */
 let current = -1;
-/** 新换上的这一对还没画出改动：画出来时停到第一处。 */
+/** 新換上的這一對還沒畫出改動：畫出來時停到第一處。 */
 let jumpPending = false;
-/** 等那份文件进编辑区（`openEditor` 发出去了）再开的那一个。 */
+/** 等那份檔案進編輯區（`openEditor` 發出去了）再開的那一個。 */
 let pendingOpen: DiffRequest | undefined;
-/** 藏着的时候编辑器里那份变过：下次显示再比。 */
+/** 藏著的時候編輯器裡那份變過：下次顯示再比。 */
 let stale = false;
 let rediffTimer: ReturnType<typeof setTimeout> | undefined;
 const listeners = new Set<() => void>();
 
-// ---------------------------------------------------------------- 读一版的全文
+// ---------------------------------------------------------------- 讀一版的全文
 
 const textCache = new Map<string, string>();
 const waiting = new Map<string, { resolve: (text: string) => void; reject: (err: Error) => void }>();
 
-/** 一版的全文（快照或存档点里的那一份）。读过的记着。 */
+/** 一版的全文（快照或存檔點裡的那一份）。讀過的記著。 */
 export function versionText(path: string, id: string): Promise<string> {
   const key = `${path}\u0000${id}`;
   const cached = textCache.get(key);
@@ -138,23 +138,23 @@ function onVersionText(msg: Extract<OutMessage, { type: 'versionText' }>): void 
   if (msg.text !== undefined) {
     w.resolve(msg.text);
   } else {
-    w.reject(new Error(msg.error ?? '读不到这一版。'));
+    w.reject(new Error(msg.error ?? '讀不到這一版。'));
   }
 }
 
-// ---------------------------------------------------------------- 对外
+// ---------------------------------------------------------------- 對外
 
-/** 对比标签此刻在比的是什么（侧栏据此标出选中的那一行）。没开就是 undefined。 */
+/** 對比標籤此刻在比的是什麼（側欄據此標出選中的那一行）。沒開就是 undefined。 */
 export function currentDiff(): DiffRequest | undefined {
   return req && paneWithSpecial(VERSION_DIFF_TAB) ? req : undefined;
 }
 
-/** 比的东西换了、标签关了：侧栏跟着重画选中的那一行。 */
+/** 比的東西換了、標籤關了：側欄跟著重畫選中的那一行。 */
 export function onDiffChange(listener: () => void): void {
   listeners.add(listener);
 }
 
-/** 在那份文件所在的那一块开对比标签（已经开着就换掉里面的内容）。 */
+/** 在那份檔案所在的那一塊開對比標籤（已經開著就換掉裡面的內容）。 */
 export function openDiff(next: DiffRequest): void {
   const pane = paneOwning(next.path) ?? paneWithSpecial(VERSION_DIFF_TAB) ?? panes.main;
   if (!pane) {
@@ -181,7 +181,7 @@ export function openDiff(next: DiffRequest): void {
   notify();
 }
 
-/** 同 {@link openDiff}；右边是现在、那份文件却没开着时先开成临时标签，进了编辑区再开对比标签。 */
+/** 同 {@link openDiff}；右邊是現在、那份檔案卻沒開著時先開成臨時標籤，進了編輯區再開對比標籤。 */
 export function openFileDiff(next: DiffRequest): void {
   if (next.right !== 'now' || paneOwning(next.path)) {
     openDiff(next);
@@ -192,8 +192,8 @@ export function openFileDiff(next: DiffRequest): void {
 }
 
 /**
- * 「恢复整份」：把编辑区里这份文件换成那一版（一步撤销，成为未保存，不写盘），停在那份文件上。换之前先让后端把磁盘上
- * 现在那一份存一版（不说话、跳过节流）。
+ * 「恢復整份」：把編輯區裡這份檔案換成那一版（一步撤銷，成為未儲存，不寫盤），停在那份檔案上。換之前先讓後端把磁碟上
+ * 現在那一份存一版（不說話、跳過節流）。
  */
 export async function restoreVersion(path: string, ref: VersionRef): Promise<void> {
   let text: string;
@@ -205,16 +205,16 @@ export async function restoreVersion(path: string, ref: VersionRef): Promise<voi
   }
   const file = paneOwning(path)?.files.get(path);
   if (file && normalizeEol(file.draft) !== normalizeEol(text)) {
-    // 消息按顺序到：排在之后任何一次 saveFile 前面。
+    // 訊息按順序到：排在之後任何一次 saveFile 前面。
     post({ type: 'saveVersion', path, quiet: true });
   }
   const result = replaceInEditor(path, text);
   if (result === 'closed') {
-    toast('这份文件已经关掉了。', true);
+    toast('這份檔案已經關掉了。', true);
   } else if (result === 'unchanged') {
-    toast('编辑区里已经是这一版了。');
+    toast('編輯區裡已經是這一版了。');
   } else {
-    toast(`已把「${ref.label}」放进编辑区：还没保存，Ctrl+Z 可以退回。`);
+    toast(`已把「${ref.label}」放進編輯區：還沒儲存，Ctrl+Z 可以退回。`);
   }
 }
 
@@ -254,15 +254,15 @@ function load(r: DiffRequest): void {
   }
 }
 
-// ---------------------------------------------------------------- 装
+// ---------------------------------------------------------------- 裝
 
 export function installVersionDiff(postMessage: (msg: InMessage) => void): void {
   post = postMessage;
   registerSpecialTab({
     id: VERSION_DIFF_TAB,
     label: () => ({
-      title: req ? `对比 · ${req.name}` : '对比',
-      tip: req ? `${sideLabel('left')} ↔ ${sideLabel('right')}` : '对比',
+      title: req ? `對比 · ${req.name}` : '對比',
+      tip: req ? `${sideLabel('left')} ↔ ${sideLabel('right')}` : '對比',
     }),
     show,
     hide,
@@ -275,9 +275,9 @@ export function installVersionDiff(postMessage: (msg: InMessage) => void): void 
     }
   });
 
-  // 编辑器里那份变了（打字、放回一处、磁盘上的新版、保存换了基线）：显示着就停一下再比，藏着就记一笔。
+  // 編輯器裡那份變了（打字、放回一處、磁碟上的新版、儲存換了基線）：顯示著就停一下再比，藏著就記一筆。
   onEditorChange((ev) => {
-    // 等着的那份文件进了编辑区：这一轮重画完了再开对比标签（这会儿还在 upsertFile 里）。
+    // 等著的那份檔案進了編輯區：這一輪重畫完了再開對比標籤（這會兒還在 upsertFile 裡）。
     if (pendingOpen && ev.type === 'render' && paneOwning(pendingOpen.path)) {
       const next = pendingOpen;
       pendingOpen = undefined;
@@ -309,7 +309,7 @@ function visible(): boolean {
   return !!view && !!host && !view.root.classList.contains('hidden') && host.activeSpecial() === VERSION_DIFF_TAB;
 }
 
-// ---------------------------------------------------------------- 显示与收起（SpecialTab）
+// ---------------------------------------------------------------- 顯示與收起（SpecialTab）
 
 function show(pane: Pane): void {
   const stage = pane.root.querySelector<HTMLElement>('.ed-stage');
@@ -334,7 +334,7 @@ function hide(pane: Pane): void {
     return;
   }
   setHidden(view.root, true);
-  // 关掉了（不只是切走）：侧栏不再标选中的那一行。
+  // 關掉了（不只是切走）：側欄不再標選中的那一行。
   if (!pane.specials.includes(VERSION_DIFF_TAB)) {
     notify();
   }
@@ -347,7 +347,7 @@ function ensureView(): View {
     return view;
   }
   const root = el('section', 'vd hidden');
-  root.setAttribute('aria-label', '对比');
+  root.setAttribute('aria-label', '對比');
   const head = el('div', 'vd-head');
   const title = el('span', 'vd-title');
   const meta = el('span', 'vd-meta');
@@ -357,10 +357,10 @@ function ensureView(): View {
     b.title = tip;
     return b;
   };
-  const prev = button('vd-prev', '↑ 上一处', '滚到上一处改动');
-  const next = button('vd-next', '↓ 下一处', '滚到下一处改动');
-  const restore = button('vd-restore', '恢复整份', '把编辑区换成左边这一版（一步撤销，不写盘，存不存由你）');
-  const open = button('vd-open', '打开文件', '回到这份文件');
+  const prev = button('vd-prev', '↑ 上一處', '滾到上一處改動');
+  const next = button('vd-next', '↓ 下一處', '滾到下一處改動');
+  const restore = button('vd-restore', '恢復整份', '把編輯區換成左邊這一版（一步撤銷，不寫盤，存不存由你）');
+  const open = button('vd-open', '開啟檔案', '回到這份檔案');
   head.append(title, meta, el('span', 'spacer'), prev, next, restore, open);
   const cols = el('div', 'vd-cols');
   const leftHead = el('div', 'vd-col vd-col-left');
@@ -391,19 +391,19 @@ function sideLabel(side: 'left' | 'right'): string {
   }
   const s = req[side];
   if (s === 'disk') {
-    return '磁盘上的（上次保存的）';
+    return '磁碟上的（上次儲存的）';
   }
   if (s === 'empty') {
-    return side === 'left' ? '存档点里还没有这一份' : '现在已经没有这一份了（删了或改了名）';
+    return side === 'left' ? '存檔點裡還沒有這一份' : '現在已經沒有這一份了（刪了或改了名）';
   }
   if (s === 'now') {
     const file = paneOwning(req.path)?.files.get(req.path);
-    return file && file.draft !== file.text ? '现在（编辑器里，还没保存）' : '现在';
+    return file && file.draft !== file.text ? '現在（編輯器裡，還沒儲存）' : '現在';
   }
   return s.label;
 }
 
-/** 右边是编辑器里那一份时，从编辑区取；那份文件关了是 undefined。左边是磁盘上的同样从编辑区取（它的基线）。 */
+/** 右邊是編輯器裡那一份時，從編輯區取；那份檔案關了是 undefined。左邊是磁碟上的同樣從編輯區取（它的基線）。 */
 function sideText(side: 'left' | 'right'): string | undefined {
   if (!req) {
     return undefined;
@@ -419,7 +419,7 @@ function sideText(side: 'left' | 'right'): string | undefined {
   return side === 'left' ? leftText : rightText;
 }
 
-/** 编辑器里那一份能不能改：右边是它时才能用回、恢复。 */
+/** 編輯器裡那一份能不能改：右邊是它時才能用回、恢復。 */
 function editable(): boolean {
   return !!req && req.right === 'now' && !!paneOwning(req.path);
 }
@@ -452,11 +452,11 @@ function render(): void {
     return;
   }
   if ((req.right === 'now' || req.left === 'disk') && !paneOwning(req.path)) {
-    say('这份文件已经关掉了：重新打开它，再在「版本」里点一行。');
+    say('這份檔案已經關掉了：重新開啟它，再在「版本」裡點一行。');
     return;
   }
   if (before === undefined || after === undefined) {
-    say('载入中…');
+    say('載入中…');
     return;
   }
 
@@ -466,10 +466,10 @@ function render(): void {
   if (diff.changes === 0) {
     say(
       onlyWhitespace(diff)
-        ? '只有空白不同（缩进、空行、行尾空格），文字一样。'
+        ? '只有空白不同（縮排、空行、行尾空格），文字一樣。'
         : req.left === 'disk'
-          ? '没有还没保存的改动了。'
-          : '两边一样。'
+          ? '沒有還沒儲存的改動了。'
+          : '兩邊一樣。'
     );
     return;
   }
@@ -485,9 +485,9 @@ function render(): void {
     removed += counts.removed;
     added += counts.added;
   });
-  v.meta.textContent = `${changes.length} 处改动 · 删 ${removed} 字 · 加 ${added} 字`;
+  v.meta.textContent = `${changes.length} 處改動 · 刪 ${removed} 字 · 加 ${added} 字`;
   if (jumpPending) {
-    // 刚换上的：停到第一处（同 VS Code 打开 diff）。
+    // 剛換上的：停到第一處（同 VS Code 開啟 diff）。
     jumpPending = false;
     current = -1;
     step(1);
@@ -507,7 +507,7 @@ function setNav(count: number): void {
   view.next.disabled = count === 0 || current >= count - 1;
 }
 
-/** 一截相同的：前后各留 {@link CONTEXT} 行，中间折起来（开头那截只留后面的、结尾那截只留前面的）。 */
+/** 一截相同的：前後各留 {@link CONTEXT} 行，中間折起來（開頭那截只留後面的、結尾那截只留前面的）。 */
 function renderSame(body: HTMLElement, diff: LineDiff, block: DiffBlock, first: boolean, last: boolean): void {
   const lines = diff.left.slice(block.left[0], block.left[1]);
   const keepHead = first ? 0 : CONTEXT;
@@ -521,7 +521,7 @@ function renderSame(body: HTMLElement, diff: LineDiff, block: DiffBlock, first: 
     const hidden = lines.length - keepHead - keepTail;
     const fold = el('button', 'vd-fold', `⋯ 相同的 ${hidden} 段 ⋯`);
     fold.type = 'button';
-    fold.title = '展开';
+    fold.title = '展開';
     fold.addEventListener('click', () => {
       expanded.add(block.left[0]);
       render();
@@ -532,7 +532,7 @@ function renderSame(body: HTMLElement, diff: LineDiff, block: DiffBlock, first: 
   body.appendChild(box);
 }
 
-/** 一处改动：左边删的、右边加的，逐字标；底下「用回这一处」。返回删了几个字、加了几个字（不算空白）。 */
+/** 一處改動：左邊刪的、右邊加的，逐字標；底下「用回這一處」。返回刪了幾個字、加了幾個字（不算空白）。 */
 function renderChange(body: HTMLElement, diff: LineDiff, block: DiffBlock, index: number): { removed: number; added: number } {
   const a = blockText(diff, block, 'left');
   const b = blockText(diff, block, 'right');
@@ -542,7 +542,7 @@ function renderChange(body: HTMLElement, diff: LineDiff, block: DiffBlock, index
   const side = (cls: string, text: string, ranges: [number, number][] | undefined, tag: 'del' | 'ins') => {
     const cell = el('div', `vd-side ${cls}`);
     if (text === '') {
-      cell.appendChild(el('div', 'vd-empty', tag === 'del' ? '（原来没有）' : '（删掉了）'));
+      cell.appendChild(el('div', 'vd-empty', tag === 'del' ? '（原來沒有）' : '（刪掉了）'));
       return cell;
     }
     let at = 0;
@@ -557,9 +557,9 @@ function renderChange(body: HTMLElement, diff: LineDiff, block: DiffBlock, index
   box.append(side('vd-old', a, marks?.left, 'del'), side('vd-new', b, marks?.right, 'ins'));
   if (editable()) {
     const bar = el('div', 'vd-bar');
-    const revert = el('button', 'chip-btn vd-revert', '用回这一处');
+    const revert = el('button', 'chip-btn vd-revert', '用回這一處');
     revert.type = 'button';
-    revert.title = '把编辑区里这一处换回左边那样（一步撤销，不写盘）';
+    revert.title = '把編輯區裡這一處換回左邊那樣（一步撤銷，不寫盤）';
     revert.addEventListener('click', () => revertBlock(index));
     bar.appendChild(revert);
     box.appendChild(bar);
@@ -571,7 +571,7 @@ function renderChange(body: HTMLElement, diff: LineDiff, block: DiffBlock, index
   return { removed: count(a, marks?.left), added: count(b, marks?.right) };
 }
 
-/** 一行文字（在那一处全文里从 `offset` 开始），落在 `ranges` 里的包进 `<del>` / `<ins>`。 */
+/** 一行文字（在那一處全文裡從 `offset` 開始），落在 `ranges` 裡的包進 `<del>` / `<ins>`。 */
 function appendMarked(row: HTMLElement, text: string, offset: number, ranges: [number, number][], tag: 'del' | 'ins'): void {
   let pos = 0;
   for (const [s, e] of ranges) {
@@ -594,15 +594,15 @@ function appendMarked(row: HTMLElement, text: string, offset: number, ranges: [n
 function changeMenu(index: number): MenuItem[] {
   const items: MenuItem[] = [];
   if (editable()) {
-    items.push({ label: '用回这一处', run: () => revertBlock(index) });
+    items.push({ label: '用回這一處', run: () => revertBlock(index) });
   }
   if (req && paneOwning(req.path) && req.right === 'now') {
-    items.push({ label: '在编辑器里打开这里', run: () => openHere(index) });
+    items.push({ label: '在編輯器裡開啟這裡', run: () => openHere(index) });
   }
   return items;
 }
 
-// ---------------------------------------------------------------- 上一处 / 下一处
+// ---------------------------------------------------------------- 上一處 / 下一處
 
 function step(delta: number): void {
   const count = shownDiff?.changes ?? 0;
@@ -621,16 +621,16 @@ function markCurrent(): void {
   }
 }
 
-// ---------------------------------------------------------------- 用回这一处、在编辑器里打开
+// ---------------------------------------------------------------- 用回這一處、在編輯器裡開啟
 
-/** 第 `index` 处改动（按画出来的那一份比较）。编辑器里那份在画完之后又变了：先重比，不拿旧下标改。 */
+/** 第 `index` 處改動（按畫出來的那一份比較）。編輯器裡那份在畫完之後又變了：先重比，不拿舊下標改。 */
 function changeBlock(index: number): DiffBlock | undefined {
   if (!req || !shownDiff) {
     return undefined;
   }
   if (sideText('right') !== shownRight) {
     render();
-    toast('编辑区里这份刚变过，重新比过了：再点一次。');
+    toast('編輯區裡這份剛變過，重新比過了：再點一次。');
     return undefined;
   }
   return shownDiff.blocks.filter((b) => b.kind === 'change')[index];
@@ -644,7 +644,7 @@ function revertBlock(index: number): void {
   }
   const edit = revertEdit(shownDiff, block);
   post({ type: 'saveVersion', path: req.path, quiet: true });
-  // 那份文件可能就藏在这个标签后面：切过去改了再切回来（同一个任务里，中间不画）。对比区的滚动位置先记下。
+  // 那份檔案可能就藏在這個標籤後面：切過去改了再切回來（同一個任務裡，中間不畫）。對比區的滾動位置先記下。
   const top = view?.body.scrollTop ?? 0;
   const back = pane.activeSpecial() === VERSION_DIFF_TAB;
   if (pane.activePath !== req.path) {

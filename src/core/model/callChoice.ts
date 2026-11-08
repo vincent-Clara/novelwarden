@@ -1,54 +1,54 @@
 /**
- * 调模型之前那一问里的两个下拉框：作者为**这一次**挑模型与上下文详细度，不写回设置
+ * 調模型之前那一問裡的兩個下拉框：作者為**這一次**挑模型與上下文詳細度，不寫回設定
  * （docs/design/plans/2026-10-20-call-choice.md）。
  *
- * 宿主怎么问见 `Host.confirmCall`，core 只经 `features/askCall.ts` 问；挑完的活跑在
- * `runtime/callScope.ts` 的 `withCallChoice` 里，`readConfig()` 在那里面读到的就是这一份。
+ * 宿主怎麼問見 `Host.confirmCall`，core 只經 `features/askCall.ts` 問；挑完的活跑在
+ * `runtime/callScope.ts` 的 `withCallChoice` 裡，`readConfig()` 在那裡面讀到的就是這一份。
  *
- * 纯数据 + 纯函数，只 import 同样零 import 的 `contextDetail.ts`：经 `media/src/protocol.ts` 打进浏览器产物，
- * 下拉框上的字与日志、VS Code 模态框里的那一行是同一份。
+ * 純資料 + 純函式，只 import 同樣零 import 的 `contextDetail.ts`：經 `media/src/protocol.ts` 打進瀏覽器產物，
+ * 下拉框上的字與日誌、VS Code 模態框裡的那一行是同一份。
  */
 import { CONTEXT_DETAIL_LABEL, ContextDetail, isContextDetail } from './contextDetail';
 
-/** 作者为这一次挑的。缺席的那一项沿用外面那一次，再缺席沿用设置。 */
+/** 作者為這一次挑的。缺席的那一項沿用外面那一次，再缺席沿用設定。 */
 export interface CallChoice {
-  /** 只用这一个模型（不换人）。缺席 = 按分档。 */
+  /** 只用這一個模型（不換人）。缺席 = 按分檔。 */
   model?: string;
   contextDetail?: ContextDetail;
 }
 
-/** 确认框上的两个下拉框：选项与打开时选着哪个。 */
+/** 確認框上的兩個下拉框：選項與開啟時選著哪個。 */
 export interface CallPrompt {
-  /** 可选的模型，与对话页下拉框同一份（按服务商分组）。「按分档」不在这里，由界面放在第一项。 */
+  /** 可選的模型，與對話頁下拉框同一份（按服務商分組）。「按分檔」不在這裡，由介面放在第一項。 */
   models: { ref: string; label: string; group: string }[];
-  /** 打开时选着的模型；`''` = 按分档。 */
+  /** 開啟時選著的模型；`''` = 按分檔。 */
   model: string;
-  /** 按分档时这几项活各交给谁（`describeTaskModels`），一行一项。选了具体模型就不必看。 */
+  /** 按分檔時這幾項活各交給誰（`describeTaskModels`），一行一項。選了具體模型就不必看。 */
   tiers: string[];
-  /** 不管这一次挑哪个模型都照档走的活（眼下只有转写），一行一项，一直显示。 */
+  /** 不管這一次挑哪個模型都照檔走的活（眼下只有轉寫），一行一項，一直顯示。 */
   fixed?: string[];
-  /** 打开时的级别。缺席 = 这一次的上下文不看详细度，不显示那个下拉框。 */
+  /** 開啟時的級別。缺席 = 這一次的上下文不看詳細度，不顯示那個下拉框。 */
   contextDetail?: ContextDetail;
 }
 
-/** 确认框的回答：点的哪颗按钮，加上作者的选择。 */
+/** 確認框的回答：點的哪顆按鈕，加上作者的選擇。 */
 export interface CallAnswer {
   action: string;
   choice: CallChoice;
 }
 
-/** 模型下拉框的第一项：不指定模型，各项活按任务档位走。 */
-export const TIERED_LABEL = '按分档';
+/** 模型下拉框的第一項：不指定模型，各項活按任務檔位走。 */
+export const TIERED_LABEL = '按分檔';
 
-/** 「只用 openrouter/x · 上下文详细度「精简」」：日志与 VS Code 模态框里那一行。 */
+/** 「只用 openrouter/x · 上下文詳細度「精簡」」：日誌與 VS Code 模態框裡那一行。 */
 export function describeCallChoice(choice: CallChoice): string {
-  const model = choice.model ? `只用 ${choice.model}（失败不换人）` : TIERED_LABEL;
-  return choice.contextDetail ? `${model} · 上下文详细度「${CONTEXT_DETAIL_LABEL[choice.contextDetail]}」` : model;
+  const model = choice.model ? `只用 ${choice.model}（失敗不換人）` : TIERED_LABEL;
+  return choice.contextDetail ? `${model} · 上下文詳細度「${CONTEXT_DETAIL_LABEL[choice.contextDetail]}」` : model;
 }
 
 /**
- * 前端交上来的选择（工程页表单的 `projectAction.call`、网页弹窗的 `promptResult.choice`）的容错读取：
- * 不是对象 = 没有（表单没问过）；认不出的那一项丢掉，沿用设置。
+ * 前端交上來的選擇（工程頁表單的 `projectAction.call`、網頁彈窗的 `promptResult.choice`）的容錯讀取：
+ * 不是物件 = 沒有（表單沒問過）；認不出的那一項丟掉，沿用設定。
  */
 export function normalizeCallChoice(raw: unknown): CallChoice | undefined {
   if (!raw || typeof raw !== 'object') {

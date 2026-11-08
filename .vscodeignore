@@ -1,11 +1,11 @@
-# .vsix 里只需要 dist/ 的产物、package.json、README 与图标。
+# .vsix 裡只需要 dist/ 的產物、package.json、README 與圖示。
 #
-# 之所以现在才需要这个文件：桌面壳搬到了 src/shells/desktop/，Rust 的
-# target/ 会长到几个 G，落在 src/ 之下。没有这份清单，一次 vsce package
-# 会把它整个打进扩展包。
+# 之所以現在才需要這個檔案：桌面殼搬到了 src/shells/desktop/，Rust 的
+# target/ 會長到幾個 G，落在 src/ 之下。沒有這份清單，一次 vsce package
+# 會把它整個打進擴充套件包。
 #
-# 注意 dist/ 在 .gitignore 里但**不能**在这里排除——它就是扩展本体
-# （dist/extension.js 与 dist/media/ 的前端产物）。
+# 注意 dist/ 在 .gitignore 裡但**不能**在這裡排除——它就是擴充套件本體
+# （dist/extension.js 與 dist/media/ 的前端產物）。
 
 src/**
 tests/**
@@ -17,21 +17,21 @@ media/src/**
 .vscode/**
 bin/**
 
-# 本机私有目录（.gitignore / .git/info/exclude 里已排除，CI 的干净 checkout 不会有）。
-# 必须显式写在这里：**vsce 一旦发现 .vscodeignore 就完全不看 .gitignore**，
-# 少了这几行，.claude/（含 CLAUDE.md 与 worktree）会被原样打进扩展包发出去。
+# 本機私有目錄（.gitignore / .git/info/exclude 裡已排除，CI 的乾淨 checkout 不會有）。
+# 必須顯式寫在這裡：**vsce 一旦發現 .vscodeignore 就完全不看 .gitignore**，
+# 少了這幾行，.claude/（含 CLAUDE.md 與 worktree）會被原樣打進擴充套件包發出去。
 .claude/**
 .cursor/**
 .worktrees/**
 local/**
 temp/**
 
-# 独立版的单文件可执行（113 MB/个）。它是另一条发布路径的产物，不属于扩展。
-# 用通配是因为 release workflow 出的是带平台后缀的名字
+# 獨立版的單檔案可執行（113 MB/個）。它是另一條釋出路徑的產物，不屬於擴充套件。
+# 用通配是因為 release workflow 出的是帶平臺字尾的名字
 # （novelwarden-linux-x64 / novelwarden-windows-x64.exe），而 `npm run dist`
-# 出的是不带后缀的 novelwarden/novelwarden.exe——两种都要挡住。
-# 旧名产物也一并排除，免得本地还留着旧构建时被塞进扩展包。
-# dist/ 其余内容（extension.js 与 media/）是扩展本体，不能一起排除。
+# 出的是不帶字尾的 novelwarden/novelwarden.exe——兩種都要擋住。
+# 舊名產物也一併排除，免得本地還留著舊構建時被塞進擴充套件包。
+# dist/ 其餘內容（extension.js 與 media/）是擴充套件本體，不能一起排除。
 dist/novelwarden*
 dist/novelforge*
 

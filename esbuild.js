@@ -23,10 +23,10 @@ const problemMatcherPlugin = {
 };
 
 async function main() {
-  // 前端资源（media/src → dist/media/）与扩展主体一起构建：
-  // F5 调试前只跑 `npm run compile`，漏了这一步 webview 会 404。
+  // 前端資源（media/src → dist/media/）與擴充套件主體一起構建：
+  // F5 除錯前只跑 `npm run compile`，漏了這一步 webview 會 404。
   await buildMedia({ watch });
-  // 内置写作技能是仓库里的目录，bundle 之前先内嵌成 core 能 import 的生成文件（见那个脚本）。
+  // 內建寫作技能是倉庫裡的目錄，bundle 之前先內嵌成 core 能 import 的生成檔案（見那個指令碼）。
   embedSkills();
 
   const ctx = await esbuild.context({

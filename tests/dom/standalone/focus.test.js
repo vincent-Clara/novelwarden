@@ -1,25 +1,25 @@
 /**
- * 专注（`media/src/editor/focus.ts` / `typewriter.ts` / `paragraphFocus.ts`，菜单那一半在 `view/lookMenu.ts`）：
- * 专注模式、全屏、打字机滚动、段落聚焦。认段落、算滚动目标的纯函数在 tests/unit/editor/focusCore.test.js。
+ * 專注（`media/src/editor/focus.ts` / `typewriter.ts` / `paragraphFocus.ts`，選單那一半在 `view/lookMenu.ts`）：
+ * 專注模式、全屏、打字機滾動、段落聚焦。認段落、算滾動目標的純函式在 tests/unit/editor/focusCore.test.js。
  *
- * jsdom 没有排版：打字机滚动用 `mirrorLayout` 那份假排版（量位置那一份镜像里第 k 行的顶 = 18 + 30k，视口 300），
- * 只验「调了没有、滚到的目标对不对」；段落聚焦验镜像层上那一层 `<mark>` 包的是不是光标那一段。
- * jsdom 也没有 Fullscreen API——正好验「不支持就置灰」，支持的那一面在页面上补一个假的。
+ * jsdom 沒有排版：打字機滾動用 `mirrorLayout` 那份假排版（量位置那一份映象裡第 k 行的頂 = 18 + 30k，視口 300），
+ * 只驗「調了沒有、滾到的目標對不對」；段落聚焦驗映象層上那一層 `<mark>` 包的是不是游標那一段。
+ * jsdom 也沒有 Fullscreen API——正好驗「不支援就置灰」，支援的那一面在頁面上補一個假的。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 「视图」菜单 | 第三组「专注」：专注模式（F8）/ 全屏 / 打字机滚动 / 段落聚焦，开着的打 ✓ |
- * | 全屏 | 不支持时置灰、提示说不支持；支持时点了请求全屏、全屏中打 ✓、再点退出 |
- * | 专注模式 | 进出（菜单、F8、Esc）；Esc 先收查找条；组字中的 F8 不算；两块编辑区只专注当前那一块、当前那一块换了跟过去；记在偏好里、刷新还在 |
- * | 打字机滚动 | 打字、回车、方向键之后把光标那一行滚到视口中间；组字中途不滚、上屏才滚；滚轮翻看与点击不拉回、下一次打字才回来；关着不滚；底下垫半屏 |
- * | 段落聚焦 | 开了 textarea 调淡、镜像层 focus 图层包着光标那一段；换段跟着换；打字之后包进新字；按三种分段格式认；非正文不做；与查找高亮叠得上；关掉撤干净 |
+ * | 「檢視」選單 | 第三組「專注」：專注模式（F8）/ 全屏 / 打字機滾動 / 段落聚焦，開著的打 ✓ |
+ * | 全屏 | 不支援時置灰、提示說不支援；支援時點了請求全屏、全屏中打 ✓、再點退出 |
+ * | 專注模式 | 進出（選單、F8、Esc）；Esc 先收查詢條；組字中的 F8 不算；兩塊編輯區只專注當前那一塊、當前那一塊換了跟過去；記在偏好裡、重新整理還在 |
+ * | 打字機滾動 | 打字、回車、方向鍵之後把游標那一行滾到視口中間；組字中途不滾、上屏才滾；滾輪翻看與點選不拉回、下一次打字才回來；關著不滾；底下墊半屏 |
+ * | 段落聚焦 | 開了 textarea 調淡、映象層 focus 圖層包著游標那一段；換段跟著換；打字之後包進新字；按三種分段格式認；非正文不做；與查詢高亮疊得上；關掉撤乾淨 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { mount, JSDOM_SKIP, MIRROR_LAYOUT, file, viewState } = require('../../helpers/dom');
 
 const SHIMS = ['pointerCapture', 'confirm', 'scrollIntoView', 'clipboard'];
-/** 等两帧（jsdom 没有 rAF，退回 16ms 定时器）。 */
+/** 等兩幀（jsdom 沒有 rAF，退回 16ms 定時器）。 */
 const frames = () => new Promise((resolve) => setTimeout(resolve, 60));
 
 function harness(opts = {}) {
@@ -39,7 +39,7 @@ function harness(opts = {}) {
     return ui.doc.querySelector('.wb-menu-drop');
   };
   const closeBar = () => ui.doc.body.dispatchEvent(new ui.window.MouseEvent('click', { bubbles: true }));
-  /** 「视图」里那一项（开着菜单拿完就收）。 */
+  /** 「檢視」裡那一項（開著選單拿完就收）。 */
   const entry = (label) => {
     const btn = [...viewMenu().querySelectorAll('.wb-menu-item')].find((b) => b.querySelector('.wb-menu-label').textContent === label);
     closeBar();
@@ -47,11 +47,11 @@ function harness(opts = {}) {
   };
   const pickMenu = (label) => {
     const btn = [...viewMenu().querySelectorAll('.wb-menu-item')].find((b) => b.querySelector('.wb-menu-label').textContent === label);
-    assert.ok(btn, `「视图」里没有「${label}」`);
+    assert.ok(btn, `「檢視」裡沒有「${label}」`);
     ui.clickEl(btn);
   };
   const focusOn = () => ui.doc.body.classList.contains('nf-focus');
-  /** 在光标处打一个字（与真的打字一样：先改 value、落光标，再发 input）。 */
+  /** 在游標處打一個字（與真的打字一樣：先改 value、落游標，再發 input）。 */
   const type = (a, text, init = {}) => {
     const at = a.selectionStart;
     a.value = a.value.slice(0, at) + text + a.value.slice(a.selectionEnd);
@@ -61,14 +61,14 @@ function harness(opts = {}) {
   return { ui, main, draft, area, open, key, viewMenu, closeBar, entry, pickMenu, focusOn, type };
 }
 
-describe('专注：「视图」菜单那一组', { skip: JSDOM_SKIP }, () => {
+describe('專注：「檢視」選單那一組', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
     h.open('chapters/001.md', '雨夜。');
   });
 
-  test('第三组「专注」：专注模式（F8）、全屏、打字机滚动、段落聚焦，缺省都没打 ✓', () => {
+  test('第三組「專注」：專注模式（F8）、全屏、打字機滾動、段落聚焦，預設都沒打 ✓', () => {
     const drop = h.viewMenu();
     const groups = [[]];
     for (const node of drop.children) {
@@ -80,32 +80,32 @@ describe('专注：「视图」菜单那一组', { skip: JSDOM_SKIP }, () => {
       }
     }
     h.closeBar();
-    assert.deepEqual(groups[2], ['专注模式|F8|false', '全屏|false', '打字机滚动|false', '段落聚焦|false']);
+    assert.deepEqual(groups[2], ['專注模式|F8|false', '全屏|false', '打字機滾動|false', '段落聚焦|false']);
   });
 
-  test('jsdom 没有 Fullscreen API：「全屏」置灰，提示说不支持', () => {
+  test('jsdom 沒有 Fullscreen API：「全屏」置灰，提示說不支援', () => {
     const btn = h.entry('全屏');
-    assert.deepEqual([btn.disabled, btn.title], [true, '这个浏览器（或窗口）不支持全屏。']);
+    assert.deepEqual([btn.disabled, btn.title], [true, '這個瀏覽器（或視窗）不支援全屏。']);
   });
 
-  test('点「打字机滚动」：打 ✓', () => {
-    h.pickMenu('打字机滚动');
-    assert.equal(h.entry('打字机滚动').getAttribute('aria-checked'), 'true');
+  test('點「打字機滾動」：打 ✓', () => {
+    h.pickMenu('打字機滾動');
+    assert.equal(h.entry('打字機滾動').getAttribute('aria-checked'), 'true');
   });
 
-  test('点「段落聚焦」：打 ✓', () => {
+  test('點「段落聚焦」：打 ✓', () => {
     h.pickMenu('段落聚焦');
     assert.equal(h.entry('段落聚焦').getAttribute('aria-checked'), 'true');
   });
 });
 
-describe('专注：全屏（能力探测）', { skip: JSDOM_SKIP }, () => {
+describe('專注：全屏（能力探測）', { skip: JSDOM_SKIP }, () => {
   let h;
   const calls = [];
   before(() => {
     h = harness();
     h.open('chapters/001.md', '雨夜。');
-    // 补一个假的 Fullscreen API：浏览器支持全屏的那一面。
+    // 補一個假的 Fullscreen API：瀏覽器支援全屏的那一面。
     const { doc } = h.ui;
     let element = null;
     Object.defineProperty(doc, 'fullscreenEnabled', { configurable: true, get: () => true });
@@ -122,11 +122,11 @@ describe('专注：全屏（能力探测）', { skip: JSDOM_SKIP }, () => {
     };
   });
 
-  test('支持时「全屏」不置灰', () => {
+  test('支援時「全屏」不置灰', () => {
     assert.equal(h.entry('全屏').disabled, false);
   });
 
-  test('点了请求整个页面全屏', () => {
+  test('點了請求整個頁面全屏', () => {
     h.pickMenu('全屏');
     assert.deepEqual(calls, ['request']);
   });
@@ -135,47 +135,47 @@ describe('专注：全屏（能力探测）', { skip: JSDOM_SKIP }, () => {
     assert.equal(h.entry('全屏').getAttribute('aria-checked'), 'true');
   });
 
-  test('再点一次退出全屏', () => {
+  test('再點一次退出全屏', () => {
     h.pickMenu('全屏');
     assert.deepEqual([calls, h.entry('全屏').getAttribute('aria-checked')], [['request', 'exit'], 'false']);
   });
 
-  test('全屏不记进偏好（刷新回到窗口）', () => {
-    // 内存里那份偏好：专注那三项都还是关的，没有 fullscreen 这一项。
+  test('全屏不記進偏好（重新整理回到視窗）', () => {
+    // 記憶體裡那份偏好：專注那三項都還是關的，沒有 fullscreen 這一項。
     assert.equal(h.focusOn(), false);
   });
 });
 
-describe('专注：专注模式进出', { skip: JSDOM_SKIP }, () => {
+describe('專注：專注模式進出', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
-    h.open('chapters/001.md', '雨夜。\n\n林昭推门。');
+    h.open('chapters/001.md', '雨夜。\n\n林昭推門。');
   });
 
-  test('「视图 → 专注模式」：body 挂 nf-focus，当前那一块挂 ed-focused', () => {
-    h.pickMenu('专注模式');
+  test('「檢視 → 專注模式」：body 掛 nf-focus，當前那一塊掛 ed-focused', () => {
+    h.pickMenu('專注模式');
     assert.deepEqual([h.focusOn(), h.main().classList.contains('ed-focused')], [true, true]);
   });
 
-  test('菜单上打 ✓', () => {
-    assert.equal(h.entry('专注模式').getAttribute('aria-checked'), 'true');
+  test('選單上打 ✓', () => {
+    assert.equal(h.entry('專注模式').getAttribute('aria-checked'), 'true');
   });
 
-  test('编辑区里按 Esc：退出', () => {
+  test('編輯區裡按 Esc：退出', () => {
     h.area().focus();
     const ev = h.key(h.area(), { key: 'Escape' });
     assert.deepEqual([ev.defaultPrevented, h.focusOn(), h.main().classList.contains('ed-focused')], [true, false, false]);
   });
 
-  test('F8 进、再按 F8 出', () => {
+  test('F8 進、再按 F8 出', () => {
     const ev = h.key(h.area(), { key: 'F8' });
     const entered = h.focusOn();
     h.key(h.area(), { key: 'F8' });
     assert.deepEqual([ev.defaultPrevented, entered, h.focusOn()], [true, true, false]);
   });
 
-  test('焦点在对话输入框里也认 F8（那里它没有别的用处）', () => {
+  test('焦點在對話輸入框裡也認 F8（那裡它沒有別的用處）', () => {
     const input = h.ui.doc.getElementById('input');
     input.focus();
     h.key(input, { key: 'F8' });
@@ -184,7 +184,7 @@ describe('专注：专注模式进出', { skip: JSDOM_SKIP }, () => {
     assert.equal(on, true);
   });
 
-  test('从被藏起来的地方（对话输入框）进专注模式：焦点放进正文，不落在看不见的框里', () => {
+  test('從被藏起來的地方（對話輸入框）進專注模式：焦點放進正文，不落在看不見的框裡', () => {
     const input = h.ui.doc.getElementById('input');
     input.focus();
     h.key(input, { key: 'F8' });
@@ -193,18 +193,18 @@ describe('专注：专注模式进出', { skip: JSDOM_SKIP }, () => {
     assert.equal(focused, h.area());
   });
 
-  test('输入法组字中的 F8 不算', () => {
+  test('輸入法組字中的 F8 不算', () => {
     h.area().focus();
     h.key(h.area(), { key: 'F8', isComposing: true });
     assert.equal(h.focusOn(), false);
   });
 
-  test('带修饰键的 F8 不算', () => {
+  test('帶修飾鍵的 F8 不算', () => {
     h.key(h.area(), { key: 'F8', ctrlKey: true });
     assert.equal(h.focusOn(), false);
   });
 
-  test('Esc 先收查找条：查找条开着时只收它，再按一次才退出专注模式', () => {
+  test('Esc 先收查詢條：查詢條開著時只收它，再按一次才退出專注模式', () => {
     h.key(h.area(), { key: 'F8' });
     h.key(h.area(), { key: 'f', ctrlKey: true });
     h.area().focus();
@@ -215,7 +215,7 @@ describe('专注：专注模式进出', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([...after1, h.focusOn()], [true, true, false]);
   });
 
-  test('菜单开着时 Esc 只收菜单，不连带退出专注模式', () => {
+  test('選單開著時 Esc 只收選單，不連帶退出專注模式', () => {
     h.key(h.area(), { key: 'F8' });
     h.viewMenu();
     h.key(h.area(), { key: 'Escape' });
@@ -224,16 +224,16 @@ describe('专注：专注模式进出', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([...after1, h.focusOn()], [null, true, false]);
   });
 
-  test('外观面板开着时 Esc 只收面板', () => {
+  test('外觀面板開著時 Esc 只收面板', () => {
     h.key(h.area(), { key: 'F8' });
-    h.pickMenu('外观设置…');
+    h.pickMenu('外觀設定…');
     h.key(h.ui.doc.querySelector('.ed-look-font'), { key: 'Escape' });
     const after1 = [h.ui.doc.querySelector('.ed-look'), h.focusOn()];
     h.key(h.area(), { key: 'Escape' });
     assert.deepEqual([...after1, h.focusOn()], [null, true, false]);
   });
 
-  test('专注模式下状态栏淡成一行，码字统计那一格照样点得开面板', () => {
+  test('專注模式下狀態列淡成一行，碼字統計那一格照樣點得開面板', () => {
     h.key(h.area(), { key: 'F8' });
     const status = h.main().querySelector('.ed-status');
     h.ui.clickEl(h.ui.doc.getElementById('edStatusWords'));
@@ -241,7 +241,7 @@ describe('专注：专注模式进出', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([h.focusOn(), status.classList.contains('hidden'), !!panel, panel?.parentElement], [true, false, true, h.ui.doc.body]);
   });
 
-  test('码字统计面板开着时 Esc 先收面板，再按一次才退出专注模式', () => {
+  test('碼字統計面板開著時 Esc 先收面板，再按一次才退出專注模式', () => {
     h.area().focus();
     h.key(h.area(), { key: 'Escape' });
     const after1 = [h.ui.doc.querySelector('.ed-stats-panel'), h.focusOn()];
@@ -249,21 +249,21 @@ describe('专注：专注模式进出', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([...after1, h.focusOn()], [null, true, false]);
   });
 
-  test('没开专注模式时 Esc 什么都不拦', () => {
+  test('沒開專注模式時 Esc 什麼都不攔', () => {
     const ev = h.key(h.area(), { key: 'Escape' });
     assert.equal(ev.defaultPrevented, false);
   });
 });
 
-describe('专注：两块编辑区只专注当前那一块', { skip: JSDOM_SKIP }, () => {
+describe('專注：兩塊編輯區只專注當前那一塊', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
     h.open('chapters/001.md', '正文。');
-    h.open('.novelwarden/summaries/001.md', '细纲。', { kind: 'plot' }, { pane: 'draft' });
+    h.open('.novelwarden/summaries/001.md', '細綱。', { kind: 'plot' }, { pane: 'draft' });
   });
 
-  test('右边那一块是当前的：专注它，左边那块不挂', () => {
+  test('右邊那一塊是當前的：專注它，左邊那塊不掛', () => {
     h.key(h.area(h.draft()), { key: 'F8' });
     assert.deepEqual(
       [h.draft().classList.contains('ed-focused'), h.main().classList.contains('ed-focused')],
@@ -271,7 +271,7 @@ describe('专注：两块编辑区只专注当前那一块', { skip: JSDOM_SKIP 
     );
   });
 
-  test('当前那一块换了（从别处打开了左边的文件）：专注跟过去', () => {
+  test('當前那一塊換了（從別處開啟了左邊的檔案）：專注跟過去', () => {
     h.open('chapters/002.md', '第二章。');
     assert.deepEqual(
       [h.main().classList.contains('ed-focused'), h.draft().classList.contains('ed-focused')],
@@ -279,18 +279,18 @@ describe('专注：两块编辑区只专注当前那一块', { skip: JSDOM_SKIP 
     );
   });
 
-  test('退出之后两块都不挂', () => {
+  test('退出之後兩塊都不掛', () => {
     h.key(h.area(), { key: 'F8' });
     assert.equal(h.ui.doc.querySelectorAll('.ed-focused').length, 0);
   });
 });
 
-describe('专注：开关记在偏好里', { skip: JSDOM_SKIP }, () => {
-  test('三个开关记进 novelforge.editor.prefs（与成对符号同一处）', () => {
+describe('專注：開關記在偏好裡', { skip: JSDOM_SKIP }, () => {
+  test('三個開關記進 novelforge.editor.prefs（與成對符號同一處）', () => {
     const h = harness({ storage: { 'novelforge.editor.prefs': JSON.stringify({ autoPair: false }) } });
     h.open('chapters/001.md', '雨夜。');
-    h.pickMenu('专注模式');
-    h.pickMenu('打字机滚动');
+    h.pickMenu('專注模式');
+    h.pickMenu('打字機滾動');
     h.pickMenu('段落聚焦');
     const saved = JSON.parse(h.ui.window.localStorage.getItem('novelforge.editor.prefs'));
     assert.deepEqual(
@@ -299,15 +299,15 @@ describe('专注：开关记在偏好里', { skip: JSDOM_SKIP }, () => {
     );
   });
 
-  test('关掉就从偏好里删掉那一项', () => {
+  test('關掉就從偏好裡刪掉那一項', () => {
     const h = harness({ storage: { 'novelforge.editor.prefs': JSON.stringify({ focusMode: true }) } });
     h.open('chapters/001.md', '雨夜。');
-    h.pickMenu('专注模式');
+    h.pickMenu('專注模式');
     const saved = JSON.parse(h.ui.window.localStorage.getItem('novelforge.editor.prefs'));
     assert.equal('focusMode' in saved, false);
   });
 
-  test('刷新之后还在专注模式里', () => {
+  test('重新整理之後還在專注模式裡', () => {
     const h = harness({ storage: { 'novelforge.editor.prefs': JSON.stringify({ focusMode: true, typewriter: true }) } });
     h.open('chapters/001.md', '雨夜。');
     assert.deepEqual(
@@ -316,19 +316,19 @@ describe('专注：开关记在偏好里', { skip: JSDOM_SKIP }, () => {
     );
   });
 
-  test('写坏的值（"true"）当关', () => {
+  test('寫壞的值（"true"）當關', () => {
     const h = harness({ storage: { 'novelforge.editor.prefs': JSON.stringify({ focusMode: 'true' }) } });
     assert.equal(h.focusOn(), false);
   });
 });
 
-describe('专注：打字机滚动', { skip: JSDOM_SKIP }, () => {
+describe('專注：打字機滾動', { skip: JSDOM_SKIP }, () => {
   let h;
   const { line, pad, viewport } = MIRROR_LAYOUT;
-  /** 第 k 行（从 0 起）的中线滚到视口中间时的 scrollTop。 */
+  /** 第 k 行（從 0 起）的中線滾到視口中間時的 scrollTop。 */
   const centered = (k) => Math.max(0, Math.round(pad + k * line + line / 2 - viewport / 2));
   const TEXT = Array.from({ length: 60 }, (_, i) => `第${i}行。`).join('\n');
-  /** 编辑区里**当下**第 k 行（从 0 起）的行首（打过回车之后行号会挪）。 */
+  /** 編輯區裡**當下**第 k 行（從 0 起）的行首（打過回車之後行號會挪）。 */
   const lineStart = (k) => {
     const lines = h.area().value.split('\n');
     return lines.slice(0, k).join('\n').length + (k > 0 ? 1 : 0);
@@ -337,14 +337,14 @@ describe('专注：打字机滚动', { skip: JSDOM_SKIP }, () => {
   before(() => {
     h = harness({ shims: [...SHIMS, 'mirrorLayout'] });
     h.open('chapters/001.md', TEXT);
-    h.pickMenu('打字机滚动');
+    h.pickMenu('打字機滾動');
   });
 
-  test('开着时 body 挂 nf-typewriter（编辑区底下垫半屏）', () => {
+  test('開著時 body 掛 nf-typewriter（編輯區底下墊半屏）', () => {
     assert.equal(h.ui.doc.body.classList.contains('nf-typewriter'), true);
   });
 
-  test('打字之后：光标那一行滚到视口中间', async () => {
+  test('打字之後：游標那一行滾到視口中間', async () => {
     const a = h.area();
     a.focus();
     a.setSelectionRange(lineStart(20) + 2, lineStart(20) + 2);
@@ -354,23 +354,23 @@ describe('专注：打字机滚动', { skip: JSDOM_SKIP }, () => {
     assert.equal(a.scrollTop, centered(20));
   });
 
-  test('回车之后：新的那一段滚到中间（空行分段：回车另起一段，中间空一行）', async () => {
+  test('回車之後：新的那一段滾到中間（空行分段：回車另起一段，中間空一行）', async () => {
     const a = h.area();
     h.key(a, { key: 'Enter' });
     await frames();
     assert.equal(a.scrollTop, centered(22));
   });
 
-  test('方向键挪了光标：下一帧滚过去', async () => {
+  test('方向鍵挪了游標：下一幀滾過去', async () => {
     const a = h.area();
-    // keydown 时浏览器还没挪光标（jsdom 不挪）：先把光标放到第 30 行，再发那一下方向键。
+    // keydown 時瀏覽器還沒挪游標（jsdom 不挪）：先把游標放到第 30 行，再發那一下方向鍵。
     a.setSelectionRange(lineStart(30), lineStart(30));
     h.key(a, { key: 'ArrowDown' });
     await frames();
     assert.equal(a.scrollTop, centered(30));
   });
 
-  test('组字中途不滚，上屏那一下才滚', async () => {
+  test('組字中途不滾，上屏那一下才滾', async () => {
     const a = h.area();
     a.setSelectionRange(lineStart(40), lineStart(40));
     a.scrollTop = 7;
@@ -386,7 +386,7 @@ describe('专注：打字机滚动', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([during, a.scrollTop], [7, centered(40)]);
   });
 
-  test('用滚轮翻看前文：不拉回来（点一下也不）', async () => {
+  test('用滾輪翻看前文：不拉回來（點一下也不）', async () => {
     const a = h.area();
     a.scrollTop = 0;
     a.dispatchEvent(new h.ui.window.Event('scroll'));
@@ -397,14 +397,14 @@ describe('专注：打字机滚动', { skip: JSDOM_SKIP }, () => {
     assert.equal(a.scrollTop, 0);
   });
 
-  test('下一次打字才回到光标那里', async () => {
+  test('下一次打字才回到游標那裡', async () => {
     const a = h.area();
     h.type(a, '字');
     await frames();
     assert.equal(a.scrollTop, centered(40));
   });
 
-  test('焦点不在编辑区（别处改写了正文）：不滚', async () => {
+  test('焦點不在編輯區（別處改寫了正文）：不滾', async () => {
     const a = h.area();
     a.scrollTop = 3;
     h.ui.doc.getElementById('input').focus();
@@ -413,8 +413,8 @@ describe('专注：打字机滚动', { skip: JSDOM_SKIP }, () => {
     assert.equal(a.scrollTop, 3);
   });
 
-  test('关掉之后：打字不滚', async () => {
-    h.pickMenu('打字机滚动');
+  test('關掉之後：打字不滾', async () => {
+    h.pickMenu('打字機滾動');
     const a = h.area();
     a.focus();
     a.setSelectionRange(lineStart(50), lineStart(50));
@@ -425,10 +425,10 @@ describe('专注：打字机滚动', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('专注：段落聚焦', { skip: JSDOM_SKIP }, () => {
+describe('專注：段落聚焦', { skip: JSDOM_SKIP }, () => {
   let h;
-  const TEXT = '第一段。\n\n第二段前半，\n续行。\n\n第三段。';
-  /** 镜像层上 focus 那一层包着的字（可能被查找高亮切成几截，拼起来）。 */
+  const TEXT = '第一段。\n\n第二段前半，\n續行。\n\n第三段。';
+  /** 映象層上 focus 那一層包著的字（可能被查詢高亮切成幾截，拼起來）。 */
   const focused = (root = h.main()) =>
     [...root.querySelectorAll('.ed-mirror:not(.ed-mirror-probe) mark.ed-hl-focus')].map((m) => m.textContent).join('');
   const dimmed = (root = h.main()) => h.area(root).classList.contains('ed-para-dim');
@@ -443,31 +443,31 @@ describe('专注：段落聚焦', { skip: JSDOM_SKIP }, () => {
     h.open('chapters/001.md', TEXT);
     const a = h.area();
     a.focus();
-    a.setSelectionRange(TEXT.indexOf('续行'), TEXT.indexOf('续行'));
+    a.setSelectionRange(TEXT.indexOf('續行'), TEXT.indexOf('續行'));
   });
 
-  test('关着时：不调淡、镜像层上没有这一层', () => {
+  test('關著時：不調淡、映象層上沒有這一層', () => {
     assert.deepEqual([dimmed(), focused()], [false, '']);
   });
 
-  test('打开：textarea 的字调淡，镜像层用实色画光标那一段', () => {
+  test('開啟：textarea 的字調淡，映象層用實色畫游標那一段', () => {
     h.pickMenu('段落聚焦');
-    assert.deepEqual([dimmed(), focused()], [true, '第二段前半，\n续行。']);
+    assert.deepEqual([dimmed(), focused()], [true, '第二段前半，\n續行。']);
   });
 
-  test('光标换到别的段：图层跟着换', () => {
+  test('游標換到別的段：圖層跟著換', () => {
     moveTo(h.area(), TEXT.indexOf('第三段'));
     assert.equal(focused(), '第三段。');
   });
 
-  test('鼠标点过去也换', () => {
+  test('滑鼠點過去也換', () => {
     const a = h.area();
     a.setSelectionRange(1, 1);
     a.dispatchEvent(new h.ui.window.MouseEvent('mouseup', { bubbles: true }));
     assert.equal(focused(), '第一段。');
   });
 
-  test('打字之后：新打的字也在这一段里（同一轮就画好，不闪）', async () => {
+  test('打字之後：新打的字也在這一段裡（同一輪就畫好，不閃）', async () => {
     const a = h.area();
     a.setSelectionRange(4, 4);
     h.type(a, '雨');
@@ -475,7 +475,7 @@ describe('专注：段落聚焦', { skip: JSDOM_SKIP }, () => {
     assert.equal(focused(), '第一段。雨');
   });
 
-  test('输入法组字中途：拼音也算在这一段里', async () => {
+  test('輸入法組字中途：拼音也算在這一段裡', async () => {
     const a = h.area();
     a.dispatchEvent(new h.ui.window.CompositionEvent('compositionstart', { bubbles: true }));
     h.type(a, 'xia', { inputType: 'insertCompositionText', isComposing: true });
@@ -488,12 +488,12 @@ describe('专注：段落聚焦', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([during, focused()], ['第一段。雨xia', '第一段。雨下']);
   });
 
-  test('光标在空行上（新起的一段还没有字）：哪一段都不画实色', () => {
+  test('游標在空行上（新起的一段還沒有字）：哪一段都不畫實色', () => {
     moveTo(h.area(), h.area().value.indexOf('\n\n') + 1);
     assert.deepEqual([dimmed(), focused()], [true, '']);
   });
 
-  test('与查找高亮叠得上：两层的 class 落在同一段字上', async () => {
+  test('與查詢高亮疊得上：兩層的 class 落在同一段字上', async () => {
     const a = h.area();
     moveTo(a, a.value.indexOf('第三段'));
     h.key(a, { key: 'f', ctrlKey: true });
@@ -507,19 +507,19 @@ describe('专注：段落聚焦', { skip: JSDOM_SKIP }, () => {
     h.key(input, { key: 'Escape' });
   });
 
-  test('按工程的分段格式认：段首缩进时，有缩进的那一行另起一段', () => {
+  test('按工程的分段格式認：段首縮排時，有縮排的那一行另起一段', () => {
     h.ui.post({ type: 'state', state: viewState({ paragraphStyle: 'indent' }) });
-    const text = '　　甲段，\n续行。\n　　乙段。';
+    const text = '　　甲段，\n續行。\n　　乙段。';
     h.open('chapters/002.md', text);
     const a = h.area();
     a.focus();
-    moveTo(a, text.indexOf('续行'));
+    moveTo(a, text.indexOf('續行'));
     const first = focused();
     moveTo(a, text.indexOf('乙段'));
-    assert.deepEqual([first, focused()], ['　　甲段，\n续行。', '　　乙段。']);
+    assert.deepEqual([first, focused()], ['　　甲段，\n續行。', '　　乙段。']);
   });
 
-  test('非正文（角色卡、细纲）不做：不调淡、没有这一层', () => {
+  test('非正文（角色卡、細綱）不做：不調淡、沒有這一層', () => {
     h.open('.novelwarden/characters/林昭.md', '# 林昭\n\n主角。', { kind: 'character' });
     assert.deepEqual([dimmed(), focused()], [false, '']);
   });
@@ -529,7 +529,7 @@ describe('专注：段落聚焦', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([dimmed(), focused() !== ''], [true, true]);
   });
 
-  test('预览里不画（textarea 藏着）', () => {
+  test('預覽裡不畫（textarea 藏著）', () => {
     h.open('chapters/003.md', '甲。\n\n乙。');
     h.ui.clickEl(h.ui.doc.getElementById('edPreviewBtn'));
     const inPreview = [dimmed(), focused()];
@@ -537,18 +537,18 @@ describe('专注：段落聚焦', { skip: JSDOM_SKIP }, () => {
     assert.deepEqual([...inPreview, dimmed()], [false, '', true]);
   });
 
-  test('超过 30 万字不画，也不调淡（不至于整篇都是淡字）', () => {
+  test('超過 30 萬字不畫，也不調淡（不至於整篇都是淡字）', () => {
     h.open('chapters/004.md', `${'字'.repeat(300_001)}`);
     assert.deepEqual([dimmed(), focused()], [false, '']);
   });
 
-  test('关掉：调淡撤掉、图层清掉', () => {
+  test('關掉：調淡撤掉、圖層清掉', () => {
     h.ui.clickEl([...h.main().querySelectorAll('.ed-tab')].find((t) => t.textContent.includes('003')));
     h.pickMenu('段落聚焦');
     assert.deepEqual([dimmed(), focused()], [false, '']);
   });
 
-  test('右边那一块各认各的光标', () => {
+  test('右邊那一塊各認各的游標', () => {
     h.pickMenu('段落聚焦');
     h.open('drafts/001.md', '草稿甲。\n\n草稿乙。', { kind: 'draft' }, { pane: 'draft' });
     const a = h.area(h.draft());

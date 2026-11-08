@@ -1,16 +1,16 @@
 /**
- * 工程页的五个页签：概览 / 章节 / 角色 / 设定 / 叙事线。
+ * 工程頁的五個頁籤：概覽 / 章節 / 角色 / 設定 / 敘事線。
  *
- * 从前一页从上到下摊着故事架构、章节、角色、设定……几百行，找一个区要翻很久。章节、角色、设定
- * 各占一页，其余（故事架构、文风与摘要、定稿进度横幅）留在「概览」。叙事线（叙事线重做第 8 个提交）同一个思路
- * 单占一页、排在设定后面：一条线一行，从前「文风与摘要」组里那一行计数删了。
+ * 從前一頁從上到下攤著故事架構、章節、角色、設定……幾百行，找一個區要翻很久。章節、角色、設定
+ * 各佔一頁，其餘（故事架構、文風與摘要、定稿進度橫幅）留在「概覽」。敘事線（敘事線重做第 8 個提交）同一個思路
+ * 單佔一頁、排在設定後面：一條線一行，從前「文風與摘要」組裡那一行計數刪了。
  *
- * 五页的内容每次都全画（`index.ts` 把各组装进各自的 `.project-panel`），切页签只换哪一块露出来——
- * 不重画、不往后端要数据；分组的右键菜单、三只浮窗挂在 `#projectBody` 上的事件委托都照旧。
- * 当前页签与折叠开合同一个待遇：只在前端，重推树不换页。
+ * 五頁的內容每次都全畫（`index.ts` 把各組裝進各自的 `.project-panel`），切頁籤只換哪一塊露出來——
+ * 不重畫、不往後端要資料；分組的右鍵選單、三隻浮窗掛在 `#projectBody` 上的事件委託都照舊。
+ * 當前頁籤與摺疊開合同一個待遇：只在前端，重推樹不換頁。
  *
- * 五页共用 `#projectBody` 这一个滚动容器（它不随重画换掉，重推树时滚动位置才留得住），
- * 所以各页滚到哪由这里记：切走时记下，切回来放回去。
+ * 五頁共用 `#projectBody` 這一個滾動容器（它不隨重畫換掉，重推樹時滾動位置才留得住），
+ * 所以各頁滾到哪由這裡記：切走時記下，切回來放回去。
  */
 import { el as mk } from '../../dom';
 import { el } from '../refs';
@@ -22,7 +22,7 @@ const TABS: readonly ProjectTab[] = ['overview', 'chapters', 'characters', 'lore
 let current: ProjectTab = 'overview';
 const scrollOf: Partial<Record<ProjectTab, number>> = {};
 
-/** 一页的容器。按当前页签决定露不露，整页重画之后不用再同步一遍。 */
+/** 一頁的容器。按當前頁籤決定露不露，整頁重畫之後不用再同步一遍。 */
 export function buildPanel(tab: ProjectTab): HTMLElement {
   const panel = mk('div', 'project-panel');
   panel.dataset.projectPanel = tab;
@@ -32,7 +32,7 @@ export function buildPanel(tab: ProjectTab): HTMLElement {
   return panel;
 }
 
-/** 切到某一页：记下这一页滚到哪，放回那一页上次的位置。 */
+/** 切到某一頁：記下這一頁滾到哪，放回那一頁上次的位置。 */
 export function showProjectTab(tab: ProjectTab, focus = false): void {
   if (tab !== current) {
     scrollOf[current] = el.projectBody.scrollTop;
@@ -53,7 +53,7 @@ export function showProjectTab(tab: ProjectTab, focus = false): void {
   el.projectBody.scrollTop = scrollOf[tab] ?? 0;
 }
 
-/** 点页签切页；左右方向键、Home / End 在页签之间走（同设置页的分类页签）。 */
+/** 點頁籤切頁；左右方向鍵、Home / End 在頁籤之間走（同設定頁的分類頁籤）。 */
 export function installProjectTabs(): void {
   for (const btn of el.projectTabs.querySelectorAll<HTMLButtonElement>('[data-project-tab]')) {
     const tab = btn.dataset.projectTab as ProjectTab;

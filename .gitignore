@@ -1,6 +1,6 @@
 node_modules/
-# 全部构建产物都在这里：dist/extension.js、dist/media/（前端，源码在 media/src/）、
-# dist/novelwarden（单文件可执行）。一处都不入库。
+# 全部構建產物都在這裡：dist/extension.js、dist/media/（前端，原始碼在 media/src/）、
+# dist/novelwarden（單檔案可執行）。一處都不入庫。
 dist/
 out/
 *.vsix
@@ -11,8 +11,8 @@ src/core/skills/builtin/embedded.ts
 sample-novel/.novelwarden/sessions
 sample-novel/.novelforge/sessions
 
-# 工程数据库（失败记录 + 日志历史）。它是可丢弃的痕迹，不是内容——
-# 内容一律是 Markdown。WAL 模式还会带出 -wal / -shm 两个附属文件。
+# 工程資料庫（失敗記錄 + 日誌歷史）。它是可丟棄的痕跡，不是內容——
+# 內容一律是 Markdown。WAL 模式還會帶出 -wal / -shm 兩個附屬檔案。
 *.db
 *.db-wal
 *.db-shm
@@ -22,10 +22,10 @@ sample-novel/.novelforge/sessions
 temp/
 local/
 
-# git worktree 隔离目录（见 .worktrees/）
+# git worktree 隔離目錄（見 .worktrees/）
 .worktrees/
 
-# 桌面壳的构建产物：sidecar 可执行文件（由 scripts/build-sidecar.js 生成，
-# 与 dist/novelwarden 同源）与 Rust 编译中间产物。壳的源码本身是入库的。
+# 桌面殼的構建產物：sidecar 可執行檔案（由 scripts/build-sidecar.js 生成，
+# 與 dist/novelwarden 同源）與 Rust 編譯中間產物。殼的原始碼本身是入庫的。
 src/shells/desktop/binaries/
 src/shells/desktop/target/

@@ -1,3 +1,4 @@
+import { traditionalLabel } from '../../model/labels';
 import { isLoreSettle, loreOfTarget, plotLabel } from '../../model/pipeline';
 import { describeStateThrough } from '../../model/characterState';
 import { CONTEXT_DETAIL_LABEL, takeLast } from '../../model/contextDetail';
@@ -38,7 +39,7 @@ export const style: LayerFn = async (a, spec) => {
       id: 'style',
       kind: 'style',
       priority: spec.priority,
-      label: '文风指南',
+      label: '文風指南',
       source: a.project.relPath(a.project.stylePath),
       text,
     },
@@ -56,7 +57,7 @@ export const globalSummary: LayerFn = async (a, spec) => {
       id: 'globalSummary',
       kind: 'globalSummary',
       priority: spec.priority,
-      label: '全文大纲',
+      label: '全文大綱',
       source: a.project.relPath(a.project.globalSummaryPath),
       text: summary,
     },
@@ -65,19 +66,19 @@ export const globalSummary: LayerFn = async (a, spec) => {
 };
 
 /**
- * 相关角色的卡（计划出场、提到的、前几章出场的、主角）。整张带不下就只带要点（{@link essentialCardKeys}），
- * 上下文详细度「精简」一律只带要点。
+ * 相關角色的卡（計劃出場、提到的、前幾章出場的、主角）。整張帶不下就只帶要點（{@link essentialCardKeys}），
+ * 上下文詳細度「精簡」一律只帶要點。
  *
- * 「暗设」（叙事线重做：原「未收伏笔」，设计稿「六、角色卡」⚑ 定案 B）与设定条目的暗设同一个口径（第 27 条，见下面
- * `lore` 层）：正文阶段（写、接着写、重写、讨论正文，连同审稿与修稿——它们也是正文那一层）与续写不带，这张卡真有暗设
- * 被去掉才在明细里注一句（第 2 条）；架构、大纲、细纲整份带，标题写「暗设（读者还不知道）」（`render.ts` 的
+ * 「暗設」（敘事線重做：原「未收伏筆」，設計稿「六、角色卡」⚑ 定案 B）與設定條目的暗設同一個口徑（第 27 條，見下面
+ * `lore` 層）：正文階段（寫、接著寫、重寫、討論正文，連同審稿與修稿——它們也是正文那一層）與續寫不帶，這張卡真有暗設
+ * 被去掉才在明細裡注一句（第 2 條）；架構、大綱、細綱整份帶，標題寫「暗設（讀者還不知道）」（`render.ts` 的
  * `renderCharacter`）。
  */
 export const characters: LayerFn = async (a, spec) => {
   const all = await a.project.listCharacters();
   const relevant = selectCharacters(all, a.request.ask, a.focus, a.limits.castSummaries);
   const writing = a.request.action.stage === 'manuscript' || a.request.step?.kind === 'continuation';
-  const essentialLabel = essentialCardKeys(!writing).join('/');
+  const essentialLabel = essentialCardKeys(!writing).map(traditionalLabel).join('/');
   for (const { card, reason } of relevant) {
     const id = `character:${card.slug}`;
     const base = {
@@ -91,12 +92,12 @@ export const characters: LayerFn = async (a, spec) => {
       a.admit({ ...base, text: '' });
       continue;
     }
-    // 「当前状态」写到第几章（D23）：上一章没定稿时，这里说的是更早那一章结束时的样子。
+    // 「當前狀態」寫到第幾章（D23）：上一章沒定稿時，這裡說的是更早那一章結束時的樣子。
     const through = describeStateThrough(card.stateThrough);
     const why = through ? `${reason}；${through}` : reason;
-    // 写正文时这张卡真有暗设被去掉：注一句（没有暗设的卡注了只是噪音）。
+    // 寫正文時這張卡真有暗設被去掉：注一句（沒有暗設的卡注了只是噪音）。
     const hidden = writing && cardHidden(card) ? `；${LORE_HIDDEN_DROPPED_NOTE}` : '';
-    // 上下文详细度「精简」：一律只带要点，不先试整张卡。
+    // 上下文詳細度「精簡」：一律只帶要點，不先試整張卡。
     if (!a.limits.essentialCards) {
       const fullText = renderCharacter(card, false, !writing);
       const fullTokens = estimateTokens(fullText);
@@ -114,49 +115,49 @@ export const characters: LayerFn = async (a, spec) => {
           text: essential,
           status: 'degraded',
           note: a.limits.essentialCards
-            ? `${why}；上下文详细度「${CONTEXT_DETAIL_LABEL[a.detail]}」只带${essentialLabel}${hidden}`
-            : `${why}；预算不足，仅保留${essentialLabel}${hidden}`,
+            ? `${why}；上下文詳細度「${CONTEXT_DETAIL_LABEL[a.detail]}」只帶${essentialLabel}${hidden}`
+            : `${why}；預算不足，僅保留${essentialLabel}${hidden}`,
         },
         essentialTokens
       );
     } else {
-      a.reject({ ...base, text: '' }, 'dropped', `${why}；预算不足`);
+      a.reject({ ...base, text: '' }, 'dropped', `${why}；預算不足`);
     }
   }
 };
 
 /**
- * 设定（设定名录，2026-10-18）。几百条的书不能「命中就整条塞」：先排序，再分两种形态装，按上下文
- * 详细度封顶，降级与丢弃都留在明细里（第 2 条）。
+ * 設定（設定名錄，2026-10-18）。幾百條的書不能「命中就整條塞」：先排序，再分兩種形態裝，按上下文
+ * 詳細度封頂，降級與丟棄都留在明細裡（第 2 條）。
  *
- * 顺位：
- * - R0 本章细纲「设定」一节点名的（没定稿是计划，定稿过是实际）——整条；
- * - R1 关键词命中：作者这次的话 + 本章细纲（接着写时再加本章已写的末尾）——整条；最长匹配，被别人更长的名字包住的不算
+ * 順位：
+ * - R0 本章細綱「設定」一節點名的（沒定稿是計劃，定稿過是實際）——整條；
+ * - R1 關鍵詞命中：作者這次的話 + 本章細綱（接著寫時再加本章已寫的末尾）——整條；最長匹配，被別人更長的名字包住的不算
  *   （{@link loreMentionsIn}）；
- * - R2 前几章（`castSummaries` 章）定稿细纲「设定」一节出现过的——一行；
- * - R3 只在大纲、细纲阶段：其余条目一行一条，让规划时照抄已有的名字，不另起一个。近几章出现过的在前（{@link catalogOrder}）。
+ * - R2 前幾章（`castSummaries` 章）定稿細綱「設定」一節出現過的——一行；
+ * - R3 只在大綱、細綱階段：其餘條目一行一條，讓規劃時照抄已有的名字，不另起一個。近幾章出現過的在前（{@link catalogOrder}）。
  *
- * 续写那几轮只要 R0、R1：前文那几章的设定第一次调用已经带过了。
+ * 續寫那幾輪只要 R0、R1：前文那幾章的設定第一次呼叫已經帶過了。
  *
- * 整条 = 一句话 + 正文 + 尾巴（水位之后、本章之前定稿的章里关于它的新事实，`loreTail` 行）：条目落后于
- * 正文时，模型照样拿得到新的那几句，不必每章定稿都调一次模型去改条目。整条超了 `loreFull`、超了
- * `loreChars` 或预算放不下就降成一行；一行也超了上限就丢。
+ * 整條 = 一句話 + 正文 + 尾巴（水位之後、本章之前定稿的章裡關於它的新事實，`loreTail` 行）：條目落後於
+ * 正文時，模型照樣拿得到新的那幾句，不必每章定稿都調一次模型去改條目。整條超了 `loreFull`、超了
+ * `loreChars` 或預算放不下就降成一行；一行也超了上限就丟。
  *
- * 「暗设」（完善设定，2026-10-19）：整条带时，正文阶段与续写只带明面、明细里注一句（第 2 条）；规划时整份带，
- * 暗设那一节换成「暗设（读者还不知道）」的标题（`render.ts` 的 `loreBodyFor`）。一行带的一句话本来就跳过暗设。
+ * 「暗設」（完善設定，2026-10-19）：整條帶時，正文階段與續寫只帶明面、明細裡注一句（第 2 條）；規劃時整份帶，
+ * 暗設那一節換成「暗設（讀者還不知道）」的標題（`render.ts` 的 `loreBodyFor`）。一行帶的一句話本來就跳過暗設。
  *
- * 架构那一层只有两件用得上它：**设定清单**当规划看（分类表 + 已有条目一行一条，清单要照用目录、照抄
- * 名字）；世界观不当规划看，只带作者点名的（已经写了正文的书再加近几章定稿里出现过的一句话）。其余几件
- * （配置、前提、角色图谱）一条都不带——它们在设定之前。
+ * 架構那一層只有兩件用得上它：**設定清單**當規劃看（分類表 + 已有條目一行一條，清單要照用目錄、照抄
+ * 名字）；世界觀不當規劃看，只帶作者點名的（已經寫了正文的書再加近幾章定稿裡出現過的一句話）。其餘幾件
+ * （配置、前提、角色圖譜）一條都不帶——它們在設定之前。
  *
- * **单条设定（展开，完善设定 2026-10-19）**：这一条自己是焦点（`loreSelf` 层），这里去掉它、只挑相关的——
- * 关键词命中（来源在作者的话之外，再加上这一条的标题、关键词、一句话与正文，以及已排细纲里用到它的那几句）
- * 整条带；同一个分类目录里的一行带。给分类表（建议拆出的子条目要归类），不给 R2、R3。
+ * **單條設定（展開，完善設定 2026-10-19）**：這一條自己是焦點（`loreSelf` 層），這裡去掉它、只挑相關的——
+ * 關鍵詞命中（來源在作者的話之外，再加上這一條的標題、關鍵詞、一句話與正文，以及已排細綱裡用到它的那幾句）
+ * 整條帶；同一個分類目錄裡的一行帶。給分類表（建議拆出的子條目要歸類），不給 R2、R3。
  *
- * **落定设定（完善设定二期）**：目标是设定目录，照设定清单那样当规划看（分类表 + 已有条目一行一条）；关键词命中的
- * 来源再加上历史那几轮——讨论里提到的已有条目要合并，就得看得见原文，整条带（含暗设）。整条的名额放宽到一次落定的
- * 上限（{@link LORE_SETTLE_LIMITS}），字数另加这么多条的上限，不受上下文详细度那一档的整条名额限制；预算放不下照样降级、
- * 写进明细。
+ * **落定設定（完善設定二期）**：目標是設定目錄，照設定清單那樣當規劃看（分類表 + 已有條目一行一條）；關鍵詞命中的
+ * 來源再加上歷史那幾輪——討論裡提到的已有條目要合併，就得看得見原文，整條帶（含暗設）。整條的名額放寬到一次落定的
+ * 上限（{@link LORE_SETTLE_LIMITS}），字數另加這麼多條的上限，不受上下文詳細度那一檔的整條名額限制；預算放不下照樣降級、
+ * 寫進明細。
  */
 export const lore: LayerFn = async (a, spec) => {
   const { stage } = a.request.action;
@@ -167,7 +168,7 @@ export const lore: LayerFn = async (a, spec) => {
   }
   const listing = stage === 'setting' && doc === 'lore';
   const entries = await a.project.listLore();
-  // 排设定清单时一条条目都没有也要往下走：分类表（目录，空的也算）照样要给。展开一条时同理（子条目要归类）。
+  // 排設定清單時一條條目都沒有也要往下走：分類表（目錄，空的也算）照樣要給。展開一條時同理（子條目要歸類）。
   if (entries.length === 0 && !listing && !selfPath) {
     return;
   }
@@ -177,11 +178,11 @@ export const lore: LayerFn = async (a, spec) => {
   const continuation = a.request.step?.kind === 'continuation';
   const planning = listing || stage === 'outline' || stage === 'plot';
   const settling = listing && isLoreSettle(a.request.action);
-  // 「暗设」的去留（完善设定，2026-10-19）：正文阶段（写、接着写、重写、讨论正文）与续写整条只带明面，
-  // 揭开靠那一章的细纲；其余阶段（设定 / 大纲 / 细纲，含展开一条设定）整条带全部，暗设标明读者还不知道。
+  // 「暗設」的去留（完善設定，2026-10-19）：正文階段（寫、接著寫、重寫、討論正文）與續寫整條只帶明面，
+  // 揭開靠那一章的細綱；其餘階段（設定 / 大綱 / 細綱，含展開一條設定）整條帶全部，暗設標明讀者還不知道。
   const writing = stage === 'manuscript' || continuation;
 
-  // 规划时新引入的设定要归类：分类就是目录、每本书自己的，空目录也算，模型只能从这一行里知道有哪些。
+  // 規劃時新引入的設定要歸類：分類就是目錄、每本書自己的，空目錄也算，模型只能從這一行裡知道有哪些。
   if (planning || selfPath) {
     const categories = await a.project.listLoreCategories();
     if (categories.length > 0) {
@@ -189,17 +190,17 @@ export const lore: LayerFn = async (a, spec) => {
         id: 'lore:categories',
         kind: 'lore',
         priority: spec.priority,
-        label: '设定 · 分类表',
+        label: '設定 · 分類表',
         source: a.project.relPath(a.project.loreDir),
-        text: `本书的设定分类：${categories.join('、')}（新设定的 category 从这里挑）。`,
-        note: '规划时新设定要归进哪一类',
+        text: `本書的設定分類：${categories.join('、')}（新設定的 category 從這裡挑）。`,
+        note: '規劃時新設定要歸進哪一類',
       });
     }
   }
 
   const picked = new Map<string, { entry: LoreEntry; full: boolean; reason: string }>();
   const pick = (entry: LoreEntry, full: boolean, reason: string): void => {
-    // 展开的那一条自己不在这里带：它是焦点，`loreSelf` 层整份带着。
+    // 展開的那一條自己不在這裡帶：它是焦點，`loreSelf` 層整份帶著。
     if (!picked.has(entry.slug) && entry.relPath !== selfPath) {
       picked.set(entry.slug, { entry, full, reason });
     }
@@ -208,13 +209,13 @@ export const lore: LayerFn = async (a, spec) => {
   for (const line of a.focus.plot?.lore ?? []) {
     const entry = lookup.find(line.name);
     if (entry) {
-      pick(entry, true, `本章细纲的设定里有「${line.name}」`);
+      pick(entry, true, `本章細綱的設定裡有「${line.name}」`);
     }
   }
-  // R1 里也分先后：作者这次亲口说的 → 本章细纲 → 本章已写的末尾。整条名额有限，先给最确定要用的。
-  // 展开一条时再加：这一条自己写着什么、已排细纲里用到它的那几句。
+  // R1 裡也分先後：作者這次親口說的 → 本章細綱 → 本章已寫的末尾。整條名額有限，先給最確定要用的。
+  // 展開一條時再加：這一條自己寫著什麼、已排細綱裡用到它的那幾句。
   const self = selfPath ? await loreEntryAt(a.project, selfPath, entries) : undefined;
-  // 落定设定时再加历史那几轮（近的在前）：讨论里提到的已有条目要合并。
+  // 落定設定時再加歷史那幾輪（近的在前）：討論裡提到的已有條目要合併。
   const discussed = settling
     ? (a.request.history ?? [])
         .map((t) => t.content)
@@ -228,20 +229,20 @@ export const lore: LayerFn = async (a, spec) => {
     await chapterTailText(a),
     ...(self ? [selfText(self.entry), ...(await expansionMaterial(a.project, self.entry, { entries })).uses.map((u) => u.text)] : []),
   ];
-  // 最长匹配（2026-10-25）：一个词每一处都落在别人更长的名字里就不算——「圣地秘境」里的「秘境」不把上位概念整条带进来。
-  // 别人的名字再加名录里记着、还没建条目的与本章细纲「设定」一节点的。展开一条时它自己不算别人的名字：上位概念照样命中。
+  // 最長匹配（2026-10-25）：一個詞每一處都落在別人更長的名字裡就不算——「聖地秘境」裡的「秘境」不把上位概念整條帶進來。
+  // 別人的名字再加名錄裡記著、還沒建條目的與本章細綱「設定」一節點的。展開一條時它自己不算別人的名字：上位概念照樣命中。
   const names = [...index.unknown.map((u) => u.name), ...(a.focus.plot?.lore ?? []).map((l) => l.name)];
   const candidates = selfPath ? entries.filter((e) => e.relPath !== selfPath) : entries;
   for (const haystack of haystacks) {
     for (const [entry, hit] of loreMentionsIn(haystack, candidates, names)) {
-      pick(entry, true, discussed.includes(haystack) ? `讨论里提到「${hit}」` : `上下文中出现「${hit}」`);
+      pick(entry, true, discussed.includes(haystack) ? `討論裡提到「${hit}」` : `上下文中出現「${hit}」`);
     }
   }
-  // 展开一条时同一个分类目录里的一行带：拆子条目、写规则时看得见旁边已经有什么。根目录（未分类）不算一类。
+  // 展開一條時同一個分類目錄裡的一行帶：拆子條目、寫規則時看得見旁邊已經有什麼。根目錄（未分類）不算一類。
   if (self?.entry.category) {
     for (const entry of entries) {
       if (entry.category === self.entry.category) {
-        pick(entry, false, `与「${self.entry.title}」同在「${self.entry.category}」`);
+        pick(entry, false, `與「${self.entry.title}」同在「${self.entry.category}」`);
       }
     }
   }
@@ -252,12 +253,12 @@ export const lore: LayerFn = async (a, spec) => {
       for (const line of ref.plot?.lore ?? []) {
         const entry = lookup.find(line.name);
         if (entry) {
-          pick(entry, false, `第 ${ref.no} 章出现过`);
+          pick(entry, false, `第 ${ref.no} 章出現過`);
         }
       }
     }
     if (planning) {
-      // 大纲、细纲：近几章出现过的在前（`rosterRecent`，与规划时的角色图谱同一个「近几章」）。排设定清单是盘点全部，照旧。
+      // 大綱、細綱：近幾章出現過的在前（`rosterRecent`，與規劃時的角色圖譜同一個「近幾章」）。排設定清單是盤點全部，照舊。
       const recentSize = a.limits.rosterRecent;
       const first = a.focus.range?.from ?? a.request.range?.from ?? (Number.isFinite(a.focus.no) ? a.focus.no : undefined);
       const to = first ?? index.known.reduce((max, r) => Math.max(max, r.chapters[r.chapters.length - 1] ?? 0), 0) + 1;
@@ -270,8 +271,8 @@ export const lore: LayerFn = async (a, spec) => {
     }
   }
 
-  const level = `上下文详细度「${CONTEXT_DETAIL_LABEL[a.detail]}」`;
-  // 落定设定：讨论里提到的要整条看得见原文才合并得了，整条名额放宽到一次落定的上限，字数另加这么多条的上限。
+  const level = `上下文詳細度「${CONTEXT_DETAIL_LABEL[a.detail]}」`;
+  // 落定設定：討論裡提到的要整條看得見原文才合併得了，整條名額放寬到一次落定的上限，字數另加這麼多條的上限。
   const fullCap = settling ? Math.max(a.limits.loreFull, LORE_SETTLE_LIMITS.entries) : a.limits.loreFull;
   const charCap = settling
     ? a.limits.loreChars + LORE_SETTLE_LIMITS.entries * (LORE_ENTRY_LIMITS.body + LORE_ENTRY_LIMITS.暗设)
@@ -279,7 +280,7 @@ export const lore: LayerFn = async (a, spec) => {
   let fullCount = 0;
   let lineCount = 0;
   let chars = 0;
-  /** R3 的一览超了上限不逐条报（几百条全是「没带」只会淹掉明细），最后并成一条。 */
+  /** R3 的一覽超了上限不逐條報（幾百條全是「沒帶」只會淹掉明細），最後併成一條。 */
   let catalogDropped = 0;
   let catalogWhy = '';
   for (const { entry, full, reason } of picked.values()) {
@@ -288,7 +289,7 @@ export const lore: LayerFn = async (a, spec) => {
       id,
       kind: 'lore' as const,
       priority: spec.priority,
-      label: `设定 · ${entry.title}`,
+      label: `設定 · ${entry.title}`,
       source: entry.relPath,
     };
     if (a.excluded.has(id)) {
@@ -302,13 +303,13 @@ export const lore: LayerFn = async (a, spec) => {
     if (full) {
       const text = renderLoreFull(entry, loreTail(records.get(entry.slug), a.focus.no, a.limits.loreTail), !writing);
       if (fullCount >= fullCap) {
-        degraded = `整条的已带满 ${fullCap} 条（${settling ? '一次落定的上限' : level}）`;
+        degraded = `整條的已帶滿 ${fullCap} 條（${settling ? '一次落定的上限' : level}）`;
       } else if (chars + text.length > charCap) {
-        degraded = `设定已带 ${chars} 字，整条带会超过 ${charCap} 字（${level}）`;
+        degraded = `設定已帶 ${chars} 字，整條帶會超過 ${charCap} 字（${level}）`;
       } else if (estimateTokens(text) > a.remaining) {
-        degraded = '预算不足';
+        degraded = '預算不足';
       } else {
-        // 这一条真有暗设被去掉才注：没有暗设的条目注了只是噪音。
+        // 這一條真有暗設被去掉才注：沒有暗設的條目注了只是噪音。
         const hidden = writing && loreBodyFor(entry.body, false).dropped;
         a.admit({ ...base, text, note: hidden ? `${why}；${LORE_HIDDEN_DROPPED_NOTE}` : why });
         fullCount++;
@@ -321,14 +322,14 @@ export const lore: LayerFn = async (a, spec) => {
     const tokens = estimateTokens(line);
     const over =
       lineCount >= a.limits.loreLines
-        ? `一句话的已带满 ${a.limits.loreLines} 条（${level}）`
+        ? `一句話的已帶滿 ${a.limits.loreLines} 條（${level}）`
         : chars + line.length > charCap
-          ? `设定已带满 ${charCap} 字（${level}）`
+          ? `設定已帶滿 ${charCap} 字（${level}）`
           : tokens > a.remaining
-            ? '预算不足'
+            ? '預算不足'
             : '';
     if (over) {
-      if (!full && reason.startsWith('已有设定')) {
+      if (!full && reason.startsWith('已有設定')) {
         catalogDropped++;
         catalogWhy ||= over;
         continue;
@@ -337,7 +338,7 @@ export const lore: LayerFn = async (a, spec) => {
       continue;
     }
     if (degraded) {
-      a.accept({ ...base, text: line, status: 'degraded', note: `${why}；${degraded}，只带一句话` }, tokens);
+      a.accept({ ...base, text: line, status: 'degraded', note: `${why}；${degraded}，只帶一句話` }, tokens);
     } else {
       a.admit({ ...base, text: line, note: why });
     }
@@ -350,32 +351,32 @@ export const lore: LayerFn = async (a, spec) => {
         id: 'lore:catalog',
         kind: 'lore',
         priority: spec.priority,
-        label: `设定 · 其余 ${catalogDropped} 条`,
+        label: `設定 · 其餘 ${catalogDropped} 條`,
         text: '',
       },
       'dropped',
-      `规划时的已有设定一览共 ${catalog} 条，${catalogWhy}，其余 ${catalogDropped} 条没带`
+      `規劃時的已有設定一覽共 ${catalog} 條，${catalogWhy}，其餘 ${catalogDropped} 條沒帶`
     );
   }
 };
 
-/** 展开一条设定时，这一条自己写着的东西（标题、关键词、一句话、正文含暗设）：关键词命中也看它。 */
+/** 展開一條設定時，這一條自己寫著的東西（標題、關鍵詞、一句話、正文含暗設）：關鍵詞命中也看它。 */
 function selfText(entry: LoreEntry): string {
   return [entry.title, ...entry.keywords, entry.brief, entry.body].join('\n');
 }
 
 /**
- * R3 一览的先后（2026-10-25）。给了 `window`（大纲、细纲：这一次要排的第一章往前数 `size` 章）：这几章里出现过的在前，
- * 按这几章里出现的章数、再按最近出现的那一章；没出现过的在后，按全书出现章数。从前一律按全书出现章数，写到八十章，开篇
- * 几十章里的高频词永远排在最前面、占满一句话的名额。没给（排设定清单、「完整」那一级）只按全书出现章数。
- * 稳定排序：一样的保持 listLore 的顺序（按路径，也就是按分类）。
+ * R3 一覽的先後（2026-10-25）。給了 `window`（大綱、細綱：這一次要排的第一章往前數 `size` 章）：這幾章裡出現過的在前，
+ * 按這幾章裡出現的章數、再按最近出現的那一章；沒出現過的在後，按全書出現章數。從前一律按全書出現章數，寫到八十章，開篇
+ * 幾十章裡的高頻詞永遠排在最前面、佔滿一句話的名額。沒給（排設定清單、「完整」那一級）只按全書出現章數。
+ * 穩定排序：一樣的保持 listLore 的順序（按路徑，也就是按分類）。
  */
 function catalogOrder(
   records: readonly LoreRecord[],
   window?: { from: number; to: number; size: number }
 ): { record: LoreRecord; reason: string }[] {
   const rows = records.map((record) => {
-    // `chapters` 是排好序的章号：这几章里的最后一个就是最近出现的那一章。
+    // `chapters` 是排好序的章號：這幾章裡的最後一個就是最近出現的那一章。
     const seen = window ? record.chapters.filter((no) => no >= window.from && no < window.to) : [];
     return { record, hits: seen.length, last: seen[seen.length - 1] ?? 0 };
   });
@@ -384,15 +385,15 @@ function catalogOrder(
     const n = record.chapters.length;
     const reason =
       hits > 0
-        ? `已有设定（近 ${window!.size} 章出现 ${hits} 章，最近第 ${last} 章）`
+        ? `已有設定（近 ${window!.size} 章出現 ${hits} 章，最近第 ${last} 章）`
         : n === 0
-          ? '已有设定'
-          : `已有设定（出现 ${n} 章${window ? `，近 ${window.size} 章没出现` : ''}）`;
+          ? '已有設定'
+          : `已有設定（出現 ${n} 章${window ? `，近 ${window.size} 章沒出現` : ''}）`;
     return { record, reason };
   });
 }
 
-/** 接着写时本章已写的末尾（续写那几轮是 step 里那一截）：关键词命中也看它。 */
+/** 接著寫時本章已寫的末尾（續寫那幾輪是 step 裡那一截）：關鍵詞命中也看它。 */
 async function chapterTailText(a: Parameters<LayerFn>[0]): Promise<string> {
   const step = a.request.step?.kind === 'continuation' ? a.request.step : undefined;
   if (step) {
@@ -404,7 +405,7 @@ async function chapterTailText(a: Parameters<LayerFn>[0]): Promise<string> {
   return '';
 }
 
-/** 水位之后、本章之前定稿的章里关于它的新事实，最近的 `max` 条。 */
+/** 水位之後、本章之前定稿的章裡關於它的新事實，最近的 `max` 條。 */
 function loreTail(record: LoreRecord | undefined, beforeNo: number, max: number): LoreFact[] {
   if (!record || max <= 0) {
     return [];
@@ -416,20 +417,20 @@ function loreTail(record: LoreRecord | undefined, beforeNo: number, max: number)
 }
 
 /**
- * 条目整合到的章不早于本章（回头重写前面的章时）：条目里可能写着之后才发生的事。同角色卡的
- * 「当前状态写到第几章」。架构、大纲阶段（`no` 是无穷大）不提。
+ * 條目整合到的章不早於本章（回頭重寫前面的章時）：條目裡可能寫著之後才發生的事。同角色卡的
+ * 「當前狀態寫到第幾章」。架構、大綱階段（`no` 是無窮大）不提。
  */
 function spoilerNote(entry: LoreEntry, no: number): string {
   if (entry.updatedThrough === undefined || !Number.isFinite(no) || entry.updatedThrough < no) {
     return '';
   }
-  return `条目整合到第 ${entry.updatedThrough} 章，可能含第 ${no} 章之后才发生的事`;
+  return `條目整合到第 ${entry.updatedThrough} 章，可能含第 ${no} 章之後才發生的事`;
 }
 
 export const prevTail: LayerFn = async (a, spec) => {
   const prev = a.focus.previous[a.focus.previous.length - 1];
-  // 「接着写」不带：这一章的开头早就从上一章结尾接过了，要接的是本章已写的末尾
-  // （`chapterSoFar`）。两个「从这里接下去」摆在一起，模型会跳回上一章去。
+  // 「接著寫」不帶：這一章的開頭早就從上一章結尾接過了，要接的是本章已寫的末尾
+  // （`chapterSoFar`）。兩個「從這裡接下去」擺在一起，模型會跳回上一章去。
   if (!prev || a.limits.prevTailChars <= 0 || a.request.writeMode === 'continue') {
     return;
   }
@@ -442,25 +443,25 @@ export const prevTail: LayerFn = async (a, spec) => {
       id: `prevTail:${prev.no}`,
       kind: 'prevTail',
       priority: spec.priority,
-      label: `${plotLabel(prev.no, prev.title)} · 结尾原文`,
+      label: `${plotLabel(prev.no, prev.title)} · 結尾原文`,
       source: manuscript.relPath,
       text: tailByChars(manuscript.text, a.limits.prevTailChars),
-      note: '原文注入，保证语气与场景衔接',
+      note: '原文注入，保證語氣與場景銜接',
     },
     { force: spec.force }
   );
 };
 
 /**
- * 前面几章的**正文全文**。只有正文阶段带（配方里只有那一张有这一层）。
+ * 前面幾章的**正文全文**。只有正文階段帶（配方里只有那一張有這一層）。
  *
- * 放不下时降级为该章细纲，再放不下才丢弃——三档都要留在明细里说清原因
- * （AGENTS.md 第 2 条：不静默截断）。
+ * 放不下時降級為該章細綱，再放不下才丟棄——三檔都要留在明細裡說清原因
+ * （AGENTS.md 第 2 條：不靜默截斷）。
  */
 export const manuscriptFull: LayerFn = async (a, spec) => {
   const previous = a.focus.previous;
   const prev = previous[previous.length - 1];
-  // 0 就是一章全文都不带（`takeLast` 不踩 `slice(-0)` 等于 `slice(0)` 的坑）。
+  // 0 就是一章全文都不帶（`takeLast` 不踩 `slice(-0)` 等於 `slice(0)` 的坑）。
   const fullTextPlots = takeLast(previous, a.limits.fullTextChapters);
 
   for (const ref of [...fullTextPlots].reverse()) {
@@ -481,13 +482,13 @@ export const manuscriptFull: LayerFn = async (a, spec) => {
 
     const manuscript = await readChapterText(a.project, ref);
     if (!manuscript?.text.trim()) {
-      // 只排了细纲、还没写正文——这不是错误，是这一章还没到那一步。它在前几章之内时
-      // 细纲由 `plotPrev` 带。
+      // 只排了細綱、還沒寫正文——這不是錯誤，是這一章還沒到那一步。它在前幾章之內時
+      // 細綱由 `plotPrev` 帶。
       continue;
     }
     const block = `【${label}】\n${manuscript.text}`;
     const tokens = estimateTokens(block);
-    // 这一章的定稿原文片段（`evidence` 层先装的）：整章进来了它就多余了，那份预算可以退回来用。
+    // 這一章的定稿原文片段（`evidence` 層先裝的）：整章進來了它就多餘了，那份預算可以退回來用。
     const ev = a.scratch.evidence.get(plot.no);
     const evTokens = ev && ev.status !== 'dropped' ? ev.tokens : 0;
     const tail = a.scratch.prevTail;
@@ -496,7 +497,7 @@ export const manuscriptFull: LayerFn = async (a, spec) => {
         releaseEvidence(a, ev);
         a.remaining += tail.tokens - tokens;
         tail.status = 'dropped';
-        tail.note = '整章正文已完整注入，无需重复结尾片段';
+        tail.note = '整章正文已完整注入，無需重複結尾片段';
         tail.tokens = 0;
         tail.text = '';
         a.items.push({
@@ -505,7 +506,7 @@ export const manuscriptFull: LayerFn = async (a, spec) => {
           text: block,
           tokens,
           status: 'included',
-          note: '含上一章结尾，续写将从此处接续',
+          note: '含上一章結尾，續寫將從此處接續',
         });
         continue;
       }
@@ -520,7 +521,7 @@ export const manuscriptFull: LayerFn = async (a, spec) => {
     const outline = ref.plot ? renderPlotSections(ref.plot) : '';
     if (outline) {
       const planned = !ref.plot!.sourceHash;
-      const outlineBlock = `【${label} · 细纲${planned ? '（计划，没定稿）' : ''}】\n${outline}`;
+      const outlineBlock = `【${label} · 細綱${planned ? '（計劃，沒定稿）' : ''}】\n${outline}`;
       const outlineTokens = estimateTokens(outlineBlock);
       if (outlineTokens <= a.remaining) {
         a.accept(
@@ -529,7 +530,7 @@ export const manuscriptFull: LayerFn = async (a, spec) => {
             source: ref.plot!.relPath,
             text: outlineBlock,
             status: 'degraded',
-            note: `正文需 ${tokens} token 放不下，已降级为细纲${planned ? '（还没同步，是写之前的计划）' : ''}`,
+            note: `正文需 ${tokens} token 放不下，已降級為細綱${planned ? '（還沒同步，是寫之前的計劃）' : ''}`,
           },
           outlineTokens
         );
@@ -539,22 +540,22 @@ export const manuscriptFull: LayerFn = async (a, spec) => {
     a.reject(
       { ...base, text: '' },
       'dropped',
-      outline ? '正文与细纲都放不下' : `正文需 ${tokens} token 放不下，且这一章没有细纲`
+      outline ? '正文與細綱都放不下' : `正文需 ${tokens} token 放不下，且這一章沒有細綱`
     );
   }
 };
 
-/** 这一章定稿过、而且定稿之后正文没再改过（细纲的 `sourceHash` 对得上正文）。 */
+/** 這一章定稿過、而且定稿之後正文沒再改過（細綱的 `sourceHash` 對得上正文）。 */
 function isFinalized(ref: ChapterRef): boolean {
   return !!ref.plot?.sourceHash && !!ref.chapter && ref.plot.sourceHash === ref.chapter.contentHash;
 }
 
 /**
- * 本章已经写好的正文末尾（最后 1600 字）：「接着写」与续写那几轮从这里往下接。
+ * 本章已經寫好的正文末尾（最後 1600 字）：「接著寫」與續寫那幾輪從這裡往下接。
  *
- * 两个来处：续写那几轮由生成链把「已写到哪」直接给过来（`step.tail`，含这一次刚写、
- * 还没落盘的部分）；「接着写」的第一次调用读磁盘上这一章的正文。**只带末尾**——
- * 上游续写也只带 1600 字（GD:998）：接得上靠的是最后那一场，整章塞进去只是贵。
+ * 兩個來處：續寫那幾輪由生成鏈把「已寫到哪」直接給過來（`step.tail`，含這一次剛寫、
+ * 還沒落盤的部分）；「接著寫」的第一次呼叫讀磁碟上這一章的正文。**只帶末尾**——
+ * 上游續寫也只帶 1600 字（GD:998）：接得上靠的是最後那一場，整章塞進去只是貴。
  */
 export const chapterSoFar: LayerFn = async (a, spec) => {
   const step = a.request.step?.kind === 'continuation' ? a.request.step : undefined;
@@ -580,50 +581,50 @@ export const chapterSoFar: LayerFn = async (a, spec) => {
       priority: spec.priority,
       label:
         a.request.writeMode === 'revise'
-          ? `已修订正文 · 末尾（已输出 ${written} 字）`
-          : `本章已写正文 · 末尾（全章已有 ${written} 字）`,
+          ? `已修訂正文 · 末尾（已輸出 ${written} 字）`
+          : `本章已寫正文 · 末尾（全章已有 ${written} 字）`,
       source,
       text,
-      note: '只带最后一段，从这里往下接',
+      note: '只帶最後一段，從這裡往下接',
     },
     { force: spec.force }
   );
 };
 
-/** 整章正文进来了：它的定稿原文片段改成 dropped、预算退回去（与上一章结尾片段同一个做法）。 */
+/** 整章正文進來了：它的定稿原文片段改成 dropped、預算退回去（與上一章結尾片段同一個做法）。 */
 function releaseEvidence(a: Parameters<LayerFn>[0], ev: ContextItem | undefined): void {
   if (!ev || ev.status === 'dropped' || ev.status === 'excluded') {
     return;
   }
   a.remaining += ev.tokens;
   ev.status = 'dropped';
-  ev.note = '整章正文已完整注入，不再单独带片段';
+  ev.note = '整章正文已完整注入，不再單獨帶片段';
   ev.tokens = 0;
   ev.text = '';
 }
 
 /**
- * 前面各章的**定稿原文片段**（D18）：拿定稿过的细纲里每条连续性事实的证据原句回到那一章的正文里
- * 逐字定位，取所在段落与前后各一段（model/continuity.ts 的 `locateEvidence`）。
+ * 前面各章的**定稿原文片段**（D18）：拿定稿過的細綱裡每條連續性事實的證據原句回到那一章的正文裡
+ * 逐字定位，取所在段落與前後各一段（model/continuity.ts 的 `locateEvidence`）。
  *
  * 移植自 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）`chapter-materials.ts` 的
- * `assembleChapterMaterials`（CM:120-187）：写正文时不拿细纲当事实，按证据回到定稿原文里取段落。
- * 不搬它的定稿收据、来源 hash 与租约（总计划 §1 #14）。
+ * `assembleChapterMaterials`（CM:120-187）：寫正文時不拿細綱當事實，按證據回到定稿原文裡取段落。
+ * 不搬它的定稿收據、來源 hash 與租約（總計劃 §1 #14）。
  *
- * 取多少按上下文详细度（`evidenceRecent` / `evidenceChapters` / `evidenceChars`，缺省 5 / 12 / 6000）：
+ * 取多少按上下文詳細度（`evidenceRecent` / `evidenceChapters` / `evidenceChars`，預設 5 / 12 / 6000）：
  *
- * | 取哪几章 | 取什么 |
+ * | 取哪幾章 | 取什麼 |
  * |---|---|
- * | 前 `evidenceRecent` 章 | 全部连续性事实 |
- * | 更早的章，一共不超过 `evidenceChapters` 章 | 只取提到本章角色的事实 |
+ * | 前 `evidenceRecent` 章 | 全部連續性事實 |
+ * | 更早的章，一共不超過 `evidenceChapters` 章 | 只取提到本章角色的事實 |
  *
- * - 只认定稿之后正文没再改过的章（细纲的 `sourceHash` 对得上正文）：正文改过的，证据句多半已经
- *   不在原处，事实本身也可能正是改掉的那一处。
- * - 由近及远填，一共不超过 `evidenceChars` 字；放不下的章 dropped 并写原因（第 2 条）。
- * - **定位不到**（作者手改过细纲里的事实或证据句）的那几条换成事实原句，条目标 degraded 并写明几条（第 2 条）。
- * - 上一章有正文却还没定稿（或定稿之后正文又改过）：明细里多一条 dropped，说清没有事实、角色状态截至第几章（D23）。
- *   不挡路——写第 N 章不强制第 N−1 章已定稿——但不静默。
- * - 「精简」整层不带：前面有写好的章时出一条 dropped 说明，不一章一条。
+ * - 只認定稿之後正文沒再改過的章（細綱的 `sourceHash` 對得上正文）：正文改過的，證據句多半已經
+ *   不在原處，事實本身也可能正是改掉的那一處。
+ * - 由近及遠填，一共不超過 `evidenceChars` 字；放不下的章 dropped 並寫原因（第 2 條）。
+ * - **定位不到**（作者手改過細綱裡的事實或證據句）的那幾條換成事實原句，條目標 degraded 並寫明幾條（第 2 條）。
+ * - 上一章有正文卻還沒定稿（或定稿之後正文又改過）：明細裡多一條 dropped，說清沒有事實、角色狀態截至第幾章（D23）。
+ *   不擋路——寫第 N 章不強制第 N−1 章已定稿——但不靜默。
+ * - 「精簡」整層不帶：前面有寫好的章時出一條 dropped 說明，不一章一條。
  */
 export const evidence: LayerFn = async (a, spec) => {
   const previous = a.focus.previous;
@@ -636,7 +637,7 @@ export const evidence: LayerFn = async (a, spec) => {
       a.reject(
         { id: 'evidence:off', kind: 'evidence', priority: spec.priority, label: '原文片段', text: '' },
         'dropped',
-        `上下文详细度「${CONTEXT_DETAIL_LABEL[a.detail]}」不带原文片段`
+        `上下文詳細度「${CONTEXT_DETAIL_LABEL[a.detail]}」不帶原文片段`
       );
     }
     return;
@@ -662,12 +663,12 @@ export const evidence: LayerFn = async (a, spec) => {
         { ...base, text: '' },
         'dropped',
         ref.plot?.sourceHash
-          ? `第 ${ref.no} 章同步之后正文又改过：连续性事实不作数${through !== undefined ? `，角色状态截至第 ${through} 章` : ''}`
-          : `第 ${ref.no} 章还没同步：没有连续性事实${through !== undefined ? `，角色状态截至第 ${through} 章` : ''}`
+          ? `第 ${ref.no} 章同步之後正文又改過：連續性事實不作數${through !== undefined ? `，角色狀態截至第 ${through} 章` : ''}`
+          : `第 ${ref.no} 章還沒同步：沒有連續性事實${through !== undefined ? `，角色狀態截至第 ${through} 章` : ''}`
       );
       continue;
     }
-    // 只认对得上的定稿：定稿之后正文改过的，证据句多半已经不在原处，事实本身也可能正是改掉的那一处。
+    // 只認對得上的定稿：定稿之後正文改過的，證據句多半已經不在原處，事實本身也可能正是改掉的那一處。
     if (!finalized) {
       continue;
     }
@@ -684,16 +685,16 @@ export const evidence: LayerFn = async (a, spec) => {
     const text = await a.project.readChapterText(ref.chapter);
     const { block, missing } = renderEvidence(ref.no, ref.title, text, facts);
     if (block.length > budget) {
-      a.reject({ ...base, text: '' }, 'dropped', `原文片段一共只带 ${evidenceChars} 字，更近的几章已经用完了`);
+      a.reject({ ...base, text: '' }, 'dropped', `原文片段一共只帶 ${evidenceChars} 字，更近的幾章已經用完了`);
       continue;
     }
-    const notes = [i >= recentFrom ? `${facts.length} 条连续性事实` : `${facts.length} 条涉及本章角色的连续性事实`];
+    const notes = [i >= recentFrom ? `${facts.length} 條連續性事實` : `${facts.length} 條涉及本章角色的連續性事實`];
     const item = a.admit({ ...base, text: block, note: notes.join('；') });
     if (item.status === 'included') {
       budget -= block.length;
       if (missing > 0) {
         item.status = 'degraded';
-        item.note = `${notes.join('；')}；${missing} 条证据在正文里找不到（细纲里的事实被手改过），换成事实原句`;
+        item.note = `${notes.join('；')}；${missing} 條證據在正文裡找不到（細綱裡的事實被手改過），換成事實原句`;
       }
       a.scratch.evidence.set(ref.no, item);
     }
@@ -701,22 +702,22 @@ export const evidence: LayerFn = async (a, spec) => {
 };
 
 /**
- * 写这一章时带哪几条**叙事线**（2026-10-20 重做，设计稿「四」）：没收束的、和本章有关的那几条，一条线一行——现在走到哪、
- * 本章计划干什么、没收的伏笔（没到回收章的写「第 b 章前不要揭开」）。审稿只带伏笔那一半（⚑5）。
+ * 寫這一章時帶哪幾條**敘事線**（2026-10-20 重做，設計稿「四」）：沒收束的、和本章有關的那幾條，一條線一行——現在走到哪、
+ * 本章計劃幹什麼、沒收的伏筆（沒到回收章的寫「第 b 章前不要揭開」）。審稿只帶伏筆那一半（⚑5）。
  *
  * 移植自 AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）`generate-draft.command.ts` 的
- * `readActiveNarrativeThreads`（GD:1452-1498）。挑哪几条、怎么排、一行怎么写都在
- * model/threadFile.ts（`manuscriptThreads` / `reviewForeshadowing`）；这一层只管登记：
+ * `readActiveNarrativeThreads`（GD:1452-1498）。挑哪幾條、怎麼排、一行怎麼寫都在
+ * model/threadFile.ts（`manuscriptThreads` / `reviewForeshadowing`）；這一層只管登記：
  *
- * - 一条一个条目，按要紧程度排好（本章有计划的在最前）；note 写状态与为什么带它，来源是那条线自己的文件。
- * - 条数与字数按上下文详细度（缺省 6 条 / 1200 字；审稿按 `foreshadowJudge` 条），放不下的 dropped 并写原因（第 2 条）。
- *   本章细纲或计划提到的伏笔一律列在它那条线的一行里（复跑之后，不占每条线 4 条的名额），只受这里的总字数管——那一行
- *   放不下时，原因里点名说这几条伏笔没带上。
- * - 作者在明细里取消勾选的那条不占名额，后面的补上来。
- * - 没有叙事线、或者没有一条有关的：什么都不出（没有东西被截断）。
- * - 写第 N 章一律按「写到第 N 章时」算（`asOf`）：重写前面的章时不带后面的事。
+ * - 一條一個條目，按要緊程度排好（本章有計劃的在最前）；note 寫狀態與為什麼帶它，來源是那條線自己的檔案。
+ * - 條數與字數按上下文詳細度（預設 6 條 / 1200 字；審稿按 `foreshadowJudge` 條），放不下的 dropped 並寫原因（第 2 條）。
+ *   本章細綱或計劃提到的伏筆一律列在它那條線的一行裡（復跑之後，不佔每條線 4 條的名額），只受這裡的總字數管——那一行
+ *   放不下時，原因裡點名說這幾條伏筆沒帶上。
+ * - 作者在明細裡取消勾選的那條不佔名額，後面的補上來。
+ * - 沒有敘事線、或者沒有一條有關的：什麼都不出（沒有東西被截斷）。
+ * - 寫第 N 章一律按「寫到第 N 章時」算（`asOf`）：重寫前面的章時不帶後面的事。
  *
- * 拆细纲（`plot` 配方，叙事线二期）走另一套挑法，见 {@link admitPlotThreads}。
+ * 拆細綱（`plot` 配方，敘事線二期）走另一套挑法，見 {@link admitPlotThreads}。
  */
 export const threads: LayerFn = async (a, spec) => {
   if (!Number.isFinite(a.focus.no)) {
@@ -742,7 +743,7 @@ export const threads: LayerFn = async (a, spec) => {
     id: idOf(c),
     kind: 'thread' as const,
     priority: spec.priority,
-    label: `${reviewing ? '伏笔' : '叙事线'} · ${c.name}`,
+    label: `${reviewing ? '伏筆' : '敘事線'} · ${c.name}`,
     source: c.relPath,
   });
   const limits = reviewing
@@ -752,26 +753,26 @@ export const threads: LayerFn = async (a, spec) => {
   const { picked, dropped } = fitThreads(
     list.filter((c) => !a.excluded.has(idOf(c))),
     limits,
-    reviewing ? '伏笔' : '叙事线'
+    reviewing ? '伏筆' : '敘事線'
   );
   for (const c of picked) {
-    a.admit({ ...base(c), text: c.line, note: `${c.status} · ${c.why}` });
+    a.admit({ ...base(c), text: c.line, note: `${traditionalLabel(c.status)} · ${traditionalLabel(c.why)}` });
   }
   for (const c of excluded) {
     a.admit({ ...base(c), text: '' });
   }
   for (const d of dropped) {
-    // 本章细纲提到的伏笔一律列在那一行里（复跑之后），整行放不下时点名说它们没带上（第 2 条）。
-    const named = d.mentioned?.length ? `（其中有本章细纲或计划提到的伏笔：${d.mentioned.join('、')}，没带上）` : '';
+    // 本章細綱提到的伏筆一律列在那一行裡（復跑之後），整行放不下時點名說它們沒帶上（第 2 條）。
+    const named = d.mentioned?.length ? `（其中有本章細綱或計劃提到的伏筆：${d.mentioned.join('、')}，沒帶上）` : '';
     a.reject({ ...base(d), text: '' }, 'dropped', `${d.note}${named}`);
   }
 };
 
 /**
- * 故事时间（2026-10-24，设计稿 docs/design/plans/2026-10-24-story-timeline.md「三」）：写第 N 章时「上一章是哪天」、拆从第 a 章起的
- * 细纲时「已写到的最后一章是哪天」，一条（id `timeline:<时间线文件>`、标签「故事时间」），按「写到这一章时」算（只看之前的行）。
- * 不占叙事线的条数与字数（一行几十个字，不和线抢名额）；消息里单独成一节（builder.ts）。审稿不带。没有时间线、或之前一行都推不出：
- * 什么都不出。
+ * 故事時間（2026-10-24，設計稿 docs/design/plans/2026-10-24-story-timeline.md「三」）：寫第 N 章時「上一章是哪天」、拆從第 a 章起的
+ * 細綱時「已寫到的最後一章是哪天」，一條（id `timeline:<時間線檔案>`、標籤「故事時間」），按「寫到這一章時」算（只看之前的行）。
+ * 不佔敘事線的條數與字數（一行幾十個字，不和線搶名額）；訊息裡單獨成一節（builder.ts）。審稿不帶。沒有時間線、或之前一行都推不出：
+ * 什麼都不出。
  */
 function admitStoryTime(a: Parameters<LayerFn>[0], spec: Parameters<LayerFn>[1], book: ThreadBook): void {
   if (!book.timeline?.exists) {
@@ -784,30 +785,30 @@ function admitStoryTime(a: Parameters<LayerFn>[0], spec: Parameters<LayerFn>[1],
     return;
   }
   const item = { id: `timeline:${book.timeline.relPath}`, kind: 'thread' as const, priority: spec.priority, label: STORY_TIME_LABEL, source: book.timeline.relPath };
-  a.admit(a.excluded.has(item.id) ? { ...item, text: '' } : { ...item, text, note: '按时间线现算' });
+  a.admit(a.excluded.has(item.id) ? { ...item, text: '' } : { ...item, text, note: '按時間線現算' });
 }
 
 /**
- * 拆细纲时的叙事线（叙事线二期，设计稿「二」）：细纲的 `plot` 配方（生成、讨论、落定共用）P1、`recentFacts` 旁边。
- * 挑法在 model/threadFile.ts 的 `plotThreads`，**按区间挑**（`focus.range`：批次是那一批，单章是那一章）：
+ * 拆細綱時的敘事線（敘事線二期，設計稿「二」）：細綱的 `plot` 配方（生成、討論、落定共用）P1、`recentFacts` 旁邊。
+ * 挑法在 model/threadFile.ts 的 `plotThreads`，**按區間挑**（`focus.range`：批次是那一批，單章是那一章）：
  *
- * - 线一条一个条目（`thread:<那条线的文件>`），伏笔一条一个条目（`thread:<所在文件>#<伏笔名>`，与审稿同一个 id 写法）；
- *   标签分「叙事线 · 」「伏笔 · 」两种，消息里同一节、伏笔另起一段（builder.ts）。
- * - 两组各自封顶：线按 `plotThreadCount`、伏笔按 `plotForeshadowCount`，字数各按 `plotThreadChars`；放不下的 dropped 并写
- *   原因（第 2 条）。伏笔另算一组，是因为「本批要收」的那几条是这一层最要紧的东西，不该被几条长的线挤掉。
- * - 伏笔名额外的（2026-10-25）：名字并成一行「其余没收的伏笔」，模型知道还有这几条开着，细纲没安排就不碰、也不另起同名的
- *   （与规划时角色图谱「其余只列名字」一个道理）。最多列名额的两倍，再多的连名字也不列，明细里说清。
- * - 这几章的细纲（拆细纲的空壳只有梗概，重拆是整份）与作者这一次的话里提到的伏笔排在前面（`plotThreads` 的 `text`）。
- * - 取消勾选的不占名额。没有叙事线、或一条有关的都没有：什么都不出。
+ * - 線一條一個條目（`thread:<那條線的檔案>`），伏筆一條一個條目（`thread:<所在檔案>#<伏筆名>`，與審稿同一個 id 寫法）；
+ *   標籤分「敘事線 · 」「伏筆 · 」兩種，訊息裡同一節、伏筆另起一段（builder.ts）。
+ * - 兩組各自封頂：線按 `plotThreadCount`、伏筆按 `plotForeshadowCount`，字數各按 `plotThreadChars`；放不下的 dropped 並寫
+ *   原因（第 2 條）。伏筆另算一組，是因為「本批要收」的那幾條是這一層最要緊的東西，不該被幾條長的線擠掉。
+ * - 伏筆名額外的（2026-10-25）：名字併成一行「其餘沒收的伏筆」，模型知道還有這幾條開著，細綱沒安排就不碰、也不另起同名的
+ *   （與規劃時角色圖譜「其餘只列名字」一個道理）。最多列名額的兩倍，再多的連名字也不列，明細裡說清。
+ * - 這幾章的細綱（拆細綱的空殼只有梗概，重拆是整份）與作者這一次的話裡提到的伏筆排在前面（`plotThreads` 的 `text`）。
+ * - 取消勾選的不佔名額。沒有敘事線、或一條有關的都沒有：什麼都不出。
  */
 async function admitPlotThreads(a: Parameters<LayerFn>[0], spec: Parameters<LayerFn>[1], book: ThreadBook): Promise<void> {
   const range = a.focus.range ?? { from: a.focus.no, to: a.focus.no };
   const plots = (await a.project.listPlots()).filter((p) => p.no >= range.from && p.no <= range.to);
   const text = [a.request.ask, ...plots.map((p) => [p.title, ...Object.values(p.sections)].join('\n'))].join('\n');
   const { lines, foreshadowing } = plotThreads(book, range, text);
-  const groups: { list: ContextThread[]; what: '叙事线' | '伏笔'; count: number; idOf: (c: ContextThread) => string }[] = [
-    { list: lines, what: '叙事线', count: a.limits.plotThreadCount, idOf: (c) => `thread:${c.relPath}` },
-    { list: foreshadowing, what: '伏笔', count: a.limits.plotForeshadowCount, idOf: (c) => `thread:${c.relPath}#${c.name}` },
+  const groups: { list: ContextThread[]; what: '敘事線' | '伏筆'; count: number; idOf: (c: ContextThread) => string }[] = [
+    { list: lines, what: '敘事線', count: a.limits.plotThreadCount, idOf: (c) => `thread:${c.relPath}` },
+    { list: foreshadowing, what: '伏筆', count: a.limits.plotForeshadowCount, idOf: (c) => `thread:${c.relPath}#${c.name}` },
   ];
   for (const { list, what, count, idOf } of groups) {
     const base = (c: ContextThread) => ({
@@ -823,13 +824,13 @@ async function admitPlotThreads(a: Parameters<LayerFn>[0], spec: Parameters<Laye
       what
     );
     for (const c of picked) {
-      a.admit({ ...base(c), text: c.line, note: `${c.status} · ${c.why}` });
+      a.admit({ ...base(c), text: c.line, note: `${traditionalLabel(c.status)} · ${traditionalLabel(c.why)}` });
     }
     for (const c of list.filter((x) => a.excluded.has(idOf(x)))) {
       a.admit({ ...base(c), text: '' });
     }
     const listed = new Set<string>();
-    if (what === '伏笔' && dropped.length > 0 && count > 0) {
+    if (what === '伏筆' && dropped.length > 0 && count > 0) {
       const max = count * 2;
       const names = dropped.slice(0, max);
       const left = dropped.length - names.length;
@@ -837,24 +838,24 @@ async function admitPlotThreads(a: Parameters<LayerFn>[0], spec: Parameters<Laye
         id: FORESHADOW_REST_ID,
         kind: 'thread',
         priority: spec.priority,
-        label: `伏笔 · 其余 ${dropped.length} 条（只列名字）`,
-        text: `其余没收的伏笔（名额外，只列名字；细纲没安排就别揭开，也别另起同名的）：${names.map((d) => d.name).join('、')}${left > 0 ? ` 等 ${dropped.length} 条` : ''}。`,
-        note: left > 0 ? `名额外的只列名字，最多 ${max} 个，其余 ${left} 条连名字也没列` : '名额外的只列名字',
+        label: `伏筆 · 其餘 ${dropped.length} 條（只列名字）`,
+        text: `其餘沒收的伏筆（名額外，只列名字；細綱沒安排就別揭開，也別另起同名的）：${names.map((d) => d.name).join('、')}${left > 0 ? ` 等 ${dropped.length} 條` : ''}。`,
+        note: left > 0 ? `名額外的只列名字，最多 ${max} 個，其餘 ${left} 條連名字也沒列` : '名額外的只列名字',
       });
       if (item.status === 'included') {
         names.forEach((d) => listed.add(idOf(d)));
       }
     }
     for (const d of dropped) {
-      a.reject({ ...base(d), text: '' }, 'dropped', listed.has(idOf(d)) ? `${d.note}；名字列在「其余没收的伏笔」里` : d.note);
+      a.reject({ ...base(d), text: '' }, 'dropped', listed.has(idOf(d)) ? `${d.note}；名字列在「其餘沒收的伏筆」裡` : d.note);
     }
   }
 }
 
-/** 拆细纲时名额外的伏笔只列名字的那一行（{@link admitPlotThreads}）。 */
+/** 拆細綱時名額外的伏筆只列名字的那一行（{@link admitPlotThreads}）。 */
 const FORESHADOW_REST_ID = 'thread:foreshadowing-rest';
 
-/** 一章的片段：定位得到的原文段落在前，定位不到的事实原句在后。 */
+/** 一章的片段：定位得到的原文段落在前，定位不到的事實原句在後。 */
 function renderEvidence(
   no: number,
   title: string,
@@ -866,12 +867,12 @@ function renderEvidence(
   const lost = [...facts.filter((f) => !f.evidence), ...quoted.filter((_, k) => !hits[k])];
   const parts = [...passages];
   if (lost.length > 0) {
-    parts.push(`（下面几条在正文里找不到原句，只有事实本身）\n${lost.map((f) => `- ${f.statement}`).join('\n')}`);
+    parts.push(`（下面幾條在正文裡找不到原句，只有事實本身）\n${lost.map((f) => `- ${f.statement}`).join('\n')}`);
   }
   return { block: `【${plotLabel(no, title)}】\n${parts.join('\n\n')}`, missing: lost.length };
 }
 
-/** 本章角色（细纲 `characters[]`）的名字与他们卡上的别名。更早的章按它挑事实。 */
+/** 本章角色（細綱 `characters[]`）的名字與他們卡上的別名。更早的章按它挑事實。 */
 function namesOf(cards: CharacterCard[], planned: readonly string[]): string[] {
   const out = new Set<string>();
   for (const name of planned) {
@@ -885,7 +886,7 @@ function namesOf(cards: CharacterCard[], planned: readonly string[]): string[] {
   return [...out].filter((n) => n.trim().length >= 2);
 }
 
-/** 本章角色里最晚的「当前状态写到第几章」。一个都没记过时 undefined。 */
+/** 本章角色裡最晚的「當前狀態寫到第幾章」。一個都沒記過時 undefined。 */
 function latestState(cards: CharacterCard[], names: readonly string[]): number | undefined {
   const nos = cards
     .filter((c) => names.includes(c.name))
@@ -895,11 +896,11 @@ function latestState(cards: CharacterCard[], names: readonly string[]): number |
 }
 
 /**
- * 上一版正文与修改意见：「重写」与「修稿」（五期）。
+ * 上一版正文與修改意見：「重寫」與「修稿」（五期）。
  *
- * **整章都带。** 从前这里是 `takeTail(…, 3000)`——3000 token 的尾巴，长一点的章前半截直接没了，
- * 模型只能凭空重写开头，明细上还看不出少了什么（第 2 条）。修稿要求「清单没指到的地方一字不改」，
- * 手上没有原文就无从谈起。
+ * **整章都帶。** 從前這裡是 `takeTail(…, 3000)`——3000 token 的尾巴，長一點的章前半截直接沒了，
+ * 模型只能憑空重寫開頭，明細上還看不出少了什麼（第 2 條）。修稿要求「清單沒指到的地方一字不改」，
+ * 手上沒有原文就無從談起。
  */
 export const revision: LayerFn = async (a, spec) => {
   const value = a.request.revision;
@@ -912,18 +913,18 @@ export const revision: LayerFn = async (a, spec) => {
       id: 'revision',
       kind: 'revision',
       priority: spec.priority,
-      label: revise ? '待修稿原文与勾选的审稿意见' : '上一版草稿与修改意见',
+      label: revise ? '待修稿原文與勾選的審稿意見' : '上一版草稿與修改意見',
       text: revise
         ? `【待修稿原文】\n${value.previousDraft.trim()}\n\n${value.feedback.trim()}`
-        : `【上一版草稿】\n${value.previousDraft.trim()}\n\n【修改意见】\n${value.feedback.trim()}`,
+        : `【上一版草稿】\n${value.previousDraft.trim()}\n\n【修改意見】\n${value.feedback.trim()}`,
     },
     { force: spec.force }
   );
 };
 
 /**
- * 待审的这一章正文全文（审稿，五期）。审的就是它，P0 force；这一章还没有正文时审稿在
- * 生成层就被拦下了（generation/generate.ts），走不到这里。
+ * 待審的這一章正文全文（審稿，五期）。審的就是它，P0 force；這一章還沒有正文時審稿在
+ * 生成層就被攔下了（generation/generate.ts），走不到這裡。
  */
 export const chapterFull: LayerFn = async (a, spec) => {
   const chapter = a.focus.chapter;
@@ -939,7 +940,7 @@ export const chapterFull: LayerFn = async (a, spec) => {
       id: `chapterFull:${a.focus.no}`,
       kind: 'chapterFull',
       priority: spec.priority,
-      label: `${plotLabel(a.focus.no, chapter.title)} · 待审正文（${chapter.wordCount} 字）`,
+      label: `${plotLabel(a.focus.no, chapter.title)} · 待審正文（${chapter.wordCount} 字）`,
       source: chapter.relPath,
       text: text.trim(),
     },
@@ -948,12 +949,12 @@ export const chapterFull: LayerFn = async (a, spec) => {
 };
 
 /**
- * 前几章定稿留下的连续性事实（审稿，五期）：由近及远、一章一条，只带事实文字。
- * 最多几章、一共几字按上下文详细度（`factsChapters` / `factsChars`，缺省 12 章 / 3000 字）。
+ * 前幾章定稿留下的連續性事實（審稿，五期）：由近及遠、一章一條，只帶事實文字。
+ * 最多幾章、一共幾字按上下文詳細度（`factsChapters` / `factsChars`，預設 12 章 / 3000 字）。
  *
- * 上游审稿读的是「已定稿历史的连续性投影」——每一章的要点与事实（RV:121-154），明说它是
- * 「唯一已发生事实源」。这里对应定稿过的细纲里的「连续性事实」一节。没定稿、或定稿之后正文又改过
- * 的章不带并说清楚：拿一份过期的事实去判「本章与前文矛盾」，判出来的可能正是作者改过的地方。
+ * 上游審稿讀的是「已定稿歷史的連續性投影」——每一章的要點與事實（RV:121-154），明說它是
+ * 「唯一已發生事實源」。這裡對應定稿過的細綱裡的「連續性事實」一節。沒定稿、或定稿之後正文又改過
+ * 的章不帶並說清楚：拿一份過期的事實去判「本章與前文矛盾」，判出來的可能正是作者改過的地方。
  */
 export const recentFacts: LayerFn = async (a, spec) => {
   const previous = a.focus.previous;
@@ -970,14 +971,14 @@ export const recentFacts: LayerFn = async (a, spec) => {
       id: `facts:${ref.no}`,
       kind: 'facts' as const,
       priority: spec.priority,
-      label: `${plotLabel(ref.no, ref.title)} · 连续性事实`,
+      label: `${plotLabel(ref.no, ref.title)} · 連續性事實`,
       source: ref.chapter.relPath,
     };
     if (!isFinalized(ref)) {
       a.reject(
         { ...base, text: '' },
         'dropped',
-        ref.plot?.sourceHash ? '同步之后正文又改过，事实不作数' : '这一章还没同步，没有连续性事实'
+        ref.plot?.sourceHash ? '同步之後正文又改過，事實不作數' : '這一章還沒同步，沒有連續性事實'
       );
       continue;
     }
@@ -987,10 +988,10 @@ export const recentFacts: LayerFn = async (a, spec) => {
     }
     const block = `【${plotLabel(ref.no, ref.title)}】\n${facts.map((f) => `- ${f.statement}`).join('\n')}`;
     if (block.length > budget) {
-      a.reject({ ...base, text: '' }, 'dropped', `连续性事实一共只带 ${factsChars} 字，更近的几章已经用完了`);
+      a.reject({ ...base, text: '' }, 'dropped', `連續性事實一共只帶 ${factsChars} 字，更近的幾章已經用完了`);
       continue;
     }
-    const item = a.admit({ ...base, source: ref.plot!.relPath, text: block, note: `${facts.length} 条` });
+    const item = a.admit({ ...base, source: ref.plot!.relPath, text: block, note: `${facts.length} 條` });
     if (item.status === 'included') {
       budget -= block.length;
     }

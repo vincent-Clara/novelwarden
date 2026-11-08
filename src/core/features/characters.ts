@@ -1,13 +1,13 @@
 /**
- * 从选定的几段正文批量提取 / 更新角色卡（缺省勾最近几章，随上下文详细度）。
+ * 從選定的幾段正文批次提取 / 更新角色卡（預設勾最近幾章，隨上下文詳細度）。
  *
- * - 模型给的名字是剧作称谓的（「反派（别名：韩厉）」）换成真名、称谓挪进 tags，没有真名的不建卡。
- * - 同一批先 `mergeWithinBatch` 再和已有的卡比：同名的并成一条；别名是同批另一条正式名的只去掉那个别名、
- *   两人都留（同章共现即两人，第 14 条）。
- * - 按人物、按小标题写 1 次，转写那一档照抄成数组 1 次（`TRANSCRIBED_CALLS`，解码是 `parseCharacterResponse`）；
- *   转写没成同解析不出来。
+ * - 模型給的名字是劇作稱謂的（「反派（別名：韓厲）」）換成真名、稱謂挪進 tags，沒有真名的不建卡。
+ * - 同一批先 `mergeWithinBatch` 再和已有的卡比：同名的併成一條；別名是同批另一條正式名的只去掉那個別名、
+ *   兩人都留（同章共現即兩人，第 14 條）。
+ * - 按人物、按小標題寫 1 次，轉寫那一檔照抄成陣列 1 次（`TRANSCRIBED_CALLS`，解碼是 `parseCharacterResponse`）；
+ *   轉寫沒成同解析不出來。
  *
- * 系统提示词在 charactersPrompt.ts。
+ * 系統提示詞在 charactersPrompt.ts。
  */
 import { getHost, plainVerdict } from '../host';
 import { collectText } from '../llm/collect';
@@ -39,82 +39,82 @@ import { TranscribeSpec, transcribeJson } from './transcribe';
 const log = scoped('角色卡');
 
 /**
- * 从选定的章节提取/更新角色卡。
+ * 從選定的章節提取/更新角色卡。
  *
- * 读的是 `chapters/` 里的正文——人物怎么说话、什么脾气只有正文里看得出，
- * 细纲里没有。所以还没写正文（0 字）的章不在候选里。
+ * 讀的是 `chapters/` 裡的正文——人物怎麼說話、什麼脾氣只有正文裡看得出，
+ * 細綱裡沒有。所以還沒寫正文（0 字）的章不在候選裡。
  *
- * 关键约束：**绝不静默覆盖作者手写的角色卡**。已存在的角色一律经
- * 宿主审阅（插件开 diff 编辑器，独立版弹确认框）；新角色则直接创建。
+ * 關鍵約束：**絕不靜默覆蓋作者手寫的角色卡**。已存在的角色一律經
+ * 宿主審閱（外掛開 diff 編輯器，獨立版彈確認框）；新角色則直接建立。
  */
 export async function extractCharacters(project: NovelProject): Promise<void> {
   const written = (await project.listChapters()).filter((c) => c.wordCount > 0);
   if (written.length === 0) {
-    log.warn('还没有写过正文，无法提取角色');
-    getHost().toast('还没有写过正文。');
+    log.warn('還沒有寫過正文，無法提取角色');
+    getHost().toast('還沒有寫過正文。');
     return;
   }
 
-  // 默认勾最近几章（上下文详细度，缺省三章）；选得越多越准，但消耗的 token 也越多。
+  // 預設勾最近幾章（上下文詳細度，預設三章）；選得越多越準，但消耗的 token 也越多。
   const config = readConfig();
   const picked = await pickPlotsByInput(
     written.map((c) => ({ no: c.order, title: c.title, chapter: c })),
-    '从哪几章提取角色信息？',
-    '输入章号，逗号分隔，如 1,2,3',
+    '從哪幾章提取角色資訊？',
+    '輸入章號，逗號分隔，如 1,2,3',
     takeLast(written, contextLimitsOf(config).characterChapters).map((c) => c.order)
   );
   if (!picked || picked.length === 0) {
-    log.info('用户取消了章节选择');
+    log.info('使用者取消了章節選擇');
     return;
   }
   const answer = await askCall({
-    message: `提取角色卡：读第 ${picked.map((p) => p.no).join('、')} 章正文，新角色直接建卡，已有角色的更新逐个对比后再写。${describeCalls(TRANSCRIBED_CALLS)}。`,
-    actions: ['开始提取'],
+    message: `提取角色卡：讀第 ${picked.map((p) => p.no).join('、')} 章正文，新角色直接建卡，已有角色的更新逐個對比後再寫。${describeCalls(TRANSCRIBED_CALLS)}。`,
+    actions: ['開始提取'],
     tasks: ['extractCharacters', 'transcribe'],
-    // 读哪几章上一步已经选定了，详细度管不着这一次。
+    // 讀哪幾章上一步已經選定了，詳細度管不著這一次。
     contextDetail: false,
   });
-  if (answer?.action !== '开始提取') {
-    log.info('用户取消了提取角色');
+  if (answer?.action !== '開始提取') {
+    log.info('使用者取消了提取角色');
     return;
   }
   return withCallChoice(answer.choice, () => runExtract(project, picked));
 }
 
-/** 问完之后：一次调用读选定的几章，建新卡、对比已有的。 */
+/** 問完之後：一次呼叫讀選定的幾章，建新卡、對比已有的。 */
 async function runExtract(project: NovelProject, picked: { no: number; title: string; chapter: Chapter }[]): Promise<void> {
-  // 确认框之后重新读：作者挑的模型与详细度在这之后才有（features/askCall.ts）。
+  // 確認框之後重新讀：作者挑的模型與詳細度在這之後才有（features/askCall.ts）。
   const config = readConfig();
-  // 一批章节一次调用，谈不上并发；走池是为了拿到「首选失败就换模型」。
+  // 一批章節一次呼叫，談不上併發；走池是為了拿到「首選失敗就換模型」。
   const pool = await createModelPool({ task: 'extractCharacters', concurrent: false });
   if (!pool) {
-    log.error('没有可用的模型，提取中止');
+    log.error('沒有可用的模型，提取中止');
     return;
   }
   const existing = await project.listCharacters();
   log.info(
-    `准备从 ${picked.length} 章提取角色`,
-    `章节 ${picked.map((p) => p.no).join('、')}｜已有角色卡 ${existing.length} 张｜模型 ${pool.label}`
+    `準備從 ${picked.length} 章提取角色`,
+    `章節 ${picked.map((p) => p.no).join('、')}｜已有角色卡 ${existing.length} 張｜模型 ${pool.label}`
   );
 
   await runTask(
-    '提取角色信息',
+    '提取角色資訊',
     async ({ signal, report }) => {
       const startedAt = Date.now();
-      // 三步：读正文 → 调模型 → 合并。给 total 才画得出进度条。
-      report({ message: '读取正文', current: 0, total: 3 });
+      // 三步：讀正文 → 調模型 → 合併。給 total 才畫得出進度條。
+      report({ message: '讀取正文', current: 0, total: 3 });
       const selected = [...picked].sort((a, b) => a.no - b.no);
-      // 预算跟着实际干活的模型走，不是对话页选的那个。
+      // 預算跟著實際幹活的模型走，不是對話頁選的那個。
       const budget = pool.primaryBudget.contextWindow - pool.primaryBudget.maxOutputTokens - 2000;
       const corpus = await buildCorpus(project, selected, budget);
-      log.debug('正文已读取', `${corpus.length} 字（约 ${estimateTokens(corpus)} token）`);
+      log.debug('正文已讀取', `${corpus.length} 字（約 ${estimateTokens(corpus)} token）`);
 
       const knownList =
         existing.length > 0
-          ? existing.map((c) => `- ${c.name}${c.aliases.length ? `（别名：${c.aliases.join('、')}）` : ''}`).join('\n')
-          : '（暂无已有角色卡）';
+          ? existing.map((c) => `- ${c.name}${c.aliases.length ? `（別名：${c.aliases.join('、')}）` : ''}`).join('\n')
+          : '（暫無已有角色卡）';
 
-      report({ message: '调用模型分析人物', current: 1, total: 3 });
+      report({ message: '呼叫模型分析人物', current: 1, total: 3 });
       const options: StreamOptions = {
         maxOutputTokens: pool.primaryBudget.maxOutputTokens,
         temperature: 0.3,
@@ -129,42 +129,42 @@ async function runExtract(project: NovelProject, picked: { no: number; title: st
               { role: 'system', content: CHARACTER_SYSTEM },
               {
                 role: 'user',
-                content: `已有角色卡（同一人请沿用既有名字，不要另起新名）：\n${knownList}\n\n以下是正文：\n\n${corpus}`,
+                content: `已有角色卡（同一人請沿用既有名字，不要另起新名）：\n${knownList}\n\n以下是正文：\n\n${corpus}`,
               },
             ],
             options
           )
         )
       );
-      log.info('模型已返回', `${raw.length} 字，用时 ${elapsed(modelStart)}`);
+      log.info('模型已返回', `${raw.length} 字，用時 ${elapsed(modelStart)}`);
 
       if (signal.aborted) {
         log.warn('提取被取消');
         return;
       }
 
-      // 2026-10-25 起改成转写：按人物、按小标题写的档案交给转写那一档照抄成 JSON（原文本身就是 JSON 的不转）。
-      // 转写没成同从前解析不出来：一张卡都不动，说一声。
+      // 2026-10-25 起改成轉寫：按人物、按小標題寫的檔案交給轉寫那一檔照抄成 JSON（原文字身就是 JSON 的不轉）。
+      // 轉寫沒成同從前解析不出來：一張卡都不動，說一聲。
       const r = await transcribeJson(raw, CHARACTERS_SPEC, poolTranscriber(signal, pool));
       if (r.notes.length > 0) {
-        log.info(`提取角色：转写 ${r.calls} 次`, r.notes.join('\n'));
+        log.info(`提取角色：轉寫 ${r.calls} 次`, r.notes.join('\n'));
       }
       if (!r.ok) {
-        log.warn(`没有解析出角色信息（${r.message}）`, `模型返回开头：${raw.slice(0, 300)}`);
-        getHost().toast('没有从这些章节中解析出角色信息。');
+        log.warn(`沒有解析出角色資訊（${r.message}）`, `模型返回開頭：${raw.slice(0, 300)}`);
+        getHost().toast('沒有從這些章節中解析出角色資訊。');
         return;
       }
       const parsed = r.value;
 
-      report({ message: `解析出 ${parsed.length} 个角色，正在合并`, current: 2, total: 3 });
-      log.info(`解析出 ${parsed.length} 个角色`, parsed.map((p) => p.name).join('、'));
+      report({ message: `解析出 ${parsed.length} 個角色，正在合併`, current: 2, total: 3 });
+      log.info(`解析出 ${parsed.length} 個角色`, parsed.map((p) => p.name).join('、'));
       await mergeCharacters(project, parsed, existing, {
         firstNo: selected[0].no,
         lastNo: selected[selected.length - 1].no,
         nos: selected.map((p) => p.no),
       });
       report({ message: '完成', current: 3, total: 3 });
-      log.info('提取结束', `总耗时 ${elapsed(startedAt)}`);
+      log.info('提取結束', `總耗時 ${elapsed(startedAt)}`);
     },
     { scope: '角色卡' }
   );
@@ -186,8 +186,8 @@ async function mergeCharacters(
 ): Promise<void> {
   const batch = mergeWithinBatch(parsed);
   const byName = new Map<string, CharacterCard>();
-  // 正式名先占位，别名后补：一张卡上写错的别名（模型给方源挂过 `方正`）
-  // 抢不走另一张卡的正式名。泛称别名（`姐姐`/`她`）一律不进表——它们谁都能用。
+  // 正式名先佔位，別名後補：一張卡上寫錯的別名（模型給方源掛過 `方正`）
+  // 搶不走另一張卡的正式名。泛稱別名（`姐姐`/`她`）一律不進表——它們誰都能用。
   for (const card of existing) {
     byName.set(card.name, card);
   }
@@ -208,9 +208,9 @@ async function mergeCharacters(
       pendingDiff.push(item);
       continue;
     }
-    // 新角色：直接创建，没有可覆盖的人工内容。
+    // 新角色：直接建立，沒有可覆蓋的人工內容。
     const slug = await uniqueSlug(project.charactersDir, slugify(item.name));
-    // 「当前状态」是从这几章里提取的：盖章归机器（D15），写到这一批的最后一章。
+    // 「當前狀態」是從這幾章裡提取的：蓋章歸機器（D15），寫到這一批的最後一章。
     const relPath = await new Workspace(project).writeCharacter(
       stampState(
         {
@@ -221,8 +221,8 @@ async function mergeCharacters(
           gender: item.gender,
           firstAppear: range.firstNo,
           lastSeen: range.lastNo,
-          // 这一批章节就是目前已知的出场记录。出场索引（定稿过的细纲）之后会给出更完整的清单，
-          // 这里先落一份，免得新卡在角色页上显示「未在定稿中出现」。
+          // 這一批章節就是目前已知的出場記錄。出場索引（定稿過的細綱）之後會給出更完整的清單，
+          // 這裡先落一份，免得新卡在角色頁上顯示「未在定稿中出現」。
           appearsIn: range.nos,
           updatedThrough: range.lastNo,
           sections: item.sections,
@@ -243,14 +243,14 @@ async function mergeCharacters(
   }
 
   const names = pendingDiff.map((p) => p.name).join('、');
-  log.info(`${pendingDiff.length} 张已有角色卡有更新建议`, names);
+  log.info(`${pendingDiff.length} 張已有角色卡有更新建議`, names);
   const choice = await getHost().confirm(
-    `已有角色卡的更新：${names}。要逐个对比确认吗？`,
-    ['逐个对比', '跳过更新'],
+    `已有角色卡的更新：${names}。要逐個對比確認嗎？`,
+    ['逐個對比', '跳過更新'],
     { modal: true }
   );
-  if (choice !== '逐个对比') {
-    log.info('用户跳过了已有角色卡的更新');
+  if (choice !== '逐個對比') {
+    log.info('使用者跳過了已有角色卡的更新');
     return;
   }
 
@@ -264,8 +264,8 @@ async function mergeCharacters(
 }
 
 /**
- * 让作者对比「现有角色卡」与「模型建议」，确认后才写入。
- * 插件宿主开 diff 编辑器；独立版弹确认框（Host.reviewReplace）。
+ * 讓作者對比「現有角色卡」與「模型建議」，確認後才寫入。
+ * 外掛宿主開 diff 編輯器；獨立版彈確認框（Host.reviewReplace）。
  */
 async function reviewCharacterUpdate(
   project: NovelProject,
@@ -273,11 +273,11 @@ async function reviewCharacterUpdate(
   proposed: ParsedCharacter,
   range: { lastNo: number; nos: number[] }
 ): Promise<void> {
-  // 合并策略：模型有内容的小节覆盖，模型留空的保留原文；别名/标签取并集；性别卡上写了的不动。
+  // 合併策略：模型有內容的小節覆蓋，模型留空的保留原文；別名/標籤取並集；性別卡上寫了的不動。
   const merged: CharacterSections = { ...existing.sections };
   for (const key of CHARACTER_SECTION_KEYS) {
     const next = proposed.sections[key]?.trim();
-    if (next && next !== '无' && next !== '（待补充）') {
+    if (next && next !== '無' && next !== '（待補充）') {
       merged[key] = next;
     }
   }
@@ -293,13 +293,13 @@ async function reviewCharacterUpdate(
     firstAppear: existing.firstAppear ?? appearsIn[0],
     lastSeen: Math.max(existing.lastSeen ?? 0, range.lastNo) || range.lastNo,
     appearsIn,
-    // 这次读到了哪一章，下次「更新角色卡」的增量从这里接着走。
+    // 這次讀到了哪一章，下次「更新角色卡」的增量從這裡接著走。
     updatedThrough: Math.max(existing.updatedThrough ?? 0, range.lastNo),
     sections: merged,
   };
-  // 模型给了新的「当前状态」才盖章（D15）；没给就沿用旧卡那一节，连同旧卡的章。
+  // 模型給了新的「當前狀態」才蓋章（D15）；沒給就沿用舊卡那一節，連同舊卡的章。
   const nextState = proposed.sections.当前状态?.trim();
-  const mergedCard = nextState && nextState !== '无' && nextState !== '（待补充）' ? stampState(baseCard, range.lastNo) : baseCard;
+  const mergedCard = nextState && nextState !== '無' && nextState !== '（待補充）' ? stampState(baseCard, range.lastNo) : baseCard;
 
   const proposedText = renderCharacterCard(mergedCard);
   const currentAbs = project.pathOf(existing.relPath);
@@ -310,29 +310,29 @@ async function reviewCharacterUpdate(
   if (host.reviewReplace) {
     verdict = plainVerdict(await host.reviewReplace(existing.name, currentText, proposedText, existing.relPath));
   } else {
-    // 宿主未实现审阅能力时退化为纯确认（不展示差异）。
+    // 宿主未實現審閱能力時退化為純確認（不展示差異）。
     const pick = await getHost().confirm(
-      `已生成对「${existing.name}」的更新（合并模型建议与现有内容）。直接采纳？`,
-      ['采纳', '跳过'],
+      `已生成對「${existing.name}」的更新（合併模型建議與現有內容）。直接採納？`,
+      ['採納', '跳過'],
       { modal: true }
     );
-    verdict = pick === '采纳' ? 'apply' : pick === '跳过' ? 'discard' : undefined;
+    verdict = pick === '採納' ? 'apply' : pick === '跳過' ? 'discard' : undefined;
   }
 
   if (verdict === 'apply') {
-    // 作者在上面那张审阅里点了采纳：经网关写回（守卫照过、旧内容先进历史版本），`review: false`——不问第二次。
+    // 作者在上面那張審閱裡點了採納：經閘道器寫回（守衛照過、舊內容先進歷史版本），`review: false`——不問第二次。
     await new Workspace(project).write(existing.relPath, { text: proposedText }, { mode: 'overwrite', review: false });
     log.info(`已更新角色卡「${existing.name}」`, `${existing.relPath}｜${currentText.length} 字 → ${proposedText.length} 字`);
     getHost().toast(`已更新「${existing.name}」。`);
   } else {
-    log.info(`跳过角色卡「${existing.name}」`, verdict === 'discard' ? '用户放弃' : '用户取消');
+    log.info(`跳過角色卡「${existing.name}」`, verdict === 'discard' ? '使用者放棄' : '使用者取消');
   }
 }
 
 /**
- * 手动新建一张空角色卡。
- * `dir` 是落点目录（工作区相对路径，如 `.novelwarden/characters/主角`）；
- * 缺省或越界时落在 characters/ 根下。
+ * 手動新建一張空角色卡。
+ * `dir` 是落點目錄（工作區相對路徑，如 `.novelwarden/characters/主角`）；
+ * 預設或越界時落在 characters/ 根下。
  */
 export async function newCharacter(project: NovelProject, dir?: string): Promise<void> {
   const target = resolveSectionDir(project, 'characters', dir);
@@ -340,12 +340,12 @@ export async function newCharacter(project: NovelProject, dir?: string): Promise
   const name = await getHost().input({
     title: '新建角色卡',
     prompt: target === root ? '角色姓名' : `角色姓名（建到 ${target}/）`,
-    validate: (v) => (v.trim() ? undefined : '不能为空'),
+    validate: (v) => (v.trim() ? undefined : '不能為空'),
   });
   if (!name) {
     return;
   }
-  // slug 带上子目录前缀，writeCharacter 会连中间目录一起建出来。
+  // slug 帶上子目錄字首，writeCharacter 會連中間目錄一起建出來。
   const prefix = target === root ? '' : `${target.slice(root.length + 1)}/`;
   const slug = await uniqueSlug(project.charactersDir, `${prefix}${slugify(name)}`);
   const relPath = await new Workspace(project).writeCharacter({
@@ -359,8 +359,8 @@ export async function newCharacter(project: NovelProject, dir?: string): Promise
 }
 
 /**
- * 手动新建一条设定。`dir` 同 newCharacter（目录就是分类，还不存在就一并建出来）。
- * `name` 给了就不再问标题——工程页「出现过 · 未建条目」那一行右键新建时带着名字。
+ * 手動新建一條設定。`dir` 同 newCharacter（目錄就是分類，還不存在就一併建出來）。
+ * `name` 給了就不再問標題——工程頁「出現過 · 未建條目」那一行右鍵新建時帶著名字。
  */
 export async function newLore(project: NovelProject, dir?: string, name?: string): Promise<void> {
   const target = resolveSectionDir(project, 'lore', dir);
@@ -368,9 +368,9 @@ export async function newLore(project: NovelProject, dir?: string, name?: string
   const title =
     name?.trim() ||
     (await getHost().input({
-      title: '新建设定条目',
-      prompt: target === root ? '设定标题（如「玄门七宗」）' : `设定标题（建到 ${target}/）`,
-      validate: (v) => (v.trim() ? undefined : '不能为空'),
+      title: '新建設定條目',
+      prompt: target === root ? '設定標題（如「玄門七宗」）' : `設定標題（建到 ${target}/）`,
+      validate: (v) => (v.trim() ? undefined : '不能為空'),
     }));
   if (!title) {
     return;
@@ -378,14 +378,14 @@ export async function newLore(project: NovelProject, dir?: string, name?: string
   const prefix = target === root ? '' : `${target.slice(root.length + 1)}/`;
   const slug = await uniqueSlug(project.loreDir, `${prefix}${slugify(title)}`);
   const rel = `${root}/${slug}.md`;
-  // 经网关新建（`create`：同名报错退出、不覆盖——上面挑过不撞名的 slug，撞上只可能是这一瞬间别处刚建了同名的）。
+  // 經閘道器新建（`create`：同名報錯退出、不覆蓋——上面挑過不撞名的 slug，撞上只可能是這一瞬間別處剛建了同名的）。
   await new Workspace(project).write(
     rel,
     {
       text:
         `---\ntitle: ${title.trim()}\nkeywords: [${title.trim()}]\n---\n\n# ${title.trim()}\n\n` +
-        `${LORE_PLACEHOLDER_PREFIX}：它是什么、有什么规则与边界、现在是什么状态。frontmatter 里可以加一行 brief 写一句话简介，` +
-        '名录里那一行显示它；keywords 写它的别称，正文或细纲里提到时会自动带进上下文。）\n',
+        `${LORE_PLACEHOLDER_PREFIX}：它是什麼、有什麼規則與邊界、現在是什麼狀態。frontmatter 裡可以加一行 brief 寫一句話簡介，` +
+        '名錄裡那一行顯示它；keywords 寫它的別稱，正文或細綱裡提到時會自動帶進上下文。）\n',
     },
     { mode: 'create' }
   );
@@ -395,24 +395,24 @@ export async function newLore(project: NovelProject, dir?: string, name?: string
 // ---------------------------------------------------------------- 解析
 
 /**
- * 提取角色转写那一步（2026-10-25 起改成转写）：合同是 {@link CHARACTER_JSON_CONTRACT}，解码就是下面的
- * {@link parseCharacterResponse}（剧作称谓换真名那些后处理都在里面）。一个人都整理不出来算不合格；性别按对应关系填，
- * 不比原文；原文连「身份」「性格」这几节都没有的不转。
+ * 提取角色轉寫那一步（2026-10-25 起改成轉寫）：合同是 {@link CHARACTER_JSON_CONTRACT}，解碼就是下面的
+ * {@link parseCharacterResponse}（劇作稱謂換真名那些後處理都在裡面）。一個人都整理不出來算不合格；性別按對應關係填，
+ * 不比原文；原文連「身份」「性格」這幾節都沒有的不轉。
  */
 const CHARACTERS_SPEC: TranscribeSpec<ParsedCharacter[]> = {
   label: '提取角色',
   contract: CHARACTER_JSON_CONTRACT,
   decode: (json) => {
     const list = parseCharacterResponse(json);
-    return list.length > 0 ? { ok: true, value: list } : { ok: false, message: '一个人物都整理不出来：要一个数组，每项带 name' };
+    return list.length > 0 ? { ok: true, value: list } : { ok: false, message: '一個人物都整理不出來：要一個陣列，每項帶 name' };
   },
   mapped: ['性别', 'gender'],
-  looksLike: (source) => /身份|性格|语言习惯|当前状态/.test(source),
+  looksLike: (source) => /身份|性格|(?:语|語)言(?:习|習)(?:惯|慣)|(?:当|當)前(?:状|狀)(?:态|態)/.test(source),
 };
 
 /**
- * 解析模型返回（转写出来的、或模型直接给的 JSON 数组）；解析失败时返回空数组由调用方提示，
- * 不做「猜测式」兜底——角色卡写错比没写更麻烦。
+ * 解析模型返回（轉寫出來的、或模型直接給的 JSON 陣列）；解析失敗時返回空陣列由呼叫方提示，
+ * 不做「猜測式」兜底——角色卡寫錯比沒寫更麻煩。
  */
 export function parseCharacterResponse(raw: string): ParsedCharacter[] {
   const text = stripCodeFence(raw);
@@ -449,14 +449,14 @@ export function parseCharacterResponse(raw: string): ParsedCharacter[] {
         sections[key] = value.filter((v) => typeof v === 'string').map((v) => `- ${v}`).join('\n');
       }
     }
-    // 「反派（别名：韩厉）」：称谓不是名字，换成别名里的真名、称谓挪进 tags；别名里没有真名的不建卡。
+    // 「反派（別名：韓厲）」：稱謂不是名字，換成別名裡的真名、稱謂挪進 tags；別名裡沒有真名的不建卡。
     const resolved = resolveRoleLabelName(name, sanitizeAliases(unique(stringArray(obj.aliases)), name));
     if (!resolved) {
-      log.warn(`「${name}」是剧作称谓，别名里也没有真名，不建卡`);
+      log.warn(`「${name}」是劇作稱謂，別名裡也沒有真名，不建卡`);
       continue;
     }
     if (resolved.label) {
-      log.info(`「${resolved.label}」是剧作称谓，改用别名里的「${resolved.name}」`);
+      log.info(`「${resolved.label}」是劇作稱謂，改用別名裡的「${resolved.name}」`);
     }
     out.push({
       name: resolved.name,
@@ -470,13 +470,13 @@ export function parseCharacterResponse(raw: string): ParsedCharacter[] {
 }
 
 /**
- * 同一次返回里的条目先互相对一遍，再去和已有的卡比。
+ * 同一次返回裡的條目先互相對一遍，再去和已有的卡比。
  *
- * - **同名的并成一条**：别名、标签取并集，小节以先出现的为准、空的用后一条补，性别同理。
- *   「反派（别名：韩厉）」换名之后就是第二个「韩厉」，不并会建出 `韩厉.md` 与 `韩厉-2.md`。
- * - **别名是同一批另一条的正式名，删掉这个别名，不并**：模型把两个人列成两条，就是认为
- *   他们是两个人（与「同章共现即两人」同一个道理，AGENTS 第 14 条）；那个别名才是错的——
- *   实战里方源的卡挂过孪生弟弟「方正」，按别名并会把方正整个人吞掉。
+ * - **同名的併成一條**：別名、標籤取並集，小節以先出現的為準、空的用後一條補，性別同理。
+ *   「反派（別名：韓厲）」換名之後就是第二個「韓厲」，不併會建出 `韩厉.md` 與 `韩厉-2.md`。
+ * - **別名是同一批另一條的正式名，刪掉這個別名，不併**：模型把兩個人列成兩條，就是認為
+ *   他們是兩個人（與「同章共現即兩人」同一個道理，AGENTS 第 14 條）；那個別名才是錯的——
+ *   實戰裡方源的卡掛過孿生弟弟「方正」，按別名並會把方正整個人吞掉。
  */
 export function mergeWithinBatch(parsed: readonly ParsedCharacter[]): ParsedCharacter[] {
   const out: ParsedCharacter[] = [];
@@ -494,14 +494,14 @@ export function mergeWithinBatch(parsed: readonly ParsedCharacter[]): ParsedChar
         same.sections[key] = item.sections[key];
       }
     }
-    log.info(`同一批里「${item.name}」出现了两次，已并成一条`);
+    log.info(`同一批裡「${item.name}」出現了兩次，已併成一條`);
   }
   const names = new Set(out.map((p) => normalizeName(p.name)));
   for (const item of out) {
     const borrowed = item.aliases.filter((a) => names.has(normalizeName(a)) && normalizeName(a) !== normalizeName(item.name));
     if (borrowed.length > 0) {
       item.aliases = item.aliases.filter((a) => !borrowed.includes(a));
-      log.warn(`「${item.name}」的别名 ${borrowed.join('、')} 是同一批另一个人的名字，已去掉`);
+      log.warn(`「${item.name}」的別名 ${borrowed.join('、')} 是同一批另一個人的名字，已去掉`);
     }
   }
   return out;
@@ -520,10 +520,10 @@ async function buildCorpus(
   const joined = parts.join('\n\n');
   const clipped = takeHead(joined, Math.max(2000, budget));
   if (clipped.length < joined.length) {
-    // 「不静默截断」：选了五章却只读进去两章半，作者必须知道。
+    // 「不靜默截斷」：選了五章卻只讀進去兩章半，作者必須知道。
     log.warn(
-      '选中章节的正文超出输入预算，已截断',
-      `${joined.length} 字 → ${clipped.length} 字。少选几章可让提取更完整。`
+      '選中章節的正文超出輸入預算，已截斷',
+      `${joined.length} 字 → ${clipped.length} 字。少選幾章可讓提取更完整。`
     );
   }
   return clipped;

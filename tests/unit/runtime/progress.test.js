@@ -1,10 +1,10 @@
 /**
- * 长任务登记处：进度快照、n/N、只改一个字段、取消、抛异常、并发。
- * 迁自 scripts/smoke-logging.js 的 `== 长任务 ==`、`== 长任务：只改一个字段 ==`、
- * `== 长任务：取消 ==`、`== 长任务：抛异常 ==`、`== 长任务：并发 ==` 五节。
+ * 長任務登記處：進度快照、n/N、只改一個欄位、取消、拋異常、併發。
+ * 遷自 scripts/smoke-logging.js 的 `== 長任務 ==`、`== 長任務：只改一個欄位 ==`、
+ * `== 長任務：取消 ==`、`== 長任務：拋異常 ==`、`== 長任務：併發 ==` 五節。
  *
- * host 用 makeFakeHost()：它默认的 progress 实现把每次进度记成 `${title}｜${m}`，
- * 与迁移前那份手写假宿主逐字一致，所以 h.progressCalls 可直接顶替原来的 hostProgressCalls。
+ * host 用 makeFakeHost()：它預設的 progress 實現把每次進度記成 `${title}｜${m}`，
+ * 與遷移前那份手寫假宿主逐字一致，所以 h.progressCalls 可直接頂替原來的 hostProgressCalls。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -28,7 +28,7 @@ before(() => {
   bundle.host.initHost(h.host);
 });
 
-describe('长任务', () => {
+describe('長任務', () => {
   let startedEmpty;
   let changes;
   let snapshotDuring;
@@ -42,7 +42,7 @@ describe('长任务', () => {
     const sub = progress.onTasksChanged(() => changes.push(progress.activeTasks().length));
 
     snapshotDuring = null;
-    result = await progress.runTask('同步章节摘要', async ({ report }) => {
+    result = await progress.runTask('同步章節摘要', async ({ report }) => {
       report({ message: '第 1 章', current: 0, total: 3 });
       snapshotDuring = progress.activeTasks()[0];
       report({ message: '第 2 章', current: 1 });
@@ -52,50 +52,50 @@ describe('长任务', () => {
     sub.dispose();
   });
 
-  test('起始时没有任务', () => {
+  test('起始時沒有任務', () => {
     assert.equal(startedEmpty, 0);
   });
 
-  test('返回值透传', () => {
+  test('返回值透傳', () => {
     assert.equal(result, '完成', result);
   });
 
-  test('任务中能看到快照', () => {
+  test('任務中能看到快照', () => {
     assert.ok(!!snapshotDuring);
   });
 
-  test('快照带标题', () => {
-    assert.equal(snapshotDuring.title, '同步章节摘要', snapshotDuring.title);
+  test('快照帶標題', () => {
+    assert.equal(snapshotDuring.title, '同步章節摘要', snapshotDuring.title);
   });
 
-  test('快照带文案', () => {
+  test('快照帶文案', () => {
     assert.equal(snapshotDuring.message, '第 1 章', snapshotDuring.message);
   });
 
-  test('快照带总数', () => {
+  test('快照帶總數', () => {
     assert.equal(snapshotDuring.total, 3, `${snapshotDuring.total}`);
   });
 
-  test('快照带耗时', () => {
+  test('快照帶耗時', () => {
     assert.equal(typeof snapshotDuring.elapsedMs, 'number');
   });
 
-  test('结束后任务表清空', () => {
+  test('結束後任務表清空', () => {
     assert.equal(progress.activeTasks().length, 0);
   });
 
-  test('订阅收到过变化', () => {
+  test('訂閱收到過變化', () => {
     assert.ok(changes.length > 0, `${changes.length}`);
   });
 
-  test('宿主进度带 n/N', () => {
+  test('宿主進度帶 n/N', () => {
     assert.ok(
       hostProgressCalls.some((c) => c.includes('（1/3）')),
       hostProgressCalls.join(' / ')
     );
   });
 
-  test('宿主进度带前缀', () => {
+  test('宿主進度帶字首', () => {
     assert.ok(
       hostProgressCalls.every((c) => c.startsWith('Novelwarden：')),
       hostProgressCalls[0]
@@ -103,19 +103,19 @@ describe('长任务', () => {
   });
 });
 
-describe('长任务：只改一个字段', () => {
+describe('長任務：只改一個欄位', () => {
   let snap;
 
   before(async () => {
     snap = null;
-    await progress.runTask('测试任务', async ({ report }) => {
+    await progress.runTask('測試任務', async ({ report }) => {
       report({ message: '甲', current: 2, total: 9 });
-      report('乙'); // 纯字符串：只改文案
+      report('乙'); // 純字串：只改文案
       snap = progress.activeTasks()[0];
     });
   });
 
-  test('字符串 report 只改文案', () => {
+  test('字串 report 只改文案', () => {
     assert.equal(snap.message, '乙', snap.message);
   });
 
@@ -128,7 +128,7 @@ describe('长任务：只改一个字段', () => {
   });
 });
 
-describe('长任务：取消', () => {
+describe('長任務：取消', () => {
   let cancelled;
   let sawAbort;
   let idDuring;
@@ -136,45 +136,45 @@ describe('长任务：取消', () => {
   before(async () => {
     sawAbort = false;
     idDuring = '';
-    await progress.runTask('可取消任务', async ({ signal, report }) => {
-      report({ message: '跑着', current: 0, total: 2 });
+    await progress.runTask('可取消任務', async ({ signal, report }) => {
+      report({ message: '跑著', current: 0, total: 2 });
       idDuring = progress.activeTasks()[0].id;
-      // 迁移前这条断言写在任务体内部；这里把结论带出来，断言留在下面的用例里。
+      // 遷移前這條斷言寫在任務體內部；這裡把結論帶出來，斷言留在下面的用例裡。
       cancelled = progress.cancelTask(idDuring);
       sawAbort = signal.aborted;
     });
   });
 
-  test('cancelTask 认得在跑的任务', () => {
+  test('cancelTask 認得在跑的任務', () => {
     assert.ok(cancelled);
   });
 
-  test('任务体看得到 aborted', () => {
+  test('任務體看得到 aborted', () => {
     assert.ok(sawAbort);
   });
 
-  test('取消后任务表也清空', () => {
+  test('取消後任務表也清空', () => {
     assert.equal(progress.activeTasks().length, 0);
   });
 
-  test('对已结束的 id 返回 false', () => {
+  test('對已結束的 id 返回 false', () => {
     assert.equal(progress.cancelTask(idDuring), false);
   });
 
-  test('对未知 id 返回 false', () => {
+  test('對未知 id 返回 false', () => {
     assert.equal(progress.cancelTask('task-不存在'), false);
   });
 });
 
-describe('长任务：抛异常', () => {
+describe('長任務：拋異常', () => {
   let caught;
   let errors;
 
   before(async () => {
     caught = '';
     try {
-      await progress.runTask('会失败的任务', async () => {
-        throw new Error('故意失败');
+      await progress.runTask('會失敗的任務', async () => {
+        throw new Error('故意失敗');
       });
     } catch (err) {
       caught = err.message;
@@ -182,53 +182,53 @@ describe('长任务：抛异常', () => {
 
     logger.clearLogs();
     try {
-      await progress.runTask('再失败一次', async () => {
-        throw new Error('又失败了');
+      await progress.runTask('再失敗一次', async () => {
+        throw new Error('又失敗了');
       });
     } catch {
-      /* 预期内 */
+      /* 預期內 */
     }
     errors = logger.recentLogs().filter((e) => e.level === 'error');
   });
 
-  test('异常继续往上抛', () => {
-    assert.equal(caught, '故意失败', caught);
+  test('異常繼續往上拋', () => {
+    assert.equal(caught, '故意失敗', caught);
   });
 
-  test('失败后任务表清空', () => {
+  test('失敗後任務表清空', () => {
     assert.equal(progress.activeTasks().length, 0);
   });
 
-  test('失败进日志', () => {
+  test('失敗進日誌', () => {
     assert.ok(
-      errors.some((e) => e.message.includes('又失败了')),
+      errors.some((e) => e.message.includes('又失敗了')),
       JSON.stringify(errors)
     );
   });
 });
 
-describe('长任务：并发', () => {
+describe('長任務：併發', () => {
   let both;
 
   before(async () => {
     both = 0;
     await Promise.all([
-      progress.runTask('任务甲', async () => {
+      progress.runTask('任務甲', async () => {
         await new Promise((r) => setTimeout(r, 20));
         both = Math.max(both, progress.activeTasks().length);
       }),
-      progress.runTask('任务乙', async () => {
+      progress.runTask('任務乙', async () => {
         await new Promise((r) => setTimeout(r, 20));
         both = Math.max(both, progress.activeTasks().length);
       }),
     ]);
   });
 
-  test('两个任务能同时在表里', () => {
+  test('兩個任務能同時在表裡', () => {
     assert.equal(both, 2, `${both}`);
   });
 
-  test('都结束后表空了', () => {
+  test('都結束後表空了', () => {
     assert.equal(progress.activeTasks().length, 0);
   });
 });

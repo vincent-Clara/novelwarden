@@ -1,18 +1,18 @@
 /**
- * 网关的复制（`Workspace.copy`）与文件页的「复制 → 粘贴」（`files/projectFiles.ts` 的 `copyInto`）。
+ * 閘道器的複製（`Workspace.copy`）與檔案頁的「複製 → 貼上」（`files/projectFiles.ts` 的 `copyInto`）。
  *
- * 从前粘贴的复制变体直接 `fs.cp`，**不过守卫**：能把文件复制进 `.trash/`、`sessions/`、`.novelwarden/history/`，
- * 也能把会话文件、工程库从内部目录里复制出来；复制细纲时连定稿记下的指纹一起抄过去。现在走网关（AGENTS 第 7 条）：
+ * 從前貼上的複製變體直接 `fs.cp`，**不過守衛**：能把檔案複製進 `.trash/`、`sessions/`、`.novelwarden/history/`，
+ * 也能把會話檔案、工程庫從內部目錄裡複製出來；複製細綱時連定稿記下的指紋一起抄過去。現在走閘道器（AGENTS 第 7 條）：
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 复制进回收站、会话目录、历史版本一律拒绝，什么都不建 | 那三处不是作者的操作对象：回收站里躺着删掉的东西，会话是内部文件，历史版本是网关自己存的副本 |
- * | 会话文件、工程库复制不出来 | 内部文件读当不存在（守卫 `isInternalPath`） |
- * | 从回收站、历史版本里复制出来可以（⚑），原件一字不动 | 读得到就复制得出来：这是在工程里找回一份的唯一入口，回收站与历史都不被改 |
- * | 同名不覆盖 | 第 3 条 |
- * | 复制章节：manifest 同步；草稿与细纲**不跟**（⚑） | 副本是一章新的（第 8 条：按路径认细纲，旧细纲不冒认）；草稿是作者对原章的笔记 |
- * | 复制细纲：去掉定稿那一侧的指纹（`writtenFrom` / `sourceHash` / `cast`），`upstreamHash` 原样不刷新，换了章号就去掉 | 第 18 条：副本没写过、没定稿过；上游指纹不该被复制顺手刷新成新鲜 |
- * | 字节原样（GBK、二进制都不转码），不存历史版本 | 复制不是「读出来再写一份」；没覆盖任何东西 |
+ * | 複製進回收站、會話目錄、歷史版本一律拒絕，什麼都不建 | 那三處不是作者的操作物件：回收站裡躺著刪掉的東西，會話是內部檔案，歷史版本是閘道器自己存的副本 |
+ * | 會話檔案、工程庫複製不出來 | 內部檔案讀當不存在（守衛 `isInternalPath`） |
+ * | 從回收站、歷史版本裡複製出來可以（⚑），原件一字不動 | 讀得到就複製得出來：這是在工程裡找回一份的唯一入口，回收站與歷史都不被改 |
+ * | 同名不覆蓋 | 第 3 條 |
+ * | 複製章節：manifest 同步；草稿與細綱**不跟**（⚑） | 副本是一章新的（第 8 條：按路徑認細綱，舊細綱不冒認）；草稿是作者對原章的筆記 |
+ * | 複製細綱：去掉定稿那一側的指紋（`writtenFrom` / `sourceHash` / `cast`），`upstreamHash` 原樣不重新整理，換了章號就去掉 | 第 18 條：副本沒寫過、沒定稿過；上游指紋不該被複制順手重新整理成新鮮 |
+ * | 位元組原樣（GBK、二進位制都不轉碼），不存歷史版本 | 複製不是「讀出來再寫一份」；沒覆蓋任何東西 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -34,12 +34,12 @@ async function codeOf(fn) {
   } catch (err) {
     return err?.code ?? `（不是 WsError：${err?.message}）`;
   }
-  return '（没抛）';
+  return '（沒拋）';
 }
 
 const bytes = (rel) => fs.readFileSync(t.rel(rel));
 
-/** 一份定稿过的细纲（frontmatter 带齐三环指纹与出场）。 */
+/** 一份定稿過的細綱（frontmatter 帶齊三環指紋與出場）。 */
 function finalizedPlot(no, title, { upstreamHash, writtenFrom, sourceHash }) {
   return [
     '---',
@@ -49,22 +49,22 @@ function finalizedPlot(no, title, { upstreamHash, writtenFrom, sourceHash }) {
     `writtenFrom: ${writtenFrom}`,
     `sourceHash: ${sourceHash}`,
     'cast: [林昭, 老周]',
-    'preflightOk: [老周：回忆里的一场]',
+    'preflightOk: [老周：回憶裡的一場]',
     '---',
     '',
     `# 第${no}章 ${title}`,
     '',
     '## 梗概',
     '',
-    `${title}的计划。`,
+    `${title}的計劃。`,
     '',
-    '## 出场人物',
+    '## 出場人物',
     '',
     '林昭、老周',
     '',
-    '## 关键事件',
+    '## 關鍵事件',
     '',
-    '- 林昭回到镇上',
+    '- 林昭回到鎮上',
     '',
   ].join('\n');
 }
@@ -81,15 +81,15 @@ before(async () => {
   });
   h = makeFakeHost({ settings: () => ({}), overrides: { reviewReplace: undefined } });
   bundle.host.initHost(h.host);
-  t = await makeTempProject(bundle.project, { prefix: 'wscopy', title: '复制测试' });
+  t = await makeTempProject(bundle.project, { prefix: 'wscopy', title: '複製測試' });
   project = t.project;
   ws = new bundle.ws.Workspace(project);
 
-  t.write('notes/备忘.txt', '随便记的。\n');
-  t.write('.novelwarden/sessions/会话甲.json', '{"id":"会话甲"}\n');
+  t.write('notes/備忘.txt', '隨便記的。\n');
+  t.write('.novelwarden/sessions/會話甲.json', '{"id":"會話甲"}\n');
   t.write('.novelwarden/novelwarden.db', 'SQLite format 3\0');
-  t.write('.novelwarden/.trash/chapters/009-删过的.md', '# 删过的\n\n找回来的那一章。\n');
-  t.write('.novelwarden/history/chapters/001-楔子.md/2026-10-18_14-32-05+0800.txt', '旧稿\n');
+  t.write('.novelwarden/.trash/chapters/009-刪過的.md', '# 刪過的\n\n找回來的那一章。\n');
+  t.write('.novelwarden/history/chapters/001-楔子.md/2026-10-18_14-32-05+0800.txt', '舊稿\n');
   fs.mkdirSync(t.rel('archive'), { recursive: true });
   project.invalidate();
 });
@@ -98,15 +98,15 @@ after(() => {
   if (t) cleanup(t.dir);
 });
 
-// ---------------------------------------------------------------- 复制进受保护的地方
+// ---------------------------------------------------------------- 複製進受保護的地方
 
-describe('粘贴（复制）进回收站、会话目录、历史版本：一律拒绝', () => {
+describe('貼上（複製）進回收站、會話目錄、歷史版本：一律拒絕', () => {
   const cases = [
-    ['回收站根', '.novelwarden/.trash', '.novelwarden/.trash/备忘.txt'],
-    ['回收站里的子目录', '.novelwarden/.trash/chapters', '.novelwarden/.trash/chapters/备忘.txt'],
-    ['会话目录', '.novelwarden/sessions', '.novelwarden/sessions/备忘.txt'],
-    ['历史版本根', '.novelwarden/history', '.novelwarden/history/备忘.txt'],
-    ['历史版本里某份文件的快照目录', '.novelwarden/history/chapters/001-楔子.md', '.novelwarden/history/chapters/001-楔子.md/备忘.txt'],
+    ['回收站根', '.novelwarden/.trash', '.novelwarden/.trash/備忘.txt'],
+    ['回收站裡的子目錄', '.novelwarden/.trash/chapters', '.novelwarden/.trash/chapters/備忘.txt'],
+    ['會話目錄', '.novelwarden/sessions', '.novelwarden/sessions/備忘.txt'],
+    ['歷史版本根', '.novelwarden/history', '.novelwarden/history/備忘.txt'],
+    ['歷史版本裡某份檔案的快照目錄', '.novelwarden/history/chapters/001-楔子.md', '.novelwarden/history/chapters/001-楔子.md/備忘.txt'],
   ];
   const results = {};
   let dirIntoTrash;
@@ -115,46 +115,46 @@ describe('粘贴（复制）进回收站、会话目录、历史版本：一律�
   before(async () => {
     h.expect();
     for (const [name, dest] of cases) {
-      results[name] = (await bundle.projectFiles.copyInto(project, ['notes/备忘.txt'], dest))[0];
+      results[name] = (await bundle.projectFiles.copyInto(project, ['notes/備忘.txt'], dest))[0];
     }
-    // 整个目录复制进回收站。
+    // 整個目錄複製進回收站。
     dirIntoTrash = (await bundle.projectFiles.copyInto(project, ['notes'], '.novelwarden/.trash'))[0];
     toastsAfter = [...h.toasts];
   });
 
   for (const [name, , landed] of cases) {
-    test(`${name}：拒绝，没有落下文件`, () => {
+    test(`${name}：拒絕，沒有落下檔案`, () => {
       assert.equal(results[name].ok, false, JSON.stringify(results[name]));
       assert.equal(t.has(landed), false, landed);
     });
   }
 
-  test('整个目录复制进回收站：拒绝，一个文件都没建', () => {
+  test('整個目錄複製進回收站：拒絕，一個檔案都沒建', () => {
     assert.equal(dirIntoTrash.ok, false, JSON.stringify(dirIntoTrash));
     assert.equal(t.has('.novelwarden/.trash/notes'), false);
   });
 
-  test('拒绝的原因说得出来（回收站 / 内部文件 / 历史版本）', () => {
+  test('拒絕的原因說得出來（回收站 / 內部檔案 / 歷史版本）', () => {
     assert.match(results['回收站根'].error, /回收站/);
-    assert.match(results['会话目录'].error, /内部文件/);
-    assert.match(results['历史版本根'].error, /历史版本/);
+    assert.match(results['會話目錄'].error, /內部檔案/);
+    assert.match(results['歷史版本根'].error, /歷史版本/);
   });
 
-  test('toast 报了没复制成', () => {
-    assert.ok(toastsAfter.some((x) => x.startsWith('error:') && x.includes('未复制')), toastsAfter.join(' | '));
+  test('toast 報了沒複製成', () => {
+    assert.ok(toastsAfter.some((x) => x.startsWith('error:') && x.includes('未複製')), toastsAfter.join(' | '));
   });
 
-  test('网关直接调也一样：copy 到这几处抛守卫的错', async () => {
-    assert.equal(await codeOf(() => ws.copy('notes/备忘.txt', '.novelwarden/.trash/x.txt')), 'inTrash');
-    assert.equal(await codeOf(() => ws.copy('notes/备忘.txt', '.novelwarden/sessions/x.json')), 'protected');
-    assert.equal(await codeOf(() => ws.copy('notes/备忘.txt', '.novelwarden/history/x.txt')), 'inHistory');
-    assert.equal(await codeOf(() => ws.copy('notes/备忘.txt', '.novelwarden/novelwarden.db-wal')), 'protected');
+  test('閘道器直接調也一樣：copy 到這幾處拋守衛的錯', async () => {
+    assert.equal(await codeOf(() => ws.copy('notes/備忘.txt', '.novelwarden/.trash/x.txt')), 'inTrash');
+    assert.equal(await codeOf(() => ws.copy('notes/備忘.txt', '.novelwarden/sessions/x.json')), 'protected');
+    assert.equal(await codeOf(() => ws.copy('notes/備忘.txt', '.novelwarden/history/x.txt')), 'inHistory');
+    assert.equal(await codeOf(() => ws.copy('notes/備忘.txt', '.novelwarden/novelwarden.db-wal')), 'protected');
   });
 });
 
-// ---------------------------------------------------------------- 从受保护的地方复制出来
+// ---------------------------------------------------------------- 從受保護的地方複製出來
 
-describe('从受保护的地方复制出来', () => {
+describe('從受保護的地方複製出來', () => {
   let fromTrash;
   let fromHistory;
   let fromSession;
@@ -163,94 +163,94 @@ describe('从受保护的地方复制出来', () => {
   let manifestFiles;
 
   before(async () => {
-    fromTrash = (await bundle.projectFiles.copyInto(project, ['.novelwarden/.trash/chapters/009-删过的.md'], 'chapters'))[0];
+    fromTrash = (await bundle.projectFiles.copyInto(project, ['.novelwarden/.trash/chapters/009-刪過的.md'], 'chapters'))[0];
     manifestFiles = (await project.readManifest()).chapters.map((c) => c.file);
     fromHistory = (
       await bundle.projectFiles.copyInto(project, ['.novelwarden/history/chapters/001-楔子.md/2026-10-18_14-32-05+0800.txt'], 'notes')
     )[0];
-    fromSession = (await bundle.projectFiles.copyInto(project, ['.novelwarden/sessions/会话甲.json'], 'notes'))[0];
+    fromSession = (await bundle.projectFiles.copyInto(project, ['.novelwarden/sessions/會話甲.json'], 'notes'))[0];
     fromDb = (await bundle.projectFiles.copyInto(project, ['.novelwarden/novelwarden.db'], 'notes'))[0];
     fromSessionsDir = (await bundle.projectFiles.copyInto(project, ['.novelwarden/sessions'], 'notes'))[0];
   });
 
-  test('⚑ 回收站里的一章复制得出来（找回一份），回收站里那份一字不动', () => {
+  test('⚑ 回收站裡的一章複製得出來（找回一份），回收站裡那份一字不動', () => {
     assert.equal(fromTrash.ok, true, JSON.stringify(fromTrash));
-    assert.equal(t.read('chapters/009-删过的.md'), '# 删过的\n\n找回来的那一章。\n');
-    assert.equal(t.read('.novelwarden/.trash/chapters/009-删过的.md'), '# 删过的\n\n找回来的那一章。\n');
+    assert.equal(t.read('chapters/009-刪過的.md'), '# 刪過的\n\n找回來的那一章。\n');
+    assert.equal(t.read('.novelwarden/.trash/chapters/009-刪過的.md'), '# 刪過的\n\n找回來的那一章。\n');
   });
 
-  test('找回进 chapters/ 的那一章进了 manifest', () => {
-    assert.ok(manifestFiles.includes('chapters/009-删过的.md'), JSON.stringify(manifestFiles));
+  test('找回進 chapters/ 的那一章進了 manifest', () => {
+    assert.ok(manifestFiles.includes('chapters/009-刪過的.md'), JSON.stringify(manifestFiles));
   });
 
-  test('⚑ 历史版本里的一份快照复制得出来，快照本身一字不动', () => {
+  test('⚑ 歷史版本裡的一份快照複製得出來，快照本身一字不動', () => {
     assert.equal(fromHistory.ok, true, JSON.stringify(fromHistory));
-    assert.equal(t.read('notes/2026-10-18_14-32-05+0800.txt'), '旧稿\n');
-    assert.equal(t.read('.novelwarden/history/chapters/001-楔子.md/2026-10-18_14-32-05+0800.txt'), '旧稿\n');
+    assert.equal(t.read('notes/2026-10-18_14-32-05+0800.txt'), '舊稿\n');
+    assert.equal(t.read('.novelwarden/history/chapters/001-楔子.md/2026-10-18_14-32-05+0800.txt'), '舊稿\n');
   });
 
-  test('会话文件复制不出来（内部文件）', () => {
+  test('會話檔案複製不出來（內部檔案）', () => {
     assert.equal(fromSession.ok, false, JSON.stringify(fromSession));
-    assert.equal(t.has('notes/会话甲.json'), false);
+    assert.equal(t.has('notes/會話甲.json'), false);
   });
 
-  test('工程库复制不出来（内部文件）', () => {
+  test('工程庫複製不出來（內部檔案）', () => {
     assert.equal(fromDb.ok, false, JSON.stringify(fromDb));
     assert.equal(t.has('notes/novelwarden.db'), false);
   });
 
-  test('整个会话目录复制不出来（固定目录）', () => {
+  test('整個會話目錄複製不出來（固定目錄）', () => {
     assert.equal(fromSessionsDir.ok, false, JSON.stringify(fromSessionsDir));
     assert.equal(t.has('notes/sessions'), false);
   });
 });
 
-// ---------------------------------------------------------------- 同名不覆盖
+// ---------------------------------------------------------------- 同名不覆蓋
 
-describe('同名不覆盖（第 3 条）', () => {
+describe('同名不覆蓋（第 3 條）', () => {
   let sameDir;
   let clash;
   let wsClash;
 
   before(async () => {
-    t.write('archive/备忘.txt', '先来的，不能被盖掉。\n');
+    t.write('archive/備忘.txt', '先來的，不能被蓋掉。\n');
     project.invalidate();
-    sameDir = (await bundle.projectFiles.copyInto(project, ['notes/备忘.txt'], 'notes'))[0];
-    clash = (await bundle.projectFiles.copyInto(project, ['notes/备忘.txt'], 'archive'))[0];
-    wsClash = await codeOf(() => ws.copy('notes/备忘.txt', 'archive/备忘.txt'));
+    sameDir = (await bundle.projectFiles.copyInto(project, ['notes/備忘.txt'], 'notes'))[0];
+    clash = (await bundle.projectFiles.copyInto(project, ['notes/備忘.txt'], 'archive'))[0];
+    wsClash = await codeOf(() => ws.copy('notes/備忘.txt', 'archive/備忘.txt'));
   });
 
-  test('粘贴回原目录：拒绝（已经在这个目录里），不加序号另起一份', () => {
+  test('貼上回原目錄：拒絕（已經在這個目錄裡），不加序號另起一份', () => {
     assert.equal(sameDir.ok, false, JSON.stringify(sameDir));
-    assert.deepEqual(fs.readdirSync(t.rel('notes')).filter((n) => n.startsWith('备忘')), ['备忘.txt']);
+    assert.deepEqual(fs.readdirSync(t.rel('notes')).filter((n) => n.startsWith('備忘')), ['備忘.txt']);
   });
 
-  test('目标已有同名：拒绝并说同名，已有那份一字不动', () => {
+  test('目標已有同名：拒絕並說同名，已有那份一字不動', () => {
     assert.equal(clash.ok, false, JSON.stringify(clash));
     assert.match(clash.error, /同名/);
-    assert.equal(t.read('archive/备忘.txt'), '先来的，不能被盖掉。\n');
+    assert.equal(t.read('archive/備忘.txt'), '先來的，不能被蓋掉。\n');
   });
 
-  test('网关直接调：exists', () => {
+  test('閘道器直接調：exists', () => {
     assert.equal(wsClash, 'exists');
   });
 
-  test('目录不能复制进自己里面', async () => {
-    fs.mkdirSync(t.rel('notes/子目录'), { recursive: true });
-    assert.equal(await codeOf(() => ws.copy('notes', 'notes/子目录/notes')), 'intoSelf');
-    assert.equal(t.has('notes/子目录/notes'), false);
+  test('目錄不能複製進自己裡面', async () => {
+    fs.mkdirSync(t.rel('notes/子目錄'), { recursive: true });
+    assert.equal(await codeOf(() => ws.copy('notes', 'notes/子目錄/notes')), 'intoSelf');
+    assert.equal(t.has('notes/子目錄/notes'), false);
   });
 
-  test('固定目录不能整个复制', async () => {
+  test('固定目錄不能整個複製', async () => {
     assert.equal(await codeOf(() => ws.copy('chapters', 'archive/chapters')), 'protected');
   });
 });
 
-// ---------------------------------------------------------------- 复制章节
+// ---------------------------------------------------------------- 複製章節
 
-describe('复制一章正文', () => {
+describe('複製一章正文', () => {
   const CH = 'chapters/第一卷/003-夜访.md';
-  const BODY = '# 夜访\n\n夜里有人敲门，三下，停一停，又是两下。\n';
+  const BODY = '# 夜訪\n\n夜裡有人敲門，三下，停一停，又是兩下。\n';
   const DRAFT = 'drafts/第一卷/003-夜访.md';
   const PLOT = '.novelwarden/summaries/第一卷/003-夜访.md';
   let plotBefore;
@@ -261,10 +261,10 @@ describe('复制一章正文', () => {
 
   before(async () => {
     t.write(CH, BODY);
-    t.write(DRAFT, '# 夜访 · 草稿\n\n作者对原章的笔记。\n');
+    t.write(DRAFT, '# 夜訪 · 草稿\n\n作者對原章的筆記。\n');
     project.invalidate();
     const chapter = (await project.listChapters()).find((c) => c.relPath === CH);
-    t.write(PLOT, finalizedPlot(3, '夜访', { upstreamHash: 'aaaaaaaaaaaaaaaa', writtenFrom: 'bbbbbbbbbbbbbbbb', sourceHash: chapter.contentHash }));
+    t.write(PLOT, finalizedPlot(3, '夜訪', { upstreamHash: 'aaaaaaaaaaaaaaaa', writtenFrom: 'bbbbbbbbbbbbbbbb', sourceHash: chapter.contentHash }));
     fs.mkdirSync(t.rel('chapters/第二卷'), { recursive: true });
     project.invalidate();
     plotBefore = t.read(PLOT);
@@ -276,47 +276,47 @@ describe('复制一章正文', () => {
     castAfter = (await bundle.cast.buildCastIndex(project)).summaryCount;
   });
 
-  test('复制出来了，字节一样，原章还在', () => {
+  test('複製出來了，位元組一樣，原章還在', () => {
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(t.read('chapters/第二卷/003-夜访.md'), BODY);
     assert.equal(t.read(CH), BODY);
   });
 
-  test('manifest 同步：副本像新建的一章一样进了索引', () => {
+  test('manifest 同步：副本像新建的一章一樣進了索引', () => {
     assert.ok(manifestFiles.includes('chapters/第二卷/003-夜访.md'), JSON.stringify(manifestFiles));
     assert.ok(manifestFiles.includes(CH), JSON.stringify(manifestFiles));
   });
 
-  test('⚑ 细纲不跟着复制（副本是一章新的，旧细纲不冒认），原细纲一字不动', () => {
+  test('⚑ 細綱不跟著複製（副本是一章新的，舊細綱不冒認），原細綱一字不動', () => {
     assert.equal(t.has('.novelwarden/summaries/第二卷/003-夜访.md'), false);
     assert.equal(t.read(PLOT), plotBefore);
   });
 
-  test('草稿不跟着复制', () => {
+  test('草稿不跟著複製', () => {
     assert.equal(t.has('drafts/第二卷/003-夜访.md'), false);
   });
 
-  test('副本不算定稿过：出场统计不多数一章（第 14 条）', () => {
+  test('副本不算定稿過：出場統計不多數一章（第 14 條）', () => {
     assert.equal(castBefore, 1);
     assert.equal(castAfter, 1);
   });
 
-  test('副本照实是「待定稿」的一章', async () => {
+  test('副本照實是「待定稿」的一章', async () => {
     project.invalidate();
     const stale = (await project.staleChapters()).map((c) => c.relPath);
     assert.ok(stale.includes('chapters/第二卷/003-夜访.md'), JSON.stringify(stale));
     assert.ok(!stale.includes(CH), JSON.stringify(stale));
   });
 
-  test('没覆盖任何东西，不存历史版本', () => {
+  test('沒覆蓋任何東西，不存歷史版本', () => {
     assert.equal(t.has('.novelwarden/history/chapters/第二卷'), false);
   });
 });
 
-// ---------------------------------------------------------------- 复制细纲
+// ---------------------------------------------------------------- 複製細綱
 
-describe('复制一份细纲：指纹不带着把副本标成新鲜或定稿过（第 18 条）', () => {
-  const PLOT = '.novelwarden/summaries/005-回乡.md';
+describe('複製一份細綱：指紋不帶著把副本標成新鮮或定稿過（第 18 條）', () => {
+  const PLOT = '.novelwarden/summaries/005-回鄉.md';
   const STALE_UP = 'deadbeefdeadbeef';
   let original;
   let origPlot;
@@ -328,76 +328,76 @@ describe('复制一份细纲：指纹不带着把副本标成新鲜或定稿过�
   let pipeCopy;
 
   before(async () => {
-    // 梗概（大纲里这一章那一条）在这份细纲之后改过：原件挂着 ⟳（upstreamHash 对不上此刻梗概的指纹）。
-    t.write(PLOT, finalizedPlot(5, '回乡', { upstreamHash: STALE_UP, writtenFrom: '1111111111111111', sourceHash: '2222222222222222' }));
-    fs.mkdirSync(t.rel('.novelwarden/summaries/备份'), { recursive: true });
+    // 梗概（大綱裡這一章那一條）在這份細綱之後改過：原件掛著 ⟳（upstreamHash 對不上此刻梗概的指紋）。
+    t.write(PLOT, finalizedPlot(5, '回鄉', { upstreamHash: STALE_UP, writtenFrom: '1111111111111111', sourceHash: '2222222222222222' }));
+    fs.mkdirSync(t.rel('.novelwarden/summaries/備份'), { recursive: true });
     project.invalidate();
     original = t.read(PLOT);
     currentUp = bundle.plotFile.plotSynopsisHash((await project.readPlot(PLOT)).sections.梗概);
 
-    result = (await bundle.projectFiles.copyInto(project, [PLOT], '.novelwarden/summaries/备份'))[0];
+    result = (await bundle.projectFiles.copyInto(project, [PLOT], '.novelwarden/summaries/備份'))[0];
     project.invalidate();
-    copyText = t.read('.novelwarden/summaries/备份/005-回乡.md');
-    copy = await project.readPlot('.novelwarden/summaries/备份/005-回乡.md');
+    copyText = t.read('.novelwarden/summaries/備份/005-回鄉.md');
+    copy = await project.readPlot('.novelwarden/summaries/備份/005-回鄉.md');
     origPlot = await project.readPlot(PLOT);
     pipeOriginal = await bundle.pipe.buildPlotPipeline(project, { no: 5, plot: origPlot });
     pipeCopy = await bundle.pipe.buildPlotPipeline(project, { no: 5, plot: copy });
   });
 
-  test('复制出来了，原件一字不动', () => {
+  test('複製出來了，原件一字不動', () => {
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(t.read(PLOT), original);
   });
 
-  test('定稿那一侧的指纹去掉了：writtenFrom / sourceHash / cast', () => {
+  test('定稿那一側的指紋去掉了：writtenFrom / sourceHash / cast', () => {
     assert.equal(copy.writtenFrom, '');
     assert.equal(copy.sourceHash, '');
     assert.doesNotMatch(copyText, /^(writtenFrom|sourceHash|cast):/m);
   });
 
-  test('upstreamHash 原样留着，没被刷新成此刻梗概的指纹', () => {
+  test('upstreamHash 原樣留著，沒被重新整理成此刻梗概的指紋', () => {
     assert.notEqual(currentUp, STALE_UP);
     assert.equal(copy.upstreamHash, STALE_UP);
   });
 
-  test('所以原件挂 ⟳ 的，副本照样挂 ⟳（不被复制顺手标成新鲜）', () => {
+  test('所以原件掛 ⟳ 的，副本照樣掛 ⟳（不被複制順手標成新鮮）', () => {
     assert.equal(pipeOriginal.plot.upstreamStale, true);
     assert.equal(pipeCopy.plot.upstreamStale, true);
   });
 
-  test('副本不算定稿过', () => {
+  test('副本不算定稿過', () => {
     assert.equal(pipeOriginal.summary.exists, true);
     assert.equal(pipeCopy.summary.exists, false);
   });
 
-  test('作者写的部分原样：七节、标题、预检放行', () => {
+  test('作者寫的部分原樣：七節、標題、預檢放行', () => {
     assert.deepEqual(copy.sections, origPlot.sections);
-    assert.match(copyText, /^title: 回乡$/m);
+    assert.match(copyText, /^title: 回鄉$/m);
     assert.match(copyText, /^preflightOk:/m);
     assert.equal(copyText.slice(copyText.indexOf('# 第5章')), original.slice(original.indexOf('# 第5章')));
   });
 
-  test('网关直接复制成另一个章号：上游指纹也去掉（那是另一章了）', async () => {
-    await ws.copy(PLOT, '.novelwarden/summaries/备份/007-回乡.md');
+  test('閘道器直接複製成另一個章號：上游指紋也去掉（那是另一章了）', async () => {
+    await ws.copy(PLOT, '.novelwarden/summaries/備份/007-回鄉.md');
     project.invalidate();
-    const renumbered = await project.readPlot('.novelwarden/summaries/备份/007-回乡.md');
+    const renumbered = await project.readPlot('.novelwarden/summaries/備份/007-回鄉.md');
     assert.equal(renumbered.upstreamHash, '');
     assert.equal(renumbered.sourceHash, '');
   });
 
-  test('没有 frontmatter 的手写细纲复制过去一字不动（不补指纹）', async () => {
-    const HAND = '# 第6章 手写\n\n## 梗概\n\n作者自己写的。\n';
-    t.write('.novelwarden/summaries/006-手写.md', HAND);
-    await ws.copy('.novelwarden/summaries/006-手写.md', '.novelwarden/summaries/备份/006-手写.md');
-    assert.equal(t.read('.novelwarden/summaries/备份/006-手写.md'), HAND);
+  test('沒有 frontmatter 的手寫細綱複製過去一字不動（不補指紋）', async () => {
+    const HAND = '# 第6章 手寫\n\n## 梗概\n\n作者自己寫的。\n';
+    t.write('.novelwarden/summaries/006-手寫.md', HAND);
+    await ws.copy('.novelwarden/summaries/006-手寫.md', '.novelwarden/summaries/備份/006-手寫.md');
+    assert.equal(t.read('.novelwarden/summaries/備份/006-手寫.md'), HAND);
   });
 });
 
-// ---------------------------------------------------------------- 复制目录
+// ---------------------------------------------------------------- 複製目錄
 
-describe('复制整个目录：逐个文件过守卫，字节原样', () => {
-  // 「卷稿」：GBK 编码的 .txt 章节（第 9 条：章节不认扩展名）、一张图、一份 markdown 章节。
-  const GBK = Buffer.from([0xc4, 0xe3, 0xba, 0xc3, 0x0a]); // 「你好」+ 换行，GBK
+describe('複製整個目錄：逐個檔案過守衛，位元組原樣', () => {
+  // 「卷稿」：GBK 編碼的 .txt 章節（第 9 條：章節不認副檔名）、一張圖、一份 markdown 章節。
+  const GBK = Buffer.from([0xc4, 0xe3, 0xba, 0xc3, 0x0a]); // 「你好」+ 換行，GBK
   const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff]);
   let result;
   let manifestFiles;
@@ -406,52 +406,52 @@ describe('复制整个目录：逐个文件过守卫，字节原样', () => {
   before(async () => {
     t.write('卷稿/020-甲.md', '# 甲\n\n第二十章。\n');
     fs.writeFileSync(t.rel('卷稿/021-乙.txt'), GBK);
-    fs.mkdirSync(t.rel('卷稿/图'), { recursive: true });
-    fs.writeFileSync(t.rel('卷稿/图/封面.png'), PNG);
+    fs.mkdirSync(t.rel('卷稿/圖'), { recursive: true });
+    fs.writeFileSync(t.rel('卷稿/圖/封面.png'), PNG);
     project.invalidate();
     result = (await bundle.projectFiles.copyInto(project, ['卷稿'], 'chapters'))[0];
     manifestFiles = (await project.readManifest()).chapters.map((c) => c.file);
 
-    // 细纲目录整个复制：里面的每一份都去掉定稿那一侧的指纹。
-    summariesDir = (await bundle.projectFiles.copyInto(project, ['.novelwarden/summaries/第一卷'], '.novelwarden/summaries/备份'))[0];
+    // 細綱目錄整個複製：裡面的每一份都去掉定稿那一側的指紋。
+    summariesDir = (await bundle.projectFiles.copyInto(project, ['.novelwarden/summaries/第一卷'], '.novelwarden/summaries/備份'))[0];
   });
 
-  test('整棵复制过去', () => {
+  test('整棵複製過去', () => {
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(t.read('chapters/卷稿/020-甲.md'), '# 甲\n\n第二十章。\n');
   });
 
-  test('GBK 的章节、二进制的图字节原样，不转码', () => {
+  test('GBK 的章節、二進位制的圖位元組原樣，不轉碼', () => {
     assert.deepEqual(bytes('chapters/卷稿/021-乙.txt'), GBK);
-    assert.deepEqual(bytes('chapters/卷稿/图/封面.png'), PNG);
+    assert.deepEqual(bytes('chapters/卷稿/圖/封面.png'), PNG);
   });
 
-  test('复制进 chapters/ 的两章都进了 manifest', () => {
+  test('複製進 chapters/ 的兩章都進了 manifest', () => {
     assert.ok(manifestFiles.includes('chapters/卷稿/020-甲.md'), JSON.stringify(manifestFiles));
     assert.ok(manifestFiles.includes('chapters/卷稿/021-乙.txt'), JSON.stringify(manifestFiles));
   });
 
-  test('目录里的细纲同样去掉了定稿那一侧的指纹', async () => {
+  test('目錄裡的細綱同樣去掉了定稿那一側的指紋', async () => {
     assert.equal(summariesDir.ok, true, JSON.stringify(summariesDir));
     project.invalidate();
-    const copied = await project.readPlot('.novelwarden/summaries/备份/第一卷/003-夜访.md');
+    const copied = await project.readPlot('.novelwarden/summaries/備份/第一卷/003-夜访.md');
     assert.equal(copied.sourceHash, '');
     assert.equal(copied.writtenFrom, '');
     assert.equal(copied.upstreamHash, 'aaaaaaaaaaaaaaaa');
   });
 
-  test('网关复制会补齐落点的父目录（与 move 一样）', async () => {
-    await ws.copy('notes/备忘.txt', '新目录/深处/备忘.txt');
-    assert.equal(t.read('新目录/深处/备忘.txt'), '随便记的。\n');
+  test('閘道器複製會補齊落點的父目錄（與 move 一樣）', async () => {
+    await ws.copy('notes/備忘.txt', '新目錄/深處/備忘.txt');
+    assert.equal(t.read('新目錄/深處/備忘.txt'), '隨便記的。\n');
   });
 
-  test('符号链接不跟进去，跳过并说出来', { skip: process.platform === 'win32' }, async () => {
-    fs.mkdirSync(t.rel('带链接'), { recursive: true });
-    t.write('带链接/正常.txt', '正常\n');
-    fs.symlinkSync('/etc/hostname', t.rel('带链接/外面'));
-    const r = await ws.copy('带链接', 'archive/带链接');
-    assert.equal(t.read('archive/带链接/正常.txt'), '正常\n');
-    assert.equal(fs.existsSync(t.rel('archive/带链接/外面')), false);
+  test('符號連結不跟進去，跳過並說出來', { skip: process.platform === 'win32' }, async () => {
+    fs.mkdirSync(t.rel('帶連結'), { recursive: true });
+    t.write('帶連結/正常.txt', '正常\n');
+    fs.symlinkSync('/etc/hostname', t.rel('帶連結/外面'));
+    const r = await ws.copy('帶連結', 'archive/帶連結');
+    assert.equal(t.read('archive/帶連結/正常.txt'), '正常\n');
+    assert.equal(fs.existsSync(t.rel('archive/帶連結/外面')), false);
     assert.ok((r.side ?? []).some((s) => s.includes('外面')), JSON.stringify(r));
   });
 });

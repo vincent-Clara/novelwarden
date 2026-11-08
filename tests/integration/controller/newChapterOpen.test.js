@@ -1,11 +1,11 @@
 /**
- * 工程页「章节」还空着时那颗「新建第 1 章」（新手上手，2026-10-24）：`projectAction newChapter` 带 `open`，建完就打开。
+ * 工程頁「章節」還空著時那顆「新建第 1 章」（新手上手，2026-10-24）：`projectAction newChapter` 帶 `open`，建完就開啟。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 带 `open`：先问章名，建好正文与细纲，打开那一章 | 新书的第一下就是开写，不必再回工程页点一下 |
- * | 不带 `open`（右键「新建章节文件」）：照旧只建不开 | 那条的口径没变 |
- * | 输入框上取消：什么都不建、不打开 | 第 3 条 |
+ * | 帶 `open`：先問章名，建好正文與細綱，開啟那一章 | 新書的第一下就是開寫，不必再回工程頁點一下 |
+ * | 不帶 `open`（右鍵「新建章節檔案」）：照舊只建不開 | 那條的口徑沒變 |
+ * | 輸入框上取消：什麼都不建、不開啟 | 第 3 條 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -40,15 +40,15 @@ after(() => {
 });
 
 async function freshBook(prefix) {
-  const t = await makeTempProject(bundle.project, { prefix, title: '青云剑录' });
+  const t = await makeTempProject(bundle.project, { prefix, title: '青雲劍錄' });
   const controller = new bundle.controller.ChatController(t.project);
   controller.attach({ kind: 'sidebar', post: () => {}, reveal() {} });
   books.push({ t, controller });
   return { t, controller };
 }
 
-describe('新建第 1 章：建完就打开', () => {
-  test('带 open：问章名，建好正文与细纲，打开那一章', async () => {
+describe('新建第 1 章：建完就開啟', () => {
+  test('帶 open：問章名，建好正文與細綱，開啟那一章', async () => {
     const { t, controller } = await freshBook('new-chapter-open');
     fakeHost.expect('楔子');
     await controller.handle({ type: 'projectAction', action: 'newChapter', open: true });
@@ -58,7 +58,7 @@ describe('新建第 1 章：建完就打开', () => {
     assert.deepEqual(fakeHost.opened, ['chapters/001-楔子.txt']);
   });
 
-  test('不带 open（右键「新建章节文件」）：照旧只建不开', async () => {
+  test('不帶 open（右鍵「新建章節檔案」）：照舊只建不開', async () => {
     const { t, controller } = await freshBook('new-chapter-closed');
     fakeHost.expect('楔子');
     await controller.handle({ type: 'projectAction', action: 'newChapter' });
@@ -66,7 +66,7 @@ describe('新建第 1 章：建完就打开', () => {
     assert.deepEqual(fakeHost.opened, []);
   });
 
-  test('输入框上取消：什么都不建、不打开', async () => {
+  test('輸入框上取消：什麼都不建、不開啟', async () => {
     const { t, controller } = await freshBook('new-chapter-cancel');
     fakeHost.expect(undefined);
     await controller.handle({ type: 'projectAction', action: 'newChapter', open: true });

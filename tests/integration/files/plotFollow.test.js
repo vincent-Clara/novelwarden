@@ -1,16 +1,16 @@
 /**
- * 细纲跟着正文走：细纲镜像正文在章节根下的相对路径（`chapters/第一卷/003-深处.txt` ↔
- * `summaries/第一卷/003-深处.md`），与草稿同一套镜像。
+ * 細綱跟著正文走：細綱映象正文在章節根下的相對路徑（`chapters/第一卷/003-深處.txt` ↔
+ * `summaries/第一卷/003-深處.md`），與草稿同一套映象。
  *
- * - 工程页给正文改名、移动（单章或整个卷目录）时，细纲一并搬过去（`handlers/chapter.ts` 的 `carryPlot`）；
- *   不搬的话这一章立刻变成「还没有细纲」，排好的计划与定稿的档案都还躺在旧路径下。
- * - 目标位置已有细纲时不覆盖，两份都留着、说出来（第 3 条）；要同步正文 `# 标题` 行的改名干脆整个不做（写标题之前
- *   `Workspace.checkMove` 就拦下），不然标题与文件名换了，细纲却留在旧路径上。
- * - 删正文不删细纲：它退回这一章的计划。
- * - 照细纲新写一章正文时，细纲的文件名与新正文对不上（还没起名时建的 `030.md`）就跟着改名
- *   （`Workspace.createChapterAt`），两边从此按路径认得出彼此。
+ * - 工程頁給正文改名、移動（單章或整個卷目錄）時，細綱一併搬過去（`handlers/chapter.ts` 的 `carryPlot`）；
+ *   不搬的話這一章立刻變成「還沒有細綱」，排好的計劃與定稿的檔案都還躺在舊路徑下。
+ * - 目標位置已有細綱時不覆蓋，兩份都留著、說出來（第 3 條）；要同步正文 `# 標題` 行的改名乾脆整個不做（寫標題之前
+ *   `Workspace.checkMove` 就攔下），不然標題與檔名換了，細綱卻留在舊路徑上。
+ * - 刪正文不刪細綱：它退回這一章的計劃。
+ * - 照細綱新寫一章正文時，細綱的檔名與新正文對不上（還沒起名時建的 `030.md`）就跟著改名
+ *   （`Workspace.createChapterAt`），兩邊從此按路徑認得出彼此。
  *
- * 2026-10-18 作者定案：「必须要保证相对路径，无相对路径是绝对错的」；工程页里改名、移动，细纲跟着走。
+ * 2026-10-18 作者定案：「必須要保證相對路徑，無相對路徑是絕對錯的」；工程頁裡改名、移動，細綱跟著走。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -21,9 +21,9 @@ const { makeFakeHost } = require('../../helpers/fakeHost');
 const { cleanup } = require('../../helpers/teardown');
 
 const PLOT = (no, title, extra = '') =>
-  `---\nno: ${no}\ntitle: ${title}\n---\n\n# 第${no}章 ${title}\n\n## 梗概\n\n${title}的梗概。\n\n## 关键事件\n\n- ${title}${extra}\n`;
+  `---\nno: ${no}\ntitle: ${title}\n---\n\n# 第${no}章 ${title}\n\n## 梗概\n\n${title}的梗概。\n\n## 關鍵事件\n\n- ${title}${extra}\n`;
 
-describe('细纲跟着正文走', () => {
+describe('細綱跟著正文走', () => {
   let bundle;
   let h;
   let t;
@@ -48,7 +48,7 @@ describe('细纲跟着正文走', () => {
 
   after(() => cleanup(t.dir));
 
-  describe('改名、移动单章', () => {
+  describe('改名、移動單章', () => {
     let renamed;
     let renamedPlot;
     let oldPlotGone;
@@ -60,60 +60,60 @@ describe('细纲跟着正文走', () => {
     before(async () => {
       t.write('chapters/第一卷/001-楔子.md', '# 楔子\n\n雨下了三天。\n');
       t.write('.novelwarden/summaries/第一卷/001-楔子.md', PLOT(1, '楔子'));
-      t.write('chapters/第一卷/002-手记.txt', '他翻开笔记。\n');
-      t.write('.novelwarden/summaries/第一卷/002-手记.md', PLOT(2, '手记'));
+      t.write('chapters/第一卷/002-手記.txt', '他翻開筆記。\n');
+      t.write('.novelwarden/summaries/第一卷/002-手記.md', PLOT(2, '手記'));
       project.invalidate();
 
-      h.expect('入镇');
+      h.expect('入鎮');
       renamed = await fileOps.renameEntry(project, 'chapters/第一卷/001-楔子.md');
-      renamedPlot = t.has('.novelwarden/summaries/第一卷/001-入镇.md') && t.read('.novelwarden/summaries/第一卷/001-入镇.md');
+      renamedPlot = t.has('.novelwarden/summaries/第一卷/001-入鎮.md') && t.read('.novelwarden/summaries/第一卷/001-入鎮.md');
       oldPlotGone = !t.has('.novelwarden/summaries/第一卷/001-楔子.md');
 
       fs.mkdirSync(t.rel('chapters/第二卷'), { recursive: true });
       h.expect();
-      moved = await fileOps.moveEntry(project, 'chapters/第一卷/001-入镇.md', 'chapters/第二卷');
+      moved = await fileOps.moveEntry(project, 'chapters/第一卷/001-入鎮.md', 'chapters/第二卷');
       movedPlot = await project.getPlot(1);
 
-      h.expect('旧手记');
-      txtRenamed = await fileOps.renameEntry(project, 'chapters/第一卷/002-手记.txt');
+      h.expect('舊手記');
+      txtRenamed = await fileOps.renameEntry(project, 'chapters/第一卷/002-手記.txt');
       txtPlot = await project.getPlot(2);
     });
 
     test('正文改了名', () => {
-      assert.equal(renamed, 'chapters/第一卷/001-入镇.md');
+      assert.equal(renamed, 'chapters/第一卷/001-入鎮.md');
     });
 
-    test('细纲跟着改名，内容原样带过去', () => {
+    test('細綱跟著改名，內容原樣帶過去', () => {
       assert.ok(renamedPlot && renamedPlot.includes('楔子的梗概'), String(renamedPlot));
     });
 
-    // 工程页那一行先认细纲的标题：只搬文件不改标题，改完名那一行还挂着旧名字（2026-10-23 作者提的）。
-    test('细纲里的标题跟着改成新名（frontmatter 与标题行）', () => {
-      assert.ok(renamedPlot && renamedPlot.includes('title: 入镇') && renamedPlot.includes('# 第1章 入镇'), String(renamedPlot));
+    // 工程頁那一行先認細綱的標題：只搬檔案不改標題，改完名那一行還掛著舊名字（2026-10-23 作者提的）。
+    test('細綱裡的標題跟著改成新名（frontmatter 與標題行）', () => {
+      assert.ok(renamedPlot && renamedPlot.includes('title: 入鎮') && renamedPlot.includes('# 第1章 入鎮'), String(renamedPlot));
       assert.ok(!renamedPlot.includes('title: 楔子'), renamedPlot);
     });
 
-    test('旧位置的细纲不在了，不会一章两份', () => {
+    test('舊位置的細綱不在了，不會一章兩份', () => {
       assert.ok(oldPlotGone);
     });
 
-    test('正文移进另一个卷目录，细纲跟着进 summaries/ 的同名目录', () => {
-      assert.equal(moved, 'chapters/第二卷/001-入镇.md');
-      assert.equal(movedPlot?.relPath, '.novelwarden/summaries/第二卷/001-入镇.md');
+    test('正文移進另一個卷目錄，細綱跟著進 summaries/ 的同名目錄', () => {
+      assert.equal(moved, 'chapters/第二卷/001-入鎮.md');
+      assert.equal(movedPlot?.relPath, '.novelwarden/summaries/第二卷/001-入鎮.md');
     });
 
-    test('.txt 正文改名，细纲（.md）也跟着改名', () => {
-      assert.equal(txtRenamed, 'chapters/第一卷/002-旧手记.txt');
-      assert.equal(txtPlot?.relPath, '.novelwarden/summaries/第一卷/002-旧手记.md');
-      assert.equal(txtPlot?.title, '旧手记');
+    test('.txt 正文改名，細綱（.md）也跟著改名', () => {
+      assert.equal(txtRenamed, 'chapters/第一卷/002-舊手記.txt');
+      assert.equal(txtPlot?.relPath, '.novelwarden/summaries/第一卷/002-舊手記.md');
+      assert.equal(txtPlot?.title, '舊手記');
     });
   });
 
-  // 只改标题那两行，别的一个字节不动；作者在细纲上另起过的标题不动、说出来；标题不进指纹，改了不挂 ⟳。
-  describe('改名时细纲的标题跟着改', () => {
-    const KEPT = '---\nno: 50\ntitle: 另起的标题\n---\n\n# 第50章 另起的标题\n\n## 梗概\n\n梗概。\n';
-    const NO_FM = '# 第52章 手写\n\n## 梗概\n\n手写的。\n\n## 作者备注\n\n别删我。\n';
-    const CRLF = '---\r\nno: 53\r\ntitle: 回车\r\n---\r\n\r\n# 第53章 回车\r\n\r\n## 梗概\r\n\r\n回车的梗概。\r\n';
+  // 只改標題那兩行，別的一個位元組不動；作者在細綱上另起過的標題不動、說出來；標題不進指紋，改了不掛 ⟳。
+  describe('改名時細綱的標題跟著改', () => {
+    const KEPT = '---\nno: 50\ntitle: 另起的標題\n---\n\n# 第50章 另起的標題\n\n## 梗概\n\n梗概。\n';
+    const NO_FM = '# 第52章 手寫\n\n## 梗概\n\n手寫的。\n\n## 作者備註\n\n別刪我。\n';
+    const CRLF = '---\r\nno: 53\r\ntitle: 回車\r\n---\r\n\r\n# 第53章 回車\r\n\r\n## 梗概\r\n\r\n回車的梗概。\r\n';
     let kept;
     let keptToasts;
     let unnamed;
@@ -123,111 +123,111 @@ describe('细纲跟着正文走', () => {
     let writtenFrom;
 
     before(async () => {
-      t.write('chapters/050-旧名.md', '# 旧名\n\n正文\n');
-      t.write('.novelwarden/summaries/050-旧名.md', KEPT);
+      t.write('chapters/050-舊名.md', '# 舊名\n\n正文\n');
+      t.write('.novelwarden/summaries/050-舊名.md', KEPT);
       project.invalidate();
       h.expect('新名');
-      await fileOps.renameEntry(project, 'chapters/050-旧名.md');
+      await fileOps.renameEntry(project, 'chapters/050-舊名.md');
       kept = t.read('.novelwarden/summaries/050-新名.md');
       keptToasts = [...h.toasts];
 
-      // 纯序号名的正文与细纲（新建时名字留空的样子）：第一次起名，细纲的空标题也填上。
+      // 純序號名的正文與細綱（新建時名字留空的樣子）：第一次起名，細綱的空標題也填上。
       t.write('chapters/051.md', '正文\n');
       project.invalidate();
-      await wsOf(project).writePlot({ no: 51, title: '', upstreamHash: '', done: false, sections: { 梗概: '空着' } });
+      await wsOf(project).writePlot({ no: 51, title: '', upstreamHash: '', done: false, sections: { 梗概: '空著' } });
       h.expect('起名');
       await fileOps.renameEntry(project, 'chapters/051.md');
       unnamed = t.read('.novelwarden/summaries/051-起名.md');
 
-      t.write('chapters/052-手写.md', '# 手写\n\n正文\n');
-      t.write('.novelwarden/summaries/052-手写.md', NO_FM);
+      t.write('chapters/052-手寫.md', '# 手寫\n\n正文\n');
+      t.write('.novelwarden/summaries/052-手寫.md', NO_FM);
       project.invalidate();
-      h.expect('改过');
-      await fileOps.renameEntry(project, 'chapters/052-手写.md');
-      noFm = t.read('.novelwarden/summaries/052-改过.md');
+      h.expect('改過');
+      await fileOps.renameEntry(project, 'chapters/052-手寫.md');
+      noFm = t.read('.novelwarden/summaries/052-改過.md');
 
-      t.write('chapters/053-回车.txt', '正文\r\n');
-      t.write('.novelwarden/summaries/053-回车.md', CRLF);
+      t.write('chapters/053-回車.txt', '正文\r\n');
+      t.write('.novelwarden/summaries/053-回車.md', CRLF);
       project.invalidate();
-      h.expect('换行');
-      await fileOps.renameEntry(project, 'chapters/053-回车.txt');
-      crlf = t.read('.novelwarden/summaries/053-换行.md');
+      h.expect('換行');
+      await fileOps.renameEntry(project, 'chapters/053-回車.txt');
+      crlf = t.read('.novelwarden/summaries/053-換行.md');
 
-      // 照细纲写过正文（记着 writtenFrom）：改名之后指纹还对得上，不挂 ⟳。
-      t.write('chapters/054-指纹.md', '# 指纹\n\n正文\n');
-      t.write('.novelwarden/summaries/054-指纹.md', PLOT(54, '指纹'));
+      // 照細綱寫過正文（記著 writtenFrom）：改名之後指紋還對得上，不掛 ⟳。
+      t.write('chapters/054-指紋.md', '# 指紋\n\n正文\n');
+      t.write('.novelwarden/summaries/054-指紋.md', PLOT(54, '指紋'));
       project.invalidate();
       const before54 = await project.getPlot(54);
       await wsOf(project).recordWrittenFrom(before54.relPath, bundle.plotFile.plotContentHash(before54));
       project.invalidate();
       writtenFrom = (await project.getPlot(54)).writtenFrom;
-      h.expect('改指纹');
-      await fileOps.renameEntry(project, 'chapters/054-指纹.md');
+      h.expect('改指紋');
+      await fileOps.renameEntry(project, 'chapters/054-指紋.md');
       project.invalidate();
       const after54 = await project.getPlot(54);
       hashed = { title: after54?.title, writtenFrom: after54?.writtenFrom, now: after54 && bundle.plotFile.plotContentHash(after54) };
     });
 
-    test('作者另起的标题不动，文件照样跟着正文搬', () => {
+    test('作者另起的標題不動，檔案照樣跟著正文搬', () => {
       assert.equal(kept, KEPT);
     });
 
-    test('另起的标题没跟着改，说出来了', () => {
-      assert.ok(keptToasts.some((x) => x.includes('另起的标题') && x.includes('没跟着改')), keptToasts.join(' | '));
+    test('另起的標題沒跟著改，說出來了', () => {
+      assert.ok(keptToasts.some((x) => x.includes('另起的標題') && x.includes('沒跟著改')), keptToasts.join(' | '));
     });
 
-    test('细纲的空标题第一次起名也填上', () => {
+    test('細綱的空標題第一次起名也填上', () => {
       assert.ok(unnamed.includes('title: 起名') && unnamed.includes('# 第51章 起名'), unnamed);
-      assert.ok(unnamed.includes('空着'), unnamed);
+      assert.ok(unnamed.includes('空著'), unnamed);
     });
 
-    test('没有 frontmatter 的细纲只换标题行、不补 frontmatter，别的原样', () => {
-      assert.equal(noFm, NO_FM.replace('# 第52章 手写', '# 第52章 改过'));
+    test('沒有 frontmatter 的細綱只換標題行、不補 frontmatter，別的原樣', () => {
+      assert.equal(noFm, NO_FM.replace('# 第52章 手寫', '# 第52章 改過'));
     });
 
-    test('CRLF 的细纲照样改，换行不变', () => {
-      assert.equal(crlf, CRLF.replace('title: 回车', 'title: 换行').replace('# 第53章 回车', '# 第53章 换行'));
+    test('CRLF 的細綱照樣改，換行不變', () => {
+      assert.equal(crlf, CRLF.replace('title: 回車', 'title: 換行').replace('# 第53章 回車', '# 第53章 換行'));
     });
 
-    test('标题不进指纹：改名之后 writtenFrom 还对得上', () => {
-      assert.equal(hashed.title, '改指纹');
+    test('標題不進指紋：改名之後 writtenFrom 還對得上', () => {
+      assert.equal(hashed.title, '改指紋');
       assert.ok(writtenFrom);
       assert.equal(hashed.writtenFrom, writtenFrom);
       assert.equal(hashed.now, writtenFrom);
     });
   });
 
-  describe('整个卷目录一起搬', () => {
+  describe('整個卷目錄一起搬', () => {
     let movedDir;
     let plot;
 
     before(async () => {
       t.write('chapters/第三卷/010-雪夜.md', '# 雪夜\n\n雪。\n');
       t.write('.novelwarden/summaries/第三卷/010-雪夜.md', PLOT(10, '雪夜'));
-      fs.mkdirSync(t.rel('chapters/归档'), { recursive: true });
+      fs.mkdirSync(t.rel('chapters/歸檔'), { recursive: true });
       project.invalidate();
       h.expect();
-      movedDir = await fileOps.moveEntry(project, 'chapters/第三卷', 'chapters/归档');
+      movedDir = await fileOps.moveEntry(project, 'chapters/第三卷', 'chapters/歸檔');
       plot = await project.getPlot(10);
     });
 
-    test('卷目录搬过去了', () => {
-      assert.equal(movedDir, 'chapters/归档/第三卷');
+    test('卷目錄搬過去了', () => {
+      assert.equal(movedDir, 'chapters/歸檔/第三卷');
     });
 
-    test('summaries/ 里那个卷目录整棵跟着走', () => {
-      assert.equal(plot?.relPath, '.novelwarden/summaries/归档/第三卷/010-雪夜.md');
+    test('summaries/ 裡那個卷目錄整棵跟著走', () => {
+      assert.equal(plot?.relPath, '.novelwarden/summaries/歸檔/第三卷/010-雪夜.md');
       assert.ok(!t.has('.novelwarden/summaries/第三卷'));
     });
   });
 
-  // 要同步正文 `# 标题` 行的改名（`.md` 正文、标题与旧文件名一致）先写标题、再搬家：细纲那一侧会撞时
-  // 写标题之前就停下，什么都不动（第 3 条）——不然正文的标题、文件名改了，细纲却留在旧路径上。
-  describe('目标位置已有细纲时不覆盖：要同步标题的改名整个不做', () => {
+  // 要同步正文 `# 標題` 行的改名（`.md` 正文、標題與舊檔名一致）先寫標題、再搬家：細綱那一側會撞時
+  // 寫標題之前就停下，什麼都不動（第 3 條）——不然正文的標題、檔名改了，細綱卻留在舊路徑上。
+  describe('目標位置已有細綱時不覆蓋：要同步標題的改名整個不做', () => {
     const CH = 'chapters/020-甲.md';
     const BODY = '# 甲\n\n正文\n';
     const MINE = PLOT(20, '甲');
-    const THEIRS = PLOT(20, '乙', '（占位）');
+    const THEIRS = PLOT(20, '乙', '（佔位）');
     let result;
     let body;
     let targetBody;
@@ -249,30 +249,30 @@ describe('细纲跟着正文走', () => {
       toasts = [...h.toasts];
     });
 
-    test('没有改名', () => {
+    test('沒有改名', () => {
       assert.equal(result, undefined);
       assert.equal(renamedTo, false);
     });
 
-    test('正文一字不动（# 标题行没被改成新名字）', () => {
+    test('正文一字不動（# 標題行沒被改成新名字）', () => {
       assert.equal(body, BODY);
     });
 
-    test('目标细纲没被盖掉', () => {
+    test('目標細綱沒被蓋掉', () => {
       assert.equal(targetBody, THEIRS);
     });
 
-    test('这一章的细纲原样留在原处', () => {
+    test('這一章的細綱原樣留在原處', () => {
       assert.equal(oldPlot, MINE);
     });
 
-    test('说出来了', () => {
+    test('說出來了', () => {
       assert.ok(toasts.some((x) => x.startsWith('error:') && x.includes('020-乙.md')), toasts.join(' | '));
     });
   });
 
-  // 不同步标题的改名（`.txt` 正文、标题与文件名不一致）行为照旧：正文照样改名，细纲留在原处并说出来。
-  describe('目标位置已有细纲时不覆盖：不同步标题的改名照旧', () => {
+  // 不同步標題的改名（`.txt` 正文、標題與檔名不一致）行為照舊：正文照樣改名，細綱留在原處並說出來。
+  describe('目標位置已有細綱時不覆蓋：不同步標題的改名照舊', () => {
     let targetBody;
     let oldKept;
     let renamed;
@@ -281,7 +281,7 @@ describe('细纲跟着正文走', () => {
     before(async () => {
       t.write('chapters/021-甲.txt', '正文\n');
       t.write('.novelwarden/summaries/021-甲.md', PLOT(21, '甲'));
-      t.write('.novelwarden/summaries/021-乙.md', PLOT(21, '乙', '（占位）'));
+      t.write('.novelwarden/summaries/021-乙.md', PLOT(21, '乙', '（佔位）'));
       project.invalidate();
       h.expect('乙');
       renamed = await fileOps.renameEntry(project, 'chapters/021-甲.txt');
@@ -290,64 +290,64 @@ describe('细纲跟着正文走', () => {
       toasts = [...h.toasts];
     });
 
-    test('正文照样改名', () => {
+    test('正文照樣改名', () => {
       assert.equal(renamed, 'chapters/021-乙.txt');
     });
 
-    test('目标细纲没被盖掉', () => {
-      assert.ok(targetBody.includes('（占位）'), targetBody);
+    test('目標細綱沒被蓋掉', () => {
+      assert.ok(targetBody.includes('（佔位）'), targetBody);
     });
 
-    test('旧细纲留在原处', () => {
+    test('舊細綱留在原處', () => {
       assert.ok(oldKept);
     });
 
-    test('说出来了', () => {
+    test('說出來了', () => {
       assert.ok(toasts.some((x) => x.startsWith('error:') && x.includes('021-乙.md')), toasts.join(' | '));
     });
   });
 
-  describe('删正文不删细纲', () => {
+  describe('刪正文不刪細綱', () => {
     let plotKept;
     let back;
 
     before(async () => {
-      t.write('chapters/030-残灯.md', '# 残灯\n\n灯芯烧到了底。\n');
-      t.write('.novelwarden/summaries/030-残灯.md', PLOT(30, '残灯'));
+      t.write('chapters/030-殘燈.md', '# 殘燈\n\n燈芯燒到了底。\n');
+      t.write('.novelwarden/summaries/030-殘燈.md', PLOT(30, '殘燈'));
       project.invalidate();
-      h.expect('删除');
-      await fileOps.deleteEntry(project, 'chapters/030-残灯.md');
-      plotKept = t.has('.novelwarden/summaries/030-残灯.md');
+      h.expect('刪除');
+      await fileOps.deleteEntry(project, 'chapters/030-殘燈.md');
+      plotKept = t.has('.novelwarden/summaries/030-殘燈.md');
       back = await project.getPlot(30);
     });
 
-    test('细纲还在', () => {
+    test('細綱還在', () => {
       assert.ok(plotKept);
     });
 
-    test('它退回这一章的计划（按号认得出）', () => {
-      assert.equal(back?.relPath, '.novelwarden/summaries/030-残灯.md');
+    test('它退回這一章的計劃（按號認得出）', () => {
+      assert.equal(back?.relPath, '.novelwarden/summaries/030-殘燈.md');
     });
   });
 
-  describe('照细纲新写一章：细纲跟着改名到新正文的镜像', () => {
+  describe('照細綱新寫一章：細綱跟著改名到新正文的映象', () => {
     let rel;
     let plot;
 
     before(async () => {
-      // 还没起名时建的纯序号细纲，后来排出了标题。
+      // 還沒起名時建的純序號細綱，後來排出了標題。
       t.write('.novelwarden/summaries/第二卷/040.md', PLOT(40, '冰河'));
       project.invalidate();
       rel = await wsOf(project).createChapterAt('chapters/第二卷/040-冰河.md', '冰面裂了。', '.novelwarden/summaries/第二卷/040.md');
       plot = await project.getPlot(40);
     });
 
-    test('正文落在给定位置，标题行取文件名', () => {
+    test('正文落在給定位置，標題行取檔名', () => {
       assert.equal(rel, 'chapters/第二卷/040-冰河.md');
       assert.equal(t.read(rel), '# 冰河\n\n冰面裂了。\n');
     });
 
-    test('细纲改名到新正文的镜像，按路径认得出', () => {
+    test('細綱改名到新正文的映象，按路徑認得出', () => {
       assert.equal(plot?.relPath, '.novelwarden/summaries/第二卷/040-冰河.md');
       assert.ok(!t.has('.novelwarden/summaries/第二卷/040.md'));
     });

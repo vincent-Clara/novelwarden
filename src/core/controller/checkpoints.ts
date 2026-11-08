@@ -1,7 +1,7 @@
 /**
- * 工程页「存档点…」弹窗与编辑器「版本」侧栏「全书改动」的后端一半：列、存、写备注、跟现在比、退回。存储在
- * `workspace/checkpoints.ts`，退回的编排在 `features/checkpoint.ts`，设计见 `docs/design/plans/2026-10-20-checkpoints.md`。
- * 单份对比在内置编辑器的对比标签里（`media/src/editor/versionDiff.ts`，全文经 `readVersion` 的 `cp:` 取），这里不管。
+ * 工程頁「存檔點…」彈窗與編輯器「版本」側欄「全書改動」的後端一半：列、存、寫備註、跟現在比、退回。儲存在
+ * `workspace/checkpoints.ts`，退回的編排在 `features/checkpoint.ts`，設計見 `docs/design/plans/2026-10-20-checkpoints.md`。
+ * 單份對比在內建編輯器的對比標籤裡（`media/src/editor/versionDiff.ts`，全文經 `readVersion` 的 `cp:` 取），這裡不管。
  */
 import type { ChatController } from './index';
 import { describeError, scoped } from '../runtime/logger';
@@ -19,9 +19,9 @@ import {
 import { kindOfPath } from '../workspace/kind';
 import { RESTORE_SKIP_TEXT, RestoreOutcome, describeCheckpoint, restoreCheckpoint } from '../features/checkpoint';
 
-const log = scoped('存档点');
+const log = scoped('存檔點');
 
-/** 列出存档点，回 `checkpoints`。 */
+/** 列出存檔點，回 `checkpoints`。 */
 export async function pushCheckpoints(c: ChatController): Promise<void> {
   const unavailable = await checkpointUnavailable(c.project);
   c.post({
@@ -52,7 +52,7 @@ export function checkpointView(project: NovelProject, cp: CheckpointInfo): Check
   };
 }
 
-/** 「存一个存档点」（手动）。之后重推列表。 */
+/** 「存一個存檔點」（手動）。之後重推列表。 */
 export async function saveCheckpoint(c: ChatController, note: string): Promise<void> {
   const unavailable = await checkpointUnavailable(c.project);
   if (unavailable) {
@@ -61,30 +61,30 @@ export async function saveCheckpoint(c: ChatController, note: string): Promise<v
   }
   try {
     const r = await createCheckpoint(c.project, { note: typeof note === 'string' ? note : '', auto: false });
-    // 份数与内容数对不上很正常：同样的内容（几份空模板、以前的存档点里已经有的）只存一份。
+    // 份數與內容數對不上很正常：同樣的內容（幾份空模板、以前的存檔點裡已經有的）只存一份。
     const shared =
-      r.newObjects === 0 ? '（内容都与以前的存档点共用，没多占地方）' : `（新存了 ${r.newObjects} 份内容，同样的内容只存一份）`;
-    const large = r.skipped.length > 0 ? `；${r.skipped.length} 份超过 2 MB 没存：${clipList(r.skipped)}` : '';
-    c.toast(`已存一个存档点：${r.files} 份文件${shared}${large}。`);
+      r.newObjects === 0 ? '（內容都與以前的存檔點共用，沒多佔地方）' : `（新存了 ${r.newObjects} 份內容，同樣的內容只存一份）`;
+    const large = r.skipped.length > 0 ? `；${r.skipped.length} 份超過 2 MB 沒存：${clipList(r.skipped)}` : '';
+    c.toast(`已存一個存檔點：${r.files} 份檔案${shared}${large}。`);
   } catch (err) {
-    log.warn('存档点没存下', describeError(err));
-    c.toast(`存档点没存下：${describeError(err)}`, 'error');
+    log.warn('存檔點沒存下', describeError(err));
+    c.toast(`存檔點沒存下：${describeError(err)}`, 'error');
   }
   await pushCheckpoints(c);
 }
 
-/** 写备注（自动的就此留住）。之后重推列表。 */
+/** 寫備註（自動的就此留住）。之後重推列表。 */
 export async function setCheckpointNote(c: ChatController, id: string, note: string): Promise<void> {
   try {
     const cp = await noteCheckpoint(c.project, id, typeof note === 'string' ? note : '');
-    c.toast(`存档点 ${describeCheckpoint(cp)} 会一直留着，不会被自动裁掉。`);
+    c.toast(`存檔點 ${describeCheckpoint(cp)} 會一直留著，不會被自動裁掉。`);
   } catch (err) {
     c.toast(describeError(err), 'error');
   }
   await pushCheckpoints(c);
 }
 
-/** 跟现在比，回 `checkpointDiff`。 */
+/** 跟現在比，回 `checkpointDiff`。 */
 export async function pushCheckpointDiff(c: ChatController, id: string): Promise<void> {
   try {
     const d = await diffCheckpoint(c.project, id);
@@ -94,7 +94,7 @@ export async function pushCheckpointDiff(c: ChatController, id: string): Promise
   }
 }
 
-/** 退回（单份或整本）。之后 `pushState`、重推列表（多了「退回之前」那一个）与这个存档点的比较。 */
+/** 退回（單份或整本）。之後 `pushState`、重推列表（多了「退回之前」那一個）與這個存檔點的比較。 */
 export async function restoreCheckpointFor(c: ChatController, request: RestoreCheckpointRequest): Promise<void> {
   const req = request && typeof request === 'object' ? request : ({} as RestoreCheckpointRequest);
   const busy = c.busy || activeTasks(c.project.root).length > 0;
@@ -113,23 +113,23 @@ export async function restoreCheckpointFor(c: ChatController, request: RestoreCh
   }
 }
 
-/** 退回的汇总（toast）：退回几份、搬进回收站几份、跳过的逐份说为什么（多了只列前几份，其余在日志里）。 */
+/** 退回的彙總（toast）：退回幾份、搬進回收站幾份、跳過的逐份說為什麼（多了只列前幾份，其餘在日誌裡）。 */
 export function describeOutcome(o: RestoreOutcome): string {
   const parts: string[] = [];
   if (o.restored.length + o.trashed.length === 0) {
-    parts.push('一份都没有退回');
+    parts.push('一份都沒有退回');
   } else {
-    parts.push(`已退回 ${o.restored.length} 份` + (o.trashed.length > 0 ? `，搬进回收站 ${o.trashed.length} 份` : ''));
+    parts.push(`已退回 ${o.restored.length} 份` + (o.trashed.length > 0 ? `，搬進回收站 ${o.trashed.length} 份` : ''));
   }
   if (o.skipped.length > 0) {
     const shown = o.skipped.slice(0, 3).map((s) => `${s.path}（${s.detail ?? RESTORE_SKIP_TEXT[s.reason]}）`);
-    parts.push(`跳过 ${o.skipped.length} 份：${shown.join('；')}${o.skipped.length > 3 ? ' 等，明细在日志里' : ''}`);
+    parts.push(`跳過 ${o.skipped.length} 份：${shown.join('；')}${o.skipped.length > 3 ? ' 等，明細在日誌裡' : ''}`);
     for (const s of o.skipped) {
-      log.info(`退回时跳过 ${s.path}`, s.detail ?? RESTORE_SKIP_TEXT[s.reason]);
+      log.info(`退回時跳過 ${s.path}`, s.detail ?? RESTORE_SKIP_TEXT[s.reason]);
     }
   }
   if (o.before && o.restored.length + o.trashed.length > 0) {
-    parts.push('退回之前的样子存成了一个存档点，想反悔可以再退回去');
+    parts.push('退回之前的樣子存成了一個存檔點，想反悔可以再退回去');
   }
   return `${parts.join('。')}。`;
 }

@@ -1,7 +1,7 @@
 /**
- * 前端 ↔ 后端的消息协议（`InMessage` / `OutMessage` / `ViewState`），插件 webview 与独立版网页共用，是前后端的
- * 唯一契约。按需要的几对消息（「转到…」的索引、名词表、全书查找、叙事线总览、时间线总览）各有一份类型文件，
- * 都带请求号、不进 `ViewState`。
+ * 前端 ↔ 後端的訊息協議（`InMessage` / `OutMessage` / `ViewState`），外掛 webview 與獨立版網頁共用，是前後端的
+ * 唯一契約。按需要的幾對訊息（「轉到…」的索引、名詞表、全書查詢、敘事線總覽、時間線總覽）各有一份型別檔案，
+ * 都帶請求號、不進 `ViewState`。
  */
 export type {
   ChapterAction,

@@ -1,17 +1,17 @@
 /**
- * 设定的格式（model/loreFile.ts）与细纲「设定」一节（model/plotFile.ts）。
+ * 設定的格式（model/loreFile.ts）與細綱「設定」一節（model/plotFile.ts）。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 几种手写写法都认、认不出的不崩、同名只留第一行 | 第 1 条：作者会手改 |
- * | 「（无）」读回来是空数组，渲染回去还是「（无）」 | 标题在 = 记过；没有设定也要留下记过的痕迹 |
- * | 分类路径规范成 `a/b`，「未分类」是空串 | 分类就是目录，每本书自己定、可以嵌套 |
- * | 「设定」一节不进内容指纹 | 补记老章节不能把它们全挂上 ⟳ |
- * | 没有这一节是 undefined，有标题没内容是空数组 | 「还没记过」与「记过、没有」是两回事 |
- * | 两趟认条目：关键词抢不走别人的标题 | 同 views/cast.ts 的角色卡 |
- * | 认提到：最长匹配，落在别人更长的名字里的不算 | 「圣地秘境」不该把上位概念「秘境」整条带进来 |
- * | 「暗设」一节拆得出来，一句话不取它 | 写正文时不带暗设（完善设定） |
- * | 待完善只认空的、占位、全是「（未交代）」 | 不按字数猜：作者写了两行就是够了 |
+ * | 幾種手寫寫法都認、認不出的不崩、同名只留第一行 | 第 1 條：作者會手改 |
+ * | 「（無）」讀回來是空陣列，渲染回去還是「（無）」 | 標題在 = 記過；沒有設定也要留下記過的痕跡 |
+ * | 分類路徑規範成 `a/b`，「未分類」是空串 | 分類就是目錄，每本書自己定、可以巢狀 |
+ * | 「設定」一節不進內容指紋 | 補記老章節不能把它們全掛上 ⟳ |
+ * | 沒有這一節是 undefined，有標題沒內容是空陣列 | 「還沒記過」與「記過、沒有」是兩回事 |
+ * | 兩趟認條目：關鍵詞搶不走別人的標題 | 同 views/cast.ts 的角色卡 |
+ * | 認提到：最長匹配，落在別人更長的名字裡的不算 | 「聖地秘境」不該把上位概念「秘境」整條帶進來 |
+ * | 「暗設」一節拆得出來，一句話不取它 | 寫正文時不帶暗設（完善設定） |
+ * | 待完善只認空的、佔位、全是「（未交代）」 | 不按字數猜：作者寫了兩行就是夠了 |
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -20,303 +20,303 @@ const { loadModule } = require('../../helpers/load');
 const lf = loadModule('src/core/model/loreFile.ts');
 const pf = loadModule('src/core/model/plotFile.ts');
 
-describe('「设定」一节的一行一条', () => {
-  test('〔〕【】[] 都认，冒号全角半角都认，没写分类也行', () => {
+describe('「設定」一節的一行一條', () => {
+  test('〔〕【】[] 都認，冒號全形半形都認，沒寫分類也行', () => {
     const lines = lf.parseLoreLines(
       [
-        '- 青崖镇〔地域/青崖〕',
-        '- 停舟客栈【地域/青崖】：镇上唯一的客栈',
-        '* 崖字令牌[信物]: 不止一块',
-        '1. 过所：出入城镇的凭证',
-        '后山',
+        '- 青崖鎮〔地域/青崖〕',
+        '- 停舟客棧【地域/青崖】：鎮上唯一的客棧',
+        '* 崖字令牌[信物]: 不止一塊',
+        '1. 過所：出入城鎮的憑證',
+        '後山',
       ].join('\n')
     );
     assert.deepEqual(lines, [
-      { name: '青崖镇', category: '地域/青崖', note: '' },
-      { name: '停舟客栈', category: '地域/青崖', note: '镇上唯一的客栈' },
-      { name: '崖字令牌', category: '信物', note: '不止一块' },
-      { name: '过所', category: '', note: '出入城镇的凭证' },
-      { name: '后山', category: '', note: '' },
+      { name: '青崖鎮', category: '地域/青崖', note: '' },
+      { name: '停舟客棧', category: '地域/青崖', note: '鎮上唯一的客棧' },
+      { name: '崖字令牌', category: '信物', note: '不止一塊' },
+      { name: '過所', category: '', note: '出入城鎮的憑證' },
+      { name: '後山', category: '', note: '' },
     ]);
   });
 
-  test('同一个名字（归一后）只留第一行；空行、占位、（无）跳过', () => {
-    const lines = lf.parseLoreLines(['- 青崖镇〔地域〕：甲', '', '（待补充）', '（无）', '- 「青崖镇」：乙'].join('\n'));
-    assert.deepEqual(lines, [{ name: '青崖镇', category: '地域', note: '甲' }]);
+  test('同一個名字（歸一後）只留第一行；空行、佔位、（無）跳過', () => {
+    const lines = lf.parseLoreLines(['- 青崖鎮〔地域〕：甲', '', '（待補充）', '（無）', '- 「青崖鎮」：乙'].join('\n'));
+    assert.deepEqual(lines, [{ name: '青崖鎮', category: '地域', note: '甲' }]);
   });
 
-  test('超长的名字、分类、说明按上限截短', () => {
-    const [line] = lf.parseLoreLines(`- ${'名'.repeat(50)}〔${'类'.repeat(60)}〕：${'说'.repeat(100)}`);
+  test('超長的名字、分類、說明按上限截短', () => {
+    const [line] = lf.parseLoreLines(`- ${'名'.repeat(50)}〔${'類'.repeat(60)}〕：${'說'.repeat(100)}`);
     assert.equal(line.name.length, lf.LORE_LINE_LIMITS.name);
     assert.equal(line.category.length, lf.LORE_LINE_LIMITS.category);
     assert.equal(line.note.length, lf.LORE_LINE_LIMITS.note);
   });
 
-  test('渲染：没有就写「（无）」，读回来是空数组；有就一行一条往返不变', () => {
-    assert.equal(lf.renderLoreLines([]), '（无）');
+  test('渲染：沒有就寫「（無）」，讀回來是空陣列；有就一行一條往返不變', () => {
+    assert.equal(lf.renderLoreLines([]), '（無）');
     assert.deepEqual(lf.parseLoreLines(lf.renderLoreLines([])), []);
     const lines = [
-      { name: '青崖镇', category: '地域/青崖', note: '' },
-      { name: '过所', category: '', note: '出入城镇的凭证' },
+      { name: '青崖鎮', category: '地域/青崖', note: '' },
+      { name: '過所', category: '', note: '出入城鎮的憑證' },
     ];
-    assert.equal(lf.renderLoreLines(lines), '- 青崖镇〔地域/青崖〕\n- 过所：出入城镇的凭证');
+    assert.equal(lf.renderLoreLines(lines), '- 青崖鎮〔地域/青崖〕\n- 過所：出入城鎮的憑證');
     assert.deepEqual(lf.parseLoreLines(lf.renderLoreLines(lines)), lines);
   });
 
-  test('分类路径：反斜杠、全角斜杠当 /，空段丢掉，「未分类」是空串', () => {
-    assert.equal(lf.normalizeLoreCategory(' 宗门 \\ 正道／ '), '宗门/正道');
+  test('分類路徑：反斜槓、全形斜槓當 /，空段丟掉，「未分類」是空串', () => {
+    assert.equal(lf.normalizeLoreCategory(' 宗門 \\ 正道／ '), '宗門/正道');
     assert.equal(lf.normalizeLoreCategory('未分类'), '');
-    assert.equal(lf.loreCategoryOfSlug('宗门/正道/青云宗'), '宗门/正道');
-    assert.equal(lf.loreCategoryOfSlug('青云宗'), '');
+    assert.equal(lf.loreCategoryOfSlug('宗門/正道/青雲宗'), '宗門/正道');
+    assert.equal(lf.loreCategoryOfSlug('青雲宗'), '');
   });
 });
 
-describe('条目的一句话与认名字（含暗设与待完善：完善设定，2026-10-19）', () => {
-  test('有 brief 用 brief；没有取正文第一句，跳过小标题与列表记号，截到 40 字', () => {
-    assert.equal(lf.loreBrief({ brief: '一句话', body: '别的' }), '一句话');
-    assert.equal(lf.loreBrief({ brief: '', body: '## 概要\n\n- 偏僻小镇，前不着村。镇口设卡。' }), '偏僻小镇，前不着村。');
+describe('條目的一句話與認名字（含暗設與待完善：完善設定，2026-10-19）', () => {
+  test('有 brief 用 brief；沒有取正文第一句，跳過小標題與列表記號，截到 40 字', () => {
+    assert.equal(lf.loreBrief({ brief: '一句话', body: '別的' }), '一句话');
+    assert.equal(lf.loreBrief({ brief: '', body: '## 概要\n\n- 偏僻小鎮，前不著村。鎮口設卡。' }), '偏僻小鎮，前不著村。');
     assert.equal(lf.loreBrief({ brief: '', body: '字'.repeat(80) }).length, lf.LORE_ENTRY_LIMITS.brief);
     assert.equal(lf.loreBrief({ brief: '', body: '' }), '');
   });
 
-  test('缺 brief 取第一句时跳过「暗设」：一句话会进写正文的上下文', () => {
-    assert.equal(lf.loreBrief({ brief: '', body: '## 暗设\n\n阁主是魔尊转世。\n\n## 概要\n\n九层木楼。' }), '九层木楼。');
+  test('缺 brief 取第一句時跳過「暗設」：一句話會進寫正文的上下文', () => {
+    assert.equal(lf.loreBrief({ brief: '', body: '## 暗設\n\n閣主是魔尊轉世。\n\n## 概要\n\n九層木樓。' }), '九層木樓。');
   });
 
-  test('暗设：以「暗设」开头的二级标题到下一个一二级标题为止，几节都收', () => {
+  test('暗設：以「暗設」開頭的二級標題到下一個一二級標題為止，幾節都收', () => {
     const body = [
       '## 概要',
       '',
-      '九层木楼。',
+      '九層木樓。',
       '',
-      '## 暗设（未揭示）',
+      '## 暗設（未揭示）',
       '',
-      '阁主是魔尊转世。',
-      '### 细节',
-      '三层以上无人上去过。',
+      '閣主是魔尊轉世。',
+      '### 細節',
+      '三層以上無人上去過。',
       '',
-      '## 现状',
+      '## 現狀',
       '',
-      '闭阁。',
+      '閉閣。',
       '',
-      '## 暗设',
-      '密道通往后山。',
+      '## 暗設',
+      '密道通往後山。',
     ].join('\n');
     const { visible, hidden } = lf.splitLoreHidden(body);
-    assert.equal(visible, '## 概要\n\n九层木楼。\n\n## 现状\n\n闭阁。');
-    assert.equal(hidden, '阁主是魔尊转世。\n### 细节\n三层以上无人上去过。\n\n密道通往后山。');
+    assert.equal(visible, '## 概要\n\n九層木樓。\n\n## 現狀\n\n閉閣。');
+    assert.equal(hidden, '閣主是魔尊轉世。\n### 細節\n三層以上無人上去過。\n\n密道通往後山。');
   });
 
-  test('没有暗设原样返回；别的标题、三级标题「### 暗设」不认（当明面）；空的、undefined 不崩', () => {
-    assert.deepEqual(lf.splitLoreHidden('## 概要\n\n九层木楼。'), { visible: '## 概要\n\n九层木楼。', hidden: '' });
-    assert.equal(lf.splitLoreHidden('### 暗设\n秘密').hidden, '');
+  test('沒有暗設原樣返回；別的標題、三級標題「### 暗設」不認（當明面）；空的、undefined 不崩', () => {
+    assert.deepEqual(lf.splitLoreHidden('## 概要\n\n九層木樓。'), { visible: '## 概要\n\n九層木樓。', hidden: '' });
+    assert.equal(lf.splitLoreHidden('### 暗設\n秘密').hidden, '');
     assert.equal(lf.splitLoreHidden('## 秘密\n秘密').hidden, '');
     assert.deepEqual(lf.splitLoreHidden(''), { visible: '', hidden: '' });
     assert.deepEqual(lf.splitLoreHidden(undefined), { visible: '', hidden: '' });
   });
 
-  test('待完善：空的、新建设定的占位、三节全是「（未交代）」；写了一点就不算', () => {
+  test('待完善：空的、新建設定的佔位、三節全是「（未交代）」；寫了一點就不算', () => {
     assert.equal(lf.loreThin({ body: '' }), 'empty');
-    assert.equal(lf.loreThin({ body: '## 暗设\n\n阁主是魔尊转世。' }), 'empty');
-    assert.equal(lf.loreThin({ body: '## 概要\n\n## 现状\n' }), 'empty');
-    assert.equal(lf.loreThin({ body: `${lf.LORE_PLACEHOLDER_PREFIX}：它是什么……）` }), 'placeholder');
+    assert.equal(lf.loreThin({ body: '## 暗設\n\n閣主是魔尊轉世。' }), 'empty');
+    assert.equal(lf.loreThin({ body: '## 概要\n\n## 現狀\n' }), 'empty');
+    assert.equal(lf.loreThin({ body: `${lf.LORE_PLACEHOLDER_PREFIX}：它是什麼……）` }), 'placeholder');
     assert.equal(
-      lf.loreThin({ body: '## 概要\n\n（未交代）\n\n## 规则与边界\n\n- (未交代)\n\n## 现状\n\n（未交代）' }),
+      lf.loreThin({ body: '## 概要\n\n（未交代）\n\n## 規則與邊界\n\n- (未交代)\n\n## 現狀\n\n（未交代）' }),
       'untold'
     );
-    assert.equal(lf.loreThin({ body: '## 概要\n\n九层木楼。\n\n## 现状\n\n（未交代）' }), undefined);
-    assert.equal(lf.loreThin({ body: '两行字，作者觉得够了。' }), undefined);
+    assert.equal(lf.loreThin({ body: '## 概要\n\n九層木樓。\n\n## 現狀\n\n（未交代）' }), undefined);
+    assert.equal(lf.loreThin({ body: '兩行字，作者覺得夠了。' }), undefined);
   });
 
-  test('先标题后关键词：关键词抢不走别人的标题', () => {
-    const a = { slug: 'a', title: '青崖镇', keywords: ['青崖', '停舟'] };
+  test('先標題後關鍵詞：關鍵詞搶不走別人的標題', () => {
+    const a = { slug: 'a', title: '青崖鎮', keywords: ['青崖', '停舟'] };
     const b = { slug: 'b', title: '停舟', keywords: [] };
     const lookup = lf.createLoreLookup([a, b]);
     assert.equal(lookup.find('停舟'), b);
     assert.equal(lookup.find('「青崖」'), a);
-    assert.equal(lookup.find('后山'), undefined);
+    assert.equal(lookup.find('後山'), undefined);
   });
 
-  test('提到没有：标题或两个字以上的关键词作为子串出现', () => {
+  test('提到沒有：標題或兩個字以上的關鍵詞作為子串出現', () => {
     const entry = { title: '崖字令牌', keywords: ['令牌', '牌'] };
     assert.equal(lf.loreMentionIn('林昭把令牌交了出去', entry), '令牌');
-    assert.equal(lf.loreMentionIn('门牌上写着字', entry), undefined);
+    assert.equal(lf.loreMentionIn('門牌上寫著字', entry), undefined);
   });
 
-  // 2026-10-25 外部报告：写到第 83 章，「圣地秘境」一出现「秘境」那一条（各个秘境的汇总）就整条进上下文。
-  test('最长匹配：每一处都落在别人更长的名字里的不算；单独出现的照算', () => {
+  // 2026-10-25 外部報告：寫到第 83 章，「聖地秘境」一出現「秘境」那一條（各個秘境的彙總）就整條進上下文。
+  test('最長匹配：每一處都落在別人更長的名字裡的不算；單獨出現的照算', () => {
     const concept = { title: '秘境', keywords: [] };
-    const holy = { title: '圣地秘境', keywords: ['圣地'] };
-    const magic = { title: '魔法', keywords: ['法术'] };
+    const holy = { title: '聖地秘境', keywords: ['聖地'] };
+    const magic = { title: '魔法', keywords: ['法術'] };
     const all = [concept, holy, magic];
     const hits = (text, names) => [...lf.loreMentionsIn(text, all, names)].map(([e, w]) => `${e.title}:${w}`);
-    assert.deepEqual(hits('主角随教众潜入圣地秘境'), ['圣地秘境:圣地秘境']);
-    assert.deepEqual(hits('圣地秘境和别的秘境不一样'), ['秘境:秘境', '圣地秘境:圣地秘境']);
-    assert.deepEqual(hits('她在练习魔法'), ['魔法:魔法']);
-    // 名录里记着、还没建条目的名字也算别人的名字。
-    assert.deepEqual(hits('幻池秘境里不能开口', []), ['秘境:秘境']);
-    assert.deepEqual(hits('幻池秘境里不能开口', ['幻池秘境']), []);
-    // 一样长的不算包住；自己更长的关键词包住自己的标题照算自己。
+    assert.deepEqual(hits('主角隨教眾潛入聖地秘境'), ['聖地秘境:聖地秘境']);
+    assert.deepEqual(hits('聖地秘境和別的秘境不一樣'), ['秘境:秘境', '聖地秘境:聖地秘境']);
+    assert.deepEqual(hits('她在練習魔法'), ['魔法:魔法']);
+    // 名錄裡記著、還沒建條目的名字也算別人的名字。
+    assert.deepEqual(hits('幻池秘境裡不能開口', []), ['秘境:秘境']);
+    assert.deepEqual(hits('幻池秘境裡不能開口', ['幻池秘境']), []);
+    // 一樣長的不算包住；自己更長的關鍵詞包住自己的標題照算自己。
     assert.deepEqual(hits('秘境', ['秘境']), ['秘境:秘境']);
     const gate = { title: '秘境', keywords: ['秘境入口'] };
     assert.deepEqual([...lf.loreMentionsIn('走到秘境入口', [gate]).values()], ['秘境']);
-    // 一个字的不认，空文本什么都没有。
+    // 一個字的不認，空文字什麼都沒有。
     assert.equal(lf.loreMentionsIn('', all).size, 0);
     assert.equal(lf.loreMentionsIn('牌', [{ title: '牌', keywords: [] }]).size, 0);
   });
 
-  // 真跑（2026-10-18，gemini-3-flash-lite）：「伪人」的关键词里有人名「沈怀山」，「青羊镇」与「沈家老宅」
-  // 互相写进对方的关键词——写正文时一提到这个人、这个地方，就把不相干的条目整条带进来。
-  test('机器写的关键词：人名、别的条目的标题、一个字的、与标题重复的都不要', () => {
+  // 真跑（2026-10-18，gemini-3-flash-lite）：「偽人」的關鍵詞裡有人名「沈懷山」，「青羊鎮」與「沈家老宅」
+  // 互相寫進對方的關鍵詞——寫正文時一提到這個人、這個地方，就把不相干的條目整條帶進來。
+  test('機器寫的關鍵詞：人名、別的條目的標題、一個字的、與標題重複的都不要', () => {
     assert.deepEqual(
-      lf.cleanLoreKeywords('伪人', ['伪人', '沈怀山', '皮囊怪物', '鬼', '青羊镇', ' 皮囊怪物 '], {
-        titles: ['青羊镇', '伪人'],
-        people: ['沈默', '沈怀山'],
+      lf.cleanLoreKeywords('偽人', ['偽人', '沈懷山', '皮囊怪物', '鬼', '青羊鎮', ' 皮囊怪物 '], {
+        titles: ['青羊鎮', '偽人'],
+        people: ['沈默', '沈懷山'],
       }),
       ['皮囊怪物']
     );
   });
 
-  test('名录里另记着的名字也不要：「魔法体系」不能把「寒冰锁」收成关键词', () => {
-    // 收了的话，往后各章记下的「寒冰锁」都被认成「魔法体系」，它永远建不出自己的条目。
+  test('名錄裡另記著的名字也不要：「魔法體系」不能把「寒冰鎖」收成關鍵詞', () => {
+    // 收了的話，往後各章記下的「寒冰鎖」都被認成「魔法體系」，它永遠建不出自己的條目。
     assert.deepEqual(
-      lf.cleanLoreKeywords('魔法体系', ['魔法', '寒冰锁', '奥术飞弹', '施法'], {
+      lf.cleanLoreKeywords('魔法體系', ['魔法', '寒冰鎖', '奧術飛彈', '施法'], {
         titles: [],
         people: [],
-        recorded: ['寒冰锁', '奥术飞弹', '魔法体系'],
+        recorded: ['寒冰鎖', '奧術飛彈', '魔法體系'],
       }),
       ['魔法', '施法']
     );
   });
 });
 
-describe('细纲的「设定」一节', () => {
+describe('細綱的「設定」一節', () => {
   const FILE = [
     '---',
     'no: 3',
-    'title: 夜访',
+    'title: 夜訪',
     'sourceHash: abc',
     '---',
     '',
-    '# 第3章 夜访',
+    '# 第3章 夜訪',
     '',
-    '## 关键事件',
+    '## 關鍵事件',
     '',
-    '- 年轻守卫潜入',
+    '- 年輕守衛潛入',
     '',
-    '## 连续性事实',
+    '## 連續性事實',
     '',
-    '- 林昭的令牌被看见了',
+    '- 林昭的令牌被看見了',
     '',
-    '## 设定',
+    '## 設定',
     '',
-    '- 停舟客栈〔地域〕：二层木楼',
+    '- 停舟客棧〔地域〕：二層木樓',
     '- 崖字令牌〔信物〕',
     '',
   ].join('\n');
 
-  test('读出「设定」一节，连续性事实不被它吃进去', () => {
-    const plot = pf.parsePlotFile(FILE, '.novelwarden/summaries/003-夜访.md');
+  test('讀出「設定」一節，連續性事實不被它吃進去', () => {
+    const plot = pf.parsePlotFile(FILE, '.novelwarden/summaries/003-夜訪.md');
     assert.deepEqual(plot.lore, [
-      { name: '停舟客栈', category: '地域', note: '二层木楼' },
+      { name: '停舟客棧', category: '地域', note: '二層木樓' },
       { name: '崖字令牌', category: '信物', note: '' },
     ]);
-    assert.equal(plot.sections.连续性事实, '- 林昭的令牌被看见了');
+    assert.equal(plot.sections.连续性事实, '- 林昭的令牌被看見了');
   });
 
-  test('没有这一节是 undefined；有标题、写着（无）是空数组', () => {
-    const none = pf.parsePlotFile(FILE.replace(/## 设定[\s\S]*$/, ''), '.novelwarden/summaries/003-夜访.md');
+  test('沒有這一節是 undefined；有標題、寫著（無）是空陣列', () => {
+    const none = pf.parsePlotFile(FILE.replace(/## 設定[\s\S]*$/, ''), '.novelwarden/summaries/003-夜訪.md');
     assert.equal(none.lore, undefined);
-    const empty = pf.parsePlotFile(FILE.replace(/## 设定[\s\S]*$/, '## 设定\n\n（无）\n'), '.novelwarden/summaries/003-夜访.md');
+    const empty = pf.parsePlotFile(FILE.replace(/## 設定[\s\S]*$/, '## 設定\n\n（無）\n'), '.novelwarden/summaries/003-夜訪.md');
     assert.deepEqual(empty.lore, []);
   });
 
-  test('「设定」一节不进内容指纹', () => {
-    const with_ = pf.parsePlotFile(FILE, '.novelwarden/summaries/003-夜访.md');
-    const without = pf.parsePlotFile(FILE.replace(/## 设定[\s\S]*$/, ''), '.novelwarden/summaries/003-夜访.md');
+  test('「設定」一節不進內容指紋', () => {
+    const with_ = pf.parsePlotFile(FILE, '.novelwarden/summaries/003-夜訪.md');
+    const without = pf.parsePlotFile(FILE.replace(/## 設定[\s\S]*$/, ''), '.novelwarden/summaries/003-夜訪.md');
     assert.equal(pf.plotContentHash(with_), pf.plotContentHash(without));
   });
 
-  test('渲染：给了才写，写在七节之后；读回来一样', () => {
-    const plot = pf.parsePlotFile(FILE, '.novelwarden/summaries/003-夜访.md');
+  test('渲染：給了才寫，寫在七節之後；讀回來一樣', () => {
+    const plot = pf.parsePlotFile(FILE, '.novelwarden/summaries/003-夜訪.md');
     const text = pf.renderPlotFile({ ...plot, sourceHash: 'abc', done: false });
-    assert.ok(text.indexOf('## 设定') > text.indexOf('## 连续性事实'));
+    assert.ok(text.indexOf('## 設定') > text.indexOf('## 連續性事實'));
     assert.deepEqual(pf.parsePlotFile(text, plot.relPath).lore, plot.lore);
     const bare = pf.renderPlotFile({ ...plot, lore: undefined, done: false });
-    assert.ok(!bare.includes('## 设定'));
+    assert.ok(!bare.includes('## 設定'));
     const empty = pf.renderPlotFile({ ...plot, lore: [], done: false });
-    assert.ok(empty.includes('## 设定\n\n（无）'));
+    assert.ok(empty.includes('## 設定\n\n（無）'));
   });
 });
 
-describe('模型给的「设定」', () => {
-  test('对象、字符串、整段多行都认；同名只留一条', () => {
+describe('模型給的「設定」', () => {
+  test('物件、字串、整段多行都認；同名只留一條', () => {
     assert.deepEqual(
       lf.loreLinesFromJson([
-        { name: '青崖镇', category: '地域', fact: '镇口设卡' },
-        { title: '过所', note: '出入凭证' },
-        '崖字令牌〔信物〕：不止一块',
-        { name: '「青崖镇」', fact: '重复的' },
-        { category: '没有名字' },
+        { name: '青崖鎮', category: '地域', fact: '鎮口設卡' },
+        { title: '過所', note: '出入憑證' },
+        '崖字令牌〔信物〕：不止一塊',
+        { name: '「青崖鎮」', fact: '重複的' },
+        { category: '沒有名字' },
         42,
       ]),
       [
-        { name: '青崖镇', category: '地域', note: '镇口设卡' },
-        { name: '过所', category: '', note: '出入凭证' },
-        { name: '崖字令牌', category: '信物', note: '不止一块' },
+        { name: '青崖鎮', category: '地域', note: '鎮口設卡' },
+        { name: '過所', category: '', note: '出入憑證' },
+        { name: '崖字令牌', category: '信物', note: '不止一塊' },
       ]
     );
-    assert.deepEqual(lf.loreLinesFromJson('- 后山〔地域〕\n- 黑市'), [
-      { name: '后山', category: '地域', note: '' },
+    assert.deepEqual(lf.loreLinesFromJson('- 後山〔地域〕\n- 黑市'), [
+      { name: '後山', category: '地域', note: '' },
       { name: '黑市', category: '', note: '' },
     ]);
     assert.deepEqual(lf.loreLinesFromJson(undefined), []);
   });
 
-  const TEXT = '林昭进了青崖镇。镇口的守卫查验过所，见了令牌就放行。停舟客栈是镇上唯一的客栈。';
+  const TEXT = '林昭進了青崖鎮。鎮口的守衛查驗過所，見了令牌就放行。停舟客棧是鎮上唯一的客棧。';
   const entries = [
-    { slug: '地域/青崖镇', title: '青崖镇', keywords: ['青崖'], category: '地域' },
+    { slug: '地域/青崖鎮', title: '青崖鎮', keywords: ['青崖'], category: '地域' },
     { slug: '信物/崖字令牌', title: '崖字令牌', keywords: ['令牌'], category: '信物' },
   ];
 
-  test('名字要逐字出现在正文里；人名不算；已有条目换成标题与实际目录', () => {
+  test('名字要逐字出現在正文裡；人名不算；已有條目換成標題與實際目錄', () => {
     const r = lf.verifyLoreLines(
       [
-        { name: '青崖', category: '地点', note: '' },
+        { name: '青崖', category: '地點', note: '' },
         { name: '令牌', category: '物品', note: '' },
-        { name: '黑市', category: '地点', note: '' },
+        { name: '黑市', category: '地點', note: '' },
         { name: '林昭', category: '人物', note: '' },
-        { name: '停舟客栈', category: '地域/青崖', note: '' },
+        { name: '停舟客棧', category: '地域/青崖', note: '' },
       ],
       TEXT,
       { entries, people: ['林昭'] }
     );
     assert.deepEqual(r.lines, [
-      { name: '青崖镇', category: '地域', note: '' },
+      { name: '青崖鎮', category: '地域', note: '' },
       { name: '崖字令牌', category: '信物', note: '' },
-      { name: '停舟客栈', category: '地域/青崖', note: '' },
+      { name: '停舟客棧', category: '地域/青崖', note: '' },
     ]);
     assert.deepEqual(
       r.dropped.map((d) => [d.name, d.why]),
       [
-        ['黑市', '正文里没有这个名字'],
+        ['黑市', '正文裡沒有這個名字'],
         ['林昭', '是角色卡上的人'],
       ]
     );
   });
 
-  test('说明要在正文里找得到依据，找不到清空说明、留下名字', () => {
+  test('說明要在正文裡找得到依據，找不到清空說明、留下名字', () => {
     const r = lf.verifyLoreLines(
       [
-        { name: '停舟客栈', category: '', note: '镇上唯一的客栈' },
-        { name: '青崖镇', category: '', note: '建在海底的城市' },
+        { name: '停舟客棧', category: '', note: '鎮上唯一的客棧' },
+        { name: '青崖鎮', category: '', note: '建在海底的城市' },
       ],
       TEXT,
       { entries, people: [] }
     );
     assert.deepEqual(r.lines, [
-      { name: '停舟客栈', category: '', note: '镇上唯一的客栈' },
-      { name: '青崖镇', category: '地域', note: '' },
+      { name: '停舟客棧', category: '', note: '鎮上唯一的客棧' },
+      { name: '青崖鎮', category: '地域', note: '' },
     ]);
     assert.equal(r.cleared.length, 1);
     assert.ok(r.cleared[0].why.includes('建在海底的城市'));

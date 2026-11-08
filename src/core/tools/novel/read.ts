@@ -1,37 +1,37 @@
 /**
- * `read` —— 读一份文件，带行号。`Workspace.read` 的薄包装。
+ * `read` —— 讀一份檔案，帶行號。`Workspace.read` 的薄包裝。
  *
- * 两条上限**取先到的那一个**：400 行 / 20000 字符。行数管的是散文式的
- * markdown（细纲、场景卡），字符数管的是「一行三千字」的正文——只按行数
- * 截的话，一章正文常常是三行，一次就把整章塞进 agent 上下文了。
+ * 兩條上限**取先到的那一個**：400 行 / 20000 字元。行數管的是散文式的
+ * markdown（細綱、場景卡），字元數管的是「一行三千字」的正文——只按行數
+ * 截的話，一章正文常常是三行，一次就把整章塞進 agent 上下文了。
  *
- * 截断必须写在返回文本里（AGENTS 第 2 条）：模型不知道自己只看了一半，会
- * 拿着半份正文去下结论，而它下的结论看起来跟读全了一模一样。
+ * 截斷必須寫在返回文字裡（AGENTS 第 2 條）：模型不知道自己只看了一半，會
+ * 拿著半份正文去下結論，而它下的結論看起來跟讀全了一模一樣。
  *
- * **越界与不存在都返回 `error` 而不是抛**：模型看得到 error，据此换个路径
- * 重试；抛出去只会让这一轮循环炸掉，而它本来只是猜错了一个文件名。
+ * **越界與不存在都返回 `error` 而不是拋**：模型看得到 error，據此換個路徑
+ * 重試；拋出去只會讓這一輪迴圈炸掉，而它本來只是猜錯了一個檔名。
  */
 import type { ToolContext, ToolDef, ToolResult } from '../types';
 import { int, objectSchema, str } from '../schema';
 import { WsError } from '../../workspace';
 
-/** 一次最多读几行。 */
+/** 一次最多讀幾行。 */
 export const READ_LINE_LIMIT = 400;
-/** 一次最多读多少字符。正文常常一行几千字，只按行数截等于不截。 */
+/** 一次最多讀多少字元。正文常常一行幾千字，只按行數截等於不截。 */
 export const READ_CHAR_LIMIT = 20000;
 
 export const readTool: ToolDef = {
   name: 'read',
   description:
-    '读一份文件的内容，返回带行号的文本。path 是工程内相对路径、用正斜杠。' +
-    `一次最多返回 ${READ_LINE_LIMIT} 行或 ${READ_CHAR_LIMIT} 字符（取先到的），` +
-    '截断时会告诉你还剩多少行，用 offset 接着读下一段。' +
-    'offset 是起始行号（从 1 开始），limit 是最多读几行。',
+    '讀一份檔案的內容，返回帶行號的文字。path 是工程內相對路徑、用正斜槓。' +
+    `一次最多返回 ${READ_LINE_LIMIT} 行或 ${READ_CHAR_LIMIT} 字元（取先到的），` +
+    '截斷時會告訴你還剩多少行，用 offset 接著讀下一段。' +
+    'offset 是起始行號（從 1 開始），limit 是最多讀幾行。',
   parameters: objectSchema(
     {
-      path: str('要读的文件，工程内相对路径。'),
-      offset: int('从第几行开始读，从 1 开始。留空从头读。'),
-      limit: int(`最多读几行。留空按上限 ${READ_LINE_LIMIT} 行。`),
+      path: str('要讀的檔案，工程內相對路徑。'),
+      offset: int('從第幾行開始讀，從 1 開始。留空從頭讀。'),
+      limit: int(`最多讀幾行。留空按上限 ${READ_LINE_LIMIT} 行。`),
     },
     ['path']
   ),
@@ -39,9 +39,9 @@ export const readTool: ToolDef = {
   async run(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
     const rel = typeof args.path === 'string' ? args.path.trim() : '';
     if (!rel) {
-      return { text: '', error: 'path 是必填的：给一个工程内相对路径。' };
+      return { text: '', error: 'path 是必填的：給一個工程內相對路徑。' };
     }
-    // 行号对模型是 1-based（返回值里就是这么标的），Workspace 收的是 0-based。
+    // 行號對模型是 1-based（返回值裡就是這麼標的），Workspace 收的是 0-based。
     const from = Math.max(1, toInt(args.offset) ?? 1);
     const want = Math.min(READ_LINE_LIMIT, Math.max(1, toInt(args.limit) ?? READ_LINE_LIMIT));
 
@@ -55,8 +55,8 @@ export const readTool: ToolDef = {
     const lines = file.text === '' ? [] : file.text.split('\n');
     const total = file.truncated?.total ?? from - 1 + lines.length;
 
-    // 字符上限：逐行累加，超了就停在上一行——切在行中间会让最后一行看起来
-    // 像是原文就那么短。
+    // 字元上限：逐行累加，超了就停在上一行——切在行中間會讓最後一行看起來
+    // 像是原文就那麼短。
     const kept: string[] = [];
     let chars = 0;
     for (const line of lines) {
@@ -71,11 +71,11 @@ export const readTool: ToolDef = {
     const lastRead = from - 1 + kept.length;
     const note =
       lastRead < total
-        ? `\n（第 ${lastRead + 1}–${total} 行未读，共 ${total} 行。用 offset=${lastRead + 1} 接着读）`
+        ? `\n（第 ${lastRead + 1}–${total} 行未讀，共 ${total} 行。用 offset=${lastRead + 1} 接著讀）`
         : '';
 
     return {
-      text: `${rel}${numbered ? `\n${numbered}` : '\n（空文件）'}${note}`,
+      text: `${rel}${numbered ? `\n${numbered}` : '\n（空檔案）'}${note}`,
       display: { title: `read ${rel}`, detail: `${kept.length} 行` },
     };
   },
@@ -87,16 +87,16 @@ function toInt(value: unknown): number | undefined {
 }
 
 /**
- * 异常 → 一句模型能照着改的话。
+ * 異常 → 一句模型能照著改的話。
  *
- * `WsError` 的 message 本来就是人话（「文件不存在：…」「路径超出工程目录：…」），
- * 原样转述就够；意外异常给一句通用的，不把调用栈喂给模型。
+ * `WsError` 的 message 本來就是人話（「檔案不存在：…」「路徑超出工程目錄：…」），
+ * 原樣轉述就夠；意外異常給一句通用的，不把呼叫棧餵給模型。
  */
 function describe(err: unknown, rel: string): string {
   if (err instanceof WsError) {
     return err.code === 'notFound'
-      ? `${err.message}。可以用 list 看看那个目录下有什么，或用 search 找找。`
+      ? `${err.message}。可以用 list 看看那個目錄下有什麼，或用 search 找找。`
       : err.message;
   }
-  return `读 ${rel} 失败：${err instanceof Error ? err.message : String(err)}`;
+  return `讀 ${rel} 失敗：${err instanceof Error ? err.message : String(err)}`;
 }

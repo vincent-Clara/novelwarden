@@ -1,32 +1,32 @@
 /**
- * 查找替换的**匹配口径**：找全部匹配、逐处算替换文字、全部替换 / 只换挑出来的那几处算出的新文字。
+ * 查詢替換的**匹配口徑**：找全部匹配、逐處算替換文字、全部替換 / 只換挑出來的那幾處算出的新文字。
  *
- * **纯函数、零 import**：内置编辑器的查找替换条（`media/src/editor/findCore.ts` 原样转出这里的函数，经
- * `media/src/protocol.ts` 打进浏览器产物）与全书查找替换（后端 `views/bookFind.ts`、`features/bookReplace.ts`）
- * 共用这一份——同一个查找串、同两颗开关，在一份文件里找到的与在全书里找到的必须是同一批，`$1` 也得展开成
- * 同一个样子。从前它只在前端（`findCore.ts`），全书查找要在后端读盘，搬过来而不是另写一套正则语义。
+ * **純函式、零 import**：內建編輯器的查詢替換條（`media/src/editor/findCore.ts` 原樣轉出這裡的函式，經
+ * `media/src/protocol.ts` 打進瀏覽器產物）與全書查詢替換（後端 `views/bookFind.ts`、`features/bookReplace.ts`）
+ * 共用這一份——同一個查詢串、同兩顆開關，在一份檔案裡找到的與在全書裡找到的必須是同一批，`$1` 也得展開成
+ * 同一個樣子。從前它只在前端（`findCore.ts`），全書查詢要在後端讀盤，搬過來而不是另寫一套正則語義。
  *
- * 几条口径（单测钉在 `tests/unit/editor/findCore.test.js`）：
+ * 幾條口徑（單測釘在 `tests/unit/editor/findCore.test.js`）：
  *
- * - 位置一律是字符串下标（与 `textarea.selectionStart` 同一套）。
- * - 缺省**不区分大小写**、**不按正则**。不按正则时查找串原样当字面量，替换串里的 `$1` 也是字面量。
- * - 按正则时带 `m`（`^` / `$` 认每一行的头尾，按「段首两个全角空格」这类找法才找得到），先试 `u`
- *   （生僻字那种代理对按一个字算），`u` 下语法不合法（比如多写了一个 `\。`）再退回不带 `u` 的；
- *   两样都编不过才算「正则写错了」——**绝不抛**。
- * - **零长度匹配跳过**（`^`、`\b`、`a*` 匹配到空串的那些位置不算一处）。
- * - 替换串的 `$1` / `$&` / `` $` `` / `$'` / `$$` / `$<名字>` 与 `String.prototype.replace` 同语义，
- *   而且是**逐处在全文里算**的：前后文（后行断言、`` $` ``）看的是整份文字，不是被切出来的那一小段。
- * - 跨行：正则里写了 `\n`（或 `[\s\S]`）就能跨行匹配，字面量里有换行也照样认；一处匹配的范围就是它覆盖的那几行。
+ * - 位置一律是字串下標（與 `textarea.selectionStart` 同一套）。
+ * - 預設**不區分大小寫**、**不按正則**。不按正則時查詢串原樣當字面量，替換串裡的 `$1` 也是字面量。
+ * - 按正則時帶 `m`（`^` / `$` 認每一行的頭尾，按「段首兩個全形空格」這類找法才找得到），先試 `u`
+ *   （生僻字那種代理對按一個字算），`u` 下語法不合法（比如多寫了一個 `\。`）再退回不帶 `u` 的；
+ *   兩樣都編不過才算「正則寫錯了」——**絕不拋**。
+ * - **零長度匹配跳過**（`^`、`\b`、`a*` 匹配到空串的那些位置不算一處）。
+ * - 替換串的 `$1` / `$&` / `` $` `` / `$'` / `$$` / `$<名字>` 與 `String.prototype.replace` 同語義，
+ *   而且是**逐處在全文裡算**的：前後文（後行斷言、`` $` ``）看的是整份文字，不是被切出來的那一小段。
+ * - 跨行：正則裡寫了 `\n`（或 `[\s\S]`）就能跨行匹配，字面量裡有換行也照樣認；一處匹配的範圍就是它覆蓋的那幾行。
  */
 
 export interface FindOptions {
-  /** 区分大小写。缺省关。 */
+  /** 區分大小寫。預設關。 */
   caseSensitive?: boolean;
-  /** 按正则。缺省关。 */
+  /** 按正則。預設關。 */
   regex?: boolean;
 }
 
-/** 一处匹配：`[start, end)`，`end > start`（零长度的不算）。 */
+/** 一處匹配：`[start, end)`，`end > start`（零長度的不算）。 */
 export interface FindMatch {
   start: number;
   end: number;
@@ -34,13 +34,13 @@ export interface FindMatch {
 
 export interface FindResult {
   matches: FindMatch[];
-  /** 匹配数到了上限、后面的没数（界面写「20000+」）。 */
+  /** 匹配數到了上限、後面的沒數（介面寫「20000+」）。 */
   truncated: boolean;
-  /** 正则写错了：浏览器给的原因（界面只说「正则写错了」，原因放在提示里）。 */
+  /** 正則寫錯了：瀏覽器給的原因（介面只說「正則寫錯了」，原因放在提示裡）。 */
   error?: string;
 }
 
-/** 全部替换要做的那一笔改动：把 `[start, end)` 换成 `text`，一共替换了 `count` 处。 */
+/** 全部替換要做的那一筆改動：把 `[start, end)` 換成 `text`，一共替換了 `count` 處。 */
 export interface ReplaceAllEdit {
   start: number;
   end: number;
@@ -48,32 +48,32 @@ export interface ReplaceAllEdit {
   count: number;
 }
 
-/** 只换挑出来的那几处之后的结果（{@link replaceSelectedIn}）。 */
+/** 只換挑出來的那幾處之後的結果（{@link replaceSelectedIn}）。 */
 export interface SelectedReplace {
-  /** 换完之后的整份文字。 */
+  /** 換完之後的整份文字。 */
   text: string;
-  /** 换掉了的那几处（原文里的位置，按先后排）。 */
+  /** 換掉了的那幾處（原文裡的位置，按先後排）。 */
   replaced: FindMatch[];
-  /** 对不上的那几处：那个位置上已经不是一处匹配（文字变过、或与前一处重叠了），没换。 */
+  /** 對不上的那幾處：那個位置上已經不是一處匹配（文字變過、或與前一處重疊了），沒換。 */
   missed: FindMatch[];
 }
 
 /**
- * 最多数多少处。再多就不往下数了（界面写「n+」）——一个 `.` 在三十万字里能匹配三十万处，
- * 全记下来既费内存，高亮层也画不动。全部替换不受这个限制（它不记位置，边找边拼）。
+ * 最多數多少處。再多就不往下數了（介面寫「n+」）——一個 `.` 在三十萬字裡能匹配三十萬處，
+ * 全記下來既費記憶體，高亮層也畫不動。全部替換不受這個限制（它不記位置，邊找邊拼）。
  */
 export const MATCH_LIMIT = 20000;
 
 export type CompiledSearch = { ok: true; re: RegExp } | { ok: false; error: string };
 
-/** 把字面量里的正则元字符转义掉。 */
+/** 把字面量裡的正則元字元轉義掉。 */
 export function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * 把查找串编成一个**新的**全局正则（每次调用一个新对象，`lastIndex` 不串）。
- * 空串返回 undefined；正则写错返回 `{ ok: false }`，绝不抛。
+ * 把查詢串編成一個**新的**全域正則（每次呼叫一個新物件，`lastIndex` 不串）。
+ * 空串返回 undefined；正則寫錯返回 `{ ok: false }`，絕不拋。
  */
 export function compileSearch(query: string, opts: FindOptions = {}): CompiledSearch | undefined {
   if (!query) {
@@ -86,7 +86,7 @@ export function compileSearch(query: string, opts: FindOptions = {}): CompiledSe
   try {
     return { ok: true, re: new RegExp(query, `${flags}mu`) };
   } catch {
-    // `u` 下更严（多余的转义、孤立的 `{` 都算错），退一步再试。
+    // `u` 下更嚴（多餘的轉義、孤立的 `{` 都算錯），退一步再試。
   }
   try {
     return { ok: true, re: new RegExp(query, `${flags}m`) };
@@ -95,7 +95,7 @@ export function compileSearch(query: string, opts: FindOptions = {}): CompiledSe
   }
 }
 
-/** 零长度匹配之后往前挪一格；`u` 模式下不把代理对劈开。 */
+/** 零長度匹配之後往前挪一格；`u` 模式下不把代理對劈開。 */
 function advance(text: string, index: number, unicode: boolean): number {
   if (unicode && index + 1 < text.length) {
     const code = text.charCodeAt(index);
@@ -109,7 +109,7 @@ function advance(text: string, index: number, unicode: boolean): number {
   return index + 1;
 }
 
-/** 按顺序给出全文里每一处**非空**匹配（`re` 必须是全局的，会被改 `lastIndex`）。 */
+/** 按順序給出全文裡每一處**非空**匹配（`re` 必須是全域的，會被改 `lastIndex`）。 */
 function* eachMatch(text: string, re: RegExp): Generator<RegExpExecArray> {
   re.lastIndex = 0;
   let m: RegExpExecArray | null;
@@ -122,7 +122,7 @@ function* eachMatch(text: string, re: RegExp): Generator<RegExpExecArray> {
   }
 }
 
-/** 找全部匹配。空查找串给空结果；正则写错给 `error`，不抛。 */
+/** 找全部匹配。空查詢串給空結果；正則寫錯給 `error`，不拋。 */
 export function findMatches(
   text: string,
   query: string,
@@ -147,10 +147,10 @@ export function findMatches(
 }
 
 /**
- * 替换串展开（ECMAScript 的 GetSubstitution，与 `String.prototype.replace` 一字不差）：
- * `$$` → `$`，`$&` → 匹配到的字，`` $` `` / `$'` → 全文里这一处之前 / 之后的字，
- * `$n` / `$nn` → 第 n 组（两位数超过组数时按一位数加一个字面数字读，`$0` 原样），
- * `$<名字>` → 命名组（正则里没有命名组时原样）。认不出的 `$` 原样留着。
+ * 替換串展開（ECMAScript 的 GetSubstitution，與 `String.prototype.replace` 一字不差）：
+ * `$$` → `$`，`$&` → 匹配到的字，`` $` `` / `$'` → 全文裡這一處之前 / 之後的字，
+ * `$n` / `$nn` → 第 n 組（兩位數超過組數時按一位數加一個字面數字讀，`$0` 原樣），
+ * `$<名字>` → 命名組（正則裡沒有命名組時原樣）。認不出的 `$` 原樣留著。
  */
 export function expandReplacement(template: string, m: RegExpExecArray, text: string): string {
   if (!template.includes('$')) {
@@ -211,14 +211,14 @@ export function expandReplacement(template: string, m: RegExpExecArray, text: st
   return out;
 }
 
-/** 编好的全局正则 → 只在给定位置试的粘性版本（前后文仍是整份文字）。 */
+/** 編好的全域正則 → 只在給定位置試的粘性版本（前後文仍是整份文字）。 */
 function stickyOf(re: RegExp): RegExp {
   return new RegExp(re.source, `${re.flags.replace('g', '')}y`);
 }
 
 /**
- * 这一处要换成什么。不按正则时就是替换串本身（`$` 是字面量）；按正则时在**全文**里从这一处重新匹配一次，
- * 照 `String.prototype.replace` 的规矩展开 `$1` 这些。这一处已经对不上（文字刚变过）、或正则写错时返回 undefined。
+ * 這一處要換成什麼。不按正則時就是替換串本身（`$` 是字面量）；按正則時在**全文**裡從這一處重新匹配一次，
+ * 照 `String.prototype.replace` 的規矩展開 `$1` 這些。這一處已經對不上（文字剛變過）、或正則寫錯時返回 undefined。
  */
 export function replacementFor(
   text: string,
@@ -231,7 +231,7 @@ export function replacementFor(
   if (!compiled?.ok) {
     return undefined;
   }
-  // 粘性（y）且不全局：只在 at.start 这一个位置试，前后文仍是整份文字。
+  // 粘性（y）且不全域：只在 at.start 這一個位置試，前後文仍是整份文字。
   const re = stickyOf(compiled.re);
   re.lastIndex = at.start;
   const m = re.exec(text);
@@ -242,8 +242,8 @@ export function replacementFor(
 }
 
 /**
- * 全部替换：算出**从第一处到最后一处的那一段**换成什么（编辑器拿它调一次 `applyEdit`，只记一步撤销）。
- * 一处都没有、查找串为空或正则写错时返回 undefined。
+ * 全部替換：算出**從第一處到最後一處的那一段**換成什麼（編輯器拿它調一次 `applyEdit`，只記一步撤銷）。
+ * 一處都沒有、查詢串為空或正則寫錯時返回 undefined。
  */
 export function replaceAllIn(
   text: string,
@@ -272,10 +272,10 @@ export function replaceAllIn(
 }
 
 /**
- * **只换挑出来的那几处**（全书替换：作者在预览里勾掉了几处）。每一处都在**原文**里、在它自己的位置上重新匹配一次
- * （与 {@link replacementFor} 同一个办法：`$1`、`` $` ``、后行断言看的都是整份原文），对得上才换；对不上的
- * （那个位置上已经不是一处匹配、或与前一处重叠）记进 `missed`、原样留着。挑出来的顺序无所谓，按位置排。
- * 查找串为空或正则写错时返回 undefined。
+ * **只換挑出來的那幾處**（全書替換：作者在預覽裡勾掉了幾處）。每一處都在**原文**裡、在它自己的位置上重新匹配一次
+ * （與 {@link replacementFor} 同一個辦法：`$1`、`` $` ``、後行斷言看的都是整份原文），對得上才換；對不上的
+ * （那個位置上已經不是一處匹配、或與前一處重疊）記進 `missed`、原樣留著。挑出來的順序無所謂，按位置排。
+ * 查詢串為空或正則寫錯時返回 undefined。
  */
 export function replaceSelectedIn(
   text: string,

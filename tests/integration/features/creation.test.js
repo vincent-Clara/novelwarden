@@ -1,21 +1,21 @@
 /**
- * 产物解析的三层降级 + 各条采纳落盘路径。
+ * 產物解析的三層降級 + 各條採納落盤路徑。
  *
- * 这一层最贵的失败方式不是崩溃，而是**静默写错地方或静默覆盖**——
- * 采纳细纲把手写的那份顶掉、生成角色图谱把作者改得很细的角色卡抹掉。
- * 所以这里的重点不是「能不能写进去」，而是「不该写的时候有没有拦住」。
+ * 這一層最貴的失敗方式不是崩潰，而是**靜默寫錯地方或靜默覆蓋**——
+ * 採納細綱把手寫的那份頂掉、生成角色圖譜把作者改得很細的角色卡抹掉。
+ * 所以這裡的重點不是「能不能寫進去」，而是「不該寫的時候有沒有攔住」。
  *
- * 一章一纲之后的五条采纳分支（`generation/accept.ts`）：
+ * 一章一綱之後的五條採納分支（`generation/accept.ts`）：
  *
- * | 产物 | 落点 | 已有内容时 |
+ * | 產物 | 落點 | 已有內容時 |
  * |---|---|---|
- * | 小说配置 / 前提 / 世界观 | `config.md` / `premise.md` / `world.md` | 覆盖前审阅；配置的 frontmatter 合并 |
- * | 角色图谱 | `characters/` 下每人一张卡 | **同名跳过**，绝不覆盖，也就不必审阅 |
- * | 情节大纲 | `outline.md` | 覆盖前审阅 |
- * | 细纲 | `summaries/NNN-标题.md` | 覆盖前审阅；七节换新，标题 / 目标字数 / 定稿记的 sourceHash 与 cast 沿用磁盘那份 |
- * | 正文 | 同号的 `chapters/NNN-标题.txt` | **追加**；落盘后在细纲上记 `writtenFrom` |
+ * | 小說配置 / 前提 / 世界觀 | `config.md` / `premise.md` / `world.md` | 覆蓋前審閱；配置的 frontmatter 合併 |
+ * | 角色圖譜 | `characters/` 下每人一張卡 | **同名跳過**，絕不覆蓋，也就不必審閱 |
+ * | 情節大綱 | `outline.md` | 覆蓋前審閱 |
+ * | 細綱 | `summaries/NNN-標題.md` | 覆蓋前審閱；七節換新，標題 / 目標字數 / 定稿記的 sourceHash 與 cast 沿用磁碟那份 |
+ * | 正文 | 同號的 `chapters/NNN-標題.txt` | **追加**；落盤後在細綱上記 `writtenFrom` |
  *
- * 落盘的守卫在 `workspace/`，这里测的是分派与那几条取舍。
+ * 落盤的守衛在 `workspace/`，這裡測的是分派與那幾條取捨。
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -31,11 +31,11 @@ let plotFile;
 let h;
 let t;
 let project;
-/** `accept(target, artifact)`——绑好 project 的采纳入口。 */
+/** `accept(target, artifact)`——綁好 project 的採納入口。 */
 let accept;
 
-/** 按区间分节的大纲：细纲的上游指纹记的是覆盖本章的那一节。 */
-const OUTLINE = '# 青云剑录 · 情节大纲\n\n## 第1–20章：第一幕 · 入局\n\n林昭进青云宗，藏书阁里有人在等他。\n';
+/** 按區間分節的大綱：細綱的上游指紋記的是覆蓋本章的那一節。 */
+const OUTLINE = '# 青雲劍錄 · 情節大綱\n\n## 第1–20章：第一幕 · 入局\n\n林昭進青雲宗，藏書閣裡有人在等他。\n';
 
 before(async () => {
   bundle = loadBundle({
@@ -49,13 +49,13 @@ before(async () => {
   });
   A = bundle.artifact;
   plotFile = bundle.plotFile;
-  // 假宿主**没有** reviewReplace，于是覆盖审阅走 confirm 那条分支。
-  // helper 默认带 reviewReplace，不摘掉的话「保留原样」这条路根本走不到。
+  // 假宿主**沒有** reviewReplace，於是覆蓋審閱走 confirm 那條分支。
+  // helper 預設帶 reviewReplace，不摘掉的話「保留原樣」這條路根本走不到。
   h = makeFakeHost({ settings: () => ({}), overrides: { reviewReplace: undefined } });
   bundle.host.initHost(h.host);
   t = await makeTempProject(bundle.project, {
     prefix: 'creation',
-    title: '青云剑录',
+    title: '青雲劍錄',
     keepExamples: true,
   });
   project = t.project;
@@ -68,22 +68,22 @@ after(() => {
   if (t) cleanup(t.dir);
 });
 
-/** 排过的细纲七节（计划时「连续性事实」空着，几节可以不写）。关键事件一条一行，与定稿的写法一样。 */
+/** 排過的細綱七節（計劃時「連續性事實」空著，幾節可以不寫）。關鍵事件一條一行，與定稿的寫法一樣。 */
 const SECTIONS = {
-  梗概: '林昭进入青云宗',
+  梗概: '林昭進入青雲宗',
   出场人物: '林昭、沈青',
   时间地点: '',
-  关键事件: '- 他在山门外踩点，失手惊动守卫，翻墙进了后院。\n- 收在藏书阁门口。',
-  看点: '藏书阁里亮着一盏灯。',
+  关键事件: '- 他在山門外踩點，失手驚動守衛，翻牆進了後院。\n- 收在藏書閣門口。',
+  看点: '藏書閣裡亮著一盞燈。',
   状态变更: '',
   连续性事实: '',
 };
 
 const settingT = (doc) => ({ kind: 'setting', doc });
 
-// ================================================================ 产物解析
+// ================================================================ 產物解析
 
-describe('artifact.ts · 细纲三层降级', () => {
+describe('artifact.ts · 細綱三層降級', () => {
   const act = { stage: 'plot', capability: 'generate' };
   let json;
   let english;
@@ -94,141 +94,141 @@ describe('artifact.ts · 细纲三层降级', () => {
 
   before(() => {
     json = A.parseArtifact(act, JSON.stringify({
-      title: '夜入青云',
+      title: '夜入青雲',
       targetWords: 3000,
       ...SECTIONS,
     }));
-    // 蓝图合同用的是英文键；`characters` 写成一个串、字数写成字符串也得认。
+    // 藍圖合同用的是英文鍵；`characters` 寫成一個串、字數寫成字串也得認。
     english = A.parseArtifact(act, JSON.stringify({
-      title: '林昭在暴雨的深夜翻越青云宗的侧峰围墙并且成功进入了藏书阁',
-      synopsis: '进宗门',
-      keyEvents: ['踩点', '翻墙'],
-      highlights: ['门后有人'],
+      title: '林昭在暴雨的深夜翻越青雲宗的側峰圍牆並且成功進入了藏書閣',
+      synopsis: '進宗門',
+      keyEvents: ['踩點', '翻牆'],
+      highlights: ['門後有人'],
       characters: '林昭，沈青',
       targetWords: '3000',
     }));
-    // 单章也用批次合同的单项形式（第 22 条）：`{"blueprints":[{…}]}` 取里面那一项。
-    // 关键事件给成一段字（老合同的形状）也照收，与批次一样按分号切成条。
+    // 單章也用批次合同的單項形式（第 22 條）：`{"blueprints":[{…}]}` 取裡面那一項。
+    // 關鍵事件給成一段字（老合同的形狀）也照收，與批次一樣按分號切成條。
     wrapped = A.parseArtifact(act, JSON.stringify({
-      blueprints: [{ chapterNumber: 12, title: '夜入青云', synopsis: '进宗门', characters: ['林昭', '沈青'], keyEvents: '踩点；翻墙' }],
+      blueprints: [{ chapterNumber: 12, title: '夜入青雲', synopsis: '進宗門', characters: ['林昭', '沈青'], keyEvents: '踩點；翻牆' }],
     }));
-    // 模型忘了 JSON，改回 Markdown 小节——这是最常见的不听话方式。
-    md = A.parseArtifact(act, '## 梗概\n\n林昭进入青云宗\n\n## 关键事件\n\n踩点、失手、翻墙');
-    // 什么结构都没有：全文塞进主字段，好过整次生成作废。
-    plain = A.parseArtifact(act, '这一章讲林昭翻墙进宗门。');
-    // 语法合法但完全不相干的 JSON 不能认下来——认了会得到一份空细纲**且不再降级**。
-    irrelevant = A.parseArtifact(act, '{"text":"林昭翻墙进宗门"}');
+    // 模型忘了 JSON，改回 Markdown 小節——這是最常見的不聽話方式。
+    md = A.parseArtifact(act, '## 梗概\n\n林昭進入青雲宗\n\n## 關鍵事件\n\n踩點、失手、翻牆');
+    // 什麼結構都沒有：全文塞進主欄位，好過整次生成作廢。
+    plain = A.parseArtifact(act, '這一章講林昭翻牆進宗門。');
+    // 語法合法但完全不相干的 JSON 不能認下來——認了會得到一份空細綱**且不再降級**。
+    irrelevant = A.parseArtifact(act, '{"text":"林昭翻牆進宗門"}');
   });
 
-  test('第一层 JSON', () => {
+  test('第一層 JSON', () => {
     assert.equal(json.kind, 'plot');
-    assert.equal(json.sections.梗概, '林昭进入青云宗');
+    assert.equal(json.sections.梗概, '林昭進入青雲宗');
   });
 
-  test('JSON 七节都收下', () => {
-    assert.equal(json.sections.看点, '藏书阁里亮着一盏灯。');
+  test('JSON 七節都收下', () => {
+    assert.equal(json.sections.看点, '藏書閣裡亮著一盞燈。');
     assert.equal(json.sections.关键事件, SECTIONS.关键事件);
   });
 
-  test('JSON 带的规划字段也收下', () => {
-    assert.equal(json.title, '夜入青云');
+  test('JSON 帶的規劃欄位也收下', () => {
+    assert.equal(json.title, '夜入青雲');
     assert.equal(json.targetWords, 3000);
   });
 
-  // 关键事件是一条一件事的列表，落盘成 `- 一条` 一行（与定稿写法一致）。
-  test('英文键也认，关键事件数组落成一条一行', () => {
-    assert.equal(english.sections.梗概, '进宗门');
-    assert.equal(english.sections.关键事件, '- 踩点\n- 翻墙');
+  // 關鍵事件是一條一件事的列表，落盤成 `- 一條` 一行（與定稿寫法一致）。
+  test('英文鍵也認，關鍵事件陣列落成一條一行', () => {
+    assert.equal(english.sections.梗概, '進宗門');
+    assert.equal(english.sections.关键事件, '- 踩點\n- 翻牆');
   });
 
-  // 看点是一条一句的列表，落盘成 `- 一条` 一行（与定稿写法一致）。
-  test('看点数组落成一条一行', () => {
-    assert.equal(english.sections.看点, '- 门后有人');
+  // 看點是一條一句的列表，落盤成 `- 一條` 一行（與定稿寫法一致）。
+  test('看點陣列落成一條一行', () => {
+    assert.equal(english.sections.看点, '- 門後有人');
   });
 
-  // 出场人物是一行名单（「林昭、沈青」），不是一条一行的列表——与蓝图落盘的样子一致。
-  test('写成一个串的出场人物拆开后落成一行名单', () => {
+  // 出場人物是一行名單（「林昭、沈青」），不是一條一行的列表——與藍圖落盤的樣子一致。
+  test('寫成一個串的出場人物拆開後落成一行名單', () => {
     assert.equal(english.sections.出场人物, '林昭、沈青');
   });
 
-  test('批次合同的单项形式也认；一段字的关键事件按分号切成一条一行', () => {
-    assert.equal(wrapped.title, '夜入青云');
+  test('批次合同的單項形式也認；一段字的關鍵事件按分號切成一條一行', () => {
+    assert.equal(wrapped.title, '夜入青雲');
     assert.equal(wrapped.sections.出场人物, '林昭、沈青');
-    assert.equal(wrapped.sections.关键事件, '- 踩点\n- 翻墙');
+    assert.equal(wrapped.sections.关键事件, '- 踩點\n- 翻牆');
   });
 
-  test('字符串的目标字数转成数字', () => {
+  test('字串的目標字數轉成數字', () => {
     assert.equal(english.targetWords, 3000);
   });
 
-  // 标题会变成文件名（`012-<标题>.md`），而模型很爱把一整句梗概当标题。
-  test('过长的标题被收口', () => {
+  // 標題會變成檔名（`012-<標題>.md`），而模型很愛把一整句梗概當標題。
+  test('過長的標題被收口', () => {
     assert.ok(english.title.length <= 18, english.title);
   });
 
-  test('第二层 Markdown 小节', () => {
-    assert.equal(md.sections.梗概, '林昭进入青云宗');
-    assert.equal(md.sections.关键事件, '踩点、失手、翻墙');
+  test('第二層 Markdown 小節', () => {
+    assert.equal(md.sections.梗概, '林昭進入青雲宗');
+    assert.equal(md.sections.关键事件, '踩點、失手、翻牆');
   });
 
-  // 兜底落「关键事件」而不是「梗概」：isPlotFilled 只看关键事件，兜底进别的
-  // 那一节的话，这一章采纳后会显示成「还没排细纲」的空壳。
-  test('第三层全文兜底进关键事件', () => {
-    assert.equal(plain.sections.关键事件, '这一章讲林昭翻墙进宗门。');
+  // 兜底落「關鍵事件」而不是「梗概」：isPlotFilled 只看關鍵事件，兜底進別的
+  // 那一節的話，這一章採納後會顯示成「還沒排細綱」的空殼。
+  test('第三層全文兜底進關鍵事件', () => {
+    assert.equal(plain.sections.关键事件, '這一章講林昭翻牆進宗門。');
   });
 
-  test('兜底进去的细纲算「排过」', () => {
+  test('兜底進去的細綱算「排過」', () => {
     assert.ok(plotFile.isPlotFilled(plain.sections), JSON.stringify(plain.sections));
   });
 
-  // 严格解析不做全文兜底。批量路径（工程页一次给几十章写细纲）用它：
-  // 那里没有人逐份过目，兜底会把模型的一句「我不太确定」变成一份「已规划」
-  // 的细纲，紧接着的批量写正文还会照着它写出一整章。
-  test('严格解析不兜底', () => {
-    assert.equal(A.parsePlotStrict('这一章讲林昭翻墙进宗门。'), undefined);
+  // 嚴格解析不做全文兜底。批次路徑（工程頁一次給幾十章寫細綱）用它：
+  // 那裡沒有人逐份過目，兜底會把模型的一句「我不太確定」變成一份「已規劃」
+  // 的細綱，緊接著的批次寫正文還會照著它寫出一整章。
+  test('嚴格解析不兜底', () => {
+    assert.equal(A.parsePlotStrict('這一章講林昭翻牆進宗門。'), undefined);
   });
 
-  test('严格解析仍认 JSON', () => {
-    assert.equal(A.parsePlotStrict('{"关键事件":"进宗门"}')?.sections.关键事件, '- 进宗门');
+  test('嚴格解析仍認 JSON', () => {
+    assert.equal(A.parsePlotStrict('{"关键事件":"進宗門"}')?.sections.关键事件, '- 進宗門');
   });
 
-  // Markdown 小节是作者（或不听话的模型）写的原文，原样收，不切。
-  test('严格解析仍认 Markdown 小节', () => {
-    assert.equal(A.parsePlotStrict('## 关键事件\n\n进宗门')?.sections.关键事件, '进宗门');
+  // Markdown 小節是作者（或不聽話的模型）寫的原文，原樣收，不切。
+  test('嚴格解析仍認 Markdown 小節', () => {
+    assert.equal(A.parsePlotStrict('## 關鍵事件\n\n進宗門')?.sections.关键事件, '進宗門');
   });
 
   test('不相干的 JSON 退到全文兜底', () => {
-    assert.ok(irrelevant.sections.关键事件.includes('林昭翻墙'), JSON.stringify(irrelevant.sections));
+    assert.ok(irrelevant.sections.关键事件.includes('林昭翻牆'), JSON.stringify(irrelevant.sections));
   });
 
-  test('代码块包裹能剥掉', () => {
+  test('程式碼塊包裹能剝掉', () => {
     assert.equal(
-      A.parseArtifact(act, '```json\n{"关键事件":"进宗门"}\n```').sections.关键事件,
-      '- 进宗门'
+      A.parseArtifact(act, '```json\n{"关键事件":"進宗門"}\n```').sections.关键事件,
+      '- 進宗門'
     );
   });
 
-  test('JSON 前后的废话不影响解析', () => {
+  test('JSON 前後的廢話不影響解析', () => {
     assert.equal(
-      A.parseArtifact(act, '好的，以下是细纲：\n{"关键事件":"进宗门"}\n希望有帮助').sections.关键事件,
-      '- 进宗门'
+      A.parseArtifact(act, '好的，以下是細綱：\n{"关键事件":"進宗門"}\n希望有幫助').sections.关键事件,
+      '- 進宗門'
     );
   });
 
-  // 落定与写细纲产出的是同一种产物，走的是同一条解析路（第 22 条）。
-  test('落定与写细纲解析成同一种产物', () => {
-    const settled = A.parseArtifact({ stage: 'plot', capability: 'settle' }, '{"关键事件":["进宗门"]}');
+  // 落定與寫細綱產出的是同一種產物，走的是同一條解析路（第 22 條）。
+  test('落定與寫細綱解析成同一種產物', () => {
+    const settled = A.parseArtifact({ stage: 'plot', capability: 'settle' }, '{"关键事件":["進宗門"]}');
     assert.equal(settled.kind, 'plot');
-    assert.equal(settled.sections.关键事件, '- 进宗门');
+    assert.equal(settled.sections.关键事件, '- 進宗門');
   });
 });
 
 /**
- * 架构四件同属一个阶段，**要看 target 才分得清是哪一件**：三件是一份文档，
- * 「角色图谱」产出的是一组角色卡。本期是过渡版解析（JSON 同名键 / Markdown 小节），
- * 移植过来的合同是二期的事。
+ * 架構四件同屬一個階段，**要看 target 才分得清是哪一件**：三件是一份文件，
+ * 「角色圖譜」產出的是一組角色卡。本期是過渡版解析（JSON 同名鍵 / Markdown 小節），
+ * 移植過來的合同是二期的事。
  */
-describe('artifact.ts · 架构四件', () => {
+describe('artifact.ts · 架構四件', () => {
   const act = { stage: 'setting', capability: 'generate' };
   let config;
   let configMd;
@@ -240,166 +240,166 @@ describe('artifact.ts · 架构四件', () => {
 
   before(() => {
     config = A.parseArtifact(act, JSON.stringify({
-      genre: '武侠',
+      genre: '武俠',
       structure: 'THREE_ACT',
       totalChapters: '30',
       wordsPerChapter: 3000,
-      一句话: '一个从火里活下来的人回到起火的地方。',
-      核心梗概: '林昭回青崖镇查七年前那场火。',
+      一句话: '一個從火裡活下來的人回到起火的地方。',
+      核心梗概: '林昭回青崖鎮查七年前那場火。',
     }), settingT('config'));
-    configMd = A.parseArtifact(act, '## 核心梗概\n\n回镇查火。\n\n## 金手指\n\n一块残缺的令牌。', settingT('config'));
-    configPlain = A.parseArtifact(act, '一个回镇查火的故事。', settingT('config'));
-    premise = A.parseArtifact(act, '## 核心冲突链\n\n回镇 → 被认出 → 被盯上', settingT('premise'));
+    configMd = A.parseArtifact(act, '## 核心梗概\n\n回鎮查火。\n\n## 金手指\n\n一塊殘缺的令牌。', settingT('config'));
+    configPlain = A.parseArtifact(act, '一個回鎮查火的故事。', settingT('config'));
+    premise = A.parseArtifact(act, '## 核心衝突鏈\n\n回鎮 → 被認出 → 被盯上', settingT('premise'));
     roster = A.parseArtifact(act, JSON.stringify({
       characters: [
-        { name: '林昭', role: '主角', 身份: '火场里活下来的孤儿', aliases: '阿昭、小昭' },
-        { name: '林昭', role: '重复的那一个' },
-        { name: '沈青', role: '盟友', identity: '客栈老板娘' },
+        { name: '林昭', role: '主角', 身份: '火場裡活下來的孤兒', aliases: '阿昭、小昭' },
+        { name: '林昭', role: '重複的那一個' },
+        { name: '沈青', role: '盟友', identity: '客棧老闆娘' },
       ],
     }), settingT('characters'));
-    rosterMd = A.parseArtifact(act, '## 林昭（主角）\n\n火场里活下来的孤儿。\n\n## 沈青\n\n客栈老板娘。', settingT('characters'));
-    // 模型漏掉外层键，直接给数组。
+    rosterMd = A.parseArtifact(act, '## 林昭（主角）\n\n火場裡活下來的孤兒。\n\n## 沈青\n\n客棧老闆娘。', settingT('characters'));
+    // 模型漏掉外層鍵，直接給陣列。
     bareRoster = A.parseArtifact(act, '[{"name":"林昭"},{"name":"沈青"}]', settingT('characters'));
   });
 
-  test('配置解析成一份架构文档', () => {
+  test('配置解析成一份架構檔案', () => {
     assert.equal(config.kind, 'settingDoc');
     assert.equal(config.doc, 'config');
   });
 
-  test('配置的小节收下', () => {
-    assert.equal(config.sections.核心梗概, '林昭回青崖镇查七年前那场火。');
+  test('配置的小節收下', () => {
+    assert.equal(config.sections.核心梗概, '林昭回青崖鎮查七年前那場火。');
   });
 
-  // 总章数与每章字数是整条链的长度锚点：大纲按它算区间，正文按它判写够没有。
-  test('配置的规模参数转成数字', () => {
+  // 總章數與每章字數是整條鏈的長度錨點：大綱按它算區間，正文按它判寫夠沒有。
+  test('配置的規模引數轉成數字', () => {
     assert.equal(config.config.totalChapters, 30);
     assert.equal(config.config.wordsPerChapter, 3000);
   });
 
-  test('配置的枚举字段不分大小写', () => {
+  test('配置的列舉欄位不分大小寫', () => {
     assert.equal(config.config.structure, 'three_act');
   });
 
-  test('配置的 Markdown 小节也认', () => {
-    assert.equal(configMd.sections.金手指, '一块残缺的令牌。');
+  test('配置的 Markdown 小節也認', () => {
+    assert.equal(configMd.sections.金手指, '一塊殘缺的令牌。');
   });
 
-  // 兜底进「核心梗概」：那是判配置「填过没有」看的那一节。
-  test('配置的全文兜底进核心梗概', () => {
-    assert.equal(configPlain.sections.核心梗概, '一个回镇查火的故事。');
+  // 兜底進「核心梗概」：那是判配置「填過沒有」看的那一節。
+  test('配置的全文兜底進核心梗概', () => {
+    assert.equal(configPlain.sections.核心梗概, '一個回鎮查火的故事。');
   });
 
-  test('前提按它自己的小节表解析', () => {
+  test('前提按它自己的小節表解析', () => {
     assert.equal(premise.doc, 'premise');
-    assert.equal(premise.sections.核心冲突链, '回镇 → 被认出 → 被盯上');
+    assert.equal(premise.sections.核心冲突链, '回鎮 → 被認出 → 被盯上');
   });
 
-  test('没给 target 时当作配置（架构的第一件）', () => {
+  test('沒給 target 時當作配置（架構的第一件）', () => {
     assert.equal(A.parseArtifact(act, '## 核心梗概\n\nx').doc, 'config');
   });
 
-  test('角色图谱解析成一组人', () => {
+  test('角色圖譜解析成一組人', () => {
     assert.equal(roster.kind, 'characterRoster');
     assert.deepEqual(roster.characters.map((c) => c.name), ['林昭', '沈青']);
   });
 
-  test('同名的只收第一个', () => {
+  test('同名的只收第一個', () => {
     assert.equal(roster.characters[0].role, '主角');
   });
 
-  test('角色的定位、别名与身份都收下', () => {
+  test('角色的定位、別名與身份都收下', () => {
     assert.deepEqual(roster.characters[0].aliases, ['阿昭', '小昭']);
-    assert.equal(roster.characters[0].sections.身份, '火场里活下来的孤儿');
+    assert.equal(roster.characters[0].sections.身份, '火場裡活下來的孤兒');
   });
 
-  test('身份的英文键也认', () => {
-    assert.equal(roster.characters[1].sections.身份, '客栈老板娘');
+  test('身份的英文鍵也認', () => {
+    assert.equal(roster.characters[1].sections.身份, '客棧老闆娘');
   });
 
-  // 模型不按 JSON 答时，能留住的就是「这个人是谁」这一段。
-  test('角色图谱的 Markdown 兜底：每个 ## 一人，括号里的定位剥掉', () => {
+  // 模型不按 JSON 答時，能留住的就是「這個人是誰」這一段。
+  test('角色圖譜的 Markdown 兜底：每個 ## 一人，括號裡的定位剝掉', () => {
     assert.deepEqual(rosterMd.characters.map((c) => c.name), ['林昭', '沈青']);
-    assert.equal(rosterMd.characters[1].sections.身份, '客栈老板娘。');
+    assert.equal(rosterMd.characters[1].sections.身份, '客棧老闆娘。');
   });
 
-  test('角色图谱的裸数组也认', () => {
+  test('角色圖譜的裸陣列也認', () => {
     assert.deepEqual(bareRoster.characters.map((c) => c.name), ['林昭', '沈青']);
   });
 
-  // 裸数组**只有一个人**时，「第一个 `{` 到最后一个 `}`」恰好是那个人自己——当成
-  // 外层对象去取数组键会取到他的 `aliases`，名单就成了空的。整段以 `[` 开头时先认数组。
-  test('裸数组只有一个人、且带 aliases 时也认得出来', () => {
+  // 裸陣列**只有一個人**時，「第一個 `{` 到最後一個 `}`」恰好是那個人自己——當成
+  // 外層物件去取陣列鍵會取到他的 `aliases`，名單就成了空的。整段以 `[` 開頭時先認陣列。
+  test('裸陣列只有一個人、且帶 aliases 時也認得出來', () => {
     const one = A.parseArtifact(act, '[{"name":"林昭","aliases":["阿昭"],"role":"主角"}]', settingT('characters'));
     assert.deepEqual(one.characters.map((c) => c.name), ['林昭'], JSON.stringify(one));
   });
 });
 
-describe('artifact.ts · 空产物与描述', () => {
-  test('正文原样收下', () => {
+describe('artifact.ts · 空產物與描述', () => {
+  test('正文原樣收下', () => {
     assert.equal(
       A.parseArtifact({ stage: 'manuscript', capability: 'generate' }, '雨下了三天。').text,
       '雨下了三天。'
     );
   });
 
-  test('大纲原样收下', () => {
-    const a = A.parseArtifact({ stage: 'outline', capability: 'generate' }, '## 第1–20章：入局\n\n进宗门。');
+  test('大綱原樣收下', () => {
+    const a = A.parseArtifact({ stage: 'outline', capability: 'generate' }, '## 第1–20章：入局\n\n進宗門。');
     assert.equal(a.kind, 'outlineDoc');
     assert.ok(a.text.startsWith('## 第1–20章'), a.text);
   });
 
-  test('空正文算空产物', () => {
+  test('空正文算空產物', () => {
     assert.ok(A.isArtifactEmpty({ kind: 'manuscript', text: '   ' }));
   });
 
-  test('一个人都没有的角色图谱算空产物', () => {
+  test('一個人都沒有的角色圖譜算空產物', () => {
     assert.ok(A.isArtifactEmpty({ kind: 'characterRoster', characters: [] }));
   });
 
-  test('小节全空的架构文档算空产物', () => {
+  test('小節全空的架構檔案算空產物', () => {
     assert.ok(A.isArtifactEmpty({ kind: 'settingDoc', doc: 'world', sections: { 规则与漏洞: ' ' } }));
   });
 
-  test('有内容的不算空', () => {
+  test('有內容的不算空', () => {
     assert.ok(!A.isArtifactEmpty(A.parseArtifact({ stage: 'plot', capability: 'generate' }, '{"关键事件":"x"}')));
   });
 
-  test('细纲描述带填了几节', () => {
+  test('細綱描述帶填了幾節', () => {
     const a = A.parseArtifact({ stage: 'plot', capability: 'generate' }, '{"梗概":"x","关键事件":"y"}');
-    assert.equal(A.describeArtifact(a), '细纲 · 2/7 节');
+    assert.equal(A.describeArtifact(a), '細綱 · 2/7 節');
   });
 
-  test('架构文档描述带填了几节', () => {
+  test('架構檔案描述帶填了幾節', () => {
     assert.equal(
       A.describeArtifact({ kind: 'settingDoc', doc: 'config', sections: { 核心梗概: 'x', 金手指: 'y' } }),
-      '小说配置 · 2/8 节'
+      '小說配置 · 2/8 節'
     );
   });
 
-  // 卡片上要说清「新建几张角色卡」，而不是一句光秃秃的「确定吗」。
-  test('角色图谱描述报人数', () => {
+  // 卡片上要說清「新建幾張角色卡」，而不是一句光禿禿的「確定嗎」。
+  test('角色圖譜描述報人數', () => {
     assert.equal(
       A.describeArtifact({ kind: 'characterRoster', characters: [{ name: 'a' }, { name: 'b' }, { name: 'c' }] }),
-      '角色图谱 · 3 人'
+      '角色圖譜 · 3 人'
     );
   });
 });
 
-// ================================================================ 采纳落盘
+// ================================================================ 採納落盤
 
 /**
- * 配置的小节整份换新，**frontmatter 合并**：产物给了的字段用产物的，没给的沿用
- * 磁盘那份。作者手定的「全书 100 章」不该因为重写一次梗概就被抹掉。
+ * 配置的小節整份換新，**frontmatter 合併**：產物給了的欄位用產物的，沒給的沿用
+ * 磁碟那份。作者手定的「全書 100 章」不該因為重寫一次梗概就被抹掉。
  */
-describe('采纳 · 小说配置（覆盖要审阅，frontmatter 合并）', () => {
+describe('採納 · 小說配置（覆蓋要審閱，frontmatter 合併）', () => {
   const rel = '.novelwarden/config.md';
   const artifact = () =>
     A.parseArtifact({ stage: 'setting', capability: 'generate' }, JSON.stringify({
-      genre: '武侠',
+      genre: '武俠',
       wordsPerChapter: 3000,
-      一句话: '一个从火里活下来的人回到起火的地方。',
-      核心梗概: '新写的梗概：林昭回青崖镇查火。',
+      一句话: '一個從火裡活下來的人回到起火的地方。',
+      核心梗概: '新寫的梗概：林昭回青崖鎮查火。',
     }), settingT('config'));
   let kept;
   let afterKept;
@@ -407,47 +407,47 @@ describe('采纳 · 小说配置（覆盖要审阅，frontmatter 合并）', () 
   let config;
 
   before(async () => {
-    // 作者手写过一份：定了类型与总章数。
-    t.write(rel, '---\ngenre: 玄幻\ntotalChapters: 100\n---\n\n# 小说配置\n\n## 核心梗概\n\n作者自己写的梗概。\n');
+    // 作者手寫過一份：定了型別與總章數。
+    t.write(rel, '---\ngenre: 玄幻\ntotalChapters: 100\n---\n\n# 小說配置\n\n## 核心梗概\n\n作者自己寫的梗概。\n');
     project.invalidate();
 
-    h.expect('保留原样');
+    h.expect('保留原樣');
     kept = await accept(settingT('config'), artifact());
     afterKept = t.read(rel);
 
-    h.expect('覆盖');
+    h.expect('覆蓋');
     written = await accept(settingT('config'), artifact());
     config = await project.readBookConfig();
   });
 
-  test('拒绝覆盖时不写盘', () => {
+  test('拒絕覆蓋時不寫盤', () => {
     assert.equal(kept.skipped, true, kept.message);
-    assert.ok(afterKept.includes('作者自己写的梗概'), afterKept);
+    assert.ok(afterKept.includes('作者自己寫的梗概'), afterKept);
   });
 
-  test('确认后写回 config.md', () => {
+  test('確認後寫回 config.md', () => {
     assert.equal(written.relPath, rel, written.message);
   });
 
-  test('小节换成新的', () => {
-    assert.equal(config.sections.核心梗概, '新写的梗概：林昭回青崖镇查火。');
+  test('小節換成新的', () => {
+    assert.equal(config.sections.核心梗概, '新寫的梗概：林昭回青崖鎮查火。');
   });
 
-  test('产物给了的字段用产物的', () => {
-    assert.equal(config.genre, '武侠');
+  test('產物給了的欄位用產物的', () => {
+    assert.equal(config.genre, '武俠');
     assert.equal(config.wordsPerChapter, 3000);
   });
 
-  test('产物没给的字段沿用磁盘那份', () => {
+  test('產物沒給的欄位沿用磁碟那份', () => {
     assert.equal(config.totalChapters, 100);
   });
 
-  test('填过之后状态机认它', async () => {
+  test('填過之後狀態機認它', async () => {
     assert.equal((await project.settingFilled()).config, true);
   });
 });
 
-describe('采纳 · 故事前提 / 世界观', () => {
+describe('採納 · 故事前提 / 世界觀', () => {
   let premise;
   let world;
   let filled;
@@ -455,71 +455,71 @@ describe('采纳 · 故事前提 / 世界观', () => {
   let reviewsOnBlank;
 
   before(async () => {
-    // 初始化写的是空模板（全是占位）：拿它跟产物 diff 一遍没有意义，不审阅。
+    // 初始化寫的是空模板（全是佔位）：拿它跟產物 diff 一遍沒有意義，不審閱。
     const before = h.confirms.length;
     premise = await accept(settingT('premise'), {
-      kind: 'settingDoc', doc: 'premise', sections: { 核心冲突链: '回镇 → 被认出 → 被盯上' },
+      kind: 'settingDoc', doc: 'premise', sections: { 核心冲突链: '回鎮 → 被認出 → 被盯上' },
     });
     world = await accept(settingT('world'), {
-      kind: 'settingDoc', doc: 'world', sections: { 规则与漏洞: '过所制度：没有过所不得进镇。' },
+      kind: 'settingDoc', doc: 'world', sections: { 规则与漏洞: '過所制度：沒有過所不得進鎮。' },
     });
     reviewsOnBlank = h.confirms.length - before;
     filled = await project.settingFilled();
   });
 
-  test('覆盖空模板不弹审阅', () => {
-    assert.equal(reviewsOnBlank, 0, `弹了 ${reviewsOnBlank} 次`);
+  test('覆蓋空模板不彈審閱', () => {
+    assert.equal(reviewsOnBlank, 0, `彈了 ${reviewsOnBlank} 次`);
   });
 
-  // 作者哪怕只填了一节，再生成就要先问（第 3 条）。
-  test('已有内容时再采纳要先问，拒绝就一字不改', async () => {
-    h.expect('保留原样');
+  // 作者哪怕只填了一節，再生成就要先問（第 3 條）。
+  test('已有內容時再採納要先問，拒絕就一字不改', async () => {
+    h.expect('保留原樣');
     const kept = await accept(settingT('premise'), {
-      kind: 'settingDoc', doc: 'premise', sections: { 核心冲突链: '另一条冲突链' },
+      kind: 'settingDoc', doc: 'premise', sections: { 核心冲突链: '另一條衝突鏈' },
     });
     assert.equal(kept.skipped, true, kept.message);
-    assert.ok(t.read('.novelwarden/premise.md').includes('回镇 → 被认出'), t.read('.novelwarden/premise.md'));
+    assert.ok(t.read('.novelwarden/premise.md').includes('回鎮 → 被認出'), t.read('.novelwarden/premise.md'));
   });
 
-  test('前提写进 premise.md', () => {
+  test('前提寫進 premise.md', () => {
     assert.equal(premise.relPath, '.novelwarden/premise.md', premise.message);
-    assert.ok(t.read('.novelwarden/premise.md').includes('回镇 → 被认出'), t.read('.novelwarden/premise.md'));
+    assert.ok(t.read('.novelwarden/premise.md').includes('回鎮 → 被認出'), t.read('.novelwarden/premise.md'));
   });
 
-  test('世界观写进 world.md', () => {
+  test('世界觀寫進 world.md', () => {
     assert.equal(world.relPath, '.novelwarden/world.md', world.message);
   });
 
-  // 空小节保留占位：作者手改时知道该往哪填。
-  test('没给的小节留着标题', () => {
-    assert.ok(t.read('.novelwarden/premise.md').includes('## 悬念骨架'), t.read('.novelwarden/premise.md'));
+  // 空小節保留佔位：作者手改時知道該往哪填。
+  test('沒給的小節留著標題', () => {
+    assert.ok(t.read('.novelwarden/premise.md').includes('## 懸念骨架'), t.read('.novelwarden/premise.md'));
   });
 
-  test('两件都算填过了', () => {
+  test('兩件都算填過了', () => {
     assert.equal(filled.premise, true);
     assert.equal(filled.world, true);
   });
 });
 
 /**
- * 角色图谱：每人一张卡。
+ * 角色圖譜：每人一張卡。
  *
- * - 没有卡的人直接建：新卡没有可覆盖的东西，不走审阅。
- * - **同名（或别名撞上）已有卡的走覆盖审阅，一张一审**（二期）：作者可能已经把那张卡
- *   改得很细，重新生成一次图谱不该静默抹掉它；同意了才换，新图谱里空着的节沿用旧卡。
- *   从前是一律跳过——那样作者想重做角色图谱时，已有的卡永远换不掉。
+ * - 沒有卡的人直接建：新卡沒有可覆蓋的東西，不走審閱。
+ * - **同名（或別名撞上）已有卡的走覆蓋審閱，一張一審**（二期）：作者可能已經把那張卡
+ *   改得很細，重新生成一次圖譜不該靜默抹掉它；同意了才換，新圖譜裡空著的節沿用舊卡。
+ *   從前是一律跳過——那樣作者想重做角色圖譜時，已有的卡永遠換不掉。
  */
-describe('采纳 · 角色图谱（新卡直接建，同名的先审阅）', () => {
+describe('採納 · 角色圖譜（新卡直接建，同名的先審閱）', () => {
   const MINE = '.novelwarden/characters/林昭.md';
-  const handWritten = '---\nname: 林昭\naliases: [阿昭]\n---\n\n# 林昭\n\n## 身份\n\n作者改得很细的一段。\n\n## 性格\n\n作者写的性格。\n';
+  const handWritten = '---\nname: 林昭\naliases: [阿昭]\n---\n\n# 林昭\n\n## 身份\n\n作者改得很細的一段。\n\n## 性格\n\n作者寫的性格。\n';
   const roster = {
     kind: 'characterRoster',
     characters: [
-      { name: '林昭', role: '主角', aliases: [], sections: { 身份: '模型写的林昭' } },
-      // 撞上的是已有卡的**别名**，同样是那一张：只审一次，不另建。
+      { name: '林昭', role: '主角', aliases: [], sections: { 身份: '模型寫的林昭' } },
+      // 撞上的是已有卡的**別名**，同樣是那一張：只審一次，不另建。
       { name: '阿昭', role: '主角', aliases: [], sections: {} },
-      { name: '沈青', role: '盟友', aliases: ['青姐'], sections: { 身份: '客栈老板娘' } },
-      { name: '韩七', role: '对手', aliases: [], sections: {} },
+      { name: '沈青', role: '盟友', aliases: ['青姐'], sections: { 身份: '客棧老闆娘' } },
+      { name: '韓七', role: '對手', aliases: [], sections: {} },
     ],
   };
   let kept;
@@ -532,72 +532,72 @@ describe('采纳 · 角色图谱（新卡直接建，同名的先审阅）', () 
   before(async () => {
     t.write(MINE, handWritten);
     project.invalidate();
-    // 第一次：作者在审阅里选「保留原样」（这个文件的假宿主没有 reviewReplace，
-    // 审阅走 confirm）。
-    h.expect('保留原样', '保留原样');
+    // 第一次：作者在審閱裡選「保留原樣」（這個檔案的假宿主沒有 reviewReplace，
+    // 審閱走 confirm）。
+    h.expect('保留原樣', '保留原樣');
     kept = await accept(settingT('characters'), roster);
     keptText = t.read(MINE);
     reviewed = h.confirms.map((c) => c.message);
-    // 第二次：同一份图谱，作者同意覆盖。
-    h.expect('覆盖', '覆盖');
+    // 第二次：同一份圖譜，作者同意覆蓋。
+    h.expect('覆蓋', '覆蓋');
     replaced = await accept(settingT('characters'), roster);
     again = h.confirms.length;
     cards = await project.listCharacters();
   });
 
-  test('新卡直接建，说出建了几张', () => {
-    assert.ok(kept.message.includes('新建 2 张角色卡'), kept.message);
+  test('新卡直接建，說出建了幾張', () => {
+    assert.ok(kept.message.includes('新建 2 張角色卡'), kept.message);
   });
 
-  // 第 3 条：已有的卡先给作者看 diff。别名撞上的也是这一张，一共只审它一次。
-  // 别名撞上的也是这一张：一共只审它一次，不会审两次、写两次。
-  test('同名的卡先审阅，别名撞上的不另审一次', () => {
+  // 第 3 條：已有的卡先給作者看 diff。別名撞上的也是這一張，一共只審它一次。
+  // 別名撞上的也是這一張：一共只審它一次，不會審兩次、寫兩次。
+  test('同名的卡先審閱，別名撞上的不另審一次', () => {
     assert.equal(reviewed.length, 1, JSON.stringify(reviewed));
     assert.ok(reviewed[0].includes('角色卡「林昭」'), reviewed[0]);
   });
 
-  test('作者选保留：那张卡一个字节都没动，并且说出来', () => {
+  test('作者選保留：那張卡一個位元組都沒動，並且說出來', () => {
     assert.equal(keptText, handWritten);
-    assert.ok(kept.message.includes('保留原样的 林昭'), kept.message);
+    assert.ok(kept.message.includes('保留原樣的 林昭'), kept.message);
   });
 
-  test('撞上别名的不另建一张', () => {
+  test('撞上別名的不另建一張', () => {
     assert.ok(!t.has('.novelwarden/characters/阿昭.md'));
   });
 
-  test('新卡带上定位、别名与身份', async () => {
+  test('新卡帶上定位、別名與身份', async () => {
     const shen = cards.find((c) => c.name === '沈青');
     assert.deepEqual(shen?.tags, ['盟友'], JSON.stringify(shen));
     assert.deepEqual(shen?.aliases, ['青姐'], JSON.stringify(shen));
-    assert.equal(shen?.sections.身份, '客栈老板娘', JSON.stringify(shen?.sections));
+    assert.equal(shen?.sections.身份, '客棧老闆娘', JSON.stringify(shen?.sections));
   });
 
-  test('作者同意覆盖：新图谱里有的节换新，空着的节沿用旧卡，别名留着', async () => {
+  test('作者同意覆蓋：新圖譜裡有的節換新，空著的節沿用舊卡，別名留著', async () => {
     const lin = cards.find((c) => c.name === '林昭');
-    assert.equal(lin.sections.身份, '模型写的林昭');
-    assert.equal(lin.sections.性格, '作者写的性格。');
+    assert.equal(lin.sections.身份, '模型寫的林昭');
+    assert.equal(lin.sections.性格, '作者寫的性格。');
     assert.deepEqual(lin.aliases, ['阿昭']);
-    assert.ok(replaced.message.includes('覆盖 林昭'), replaced.message);
+    assert.ok(replaced.message.includes('覆蓋 林昭'), replaced.message);
   });
 
-  test('第二次不再新建（沈青、韩七已经有卡了），也不多出卡', () => {
+  test('第二次不再新建（沈青、韓七已經有卡了），也不多出卡', () => {
     assert.ok(!replaced.message.includes('新建'), replaced.message);
     assert.equal(cards.length, 3, cards.map((c) => c.name).join('、'));
     assert.equal(again, 1);
   });
 
-  test('有卡就算角色图谱填过了', async () => {
+  test('有卡就算角色圖譜填過了', async () => {
     assert.equal((await project.settingFilled()).characters, true);
   });
 });
 
 /**
- * 拆细纲给下一章找的落点是**纯序号的占位路径**（`summaries/012.md`）：标题要等细纲
- * 出来才定得下来。采纳时按章号与产物带的标题新建。
+ * 拆細綱給下一章找的落點是**純序號的佔位路徑**（`summaries/012.md`）：標題要等細綱
+ * 出來才定得下來。採納時按章號與產物帶的標題新建。
  */
-describe('采纳 · 细纲（新建：落点是占位路径）', () => {
+describe('採納 · 細綱（新建：落點是佔位路徑）', () => {
   const placeholder = { kind: 'plot', plotRelPath: '.novelwarden/summaries/012.md' };
-  const REL = '.novelwarden/summaries/012-夜入青云.md';
+  const REL = '.novelwarden/summaries/012-夜入青雲.md';
   let result;
   let confirms;
   let plot;
@@ -607,7 +607,7 @@ describe('采纳 · 细纲（新建：落点是占位路径）', () => {
     h.expect();
     result = await accept(placeholder, {
       kind: 'plot',
-      title: '夜入青云',
+      title: '夜入青雲',
       targetWords: 3000,
       sections: { ...SECTIONS },
     });
@@ -616,75 +616,75 @@ describe('采纳 · 细纲（新建：落点是占位路径）', () => {
     pipe = await bundle.pipe.buildPlotPipeline(project, { no: 12, plot });
   });
 
-  // 文件名里的标题等这一刻才定得下来，所以落点不是 target 上那个占位路径。
-  test('按章号与产物的标题落盘', () => {
+  // 檔名裡的標題等這一刻才定得下來，所以落點不是 target 上那個佔位路徑。
+  test('按章號與產物的標題落盤', () => {
     assert.equal(result.relPath, REL, result.message);
   });
 
-  test('占位路径没有被当成文件名', () => {
+  test('佔位路徑沒有被當成檔名', () => {
     assert.ok(!t.has(placeholder.plotRelPath));
   });
 
-  test('消息说的是新建', () => {
+  test('訊息說的是新建', () => {
     assert.ok(result.message.includes('已新建'), result.message);
   });
 
-  test('新建不弹审阅', () => {
+  test('新建不彈審閱', () => {
     assert.equal(confirms, 0);
   });
 
-  test('目标字数落进 frontmatter', () => {
+  test('目標字數落進 frontmatter', () => {
     assert.equal(plot.targetWords, 3000);
   });
 
-  // 没定稿时「出场人物」写的是计划出场：挑角色卡、预检用。
-  test('计划出场从「出场人物」一节读得回来', () => {
+  // 沒定稿時「出場人物」寫的是計劃出場：挑角色卡、預檢用。
+  test('計劃出場從「出場人物」一節讀得回來', () => {
     assert.deepEqual(plot.characters, ['林昭', '沈青']);
   });
 
-  // 上游是这一章的梗概（大纲里这一章那一条）：改别的章那一条不该让这一章挂 ⟳。
-  test('记下这一章梗概的指纹', () => {
+  // 上游是這一章的梗概（大綱裡這一章那一條）：改別的章那一條不該讓這一章掛 ⟳。
+  test('記下這一章梗概的指紋', () => {
     assert.equal(plot.upstreamHash, bundle.plotFile.plotSynopsisHash(plot.sections.梗概));
   });
 
-  test('H1 是「第N章 标题」', () => {
-    assert.ok(t.read(REL).includes('# 第12章 夜入青云'), t.read(REL).slice(0, 300));
+  test('H1 是「第N章 標題」', () => {
+    assert.ok(t.read(REL).includes('# 第12章 夜入青雲'), t.read(REL).slice(0, 300));
   });
 
-  test('写完就算排过细纲', () => {
+  test('寫完就算排過細綱', () => {
     assert.ok(plotFile.isPlotFilled(plot.sections), JSON.stringify(plot.sections));
   });
 
-  test('这一章的下一步是写正文', () => {
+  test('這一章的下一步是寫正文', () => {
     assert.equal(pipe.stage, 'manuscript', pipe.stage);
   });
 
-  // 占位路径（`013.md`）上采纳过一次，文件已经按标题落成 `013-藏书阁.md`。再按同一个
-  // 占位路径采纳，acceptPlot 要按章号认出那一份、走覆盖审阅——从前它认成「还没有」，
-  // 走新建那条路，writePlot 把同号那份**不经审阅**顶掉（第 3 条）。
-  // 用第 13 章演示，免得后面几组要用的第 12 章被改掉。
+  // 佔位路徑（`013.md`）上採納過一次，檔案已經按標題落成 `013-藏書閣.md`。再按同一個
+  // 佔位路徑採納，acceptPlot 要按章號認出那一份、走覆蓋審閱——從前它認成「還沒有」，
+  // 走新建那條路，writePlot 把同號那份**不經審閱**頂掉（第 3 條）。
+  // 用第 13 章演示，免得後面幾組要用的第 12 章被改掉。
   test(
-    '同号已有细纲时，按占位路径再采纳一次也要先问覆盖',
+    '同號已有細綱時，按佔位路徑再採納一次也要先問覆蓋',
     async () => {
       await accept({ kind: 'plot', plotRelPath: '.novelwarden/summaries/013.md' }, {
-        kind: 'plot', title: '藏书阁', sections: { ...SECTIONS, 关键事件: '第一版。' },
+        kind: 'plot', title: '藏書閣', sections: { ...SECTIONS, 关键事件: '第一版。' },
       });
-      h.expect(); // 不排答案：真弹了审阅就当取消
+      h.expect(); // 不排答案：真彈了審閱就當取消
       const second = await accept({ kind: 'plot', plotRelPath: '.novelwarden/summaries/013.md' }, {
-        kind: 'plot', title: '藏书阁', sections: { ...SECTIONS, 关键事件: '第二版。' },
+        kind: 'plot', title: '藏書閣', sections: { ...SECTIONS, 关键事件: '第二版。' },
       });
-      assert.equal(h.confirms.length, 1, `弹了 ${h.confirms.length} 次审阅：${second.message}`);
-      assert.ok(t.read('.novelwarden/summaries/013-藏书阁.md').includes('第一版'), '第一版被静默覆盖了');
+      assert.equal(h.confirms.length, 1, `彈了 ${h.confirms.length} 次審閱：${second.message}`);
+      assert.ok(t.read('.novelwarden/summaries/013-藏書閣.md').includes('第一版'), '第一版被靜默覆蓋了');
     }
   );
 });
 
-describe('采纳 · 细纲（覆盖要审阅）', () => {
-  const target = { kind: 'plot', plotRelPath: '.novelwarden/summaries/012-夜入青云.md' };
-  const FINALIZED = '.novelwarden/summaries/014-定稿过.md';
+describe('採納 · 細綱（覆蓋要審閱）', () => {
+  const target = { kind: 'plot', plotRelPath: '.novelwarden/summaries/012-夜入青雲.md' };
+  const FINALIZED = '.novelwarden/summaries/014-定稿過.md';
   const next = {
     ...SECTIONS,
-    关键事件: '改成三拍：踩点、被狗惊动、翻墙；收在藏书阁门口。',
+    关键事件: '改成三拍：踩點、被狗驚動、翻牆；收在藏書閣門口。',
   };
   let kept;
   let afterKept;
@@ -695,90 +695,90 @@ describe('采纳 · 细纲（覆盖要审阅）', () => {
   let refinalized;
 
   before(async () => {
-    // 已有内容且不同 → 必须问。答「保留原样」就不能写。
-    h.expect('保留原样');
+    // 已有內容且不同 → 必須問。答「保留原樣」就不能寫。
+    h.expect('保留原樣');
     kept = await accept(target, { kind: 'plot', sections: next });
     afterKept = t.read(target.plotRelPath);
 
-    // 产物带的标题与目标字数都与磁盘不同：「重写细纲」改的是这一章怎么走，
-    // 不该顺手把作者起的名字、定的字数抹掉。
-    h.expect('覆盖');
-    written = await accept(target, { kind: 'plot', title: '别的名字', targetWords: 5000, sections: next });
+    // 產物帶的標題與目標字數都與磁碟不同：「重寫細綱」改的是這一章怎麼走，
+    // 不該順手把作者起的名字、定的字數抹掉。
+    h.expect('覆蓋');
+    written = await accept(target, { kind: 'plot', title: '別的名字', targetWords: 5000, sections: next });
     plot = await project.readPlot(target.plotRelPath);
 
-    // 一字未变时不该弹框——弹了只会让人以为自己点错了。
+    // 一字未變時不該彈框——彈了只會讓人以為自己點錯了。
     h.expect();
     same = await accept(target, { kind: 'plot', sections: next });
     sameConfirms = h.confirms.length;
 
-    // 一份定稿过的细纲（有 sourceHash 与 cast）被重写。
+    // 一份定稿過的細綱（有 sourceHash 與 cast）被重寫。
     t.write(FINALIZED, plotFile.renderPlotFile({
-      no: 14, title: '定稿过', upstreamHash: '', done: false,
+      no: 14, title: '定稿過', upstreamHash: '', done: false,
       sourceHash: 'SRC14', cast: [{ name: '林昭', aliases: ['阿昭'] }], sections: { ...SECTIONS },
     }));
     project.invalidate();
-    h.expect('覆盖');
+    h.expect('覆蓋');
     await accept({ kind: 'plot', plotRelPath: FINALIZED }, { kind: 'plot', sections: next });
     refinalized = await project.readPlot(FINALIZED);
   });
 
-  test('拒绝覆盖时不写盘', () => {
+  test('拒絕覆蓋時不寫盤', () => {
     assert.equal(kept.skipped, true, kept.message);
   });
 
-  test('拒绝后磁盘上还是旧的', () => {
+  test('拒絕後磁碟上還是舊的', () => {
     assert.ok(!afterKept.includes('改成三拍'), afterKept);
   });
 
-  test('确认后才写', () => {
+  test('確認後才寫', () => {
     assert.equal(written.relPath, target.plotRelPath, written.message);
     assert.ok(t.read(target.plotRelPath).includes('改成三拍'));
   });
 
-  test('标题沿用磁盘那份（文件名不变）', () => {
-    assert.equal(plot.title, '夜入青云');
-    assert.ok(!t.has('.novelwarden/summaries/012-别的名字.md'));
+  test('標題沿用磁碟那份（檔名不變）', () => {
+    assert.equal(plot.title, '夜入青雲');
+    assert.ok(!t.has('.novelwarden/summaries/012-別的名字.md'));
   });
 
-  test('目标字数沿用磁盘那份', () => {
+  test('目標字數沿用磁碟那份', () => {
     assert.equal(plot.targetWords, 3000);
   });
 
-  // 定稿过的章重写细纲：定稿记的账沿用磁盘那份——这一章不被拉回「待定稿」，正文只挂 ⟳（第 18 条）。
-  test('重写定稿过的细纲：sourceHash 沿用磁盘那份', () => {
+  // 定稿過的章重寫細綱：定稿記的賬沿用磁碟那份——這一章不被拉回「待定稿」，正文只掛 ⟳（第 18 條）。
+  test('重寫定稿過的細綱：sourceHash 沿用磁碟那份', () => {
     assert.equal(refinalized.sourceHash, 'SRC14');
   });
 
-  test('重写定稿过的细纲：cast 沿用磁盘那份', () => {
+  test('重寫定稿過的細綱：cast 沿用磁碟那份', () => {
     assert.deepEqual(JSON.parse(JSON.stringify(refinalized.cast)), [{ name: '林昭', aliases: ['阿昭'] }]);
   });
 
-  test('重写定稿过的细纲：七节照样换新', () => {
+  test('重寫定稿過的細綱：七節照樣換新', () => {
     assert.ok(refinalized.sections.关键事件.includes('改成三拍'), refinalized.sections.关键事件);
   });
 
-  test('内容相同不弹框直接通过', () => {
+  test('內容相同不彈框直接通過', () => {
     assert.notEqual(same.skipped, true, same.message);
     assert.equal(sameConfirms, 0);
   });
 
-  // 落定走的是同一条落盘路（`acceptPlot`），只是上游那次调用的提示词不同。
-  test('落定产出的细纲走同一条落盘路', async () => {
-    h.expect('覆盖');
-    const r = await accept(target, { kind: 'plot', sections: { ...next, 看点: '讨论里定下的：灯灭了' } });
+  // 落定走的是同一條落盤路（`acceptPlot`），只是上游那次呼叫的提示詞不同。
+  test('落定產出的細綱走同一條落盤路', async () => {
+    h.expect('覆蓋');
+    const r = await accept(target, { kind: 'plot', sections: { ...next, 看点: '討論裡定下的：燈滅了' } });
     assert.equal(r.relPath, target.plotRelPath, r.message);
-    assert.ok(t.read(target.plotRelPath).includes('讨论里定下的'));
+    assert.ok(t.read(target.plotRelPath).includes('討論裡定下的'));
   });
 });
 
 /**
- * 正文落在**同号的章节**上：没有就新建 `chapters/NNN-<细纲标题>.txt`；有了按写法落——
- * 「接着写」追加、其余覆盖（写入前审阅）。落盘之后在细纲上记 `writtenFrom`——少了这一步，
- * 这一章会永远显示（或永远不显示）「正文与细纲对不上」。
+ * 正文落在**同號的章節**上：沒有就新建 `chapters/NNN-<細綱標題>.txt`；有了按寫法落——
+ * 「接著寫」追加、其餘覆蓋（寫入前審閱）。落盤之後在細綱上記 `writtenFrom`——少了這一步，
+ * 這一章會永遠顯示（或永遠不顯示）「正文與細綱對不上」。
  */
-describe('采纳 · 正文（落到同号章节）', () => {
-  const plotRelPath = '.novelwarden/summaries/012-夜入青云.md';
-  const CHAPTER = 'chapters/012-夜入青云.txt';
+describe('採納 · 正文（落到同號章節）', () => {
+  const plotRelPath = '.novelwarden/summaries/012-夜入青雲.md';
+  const CHAPTER = 'chapters/012-夜入青雲.txt';
   const target = { kind: 'manuscript', plotRelPath };
   let result;
   let confirms;
@@ -788,54 +788,54 @@ describe('采纳 · 正文（落到同号章节）', () => {
 
   before(async () => {
     h.expect();
-    result = await accept(target, { kind: 'manuscript', text: '雨下了三天，青云宗的石阶泡得发白。' });
+    result = await accept(target, { kind: 'manuscript', text: '雨下了三天，青雲宗的石階泡得發白。' });
     confirms = h.confirms.length;
     plot = await project.readPlot(plotRelPath);
     entry = (await project.readManifest()).chapters.find((c) => c.order === 12);
     pipe = await bundle.pipe.buildPlotPipeline(project, { no: 12, plot });
   });
 
-  test('正文落在同号的章节上', () => {
+  test('正文落在同號的章節上', () => {
     assert.equal(result.relPath, CHAPTER, result.message);
   });
 
-  test('正文确实写进去了', () => {
-    assert.ok(t.read(CHAPTER).includes('石阶泡得发白'));
+  test('正文確實寫進去了', () => {
+    assert.ok(t.read(CHAPTER).includes('石階泡得發白'));
   });
 
-  // 新建正文一律出 .txt（2026-10-24）：纯文本不写标题行，标题只在文件名里。
-  test('新建的章节是纯文本，不带标题行', () => {
+  // 新建正文一律出 .txt（2026-10-24）：純文字不寫標題行，標題只在檔名裡。
+  test('新建的章節是純文字，不帶標題行', () => {
     assert.ok(t.read(CHAPTER).startsWith('雨下了三天'), t.read(CHAPTER).slice(0, 40));
   });
 
-  test('新建章节不弹审阅', () => {
+  test('新建章節不彈審閱', () => {
     assert.equal(confirms, 0);
   });
 
-  test('细纲上记下 writtenFrom = 细纲的内容指纹', () => {
+  test('細綱上記下 writtenFrom = 細綱的內容指紋', () => {
     assert.equal(plot.writtenFrom, plotFile.plotContentHash(plot));
   });
 
-  // 章节是作者的文件：正文那一环的指纹记在细纲这一侧，章节里一笔都不记。
-  test('章节里不记任何指纹', () => {
+  // 章節是作者的檔案：正文那一環的指紋記在細綱這一側，章節裡一筆都不記。
+  test('章節裡不記任何指紋', () => {
     assert.ok(!/writtenFrom|upstreamHash/.test(t.read(CHAPTER)), t.read(CHAPTER));
   });
 
-  test('章节进了 manifest', () => {
+  test('章節進了 manifest', () => {
     assert.equal(entry?.file, CHAPTER, JSON.stringify(entry));
   });
 
-  test('刚写完的正文不标脏', () => {
+  test('剛寫完的正文不標髒', () => {
     assert.equal(pipe.chapter.upstreamStale, false);
   });
 
-  // 细纲定了 3000 字，写了十几个字——没写够就留在「待写正文」（接着写）。
-  test('没写够目标字数时停在待写正文', () => {
+  // 細綱定了 3000 字，寫了十幾個字——沒寫夠就留在「待寫正文」（接著寫）。
+  test('沒寫夠目標字數時停在待寫正文', () => {
     assert.equal(pipe.stage, 'manuscript', pipe.stage);
     assert.ok(pipe.progress.manuscript < 1, String(pipe.progress.manuscript));
   });
 
-  describe('接着写一次', () => {
+  describe('接著寫一次', () => {
     let second;
     let text;
     let chapterCount;
@@ -843,35 +843,35 @@ describe('采纳 · 正文（落到同号章节）', () => {
 
     before(async () => {
       h.expect();
-      second = await accept(target, { kind: 'manuscript', text: '他数到第三盏灯才动。' }, { writeMode: 'continue' });
+      second = await accept(target, { kind: 'manuscript', text: '他數到第三盞燈才動。' }, { writeMode: 'continue' });
       confirmsAgain = h.confirms.length;
       text = t.read(CHAPTER);
       chapterCount = (await project.listChapters()).length;
     });
 
-    // 「接着写」不该丢掉前面那几千字——所以是追加不是覆盖。
-    test('追加在同一章末尾，不覆盖前一次', () => {
+    // 「接著寫」不該丟掉前面那幾千字——所以是追加不是覆蓋。
+    test('追加在同一章末尾，不覆蓋前一次', () => {
       assert.equal(second.relPath, CHAPTER, second.message);
-      assert.ok(text.includes('石阶泡得发白') && text.includes('第三盏灯'), text);
+      assert.ok(text.includes('石階泡得發白') && text.includes('第三盞燈'), text);
     });
 
-    // 从前两次追加之间插一行 `---` 当拆章的候选断点；拆章删了，现在只空一行。
-    test('两次之间只空一行，不插分隔线', () => {
-      assert.ok(text.includes('泡得发白。\n\n他数到'), JSON.stringify(text));
+    // 從前兩次追加之間插一行 `---` 當拆章的候選斷點；拆章刪了，現在只空一行。
+    test('兩次之間只空一行，不插分隔線', () => {
+      assert.ok(text.includes('泡得發白。\n\n他數到'), JSON.stringify(text));
       assert.ok(!/^\s*-{3,}\s*$/m.test(text), text);
     });
 
-    test('没有另建一章', () => {
+    test('沒有另建一章', () => {
       assert.equal(chapterCount, 1, String(chapterCount));
     });
 
-    // 追加是唯一不走覆盖审阅的落盘路径——它不覆盖任何东西。
-    test('追加不弹审阅', () => {
+    // 追加是唯一不走覆蓋審閱的落盤路徑——它不覆蓋任何東西。
+    test('追加不彈審閱', () => {
       assert.equal(confirmsAgain, 0);
     });
   });
 
-  describe('细纲改过 → 正文标脏 → 重写后记新的指纹', () => {
+  describe('細綱改過 → 正文標髒 → 重寫後記新的指紋', () => {
     let stale;
     let declined;
     let stillStale;
@@ -881,92 +881,92 @@ describe('采纳 · 正文（落到同号章节）', () => {
     let asked;
 
     before(async () => {
-      h.expect('覆盖');
+      h.expect('覆蓋');
       await accept({ kind: 'plot', plotRelPath }, {
-        kind: 'plot', sections: { ...SECTIONS, 关键事件: '整章推倒：他没翻墙，是被人从正门请进去的。' },
+        kind: 'plot', sections: { ...SECTIONS, 关键事件: '整章推倒：他沒翻牆，是被人從正門請進去的。' },
       });
       stale = await bundle.pipe.buildPlotPipeline(project, { no: 12, plot: await project.readPlot(plotRelPath) });
 
-      // 第一次作者在审阅里选「保留原样」：什么都不改，也不记指纹。
-      h.expect('保留原样');
-      declined = await accept(target, { kind: 'manuscript', text: '门开了，有人请他进去。' }, { writeMode: 'rewrite' });
+      // 第一次作者在審閱裡選「保留原樣」：什麼都不改，也不記指紋。
+      h.expect('保留原樣');
+      declined = await accept(target, { kind: 'manuscript', text: '門開了，有人請他進去。' }, { writeMode: 'rewrite' });
       stillStale = await bundle.pipe.buildPlotPipeline(project, { no: 12, plot: await project.readPlot(plotRelPath) });
 
-      h.expect('覆盖');
-      rewritten = await accept(target, { kind: 'manuscript', text: '门开了，有人请他进去。' }, { writeMode: 'rewrite' });
+      h.expect('覆蓋');
+      rewritten = await accept(target, { kind: 'manuscript', text: '門開了，有人請他進去。' }, { writeMode: 'rewrite' });
       asked = h.confirms.length;
       text = t.read(CHAPTER);
       fresh = await bundle.pipe.buildPlotPipeline(project, { no: 12, plot: await project.readPlot(plotRelPath) });
     });
 
-    // 重写细纲的那一步不许抹掉 writtenFrom：它对不上，正是「细纲在正文之后改过」的信号。
-    test('细纲改后正文标脏', () => {
+    // 重寫細綱的那一步不許抹掉 writtenFrom：它對不上，正是「細綱在正文之後改過」的訊號。
+    test('細綱改後正文標髒', () => {
       assert.equal(stale.chapter.upstreamStale, true, JSON.stringify(stale.chapter));
     });
 
-    // 第 3 条：重写吞掉的是一整章，写入前必须先问。
-    test('重写覆盖前先问；保留原样就一个字不改、也不记指纹', () => {
+    // 第 3 條：重寫吞掉的是一整章，寫入前必須先問。
+    test('重寫覆蓋前先問；保留原樣就一個字不改、也不記指紋', () => {
       assert.equal(declined.skipped, true, declined.message);
       assert.equal(stillStale.chapter.upstreamStale, true);
     });
 
-    test('答了覆盖：整章换成新写的，旧的不留', () => {
+    test('答了覆蓋：整章換成新寫的，舊的不留', () => {
       assert.equal(asked, 1);
       assert.equal(rewritten.relPath, CHAPTER, rewritten.message);
-      assert.ok(text.includes('门开了') && !text.includes('石阶泡得发白'), text);
+      assert.ok(text.includes('門開了') && !text.includes('石階泡得發白'), text);
     });
 
-    // 纯文本的正文没有标题行（标题在文件名里），重写也不凭空加一行。
-    test('重写之后照旧没有标题行', () => {
-      assert.ok(text.startsWith('门开了'), JSON.stringify(text.slice(0, 30)));
+    // 純文字的正文沒有標題行（標題在檔名裡），重寫也不憑空加一行。
+    test('重寫之後照舊沒有標題行', () => {
+      assert.ok(text.startsWith('門開了'), JSON.stringify(text.slice(0, 30)));
     });
 
-    test('照着新细纲写过之后不再标脏', () => {
+    test('照著新細綱寫過之後不再標髒', () => {
       assert.equal(fresh.chapter.upstreamStale, false, JSON.stringify(fresh.chapter));
     });
   });
 });
 
 /**
- * 老工程里只有正文、没有细纲的章：target 上的细纲路径是它**应该**在的位置
- * （正文的镜像，`plotPathOfNo`），文件并不存在。正文照样落到那一章上，不凭空造细纲。
+ * 老工程裡只有正文、沒有細綱的章：target 上的細綱路徑是它**應該**在的位置
+ * （正文的映象，`plotPathOfNo`），檔案並不存在。正文照樣落到那一章上，不憑空造細綱。
  */
-describe('采纳 · 正文（只有正文、没有细纲的老章）', () => {
-  const CHAPTER = 'chapters/020-旧章.md';
+describe('採納 · 正文（只有正文、沒有細綱的老章）', () => {
+  const CHAPTER = 'chapters/020-舊章.md';
   let result;
   let plotPath;
   let unmarked;
   let asked;
 
   before(async () => {
-    t.write(CHAPTER, '# 旧章\n\n作者早就写好的。\n');
+    t.write(CHAPTER, '# 舊章\n\n作者早就寫好的。\n');
     project.invalidate();
-    plotPath = await project.plotPathOfNo(20, '旧章');
-    result = await accept({ kind: 'manuscript', plotRelPath: plotPath }, { kind: 'manuscript', text: '接着往下写的一段。' }, { writeMode: 'continue' });
-    // 老会话里的 Draft 没记写法：宁可多问一句，也不把一整章叠到已有的后面。
-    h.expect('保留原样');
+    plotPath = await project.plotPathOfNo(20, '舊章');
+    result = await accept({ kind: 'manuscript', plotRelPath: plotPath }, { kind: 'manuscript', text: '接著往下寫的一段。' }, { writeMode: 'continue' });
+    // 老會話裡的 Draft 沒記寫法：寧可多問一句，也不把一整章疊到已有的後面。
+    h.expect('保留原樣');
     unmarked = await accept({ kind: 'manuscript', plotRelPath: plotPath }, { kind: 'manuscript', text: '另起的一整章。' });
     asked = h.confirms.length;
   });
 
-  test('接着写：追加到那一章上', () => {
+  test('接著寫：追加到那一章上', () => {
     assert.equal(result.relPath, CHAPTER, result.message);
     const text = t.read(CHAPTER);
-    assert.ok(text.includes('作者早就写好的') && text.includes('接着往下写'), text);
+    assert.ok(text.includes('作者早就寫好的') && text.includes('接著往下寫'), text);
   });
 
-  test('没记写法：按覆盖审阅，先问', () => {
+  test('沒記寫法：按覆蓋審閱，先問', () => {
     assert.equal(asked, 1);
     assert.equal(unmarked.skipped, true);
     assert.ok(!t.read(CHAPTER).includes('另起的一整章'));
   });
 
-  test('不凭空造出一份细纲', () => {
+  test('不憑空造出一份細綱', () => {
     assert.ok(!t.has(plotPath), plotPath);
   });
 });
 
-describe('采纳 · 大纲整篇替换', () => {
+describe('採納 · 大綱整篇替換', () => {
   let kept;
   let result;
   let outline;
@@ -974,72 +974,72 @@ describe('采纳 · 大纲整篇替换', () => {
 
   before(async () => {
     project.invalidate();
-    h.expect('保留原样');
-    kept = await accept({ kind: 'outline' }, { kind: 'outlineDoc', text: '## 第12章：入局\n不该写进去' });
-    h.expect('覆盖');
-    result = await accept({ kind: 'outline' }, { kind: 'outlineDoc', text: '## 第12章：第一幕\n林昭进宗门。' });
+    h.expect('保留原樣');
+    kept = await accept({ kind: 'outline' }, { kind: 'outlineDoc', text: '## 第12章：入局\n不該寫進去' });
+    h.expect('覆蓋');
+    result = await accept({ kind: 'outline' }, { kind: 'outlineDoc', text: '## 第12章：第一幕\n林昭進宗門。' });
     project.invalidate();
     outline = await project.readOutline();
-    oldFormat = await accept({ kind: 'outline' }, { kind: 'outlineDoc', text: '## 第1–20章：第一幕 · 入局\n\n- 林昭进宗门' }).catch((err) => err);
+    oldFormat = await accept({ kind: 'outline' }, { kind: 'outlineDoc', text: '## 第1–20章：第一幕 · 入局\n\n- 林昭進宗門' }).catch((err) => err);
   });
 
-  test('拒绝覆盖时不写盘', () => {
+  test('拒絕覆蓋時不寫盤', () => {
     assert.equal(kept.skipped, true, kept.message);
   });
 
-  test('大纲写回 outline.md', () => {
+  test('大綱寫回 outline.md', () => {
     assert.ok(result.relPath.endsWith('outline.md'), result.message);
   });
 
-  // 大纲是各章细纲梗概的汇总：整篇换掉，就是换掉各章细纲的梗概。
-  test('大纲内容已换', () => {
-    assert.ok(outline.includes('## 第12章：第一幕\n林昭进宗门。') && !outline.includes('不该写进去'), outline);
+  // 大綱是各章細綱梗概的彙總：整篇換掉，就是換掉各章細綱的梗概。
+  test('大綱內容已換', () => {
+    assert.ok(outline.includes('## 第12章：第一幕\n林昭進宗門。') && !outline.includes('不該寫進去'), outline);
   });
 
-  test('认不出章标题的（旧格式的区间分节）不写，不把空壳删光', async () => {
-    assert.ok(oldFormat instanceof Error && /认不出「## 第N章：标题」/.test(oldFormat.message), String(oldFormat));
+  test('認不出章標題的（舊格式的區間分節）不寫，不把空殼刪光', async () => {
+    assert.ok(oldFormat instanceof Error && /認不出「## 第N章：標題」/.test(oldFormat.message), String(oldFormat));
     project.invalidate();
     assert.equal(await project.readOutline(), outline);
   });
 });
 
-describe('采纳 · 认不出是哪一章时报错而不是乱写', () => {
+describe('採納 · 認不出是哪一章時報錯而不是亂寫', () => {
   let plotMessage = '';
   let manuscriptMessage = '';
 
   before(async () => {
     try {
-      await accept({ kind: 'plot', plotRelPath: '.novelwarden/summaries/没有章号.md' }, { kind: 'plot', sections: SECTIONS });
+      await accept({ kind: 'plot', plotRelPath: '.novelwarden/summaries/沒有章號.md' }, { kind: 'plot', sections: SECTIONS });
     } catch (err) {
       plotMessage = String(err.message ?? err);
     }
     try {
-      await accept({ kind: 'manuscript', plotRelPath: '.novelwarden/summaries/没有章号.md' }, { kind: 'manuscript', text: 'x' });
+      await accept({ kind: 'manuscript', plotRelPath: '.novelwarden/summaries/沒有章號.md' }, { kind: 'manuscript', text: 'x' });
     } catch (err) {
       manuscriptMessage = String(err.message ?? err);
     }
   });
 
-  test('细纲认不出章号时抛错', () => {
-    assert.ok(plotMessage.includes('认不出这份细纲的章号'), plotMessage);
+  test('細綱認不出章號時拋錯', () => {
+    assert.ok(plotMessage.includes('認不出這份細綱的章號'), plotMessage);
   });
 
-  test('正文认不出章号时抛错', () => {
-    assert.ok(manuscriptMessage.includes('认不出这份细纲的章号'), manuscriptMessage);
+  test('正文認不出章號時拋錯', () => {
+    assert.ok(manuscriptMessage.includes('認不出這份細綱的章號'), manuscriptMessage);
   });
 
-  test('没有凭空造出细纲或章节', () => {
-    assert.ok(!t.has('.novelwarden/summaries/没有章号.md'));
-    assert.ok(!t.has('chapters/没有章号.md'));
+  test('沒有憑空造出細綱或章節', () => {
+    assert.ok(!t.has('.novelwarden/summaries/沒有章號.md'));
+    assert.ok(!t.has('chapters/沒有章號.md'));
   });
 
-  // 细纲与同号章节都不存在时：作者（或 agent 给了 `chapters/999.txt`）明确要写这一章的
-  // 正文，那就按号新建一个没有标题的章节——不拿路径里的词干当标题（那不是作者起的），
-  // 也不凭空造一份细纲；没有细纲，writtenFrom 就无处可记，这一章永不标脏（第 18a 条）。
-  test('细纲与同号章节都不存在时，按号新建章节、不造细纲', async () => {
+  // 細綱與同號章節都不存在時：作者（或 agent 給了 `chapters/999.txt`）明確要寫這一章的
+  // 正文，那就按號新建一個沒有標題的章節——不拿路徑裡的詞幹當標題（那不是作者起的），
+  // 也不憑空造一份細綱；沒有細綱，writtenFrom 就無處可記，這一章永不標髒（第 18a 條）。
+  test('細綱與同號章節都不存在時，按號新建章節、不造細綱', async () => {
     await accept({ kind: 'manuscript', plotRelPath: '.novelwarden/summaries/999-不存在.md' }, { kind: 'manuscript', text: '雨停了。' });
-    assert.ok(t.has('chapters/999.txt'), '没有按号新建章节');
+    assert.ok(t.has('chapters/999.txt'), '沒有按號新建章節');
     assert.ok(t.read('chapters/999.txt').includes('雨停了。'));
-    assert.ok(!t.has('.novelwarden/summaries/999-不存在.md') && !t.has('.novelwarden/summaries/999.md'), '凭空造了细纲');
+    assert.ok(!t.has('.novelwarden/summaries/999-不存在.md') && !t.has('.novelwarden/summaries/999.md'), '憑空造了細綱');
   });
 });

@@ -1,7 +1,7 @@
-/* 资源管理器（侧栏「文件」页）：磁盘目录的原样结构，样式对齐 VS Code。 */
+/* 資源管理器（側欄「檔案」頁）：磁碟目錄的原樣結構，樣式對齊 VS Code。 */
 
-/* 侧栏「文件」页：磁盘目录的原样结构。样式对齐 VS Code 的资源管理器——
-   紧凑行高、缩进参考线、整行选中态。只在独立版加载，插件形态没有这一页。 */
+/* 側欄「檔案」頁：磁碟目錄的原樣結構。樣式對齊 VS Code 的資源管理器——
+   緊湊行高、縮排參考線、整行選中態。只在獨立版載入，外掛形態沒有這一頁。 */
 
 .fx-toolbar {
   display: flex;
@@ -29,7 +29,7 @@
   min-height: 0;
   overflow: auto;
   padding: 4px 0 12px;
-  /* 长文件名不折行，横向滚动——折行会把树的缩进读乱。 */
+  /* 長檔名不折行，橫向滾動——折行會把樹的縮排讀亂。 */
   white-space: nowrap;
 }
 
@@ -48,7 +48,7 @@
   padding-right: 10px;
   line-height: 22px;
   cursor: pointer;
-  /* 选中行的左侧标记条。未选中时透明，宽度照占，避免选中时整行位移。 */
+  /* 選中行的左側標記條。未選中時透明，寬度照佔，避免選中時整行位移。 */
   border-left: 2px solid transparent;
 }
 
@@ -56,7 +56,7 @@
   background: var(--vscode-list-hoverBackground);
 }
 
-/* 剪切源压暗；行可聚焦（Ctrl+X/C/V 的作用对象）。 */
+/* 剪下源壓暗；行可聚焦（Ctrl+X/C/V 的作用物件）。 */
 .fx-row.fx-cut {
   opacity: 0.55;
 }
@@ -71,7 +71,7 @@
   border-left-color: var(--vscode-focusBorder);
 }
 
-/* 编辑器那边「在文件页中定位」的那一行（文件或目录），直到下一次定位。 */
+/* 編輯器那邊「在檔案頁中定位」的那一行（檔案或目錄），直到下一次定位。 */
 .fx-row.fx-revealed {
   outline: 1px dashed var(--vscode-focusBorder, rgba(128, 128, 128, 0.6));
   outline-offset: -1px;
@@ -88,7 +88,7 @@
 .fx-icon {
   flex: 0 0 auto;
   font-size: 12px;
-  /* emoji 图标的基线比文字低一点，压回来才与名字对齐。 */
+  /* emoji 圖示的基線比文字低一點，壓回來才與名字對齊。 */
   line-height: 1;
 }
 
@@ -102,18 +102,18 @@
   font-weight: 600;
 }
 
-/* 点开头的文件夹（.novelwarden / .vscode）：看得见、打得开，但压暗一档，
-   不跟正文抢注意力。VS Code 对 gitignore 里的条目也是这个处理。 */
+/* 點開頭的資料夾（.novelwarden / .vscode）：看得見、打得開，但壓暗一檔，
+   不跟正文搶注意力。VS Code 對 gitignore 裡的條目也是這個處理。 */
 .fx-dotted > .fx-name {
   opacity: 0.75;
 }
 
-/* 二进制文件：内置编辑器打不开（点击回落到系统程序），置灰示意。 */
+/* 二進位制檔案：內建編輯器打不開（點選回落到系統程式），置灰示意。 */
 .fx-binary > .fx-name {
   color: var(--vscode-descriptionForeground);
 }
 
-/* 文件大小贴右侧，平时不显眼，hover 时才亮起来——常态下它是噪音。 */
+/* 檔案大小貼右側，平時不顯眼，hover 時才亮起來——常態下它是噪音。 */
 .fx-size {
   margin-left: auto;
   padding-left: 10px;

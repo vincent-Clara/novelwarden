@@ -1,32 +1,32 @@
 /**
- * 参数 schema 的写法，以及守着它的那批校验。
+ * 引數 schema 的寫法，以及守著它的那批校驗。
  *
- * ## 模型只看得见两样东西
+ * ## 模型只看得見兩樣東西
  *
- * `description` 与 `parameters`。它决定「这一步该调哪个工具、参数怎么填」时，
- * 手上就这些。所以这一层真正的活不是转换格式（那是十行），而是**把描述与
- * schema 的写法钉死**——描述会慢慢跑偏，schema 会慢慢长出嵌套，两者都不会
- * 报错，只会让模型的调用成功率一点点掉下去。
+ * `description` 與 `parameters`。它決定「這一步該調哪個工具、引數怎麼填」時，
+ * 手上就這些。所以這一層真正的活不是轉換格式（那是十行），而是**把描述與
+ * schema 的寫法釘死**——描述會慢慢跑偏，schema 會慢慢長出巢狀，兩者都不會
+ * 報錯，只會讓模型的呼叫成功率一點點掉下去。
  *
- * ## 描述怎么写：三条原则
+ * ## 描述怎麼寫：三條原則
  *
- * 1. **说清坐标系**。工程里的东西全是普通 Markdown，路径就是它们的身份：
- *    架构与大纲在 `.novelwarden/` 根下，细纲一章一份放在 `.novelwarden/summaries/`（与正文同样的相对路径），
- *    正文在章节根（默认 `chapters/`）。不说清楚，模型会去猜一个不存在的路径
- *    然后反复重试。
- * 2. **说清限制**。「一次最多返回 400 行，超出会截断并告诉你截了多少」——
- *    这既是第 2 条（不静默截断）的落点，也是让模型知道「还有下一页」的唯一
- *    途径。
- * 3. **不写领域知识**。「细纲的关键事件写到什么程度、看点怎么留」那几句在
- *    `context/prompts.ts` 里，由 `generate` **内部那次调用**自己带着。在工具
- *    描述里再写一遍，一是白烧 token（每一轮都要发），二是两处迟早跑偏——
- *    而跑偏之后没有任何测试会红。
+ * 1. **說清座標系**。工程裡的東西全是普通 Markdown，路徑就是它們的身份：
+ *    架構與大綱在 `.novelwarden/` 根下，細綱一章一份放在 `.novelwarden/summaries/`（與正文同樣的相對路徑），
+ *    正文在章節根（預設 `chapters/`）。不說清楚，模型會去猜一個不存在的路徑
+ *    然後反覆重試。
+ * 2. **說清限制**。「一次最多返回 400 行，超出會截斷並告訴你截了多少」——
+ *    這既是第 2 條（不靜默截斷）的落點，也是讓模型知道「還有下一頁」的唯一
+ *    途徑。
+ * 3. **不寫領域知識**。「細綱的關鍵事件寫到什麼程度、看點怎麼留」那幾句在
+ *    `context/prompts.ts` 裡，由 `generate` **內部那次呼叫**自己帶著。在工具
+ *    描述裡再寫一遍，一是白燒 token（每一輪都要發），二是兩處遲早跑偏——
+ *    而跑偏之後沒有任何測試會紅。
  *
- * ## 参数尽量扁平
+ * ## 引數儘量扁平
  *
- * `{path, offset, limit}` 好过 `{target: {kind, chapterNo}}`。嵌套
- * 对象是模型最容易填错的地方，而填错的表现是一次白花的往返。所以
- * {@link validateToolDef} **直接拒绝嵌套对象属性**，不是靠人记得。
+ * `{path, offset, limit}` 好過 `{target: {kind, chapterNo}}`。巢狀
+ * 物件是模型最容易填錯的地方，而填錯的表現是一次白花的往返。所以
+ * {@link validateToolDef} **直接拒絕巢狀物件屬性**，不是靠人記得。
  */
 import type { ToolDef } from './types';
 
@@ -54,11 +54,11 @@ export function strArray(description: string): PropSchema {
 }
 
 /**
- * 拼一个对象 schema。`required` 里的键必须在 `props` 里，否则
- * {@link validateToolDef} 会报出来。
+ * 拼一個物件 schema。`required` 裡的鍵必須在 `props` 裡，否則
+ * {@link validateToolDef} 會報出來。
  *
- * `additionalProperties: false` 是有意的：模型多塞一个字段时我们希望**当场
- * 知道**，而不是安静地忽略掉一个它以为自己传了的参数。
+ * `additionalProperties: false` 是有意的：模型多塞一個欄位時我們希望**當場
+ * 知道**，而不是安靜地忽略掉一個它以為自己傳了的引數。
  */
 export function objectSchema(
   props: Record<string, PropSchema>,
@@ -68,62 +68,62 @@ export function objectSchema(
 }
 
 /**
- * 校验一条定义。返回一句人话说明哪里不对，没问题时返回 undefined。
+ * 校驗一條定義。返回一句人話說明哪裡不對，沒問題時返回 undefined。
  *
- * 调用方（{@link ToolRegistry}）拿到说明就抛。这不是防御性编程：这些 schema
- * 是我们自己写的常量，跑一次就固定下来了。抛在注册那一刻等于把「描述写歪了」
- * 变成一条红测试，而不是三个月后某次对话里模型莫名其妙填错参数。
+ * 呼叫方（{@link ToolRegistry}）拿到說明就拋。這不是防禦性程式設計：這些 schema
+ * 是我們自己寫的常量，跑一次就固定下來了。拋在註冊那一刻等於把「描述寫歪了」
+ * 變成一條紅測試，而不是三個月後某次對話裡模型莫名其妙填錯引數。
  */
 export function validateToolDef(def: ToolDef, seen: ReadonlySet<string>): string | undefined {
   if (!/^[a-z][a-z0-9_]*$/.test(def.name ?? '')) {
-    // 各家 API 对工具名的字符集要求不一，取交集最省心。
-    return '名字只能是小写字母、数字与下划线，且以字母开头';
+    // 各家 API 對工具名的字符集要求不一，取交集最省心。
+    return '名字只能是小寫字母、數字與下劃線，且以字母開頭';
   }
   if (seen.has(def.name)) {
-    return '名字重复了——同名工具模型只认得出一个，另一个永远调不到';
+    return '名字重複了——同名工具模型只認得出一個，另一個永遠調不到';
   }
   if (!def.description?.trim()) {
-    return '没有描述。模型只靠描述与参数决定怎么用它';
+    return '沒有描述。模型只靠描述與引數決定怎麼用它';
   }
 
   const schema = def.parameters as { type?: unknown; properties?: unknown; required?: unknown };
   if (schema?.type !== 'object' || !isPlainObject(schema.properties)) {
-    return 'parameters 必须是 `{ type: "object", properties: {…} }`';
+    return 'parameters 必須是 `{ type: "object", properties: {…} }`';
   }
   const props = schema.properties as Record<string, unknown>;
 
   for (const [key, raw] of Object.entries(props)) {
     if (!isPlainObject(raw)) {
-      return `参数 ${key} 的 schema 不是对象`;
+      return `引數 ${key} 的 schema 不是物件`;
     }
-    // 这条路上的输入可能是手写的字面量 schema（测试里就是），所以按最松的
-    // 形状读，不套 PropSchema——校验器自己不该假设被校验的东西已经合法。
+    // 這條路上的輸入可能是手寫的字面量 schema（測試裡就是），所以按最松的
+    // 形狀讀，不套 PropSchema——校驗器自己不該假設被校驗的東西已經合法。
     const type = typeof raw.type === 'string' ? raw.type : '';
     const description = typeof raw.description === 'string' ? raw.description : '';
     const items = isPlainObject(raw.items) ? raw.items : undefined;
 
     if (!description.trim()) {
-      return `参数 ${key} 没有 description——模型看不出该填什么`;
+      return `引數 ${key} 沒有 description——模型看不出該填什麼`;
     }
-    // 扁平：嵌套对象是模型最容易填错的地方。
+    // 扁平：巢狀物件是模型最容易填錯的地方。
     if (type === 'object') {
-      return `参数 ${key} 是嵌套对象。摊平成几个标量参数（{path, offset, limit} 好过 {target:{…}}）`;
+      return `引數 ${key} 是巢狀物件。攤平成幾個標量引數（{path, offset, limit} 好過 {target:{…}}）`;
     }
     if (type === 'array' && items?.type === undefined) {
-      return `参数 ${key} 是数组但没说元素类型`;
+      return `引數 ${key} 是陣列但沒說元素型別`;
     }
     if (type === 'array' && items?.type === 'object') {
-      return `参数 ${key} 是对象数组。摊平它`;
+      return `引數 ${key} 是物件陣列。攤平它`;
     }
   }
 
   const required = schema.required ?? [];
   if (!Array.isArray(required)) {
-    return 'required 必须是数组';
+    return 'required 必須是陣列';
   }
   for (const key of required) {
     if (!(key in props)) {
-      return `required 里的 ${String(key)} 不在 properties 里`;
+      return `required 裡的 ${String(key)} 不在 properties 裡`;
     }
   }
   return undefined;
@@ -134,11 +134,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * 按 `parameters` 校验一次调用的入参：缺必填、类型不对、不在枚举里、多塞了 schema 里没有的键。
- * 返回一句给模型的话，没问题时 undefined。
+ * 按 `parameters` 校驗一次呼叫的入參：缺必填、型別不對、不在列舉裡、多塞了 schema 裡沒有的鍵。
+ * 返回一句給模型的話，沒問題時 undefined。
  *
- * 只认 {@link objectSchema} 拼得出的那几种形状。空串不算缺——`edit` 的 `new` 就是靠空串表示删掉，
- * 「不能为空」由各工具自己的 `check` 说。
+ * 只認 {@link objectSchema} 拼得出的那幾種形狀。空串不算缺——`edit` 的 `new` 就是靠空串表示刪掉，
+ * 「不能為空」由各工具自己的 `check` 說。
  */
 export function checkArgs(parameters: Record<string, unknown>, args: Record<string, unknown>): string | undefined {
   const props = (isPlainObject(parameters.properties) ? parameters.properties : {}) as Record<string, PropSchema>;
@@ -146,7 +146,7 @@ export function checkArgs(parameters: Record<string, unknown>, args: Record<stri
 
   const missing = required.filter((key) => args[key] === undefined || args[key] === null);
   if (missing.length > 0) {
-    return `缺少参数：${missing.map((k) => `${k}（${props[k]?.description ?? ''}）`).join('；')}`;
+    return `缺少引數：${missing.map((k) => `${k}（${props[k]?.description ?? ''}）`).join('；')}`;
   }
   for (const [key, value] of Object.entries(args)) {
     if (value === undefined || value === null) {
@@ -154,11 +154,11 @@ export function checkArgs(parameters: Record<string, unknown>, args: Record<stri
     }
     const prop = props[key];
     if (!prop) {
-      return `没有 ${key} 这个参数。可用的是：${Object.keys(props).join(' / ')}。`;
+      return `沒有 ${key} 這個引數。可用的是：${Object.keys(props).join(' / ')}。`;
     }
     const items = prop.items;
     if (!matchesType(prop.type, value) || (items && !(value as unknown[]).every((v) => matchesType(items.type, v)))) {
-      return `${key} 应该是${TYPE_NAMES[prop.type]}${items ? `（元素是${TYPE_NAMES[items.type]}）` : ''}。`;
+      return `${key} 應該是${TYPE_NAMES[prop.type]}${items ? `（元素是${TYPE_NAMES[items.type]}）` : ''}。`;
     }
     if (prop.enum && !prop.enum.includes(value as string)) {
       return `${key} 只能是：${prop.enum.join(' / ')}。`;
@@ -168,11 +168,11 @@ export function checkArgs(parameters: Record<string, unknown>, args: Record<stri
 }
 
 const TYPE_NAMES: Record<PropSchema['type'], string> = {
-  string: '字符串',
-  number: '数字',
-  integer: '整数',
+  string: '字串',
+  number: '數字',
+  integer: '整數',
   boolean: 'true / false',
-  array: '数组',
+  array: '陣列',
 };
 
 function matchesType(type: PropSchema['type'], value: unknown): boolean {

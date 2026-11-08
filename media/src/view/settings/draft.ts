@@ -1,20 +1,20 @@
 /**
- * 设置页的本地编辑状态，以及保存前的校验。
+ * 設定頁的本地編輯狀態，以及儲存前的校驗。
  *
- * `dirty` 是必要的：FileSystemWatcher 一刷新就会推一份新设置过来，
- * 如果无条件重渲染，用户正在填的 baseUrl 会被磁盘上的旧值冲掉。
+ * `dirty` 是必要的：FileSystemWatcher 一重新整理就會推一份新設定過來，
+ * 如果無條件重渲染，使用者正在填的 baseUrl 會被磁碟上的舊值沖掉。
  */
 import type { LlmTask, ModelTier, SerializedProvider } from '../../protocol';
 
 export const draft: {
   providers: SerializedProvider[];
-  /** 默认模型列表（有序，第一个是首选），每项形如 `glm/glm-4-plus`。 */
+  /** 預設模型列表（有序，第一個是首選），每項形如 `glm/glm-4-plus`。 */
   models: string[];
-  /** 三档各自的模型清单，与 models 同构。空档 = 沿用 models。 */
+  /** 三檔各自的模型清單，與 models 同構。空檔 = 沿用 models。 */
   tierModels: Record<ModelTier, string[]>;
-  /** 任务 → 档位的覆盖，只存与内置默认不同的项。 */
+  /** 任務 → 檔位的覆蓋，只存與內建預設不同的項。 */
   taskTiers: Partial<Record<LlmTask, ModelTier>>;
-  /** providerId -> 有没有存过 API Key。Key 本身从不回显。 */
+  /** providerId -> 有沒有存過 API Key。Key 本身從不回顯。 */
   keys: Record<string, boolean>;
   dirty: boolean;
 } = {
@@ -30,7 +30,7 @@ export function touch(): void {
   draft.dirty = true;
 }
 
-/** 生成一个不与现有服务商冲突的 id。 */
+/** 生成一個不與現有服務商衝突的 id。 */
 export function uniqueId(base: string): string {
   if (!draft.providers.some((p) => p.id === base)) {
     return base;
@@ -43,36 +43,36 @@ export function uniqueId(base: string): string {
   }
 }
 
-/** draft 里全部模型的引用，按配置顺序。 */
+/** draft 裡全部模型的引用，按配置順序。 */
 export function allRefs(): string[] {
   return draft.providers.flatMap((p) => p.models.map((m) => `${p.id}/${m.name}`));
 }
 
 /**
- * 保存前挡住会让引用无法解析的配置。返回错误信息，没问题返回空串。
+ * 儲存前擋住會讓引用無法解析的配置。返回錯誤資訊，沒問題返回空串。
  *
- * 模型引用**只在第一个斜杠处切分**，所以前缀里绝不能有斜杠——
- * `openrouter/z-ai/glm-4.6` 的服务商是 `openrouter`，模型名是 `z-ai/glm-4.6`。
+ * 模型引用**只在第一個斜槓處切分**，所以字首裡絕不能有斜槓——
+ * `openrouter/z-ai/glm-4.6` 的服務商是 `openrouter`，模型名是 `z-ai/glm-4.6`。
  */
 export function validateProviders(providers: SerializedProvider[]): string {
   const ids = new Set<string>();
   for (const p of providers) {
     const id = (p.id || '').trim();
-    if (!id) return '服务商的前缀 id 不能为空。';
-    if (id.includes('/')) return `前缀「${id}」不能含斜杠，否则模型引用无法切分。`;
-    if (!/^[A-Za-z0-9._-]+$/.test(id)) return `前缀「${id}」只能用字母、数字、点、下划线和连字符。`;
-    if (ids.has(id)) return `前缀「${id}」重复了，每个服务商的前缀必须唯一。`;
+    if (!id) return '服務商的字首 id 不能為空。';
+    if (id.includes('/')) return `字首「${id}」不能含斜槓，否則模型引用無法切分。`;
+    if (!/^[A-Za-z0-9._-]+$/.test(id)) return `字首「${id}」只能用字母、數字、點、下劃線和連字元。`;
+    if (ids.has(id)) return `字首「${id}」重複了，每個服務商的字首必須唯一。`;
     ids.add(id);
 
-    if (p.models.length === 0) return `服务商「${id}」下没有模型。`;
+    if (p.models.length === 0) return `服務商「${id}」下沒有模型。`;
     const names = new Set<string>();
     for (const m of p.models) {
       const name = (m.name || '').trim();
-      if (!name) return `服务商「${id}」下有模型名为空。`;
-      if (names.has(name)) return `服务商「${id}」下的模型「${name}」重复了。`;
+      if (!name) return `服務商「${id}」下有模型名為空。`;
+      if (names.has(name)) return `服務商「${id}」下的模型「${name}」重複了。`;
       names.add(name);
       if (m.contextWindow && m.maxOutputTokens && m.maxOutputTokens >= m.contextWindow) {
-        return `${id}/${name} 的输出上限必须小于它的窗口。`;
+        return `${id}/${name} 的輸出上限必須小於它的視窗。`;
       }
     }
   }

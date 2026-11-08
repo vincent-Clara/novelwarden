@@ -1,9 +1,9 @@
 /**
  * 事件流的收集器：collectText / collect。
  *
- * 这一层是 13 个既有调用点与 provider 之间唯一的桥，所以三件事必须钉死：
- * reasoning 绝不混进正文、usage 按字段合并（同一次请求会回调多次）、
- * 收尾原因原样交出（上游没说就是 undefined）。
+ * 這一層是 13 個既有呼叫點與 provider 之間唯一的橋，所以三件事必須釘死：
+ * reasoning 絕不混進正文、usage 按欄位合併（同一次請求會回呼多次）、
+ * 收尾原因原樣交出（上游沒說就是 undefined）。
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -30,7 +30,7 @@ describe('llm/collect', () => {
     assert.equal(text, '雨下了三天。');
   });
 
-  test('reasoning 不混进正文，单独回调', async () => {
+  test('reasoning 不混進正文，單獨回呼', async () => {
     const seen = [];
     await c.collectText(
       streamOf([
@@ -46,7 +46,7 @@ describe('llm/collect', () => {
     ]);
   });
 
-  test('usage 按字段合并，缺席字段保留', async () => {
+  test('usage 按欄位合併，缺席欄位保留', async () => {
     const r = await c.collect(
       streamOf([
         { type: 'usage', usage: { inputTokens: 100 } },
@@ -57,7 +57,7 @@ describe('llm/collect', () => {
     assert.deepEqual(r.usage, { inputTokens: 100, outputTokens: 20 });
   });
 
-  test('usage 每条都回调，不等收全', async () => {
+  test('usage 每條都回呼，不等收全', async () => {
     const seen = [];
     await c.collect(
       streamOf([
@@ -69,7 +69,7 @@ describe('llm/collect', () => {
     assert.deepEqual(seen, [{ inputTokens: 100 }, { outputTokens: 20 }]);
   });
 
-  test('onDelta 收到增量与全量', async () => {
+  test('onDelta 收到增量與全量', async () => {
     const seen = [];
     await c.collectText(
       streamOf([
@@ -84,7 +84,7 @@ describe('llm/collect', () => {
     ]);
   });
 
-  test('collect 同时给出四份产出', async () => {
+  test('collect 同時給出四份產出', async () => {
     const r = await c.collect(
       streamOf([
         { type: 'text', text: '正' },
@@ -97,7 +97,7 @@ describe('llm/collect', () => {
     assert.deepEqual(r, { text: '正文', reasoning: '想', usage: { inputTokens: 5 }, stopReason: 'end' });
   });
 
-  test('空流产出空字符串与空 usage', async () => {
+  test('空流產出空字串與空 usage', async () => {
     const r = await c.collect(streamOf([]));
     assert.deepEqual(r, {
       text: '',
@@ -107,21 +107,21 @@ describe('llm/collect', () => {
     });
   });
 
-  test('收尾原因收进 stopReason', async () => {
+  test('收尾原因收進 stopReason', async () => {
     const r = await c.collect(
-      streamOf([{ type: 'text', text: '写到一半' }, { type: 'stop', reason: 'maxTokens' }])
+      streamOf([{ type: 'text', text: '寫到一半' }, { type: 'stop', reason: 'maxTokens' }])
     );
     assert.equal(r.stopReason, 'maxTokens');
   });
 
-  // undefined 有它自己的意思：「上游没说」。补一个默认值等于替它编一句话，而
-  // 续写链会照着那句话决定回退还是往后接。
-  test('上游没说时是 undefined，不补默认值', async () => {
+  // undefined 有它自己的意思：「上游沒說」。補一個預設值等於替它編一句話，而
+  // 續寫鏈會照著那句話決定回退還是往後接。
+  test('上游沒說時是 undefined，不補預設值', async () => {
     const r = await c.collect(streamOf([{ type: 'text', text: '好的。' }]));
     assert.equal(r.stopReason, undefined);
   });
 
-  test('mergeUsage 就地按字段合并，undefined 不覆盖已有值', () => {
+  test('mergeUsage 就地按欄位合併，undefined 不覆蓋已有值', () => {
     const target = { inputTokens: 100, outputTokens: 7 };
     c.mergeUsage(target, { outputTokens: 20 });
     assert.deepEqual(target, { inputTokens: 100, outputTokens: 20 });
@@ -129,15 +129,15 @@ describe('llm/collect', () => {
     assert.deepEqual(target, { inputTokens: 100, outputTokens: 20 });
   });
 
-  // 续写、修复重试各是一次新请求：请求之间相加（合并只会剩最后一次，「输入实测」就报少了）。
-  test('sumUsage 把几次请求逐字段相加', () => {
+  // 續寫、修復重試各是一次新請求：請求之間相加（合併只會剩最後一次，「輸入實測」就報少了）。
+  test('sumUsage 把幾次請求逐欄位相加', () => {
     assert.deepEqual(
       c.sumUsage([{ inputTokens: 100, outputTokens: 20 }, { inputTokens: 150, outputTokens: 30 }]),
       { inputTokens: 250, outputTokens: 50 }
     );
   });
 
-  test('sumUsage 只加回报了的那几次，一次都没报就仍是 undefined', () => {
+  test('sumUsage 只加回報了的那幾次，一次都沒報就仍是 undefined', () => {
     assert.deepEqual(c.sumUsage([{ inputTokens: 100 }, {}, { inputTokens: 50 }]), { inputTokens: 150 });
     assert.deepEqual(c.sumUsage([{}, {}]), {});
     assert.deepEqual(c.sumUsage([]), {});

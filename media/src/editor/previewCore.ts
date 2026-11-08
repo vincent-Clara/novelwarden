@@ -1,17 +1,17 @@
 /**
- * Markdown 预览的纯函数（零 DOM）：把正文切成块、记下每一块是源文件的第几行到第几行（`previewBlocks`），以及
- * 「编辑区里第几行」与「预览里多高」之间的换算（切预览 / 切回编辑时两边滚到同一处，`preview.ts` 与
- * `previewSync.ts` 用）。`tests/unit/editor/previewCore.test.js` 钉着。
+ * Markdown 預覽的純函式（零 DOM）：把正文切成塊、記下每一塊是原始檔的第幾行到第幾行（`previewBlocks`），以及
+ * 「編輯區裡第幾行」與「預覽裡多高」之間的換算（切預覽 / 切回編輯時兩邊滾到同一處，`preview.ts` 與
+ * `previewSync.ts` 用）。`tests/unit/editor/previewCore.test.js` 釘著。
  *
- * 行号从 0 数、按 `\n` 切（textarea 里的 `area.value` 也是这样，`\r\n` 先归一），`end` 不含。位置可以带小数：
- * `12.5` 是第 12 行（从 0 数）往下半行——中文一段就是一行、一行能折成好几屏，只认整行会差出一大截。
+ * 行號從 0 數、按 `\n` 切（textarea 裡的 `area.value` 也是這樣，`\r\n` 先歸一），`end` 不含。位置可以帶小數：
+ * `12.5` 是第 12 行（從 0 數）往下半行——中文一段就是一行、一行能折成好幾屏，只認整行會差出一大截。
  */
 
-/** 预览里的一块（`<p>` / `<h1>` / `<pre>` / 一个 `<li>`……）对应源文件的哪几行。 */
+/** 預覽裡的一塊（`<p>` / `<h1>` / `<pre>` / 一個 `<li>`……）對應原始檔的哪幾行。 */
 interface Span {
-  /** 第一行（从 0 数）。 */
+  /** 第一行（從 0 數）。 */
   start: number;
-  /** 最后一行的下一行。 */
+  /** 最後一行的下一行。 */
   end: number;
 }
 
@@ -25,13 +25,13 @@ export type PreviewBlock =
   | (Span & { kind: 'list'; ordered: boolean; items: (Span & { text: string })[] });
 
 /**
- * 正文切成块（够用的那一套：frontmatter、标题、段落、代码块、分隔线、引用、列表）。缺的语法当段落原样显示。
+ * 正文切成塊（夠用的那一套：frontmatter、標題、段落、程式碼塊、分隔線、引用、列表）。缺的語法當段落原樣顯示。
  *
- * - frontmatter：第一行是 `---`、后面某一行正好是 `---`，这一段（连同两条线）是一块。
- * - 连着的几行普通文字是一段（空行、标题、代码块、分隔线、引用、列表项都会断开它）；段首缩进的正文没有空行，
- *   整章就是一段——那时滚动对应只能在这一大块里按行数比例摆。
- * - 代码块从开头那条 ``` 到收尾那条（没收尾就到文末）。
- * - 引用一行一块；列表是连着的同一种列表项，每一项一行。
+ * - frontmatter：第一行是 `---`、後面某一行正好是 `---`，這一段（連同兩條線）是一塊。
+ * - 連著的幾行普通文字是一段（空行、標題、程式碼塊、分隔線、引用、列表項都會斷開它）；段首縮排的正文沒有空行，
+ *   整章就是一段——那時滾動對應只能在這一大塊裡按行數比例擺。
+ * - 程式碼塊從開頭那條 ``` 到收尾那條（沒收尾就到文末）。
+ * - 引用一行一塊；列表是連著的同一種列表項，每一項一行。
  */
 export function previewBlocks(source: string): PreviewBlock[] {
   const lines = source.split(/\r?\n/);
@@ -84,7 +84,7 @@ export function previewBlocks(source: string): PreviewBlock[] {
     if (heading) {
       flush();
       endList();
-      // h4 以下都当 h3 画：预览是给人快速扫一眼的，再细分层级没有意义。
+      // h4 以下都當 h3 畫：預覽是給人快速掃一眼的，再細分層級沒有意義。
       const level = Math.min(heading[1].length, 3) as 1 | 2 | 3;
       blocks.push({ kind: 'heading', level, start: i, end: i + 1, text: heading[2] });
       continue;
@@ -128,28 +128,28 @@ export function previewBlocks(source: string): PreviewBlock[] {
   return blocks;
 }
 
-// ---------------------------------------------------------------- 滚动对应
+// ---------------------------------------------------------------- 滾動對應
 
-/** 预览里一块（带 `data-line` 的那几样）量出来的位置：`top` 从预览内容的最顶上算，`height` 是它自己的高。 */
+/** 預覽裡一塊（帶 `data-line` 的那幾樣）量出來的位置：`top` 從預覽內容的最頂上算，`height` 是它自己的高。 */
 export interface BlockBox extends Span {
   top: number;
   height: number;
 }
 
-/** 夹进 `[lo, hi]`。 */
+/** 夾進 `[lo, hi]`。 */
 function clamp(x: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, x));
 }
 
-/** `a` 到 `b` 之间按比例取一点（`span` 为 0 时取 `a`）。 */
+/** `a` 到 `b` 之間按比例取一點（`span` 為 0 時取 `a`）。 */
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * clamp(t, 0, 1);
 }
 
 /**
- * 源文件里的位置（行，带小数）→ 预览里的纵向位置。落在某一块里按它占这一块几行的比例摆；落在两块之间的空行上，
- * 在上一块的底与下一块的顶之间按比例摆；在第一块之前从 0 摆到它的顶，最后一块之后就是它的底。`boxes` 按 `start` 排好、
- * 互不重叠（列表按项、不按整张列表）。
+ * 原始檔裡的位置（行，帶小數）→ 預覽裡的縱向位置。落在某一塊裡按它佔這一塊幾行的比例擺；落在兩塊之間的空行上，
+ * 在上一塊的底與下一塊的頂之間按比例擺；在第一塊之前從 0 擺到它的頂，最後一塊之後就是它的底。`boxes` 按 `start` 排好、
+ * 互不重疊（列表按項、不按整張列表）。
  */
 export function sourceToPreviewY(boxes: readonly BlockBox[], pos: number): number {
   if (boxes.length === 0) {
@@ -173,7 +173,7 @@ export function sourceToPreviewY(boxes: readonly BlockBox[], pos: number): numbe
   return last.top + last.height;
 }
 
-/** 预览里的纵向位置 → 源文件里的位置（行，带小数）。`sourceToPreviewY` 反过来。 */
+/** 預覽裡的縱向位置 → 原始檔裡的位置（行，帶小數）。`sourceToPreviewY` 反過來。 */
 export function previewYToSource(boxes: readonly BlockBox[], y: number): number {
   if (boxes.length === 0) {
     return 0;
@@ -197,8 +197,8 @@ export function previewYToSource(boxes: readonly BlockBox[], y: number): number 
 }
 
 /**
- * 编辑区：纵向位置 `y`（从第 0 行的顶算）落在第几行（带小数）。`topOf(i)` 是第 i 行的顶（`topOf(0)` 为 0，
- * `topOf(lineCount)` 是最后一行的底），按行单调不减。二分，只量 log₂(行数) 次——每量一次都要排一遍前面的文字。
+ * 編輯區：縱向位置 `y`（從第 0 行的頂算）落在第幾行（帶小數）。`topOf(i)` 是第 i 行的頂（`topOf(0)` 為 0，
+ * `topOf(lineCount)` 是最後一行的底），按行單調不減。二分，只量 log₂(行數) 次——每量一次都要排一遍前面的文字。
  */
 export function lineAtY(lineCount: number, topOf: (i: number) => number, y: number): number {
   if (lineCount <= 0) {
@@ -219,7 +219,7 @@ export function lineAtY(lineCount: number, topOf: (i: number) => number, y: numb
   return lo + (next > top ? clamp((y - top) / (next - top), 0, 1) : 0);
 }
 
-/** 编辑区：第几行（带小数）的纵向位置。`lineAtY` 反过来。 */
+/** 編輯區：第幾行（帶小數）的縱向位置。`lineAtY` 反過來。 */
 export function yOfLine(lineCount: number, topOf: (i: number) => number, pos: number): number {
   if (lineCount <= 0) {
     return 0;
@@ -229,7 +229,7 @@ export function yOfLine(lineCount: number, topOf: (i: number) => number, pos: nu
   return lerp(topOf(i), topOf(i + 1), p - i);
 }
 
-/** 每一行开头在文字里的下标（`\n` 切）。 */
+/** 每一行開頭在文字裡的下標（`\n` 切）。 */
 export function lineStarts(text: string): number[] {
   const starts = [0];
   for (let at = text.indexOf('\n'); at !== -1; at = text.indexOf('\n', at + 1)) {
@@ -238,7 +238,7 @@ export function lineStarts(text: string): number[] {
   return starts;
 }
 
-/** 下标落在第几行（从 0 数）。 */
+/** 下標落在第幾行（從 0 數）。 */
 export function lineOfOffset(starts: readonly number[], offset: number): number {
   let lo = 0;
   let hi = starts.length - 1;

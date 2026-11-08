@@ -1,4 +1,4 @@
-/** 建按钮的几个小工具。设置页、消息气泡、工程页都在用。 */
+/** 建按鈕的幾個小工具。設定頁、訊息氣泡、工程頁都在用。 */
 import { el } from '../dom';
 
 export function linkBtn(text: string, onClick: () => void): HTMLButtonElement {
@@ -19,7 +19,7 @@ export function secondaryBtn(text: string, onClick: () => void): HTMLButtonEleme
   return b;
 }
 
-/** 卡片头部用的小号按钮。 */
+/** 卡片頭部用的小號按鈕。 */
 export function smallBtn(text: string, onClick: () => void): HTMLButtonElement {
   const b = secondaryBtn(text, onClick);
   b.classList.add('small');

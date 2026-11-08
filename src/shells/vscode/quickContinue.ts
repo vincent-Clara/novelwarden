@@ -3,29 +3,29 @@ import { generate } from '../../core/generation/generate';
 import { NovelProject } from '../../core/model/project';
 import { buildBookFacts } from '../../core/views/pipeline';
 
-/** 供命令面板走的极简续写（不开 Webview），结果流式写入新文档。 */
+/** 供命令面板走的極簡續寫（不開 Webview），結果流式寫入新文件。 */
 export async function quickContinue(project: NovelProject): Promise<void> {
   const outline = await vscode.window.showInputBox({
-    title: 'Novel: 快速续写',
-    prompt: '输入接下来的剧情纲要（详细的写作请用续写面板）',
+    title: 'Novel: 快速續寫',
+    prompt: '輸入接下來的劇情綱要（詳細的寫作請用續寫面板）',
     ignoreFocusOut: true,
-    validateInput: (v) => (v.trim() ? undefined : '纲要不能为空'),
+    validateInput: (v) => (v.trim() ? undefined : '綱要不能為空'),
   });
   if (!outline) {
     return;
   }
 
-  // 写的是**下一可写章**：从第 1 章起连续有正文的最大章号 + 1，与主按钮同一个判据
-  // （第 20 条）。从前用「细纲号与章号里最大的 + 1」，排了十章细纲只写了三章时，
-  // 快速续写会跳到第 11 章去。
+  // 寫的是**下一可寫章**：從第 1 章起連續有正文的最大章號 + 1，與主按鈕同一個判據
+  // （第 20 條）。從前用「細綱號與章號裡最大的 + 1」，排了十章細綱只寫了三章時，
+  // 快速續寫會跳到第 11 章去。
   const no = (await buildBookFacts(project)).nextChapterNo;
   const plotRelPath = await project.plotPathOfNo(no);
   const doc = await vscode.workspace.openTextDocument({ language: 'markdown', content: '' });
   const editor = await vscode.window.showTextDocument(doc, { preview: false });
-  // 这条路不开面板，也就没有 controller 替它管并发——自带一个 abort 即可。
+  // 這條路不開面板，也就沒有 controller 替它管併發——自帶一個 abort 即可。
   const abort = new AbortController();
 
-  /** 整份换掉：续写丢弃过的那一轮、以及收尾时的去重，都要反映到文档里。 */
+  /** 整份換掉：續寫丟棄過的那一輪、以及收尾時的去重，都要反映到文件裡。 */
   const replaceAll = (text: string) =>
     editor.edit((b) => b.replace(new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), text));
 
@@ -37,12 +37,12 @@ export async function quickContinue(project: NovelProject): Promise<void> {
         project,
         {
           action: { stage: 'manuscript', capability: 'generate' },
-          // 那一章的细纲多半还不存在，target 指向它**应该**在的位置（跟上一章放在一起），
-          // 装配器按这个号定位前文。目标字数由生成层兜底（细纲 → 配置的每章字数）。
+          // 那一章的細綱多半還不存在，target 指向它**應該**在的位置（跟上一章放在一起），
+          // 裝配器按這個號定位前文。目標字數由生成層兜底（細綱 → 配置的每章字數）。
           target: { kind: 'manuscript', plotRelPath },
           targetNo: no,
           ask: outline,
-          // 这一章已经写了一半时从末尾接着写；还没有正文时生成层会按新写处理。
+          // 這一章已經寫了一半時從末尾接著寫；還沒有正文時生成層會按新寫處理。
           writeMode: 'continue',
         },
         {
@@ -55,7 +55,7 @@ export async function quickContinue(project: NovelProject): Promise<void> {
           onReset: (full) => void replaceAll(full),
           onProgress: (p) =>
             progress.report({
-              message: `${p.round > 0 ? `续写第 ${p.round} 轮 · ` : ''}${p.words}${p.target ? ` / ${p.target}` : ''} 字`,
+              message: `${p.round > 0 ? `續寫第 ${p.round} 輪 · ` : ''}${p.words}${p.target ? ` / ${p.target}` : ''} 字`,
             }),
           onDone: (full) => {
             void replaceAll(full);

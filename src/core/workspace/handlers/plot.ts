@@ -1,31 +1,32 @@
+import { traditionalLabel } from '../../model/labels';
 /**
- * `plot` handler：一章的细纲。
+ * `plot` handler：一章的細綱。
  *
- * 两件事：
+ * 兩件事：
  *
- * 1. **渲染**：`Artifact{kind:'plot'}` → `renderPlotFile`。七个小节换新；
- *    **标题、目标字数、done、writtenFrom、定稿记的 sourceHash 与 cast 沿用磁盘那份**——
- *    「重写细纲」改的是这一章怎么走，不该顺手把作者起的标题、定的字数、标的完成状态抹掉；
- *    `writtenFrom` 是正文那一侧记的账，细纲重写之后它对不上，正是「细纲在正文之后改过」的信号
- *    （定稿过的章照样只挂 ⟳，第 18 条）。**预检的永久放行（`preflightOk`）刻意不沿用**：
- *    重排过的出场是新的安排，要再问一次（五期补遗 §2）。
- * 2. **记账**：`upstreamHash` = 写下去的这一份里**梗概**的指纹（`plotSynopsisHash`；梗概就是情节大纲里这一章那一条，
- *    大纲是各章梗概的汇总）。梗概空着就不记。谁写都记——作者在内置编辑器里改一份细纲，等于把细纲与大纲那一条对齐了；
- *    在汇总的大纲里改梗概走的是网关的 `writeOutline`（外科式换掉那一节，不经这里），指纹不动，排过细纲的章于是挂 ⟳。
+ * 1. **渲染**：`Artifact{kind:'plot'}` → `renderPlotFile`。七個小節換新；
+ *    **標題、目標字數、done、writtenFrom、定稿記的 sourceHash 與 cast 沿用磁碟那份**——
+ *    「重寫細綱」改的是這一章怎麼走，不該順手把作者起的標題、定的字數、標的完成狀態抹掉；
+ *    `writtenFrom` 是正文那一側記的賬，細綱重寫之後它對不上，正是「細綱在正文之後改過」的訊號
+ *    （定稿過的章照樣只掛 ⟳，第 18 條）。**預檢的永久放行（`preflightOk`）刻意不沿用**：
+ *    重排過的出場是新的安排，要再問一次（五期補遺 §2）。
+ * 2. **記賬**：`upstreamHash` = 寫下去的這一份裡**梗概**的指紋（`plotSynopsisHash`；梗概就是情節大綱裡這一章那一條，
+ *    大綱是各章梗概的彙總）。梗概空著就不記。誰寫都記——作者在內建編輯器裡改一份細綱，等於把細綱與大綱那一條對齊了；
+ *    在彙總的大綱裡改梗概走的是閘道器的 `writeOutline`（外科式換掉那一節，不經這裡），指紋不動，排過細綱的章於是掛 ⟳。
  *
- * 复制出来的副本另有一条（`afterCopy`）：去掉定稿那一侧的指纹，`upstreamHash` 不重记——副本是一份还没写、没定稿的计划。
+ * 複製出來的副本另有一條（`afterCopy`）：去掉定稿那一側的指紋，`upstreamHash` 不重記——副本是一份還沒寫、沒定稿的計劃。
  *
- * 另有定稿那一次写入的渲染（{@link renderFinalizedPlot}）：它不走 `write`，由
- * `Workspace.finalizePlot` 调——反向更新的依据是正文；梗概照正文改了，记过的上游指纹跟着刷成新梗概的。
+ * 另有定稿那一次寫入的渲染（{@link renderFinalizedPlot}）：它不走 `write`，由
+ * `Workspace.finalizePlot` 調——反向更新的依據是正文；梗概照正文改了，記過的上游指紋跟著刷成新梗概的。
  *
- * ## 两条不能碰的取舍
+ * ## 兩條不能碰的取捨
  *
- * - **手写的产物永不标脏**（第 18a 条）：**没有 frontmatter 的细纲不补
- *   `upstreamHash`**。它为空说明这份细纲不是这条链生出来的，拿一个凭空的过期标记
- *   去催作者重做，他会学会无视所有标记。
- * - **`plotContentHash` 只哈希七个小节，不含 frontmatter**（第 18b 条）：
- *   `upstreamHash` / `writtenFrom` / `sourceHash` 自己就在 frontmatter 里，算进去会让「排一次细纲」
- *   立刻使这一章的正文过期。那个哈希在 `model/plotFile.ts` 里定义。
+ * - **手寫的產物永不標髒**（第 18a 條）：**沒有 frontmatter 的細綱不補
+ *   `upstreamHash`**。它為空說明這份細綱不是這條鏈生出來的，拿一個憑空的過期標記
+ *   去催作者重做，他會學會無視所有標記。
+ * - **`plotContentHash` 只雜湊七個小節，不含 frontmatter**（第 18b 條）：
+ *   `upstreamHash` / `writtenFrom` / `sourceHash` 自己就在 frontmatter 裡，算進去會讓「排一次細綱」
+ *   立刻使這一章的正文過期。那個雜湊在 `model/plotFile.ts` 裡定義。
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -48,13 +49,13 @@ import { Handler, HandlerCtx } from './types';
 
 export const plotHandler: Handler = {
   /**
-   * 七个小节换新，其余字段按上面的规矩合并。
+   * 七個小節換新，其餘欄位按上面的規矩合併。
    *
-   * 细纲文件不存在时（拆细纲那一步新建）就用产物自己带的标题与目标字数。
+   * 細綱檔案不存在時（拆細綱那一步新建）就用產物自己帶的標題與目標字數。
    */
   async render(ctx: HandlerCtx, artifact) {
     if (artifact.kind !== 'plot') {
-      throw new Error(`「${ctx.rel}」不接 ${artifact.kind} 产物`);
+      throw new Error(`「${ctx.rel}」不接 ${traditionalLabel(artifact.kind)} 產物`);
     }
     const current = await ctx.project.readPlot(ctx.rel);
     return renderPlotFile({
@@ -67,34 +68,34 @@ export const plotHandler: Handler = {
       cast: current?.cast,
       done: current?.done ?? false,
       sections: artifact.sections,
-      // 「设定」一节不在七节里：产物带了就换新（重排的计划），没带就沿用磁盘那份。
+      // 「設定」一節不在七節裡：產物帶了就換新（重排的計劃），沒帶就沿用磁碟那份。
       lore: artifact.lore ?? current?.lore,
     });
   },
 
   /**
-   * 记账：把写下去的这一份梗概的指纹落进 frontmatter。
+   * 記賬：把寫下去的這一份梗概的指紋落進 frontmatter。
    *
-   * `rewriteFrontmatter` 只改 `---` 之间那一段，**正文一个字节不动**——
-   * 作者可能加过自定义小节，整份重渲染会把它们悄悄抹平。
-   * 没有 frontmatter 时返回 undefined，那正是「手写的产物」，不补。
+   * `rewriteFrontmatter` 只改 `---` 之間那一段，**正文一個位元組不動**——
+   * 作者可能加過自定義小節，整份重渲染會把它們悄悄抹平。
+   * 沒有 frontmatter 時返回 undefined，那正是「手寫的產物」，不補。
    */
   async after(ctx: HandlerCtx, text: string) {
-    return recordUpstream(ctx, text, plotSynopsisHash(parsePlotFile(text, ctx.rel).sections.梗概), '梗概指纹');
+    return recordUpstream(ctx, text, plotSynopsisHash(parsePlotFile(text, ctx.rel).sections.梗概), '梗概指紋');
   },
 
   /**
-   * 复制出来的一份细纲（文件页的「复制 → 粘贴」，或整个分卷目录复制一份）：**去掉定稿那一侧的账**，其余一个字不动。
+   * 複製出來的一份細綱（檔案頁的「複製 → 貼上」，或整個分卷目錄複製一份）：**去掉定稿那一側的賬**，其餘一個字不動。
    *
-   * - `writtenFrom` / `sourceHash` / `cast` 删掉：它们说的是「有一份正文照这份写成过、定稿时正文是这个指纹、实际出场
-   *   这几个人」——那是原件那一章的事。副本落在别的路径上，镜像的是另一章（或者还没有正文），带着它们会被当成
-   *   定稿过的细纲：出场统计、设定名录多数一章（第 14 条），镜像位置上要是恰好有正文，还会被说成「定稿之后正文改过」
-   *   或「细纲在正文之后改过」（第 18 条）。副本是一份还没写、没定稿的计划。
-   * - `upstreamHash` **原样留着，不重算**：内容一字没变、章号没变（文件名照抄）——原件挂着 ⟳ 的副本照样挂着，
-   *   不被复制顺手刷成「新鲜」（`after` 会按此刻的梗概重记，所以复制不走它）。**章号变了**（网关直接复制成另一个文件名）
-   *   就删掉：那是另一章了。
-   * - 作者自己定的（标题、目标字数、`status: done`、预检与冲突检查的放行）与七节、「设定」一节原样留着。
-   * - 没有 frontmatter 的手写细纲不补（第 18a 条）。
+   * - `writtenFrom` / `sourceHash` / `cast` 刪掉：它們說的是「有一份正文照這份寫成過、定稿時正文是這個指紋、實際出場
+   *   這幾個人」——那是原件那一章的事。副本落在別的路徑上，映象的是另一章（或者還沒有正文），帶著它們會被當成
+   *   定稿過的細綱：出場統計、設定名錄多數一章（第 14 條），映象位置上要是恰好有正文，還會被說成「定稿之後正文改過」
+   *   或「細綱在正文之後改過」（第 18 條）。副本是一份還沒寫、沒定稿的計劃。
+   * - `upstreamHash` **原樣留著，不重算**：內容一字沒變、章號沒變（檔名照抄）——原件掛著 ⟳ 的副本照樣掛著，
+   *   不被複制順手刷成「新鮮」（`after` 會按此刻的梗概重記，所以複製不走它）。**章號變了**（閘道器直接複製成另一個檔名）
+   *   就刪掉：那是另一章了。
+   * - 作者自己定的（標題、目標字數、`status: done`、預檢與衝突檢查的放行）與七節、「設定」一節原樣留著。
+   * - 沒有 frontmatter 的手寫細綱不補（第 18a 條）。
    */
   async afterCopy(ctx: HandlerCtx, from: string) {
     const abs = ctx.project.pathOf(ctx.rel);
@@ -108,7 +109,7 @@ export const plotHandler: Handler = {
     if (!sameNo) {
       patch.upstreamHash = undefined;
     }
-    // 一个要去掉的键都没有（手写的、没写过的计划）就一个字节不碰：`rewriteFrontmatter` 会把整段 frontmatter 重新排一遍。
+    // 一個要去掉的鍵都沒有（手寫的、沒寫過的計劃）就一個位元組不碰：`rewriteFrontmatter` 會把整段 frontmatter 重新排一遍。
     const keys = Object.keys(parseMarkdown(raw).frontmatter);
     const dropped = Object.keys(patch).filter((key) => keys.includes(key));
     if (dropped.length === 0) {
@@ -120,23 +121,23 @@ export const plotHandler: Handler = {
     }
     await fs.writeFile(abs, next, 'utf8');
     ctx.project.invalidate();
-    return [`细纲副本 ${ctx.rel} 去掉了 ${dropped.join(' / ')}（副本没写过、没同步过）`];
+    return [`細綱副本 ${ctx.rel} 去掉了 ${dropped.join(' / ')}（副本沒寫過、沒同步過）`];
   },
 };
 
 /**
- * 定稿反向更新之后的细纲全文。
+ * 定稿反向更新之後的細綱全文。
  *
- * - **七节整体换成更新后的那一版**（作者自加的小节不留——旧版整份进了回收站）。
- * - frontmatter 保留 `no` / `title` / `targetWords` / `status` / `preflightOk` / `factCheckOk`：那些是作者定的，定稿不该动。
- * - `upstreamHash` 记过的刷成**新梗概**的指纹：梗概照正文改了（它也是大纲里这一章那一条），这一份与自己的梗概是对齐的，
- *   不该一定稿就挂 ⟳；没记过的（手写的、空壳）照旧不记（第 18a 条）。
- * - 写入 `sourceHash`（正文的 contentHash）与 `cast`（实际出场），并把 **`writtenFrom` 刷成更新之后的
- *   内容指纹**：不刷的话，定稿刚改完细纲，正文立刻挂 ⟳（「细纲在正文之后改过」）；刷了之后，作者
- *   定稿后再改细纲，正文才挂 ⟳，提醒它可能没跟上（作者定案）。
+ * - **七節整體換成更新後的那一版**（作者自加的小節不留——舊版整份進了回收站）。
+ * - frontmatter 保留 `no` / `title` / `targetWords` / `status` / `preflightOk` / `factCheckOk`：那些是作者定的，定稿不該動。
+ * - `upstreamHash` 記過的刷成**新梗概**的指紋：梗概照正文改了（它也是大綱裡這一章那一條），這一份與自己的梗概是對齊的，
+ *   不該一定稿就掛 ⟳；沒記過的（手寫的、空殼）照舊不記（第 18a 條）。
+ * - 寫入 `sourceHash`（正文的 contentHash）與 `cast`（實際出場），並把 **`writtenFrom` 刷成更新之後的
+ *   內容指紋**：不刷的話，定稿剛改完細綱，正文立刻掛 ⟳（「細綱在正文之後改過」）；刷了之後，作者
+ *   定稿後再改細綱，正文才掛 ⟳，提醒它可能沒跟上（作者定案）。
  *
- * 还没有细纲的章（拆书导入、作者手写的正文）落一份新的：标题取章节的（回落标题不算），其余为空。
- * 指纹按**读回来的样子**算（占位文字读回来是空串），与流水线判脏时同一个口径。
+ * 還沒有細綱的章（拆書匯入、作者手寫的正文）落一份新的：標題取章節的（回落標題不算），其餘為空。
+ * 指紋按**讀回來的樣子**算（佔位文字讀回來是空串），與流水線判髒時同一個口徑。
  */
 export function renderFinalizedPlot(input: {
   rel: string;
@@ -160,7 +161,7 @@ export function renderFinalizedPlot(input: {
     sourceHash: input.sourceHash,
     cast: input.cast,
     sections: input.sections,
-    // 「设定」一节：定稿记下的实际出现；没给（老调用）就沿用磁盘那份。
+    // 「設定」一節：定稿記下的實際出現；沒給（老呼叫）就沿用磁碟那份。
     lore: input.lore ?? current?.lore,
   };
   const writtenFrom = plotContentHash(parsePlotFile(renderPlotFile(plot), input.rel));
@@ -168,11 +169,11 @@ export function renderFinalizedPlot(input: {
 }
 
 /**
- * 把上游指纹记进这份产物的 frontmatter。返回 `side` 说明（没记就是空数组）。
+ * 把上游指紋記進這份產物的 frontmatter。返回 `side` 說明（沒記就是空陣列）。
  *
- * **两种情况不记**：
- * - 文件没有 frontmatter（作者手写的）——补一个凭空的指纹等于凭空标脏
- * - 算出来的指纹是空串（梗概还空着）——同上
+ * **兩種情況不記**：
+ * - 檔案沒有 frontmatter（作者手寫的）——補一個憑空的指紋等於憑空標髒
+ * - 算出來的指紋是空串（梗概還空著）——同上
  */
 async function recordUpstream(
   ctx: HandlerCtx,
@@ -185,7 +186,7 @@ async function recordUpstream(
   }
   const next = rewriteFrontmatter(text, { upstreamHash: upstream });
   if (next === undefined) {
-    // 手写的产物：没有 frontmatter，就没有这条链。不给它补一个。
+    // 手寫的產物：沒有 frontmatter，就沒有這條鏈。不給它補一個。
     return [];
   }
   if (next === text) {
@@ -193,10 +194,10 @@ async function recordUpstream(
   }
   await fs.writeFile(ctx.project.pathOf(ctx.rel), next, 'utf8');
   ctx.project.invalidate();
-  return [`记下${label} ${upstream}`];
+  return [`記下${label} ${upstream}`];
 }
 
-/** 磁盘上那份细纲的解析结果；没有就 undefined。零信任地读，绝不抛。 */
+/** 磁碟上那份細綱的解析結果；沒有就 undefined。零信任地讀，絕不拋。 */
 export async function readPlotAt(project: NovelProject, rel: string) {
   try {
     const raw = await readTextIfExists(project.pathOf(rel));

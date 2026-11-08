@@ -5,8 +5,8 @@ import * as path from 'node:path';
 import { HIDDEN_DIR_NAMES, MAX_DIR_ENTRIES } from '../../core/files/fileTree';
 
 /**
- * 本机一层目录列举。给空窗口的「打开文件夹」用，**不是**工程内的 listDir。
- * 只返回名字与绝对路径，不读文件内容。
+ * 本機一層目錄列舉。給空視窗的「開啟資料夾」用，**不是**工程內的 listDir。
+ * 只返回名字與絕對路徑，不讀檔案內容。
  */
 
 export interface HostDirEntry {
@@ -48,7 +48,7 @@ function winDrives(): HostDirListing {
       fsSync.statSync(root);
       entries.push({ name: `${letter}:`, kind: 'dir', absPath: root });
     } catch {
-      // 盘符不存在就跳过
+      // 磁碟機代號不存在就跳過
     }
   }
   return { path: '', entries, truncated: 0, roots: true };
@@ -58,7 +58,7 @@ function bad(pathShown: string, error: string, extra?: Partial<HostDirListing>):
   return { path: pathShown, entries: [], truncated: 0, error, ...extra };
 }
 
-/** `path === ''` 在 Unix 列举 `/`，在 Windows 列举盘符。`~` 是家目录。 */
+/** `path === ''` 在 Unix 列舉 `/`，在 Windows 列舉磁碟機代號。`~` 是家目錄。 */
 export async function listHostDir(absPath: string): Promise<HostDirListing> {
   if (absPath === '~') {
     return listHostDir(os.homedir());
@@ -77,7 +77,7 @@ export async function listHostDir(absPath: string): Promise<HostDirListing> {
     return bad(shown, describe(err), { parent: parentOf(target) });
   }
   if (!stat.isDirectory()) {
-    return bad(shown, '不是目录', { parent: parentOf(target) });
+    return bad(shown, '不是目錄', { parent: parentOf(target) });
   }
 
   let dirents: import('node:fs').Dirent[];
@@ -118,7 +118,7 @@ export async function createHostDir(parent: string, name: string): Promise<HostD
   const trimmed = (name ?? '').trim();
   if (!trimmed || BAD_NAME.test(trimmed)) {
     const listing = await listHostDir(parent);
-    listing.error = '文件夹名不合法';
+    listing.error = '資料夾名不合法';
     return listing;
   }
   const dest = path.join(path.resolve(parent), trimmed);
@@ -127,7 +127,7 @@ export async function createHostDir(parent: string, name: string): Promise<HostD
   } catch (err) {
     const listing = await listHostDir(parent);
     const code = (err as NodeJS.ErrnoException).code;
-    listing.error = code === 'EEXIST' ? '已存在同名项' : describe(err);
+    listing.error = code === 'EEXIST' ? '已存在同名項' : describe(err);
     return listing;
   }
   return listHostDir(parent);
@@ -137,13 +137,13 @@ function describe(err: unknown): string {
   if (err instanceof Error) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === 'ENOENT') {
-      return '目录不存在';
+      return '目錄不存在';
     }
     if (code === 'EACCES' || code === 'EPERM') {
-      return '没有读取这个目录的权限';
+      return '沒有讀取這個目錄的許可權';
     }
     if (code === 'ENOTDIR') {
-      return '不是目录';
+      return '不是目錄';
     }
     return err.message;
   }

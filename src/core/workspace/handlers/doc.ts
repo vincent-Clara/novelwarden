@@ -1,20 +1,20 @@
 /**
- * `doc` handler：纯文本 + frontmatter，**没有上游指纹**。
+ * `doc` handler：純文字 + frontmatter，**沒有上游指紋**。
  *
- * 接 `style` / `globalSummary` / `threads` / `character` / `lore` 五种。
+ * 接 `style` / `globalSummary` / `threads` / `character` / `lore` 五種。
  *
- * 它们的共同点是**在指纹链之外**：
+ * 它們的共同點是**在指紋鏈之外**：
  *
- * - `style.md` / 角色卡 / 设定条目根本不在生产链上——它们是横切的记忆与
- *   约束，被装配进 prompt，但不由某一层产物「生出来」。
- * - `summaries/global.md` 的上游是全部定稿过的细纲，那是一次显式的重建动作
- *   （features/summarize.ts 的 `through` 水位线），不是 hash 传播。
- * - 叙事线（`threads/<线名>.md`，一条线一个文件）由排线与定稿写（机器只追加、当前进度有指纹守着，
- *   见 model/threadFile.ts），是跨章的计划与记录，同样不在链上。
+ * - `style.md` / 角色卡 / 設定條目根本不在生產鏈上——它們是橫切的記憶與
+ *   約束，被裝配進 prompt，但不由某一層產物「生出來」。
+ * - `summaries/global.md` 的上游是全部定稿過的細綱，那是一次顯式的重建動作
+ *   （features/summarize.ts 的 `through` 水位線），不是 hash 傳播。
+ * - 敘事線（`threads/<線名>.md`，一條線一個檔案）由排線與定稿寫（機器只追加、當前進度有指紋守著，
+ *   見 model/threadFile.ts），是跨章的計劃與記錄，同樣不在鏈上。
  *
- * 它们都没有对应的结构化产物，只走 `{text}` 那条路，所以这里什么都不用做。情节大纲从前也在这里（把 `outlineDoc`
- * 渲染成 `outline.md`）；现在它没有文件，是各章细纲梗概的汇总，读写由网关自己接住（`Workspace.writeOutline`），
- * 不经任何 handler。
+ * 它們都沒有對應的結構化產物，只走 `{text}` 那條路，所以這裡什麼都不用做。情節大綱從前也在這裡（把 `outlineDoc`
+ * 渲染成 `outline.md`）；現在它沒有檔案，是各章細綱梗概的彙總，讀寫由閘道器自己接住（`Workspace.writeOutline`），
+ * 不經任何 handler。
  */
 import { Handler } from './types';
 

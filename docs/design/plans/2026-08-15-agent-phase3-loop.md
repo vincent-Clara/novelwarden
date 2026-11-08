@@ -1,42 +1,42 @@
-# 三期：agent 循环 + 只读四件套 Implementation Plan
+# 三期：agent 迴圈 + 只讀四件套 Implementation Plan
 
-> **已合入，本文是当时的记录。** 分层此后调过一次：工具与工具契约从
-> `core/agent/{tools/,registry.ts}` 独立成 [`core/tools/`](../../../src/core/tools/README.md)，
-> 下面提到的这些路径已经不存在。当下的真相以模块 README 为准。
+> **已合入，本文是當時的記錄。** 分層此後調過一次：工具與工具契約從
+> `core/agent/{tools/,registry.ts}` 獨立成 [`core/tools/`](../../../src/core/tools/README.md)，
+> 下面提到的這些路徑已經不存在。當下的真相以模組 README 為準。
 
-> **接手须知：** 这份计划面向新的 agent，假设你**没有读过**前面的对话。开工前必读：
-> 1. 根目录 [AGENTS.md](../../../AGENTS.md) —— 尤其第 **2、4、11、12、19、20** 条
-> 2. 设计依据 [docs/design/specs/2026-08-15-agent-architecture-design.md](../specs/2026-08-15-agent-architecture-design.md) 的 **L3 一节**
-> 3. 前置：[零期](2026-08-15-agent-phase0-provider-events.md)、[一期](2026-08-15-agent-phase1-workspace.md)、[二期](2026-08-15-agent-phase2-generation.md) 必须已经合入
+> **接手須知：** 這份計劃面向新的 agent，假設你**沒有讀過**前面的對話。開工前必讀：
+> 1. 根目錄 [AGENTS.md](../../../AGENTS.md) —— 尤其第 **2、4、11、12、19、20** 條
+> 2. 設計依據 [docs/design/specs/2026-08-15-agent-architecture-design.md](../specs/2026-08-15-agent-architecture-design.md) 的 **L3 一節**
+> 3. 前置：[零期](2026-08-15-agent-phase0-provider-events.md)、[一期](2026-08-15-agent-phase1-workspace.md)、[二期](2026-08-15-agent-phase2-generation.md) 必須已經合入
 >
-> 每个 Task 按 `- [ ]` 逐步执行，做完立刻 commit。
+> 每個 Task 按 `- [ ]` 逐步執行，做完立刻 commit。
 
-**Goal:** 让 agent 跑起来——但**只给只读工具与生成工具**。这一期结束时 agent 能查、能跨章对账、能批评、能出草稿，**但一个字都写不进磁盘**（落盘仍走现有的采纳卡片）。
+**Goal:** 讓 agent 跑起來——但**只給只讀工具與生成工具**。這一期結束時 agent 能查、能跨章對賬、能批評、能出草稿，**但一個字都寫不進磁碟**（落盤仍走現有的採納卡片）。
 
-**Architecture:** 循环本身很短（约 300 行），因为工具体全是前三期成果的薄包装。真正要小心的是三件事：**状态注入**（让 agent 与状态机说同一套话）、**上下文压缩**（agent 自己的历史会涨）、**预算闸门**（第 4 条）。
+**Architecture:** 迴圈本身很短（約 300 行），因為工具體全是前三期成果的薄包裝。真正要小心的是三件事：**狀態注入**（讓 agent 與狀態機說同一套話）、**上下文壓縮**（agent 自己的歷史會漲）、**預算閘門**（第 4 條）。
 
-**Tech Stack:** TypeScript（`src/core/agent/`）+ `node:test`。不新增依赖。
+**Tech Stack:** TypeScript（`src/core/agent/`）+ `node:test`。不新增依賴。
 
 ## Global Constraints
 
-- **这一期 agent 不写盘。** `write` / `edit` / `run` 三个工具**不注册**，四期才加。
-- **agent 不决定「下一步」**：每回合注入 `deriveNextStep` 的结论，agent 拿着它去执行（第 20 条）。
-- **生成产物绝不回灌 agent 上下文**：`generate` 只回 `{draftId, kind, summary, words}`。
-- **读工具的返回值有硬上限，超了必须说明截断了多少**（第 2 条）。
-- **日志不记 prompt / 正文全文，不出现 API Key**（第 11 条）。工具调用只记工具名与参数的**键名**，不记参数值——值里可能有正文片段。
-- **正文层的 `generate` 严格用对话页选定的模型**，不走池不 fallback（第 12 条）。
-- 每个 Task 结束立刻 commit；前缀 `feat(agent)` / `test`；中文正文。
+- **這一期 agent 不寫盤。** `write` / `edit` / `run` 三個工具**不註冊**，四期才加。
+- **agent 不決定「下一步」**：每回合注入 `deriveNextStep` 的結論，agent 拿著它去執行（第 20 條）。
+- **生成產物絕不回灌 agent 上下文**：`generate` 只回 `{draftId, kind, summary, words}`。
+- **讀工具的返回值有硬上限，超了必須說明截斷了多少**（第 2 條）。
+- **日誌不記 prompt / 正文全文，不出現 API Key**（第 11 條）。工具呼叫只記工具名與引數的**鍵名**，不記引數值——值裡可能有正文片段。
+- **正文層的 `generate` 嚴格用對話頁選定的模型**，不走池不 fallback（第 12 條）。
+- 每個 Task 結束立刻 commit；字首 `feat(agent)` / `test`；中文正文。
 
 ---
 
-## 目标态文件结构
+## 目標態檔案結構
 
 ```
 src/core/agent/
-├── loop.ts        对话循环
-├── registry.ts    工具注册表 → ToolSpec[]
-├── context.ts     ★ 状态注入 + 工具结果压缩
-├── budget.ts      ★ 步数 / 调用次数 / token 上限 + 无进展检测
+├── loop.ts        對話迴圈
+├── registry.ts    工具登錄檔 → ToolSpec[]
+├── context.ts     ★ 狀態注入 + 工具結果壓縮
+├── budget.ts      ★ 步數 / 呼叫次數 / token 上限 + 無進展檢測
 ├── tools/
 │   ├── index.ts
 │   ├── list.ts
@@ -46,20 +46,20 @@ src/core/agent/
 └── README.md
 ```
 
-## 提交节奏（6 个 commit）
+## 提交節奏（6 個 commit）
 
-| # | 前缀 | 主题 |
+| # | 字首 | 主題 |
 |---|---|---|
-| 1 | `feat` | 工具注册表与 JSON Schema |
-| 2 | `feat` | 只读三件套（list / read / search） |
+| 1 | `feat` | 工具登錄檔與 JSON Schema |
+| 2 | `feat` | 只讀三件套（list / read / search） |
 | 3 | `feat` | `generate` 工具 |
-| 4 | `feat` | 状态注入与上下文压缩 |
-| 5 | `feat` | 预算闸门与无进展检测 |
-| 6 | `feat` | agent 循环 + 协议 + 前端工具流 |
+| 4 | `feat` | 狀態注入與上下文壓縮 |
+| 5 | `feat` | 預算閘門與無進展檢測 |
+| 6 | `feat` | agent 迴圈 + 協議 + 前端工具流 |
 
 ---
 
-### Task 1: 工具注册表与 JSON Schema
+### Task 1: 工具登錄檔與 JSON Schema
 
 **Files:**
 - Create: `src/core/agent/registry.ts`
@@ -74,9 +74,9 @@ export interface ToolContext {
   workspace: Workspace;
   drafts: DraftStore;
   signal: AbortSignal;
-  /** 生成类工具用它记账。 */
+  /** 生成類工具用它記賬。 */
   budget: Budget;
-  /** 工具想说点什么给用户看（进气泡，不进 agent 上下文）。 */
+  /** 工具想說點什麼給使用者看（進氣泡，不進 agent 上下文）。 */
   report(message: string): void;
 }
 
@@ -84,96 +84,96 @@ export interface ToolDef {
   name: string;
   description: string;
   parameters: Record<string, unknown>;   // JSON Schema
-  /** 会花钱。预算闸门与策略据此分类。 */
+  /** 會花錢。預算閘門與策略據此分類。 */
   costly?: boolean;
-  /** 会写盘。三期一个都没有。 */
+  /** 會寫盤。三期一個都沒有。 */
   mutating?: boolean;
   run(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult>;
 }
 
 export interface ToolResult {
-  /** 回给模型看的文本。**必须简短**——它会留在 agent 上下文里。 */
+  /** 回給模型看的文字。**必須簡短**——它會留在 agent 上下文裡。 */
   text: string;
-  /** 给界面画的结构化摘要，不进 agent 上下文。 */
+  /** 給介面畫的結構化摘要，不進 agent 上下文。 */
   display?: { title: string; detail?: string };
-  /** 出错了。模型看得到，据此重试或换路。 */
+  /** 出錯了。模型看得到，據此重試或換路。 */
   error?: string;
 }
 
 export function toolSpecs(defs: ToolDef[]): ToolSpec[];
 ```
 
-**工具描述怎么写**（这是本 Task 真正的活）：
+**工具描述怎麼寫**（這是本 Task 真正的活）：
 
-模型只靠 `description` 与 `parameters` 决定怎么用。三条原则：
+模型只靠 `description` 與 `parameters` 決定怎麼用。三條原則：
 
-1. **说清坐标系**：「path 是工程内相对路径，正斜杠。细纲在 `.novelforge/plots/`，场景在 `.novelforge/scenes/<细纲名>/`，中转站正文在 `.novelforge/manuscripts/`，已发布章节在 `chapters/`。」
-2. **说清限制**：「一次最多返回 400 行，超出会截断并告诉你截了多少。」
-3. **不写领域知识**：不要在工具描述里写「剧情不写画面天气台词」——那在 `prompts.ts` 里，由 `generate` 内部那次调用自己带着。工具描述里写一遍只会浪费 token 且两处会跑偏。
+1. **說清座標系**：「path 是工程內相對路徑，正斜槓。細綱在 `.novelforge/plots/`，場景在 `.novelforge/scenes/<细纲名>/`，中轉站正文在 `.novelforge/manuscripts/`，已釋出章節在 `chapters/`。」
+2. **說清限制**：「一次最多返回 400 行，超出會截斷並告訴你截了多少。」
+3. **不寫領域知識**：不要在工具描述裡寫「劇情不寫畫面天氣臺詞」——那在 `prompts.ts` 裡，由 `generate` 內部那次呼叫自己帶著。工具描述裡寫一遍只會浪費 token 且兩處會跑偏。
 
-**参数 schema 尽量扁平**：`{path, offset, limit}` 好过 `{target: {kind, chapterNo, sceneNo}}`。嵌套对象是模型最容易填错的地方。
+**引數 schema 儘量扁平**：`{path, offset, limit}` 好過 `{target: {kind, chapterNo, sceneNo}}`。巢狀物件是模型最容易填錯的地方。
 
-- [ ] **Step 1: 写失败测试**（`toolSpecs` 产出的 schema 合法、名字不重、必填字段标对）
+- [ ] **Step 1: 寫失敗測試**（`toolSpecs` 產出的 schema 合法、名字不重、必填欄位標對）
 - [ ] **Step 2–5: 同上**
 
 ---
 
-### Task 2: 只读三件套
+### Task 2: 只讀三件套
 
 **Files:**
 - Create: `src/core/agent/tools/{list,read,search}.ts`
 - Create: `tests/integration/agent/readTools.test.js`
 
-三个都是 `Workspace` 的薄包装（一期已经实现），**每个不超过 50 行**。这一期的活是把返回值**压成模型读得动的形状**。
+三個都是 `Workspace` 的薄包裝（一期已經實現），**每個不超過 50 行**。這一期的活是把返回值**壓成模型讀得動的形狀**。
 
 #### `list`
 
 ```
-参数：{ path?: string }
-返回（文本）：
-  .novelforge/plots/  （42 项）
+引數：{ path?: string }
+返回（文字）：
+  .novelforge/plots/  （42 項）
   001-楔子.md          620 字
   002-入宗.md          710 字
   …
-  （还有 32 项未列出，用 path 参数进子目录看）
+  （還有 32 項未列出，用 path 引數進子目錄看）
 ```
 
-**上限 60 项**，超了说明还有多少。
+**上限 60 項**，超了說明還有多少。
 
 #### `read`
 
 ```
-参数：{ path: string, offset?: number, limit?: number }
-返回（文本）：文件内容，带行号
-  末尾若截断：（第 401–1203 行未读，共 1203 行。用 offset 继续读）
+引數：{ path: string, offset?: number, limit?: number }
+返回（文字）：檔案內容，帶行號
+  末尾若截斷：（第 401–1203 行未讀，共 1203 行。用 offset 繼續讀）
 ```
 
-**上限 400 行 / 20000 字符**，取先到的。
+**上限 400 行 / 20000 字元**，取先到的。
 
 #### `search`
 
 ```
-参数：{ pattern: string, path?: string, kinds?: string[], regex?: boolean }
-返回（文本）：
-  chapters/009-北境.md:142  「我从没去过北境。」他说。
-  chapters/031-旧事.md:88   北境的雪他见过三回。
-  （命中 2 处，扫了 99 个文件）
-  ⚠ 因超上限丢弃 0 条
+引數：{ pattern: string, path?: string, kinds?: string[], regex?: boolean }
+返回（文字）：
+  chapters/009-北境.md:142  「我從沒去過北境。」他說。
+  chapters/031-旧事.md:88   北境的雪他見過三回。
+  （命中 2 處，掃了 99 個檔案）
+  ⚠ 因超上限丟棄 0 條
 ```
 
-按章号升序（一期的 `search.ts` 已经这么排了）。**`dropped > 0` 必须写在返回文本里**——第 2 条。
+按章號升序（一期的 `search.ts` 已經這麼排了）。**`dropped > 0` 必須寫在返回文字裡**——第 2 條。
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: 寫失敗測試**
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| `list` 超 60 项 | 返回文本里有「还有 N 项未列出」 |
-| `read` 超行数上限 | 有「第 X–Y 行未读」 |
-| `read` 越界路径 | `error` 字段有值，**不抛** |
-| `read` 不存在的文件 | `error` 字段说清楚，模型能据此换路 |
-| `search` 有丢弃 | 返回文本里有 ⚠ |
-| `search` 跨章命中 | 按章号升序 |
-| 三个工具都不写盘 | 跑完磁盘 mtime 不变 |
+| `list` 超 60 項 | 返回文字裡有「還有 N 項未列出」 |
+| `read` 超行數上限 | 有「第 X–Y 行未讀」 |
+| `read` 越界路徑 | `error` 欄位有值，**不拋** |
+| `read` 不存在的檔案 | `error` 欄位說清楚，模型能據此換路 |
+| `search` 有丟棄 | 返回文字裡有 ⚠ |
+| `search` 跨章命中 | 按章號升序 |
+| 三個工具都不寫盤 | 跑完磁碟 mtime 不變 |
 
 - [ ] **Step 2–5: 同上**
 
@@ -185,86 +185,86 @@ export function toolSpecs(defs: ToolDef[]): ToolSpec[];
 - Create: `src/core/agent/tools/generate.ts`
 - Create: `tests/integration/agent/generateTool.test.js`
 
-**这是「agent 只做上层调度，生成走工具」的落点。**
+**這是「agent 只做上層排程，生成走工具」的落點。**
 
 ```
-参数：{
-  target: string,        // 路径。决定层与目标
+引數：{
+  target: string,        // 路徑。決定層與目標
   capability: string,    // discuss|expand|critique|check|split|generate|settle|rewrite
-  ask?: string,          // 补充要求，可空
+  ask?: string,          // 補充要求，可空
   targetWords?: number
 }
-返回（文本）：
-  已生成：剧情 · 4/4 节，620 字
+返回（文字）：
+  已生成：劇情 · 4/4 節，620 字
   draftId: d-3f2a
-  落点：.novelforge/plots/012-入宗.md（已有内容，采纳时会先请作者审阅）
+  落點：.novelforge/plots/012-入宗.md（已有內容，採納時會先請作者審閱）
 ```
 
-**内部流程**（全是二期成果的调用）：
+**內部流程**（全是二期成果的呼叫）：
 
 ```ts
 const { stage, target: t } = kindOfPath(project, args.target);
 const action = { stage, capability };
-if (!isValidAction(action)) return { error: `${stage} 层不支持 ${capability}` };
+if (!isValidAction(action)) return { error: `${stage} 層不支援 ${capability}` };
 const { draft } = await generate(project, { action, target: t, ask, targetWords, history: [] }, handlers, { signal, provider });
 ctx.drafts.put(draft);
 return { text: `已生成：${draft.summary}…`, display: {…} };
 ```
 
-**五条必须做对的事：**
+**五條必須做對的事：**
 
-1. **产物不回灌**。返回文本里只有形状与 draftId，**没有正文**。三千字正文塞回循环，agent 每走一步重烧一遍。
-2. **正文层用对话页选定的模型**，不传 `provider`（走缺省）。非正文层可以走分档池（`plotOutline` / `sceneBreakdown`）——但**这一期先全部走缺省**，四期再接池。
-3. **`history` 传空数组**。agent 的对话历史与创作会话的历史是两回事，混进去会让装配器把 agent 的工具调用当成作者的讨论。**唯一的例外是 `settle`**——它要沉淀的就是一段讨论；这一期**不支持 `settle`**，返回 `error` 说明「落定剧情请在对话页手动执行」。
-4. **流式内容照旧推给前端**（`onDelta` → `delta` 消息），作者看得见 agent 在写什么。
-5. **`costly: true`**，每次调用记进 budget。
+1. **產物不回灌**。返回文字裡只有形狀與 draftId，**沒有正文**。三千字正文塞回迴圈，agent 每走一步重燒一遍。
+2. **正文層用對話頁選定的模型**，不傳 `provider`（走預設）。非正文層可以走分檔池（`plotOutline` / `sceneBreakdown`）——但**這一期先全部走預設**，四期再接池。
+3. **`history` 傳空陣列**。agent 的對話歷史與創作會話的歷史是兩回事，混進去會讓裝配器把 agent 的工具呼叫當成作者的討論。**唯一的例外是 `settle`**——它要沉澱的就是一段討論；這一期**不支援 `settle`**，返回 `error` 說明「落定劇情請在對話頁手動執行」。
+4. **流式內容照舊推給前端**（`onDelta` → `delta` 訊息），作者看得見 agent 在寫什麼。
+5. **`costly: true`**，每次呼叫記進 budget。
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: 寫失敗測試**
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| 对 `plots/012.md` 调 `generate` | draft 落进 store，返回文本里**没有正文** |
-| 对 `chapters/012.md` 调 `capability: 'split'` | `error`（manuscript 层不支持 split，`STAGE_CAPABILITIES` 说了算） |
-| `capability: 'settle'` | `error`，说明去对话页手动执行 |
-| 认不出的路径 | `error`，不抛 |
-| 调用一次 | `budget.calls` +1 |
-| 正文层 | 用的是 `config.active` 那个模型 |
+| 對 `plots/012.md` 調 `generate` | draft 落進 store，返回文字裡**沒有正文** |
+| 對 `chapters/012.md` 調 `capability: 'split'` | `error`（manuscript 層不支援 split，`STAGE_CAPABILITIES` 說了算） |
+| `capability: 'settle'` | `error`，說明去對話頁手動執行 |
+| 認不出的路徑 | `error`，不拋 |
+| 呼叫一次 | `budget.calls` +1 |
+| 正文層 | 用的是 `config.active` 那個模型 |
 
 - [ ] **Step 2–5: 同上**
 
 ---
 
-### Task 4: 状态注入与上下文压缩
+### Task 4: 狀態注入與上下文壓縮
 
 **Files:**
 - Create: `src/core/agent/context.ts`
 - Create: `tests/unit/agent/context.test.js`
 
-#### 状态注入
+#### 狀態注入
 
-每回合把这段拼进 system 消息（约 150 token）：
+每回合把這段拼進 system 訊息（約 150 token）：
 
 ```
-# 当前工程
-《青云志》· 已发布 99 章 · 31.2 万字
-当前目标：第 100 章（.novelforge/plots/100.md）
-本章状态：待写剧情
-下一步（由状态机算出，不要另做判断）：写剧情
-提醒：全书大纲改过，第 12、13 章的细纲已过期（⟳）
+# 當前工程
+《青雲志》· 已釋出 99 章 · 31.2 萬字
+當前目標：第 100 章（.novelforge/plots/100.md）
+本章狀態：待寫劇情
+下一步（由狀態機算出，不要另做判斷）：寫劇情
+提醒：全書大綱改過，第 12、13 章的細綱已過期（⟳）
 ```
 
-**数据全从既有的只读聚合取**：`buildPlotPipelineView` / `deriveNextStep` / `deriveBookStage`（`views/pipeline.ts` + `model/pipeline.ts`）。**不要重新实现任何判据**——两处各判各的，界面上就会出现「徽章说待拆场景，agent 让你写正文」（第 20 条）。
+**資料全從既有的只讀聚合取**：`buildPlotPipelineView` / `deriveNextStep` / `deriveBookStage`（`views/pipeline.ts` + `model/pipeline.ts`）。**不要重新實現任何判據**——兩處各判各的，介面上就會出現「徽章說待拆場景，agent 讓你寫正文」（第 20 條）。
 
-「⟳ 提醒」**最多列 5 章**，超了写「等 N 章」。
+「⟳ 提醒」**最多列 5 章**，超了寫「等 N 章」。
 
-#### 上下文压缩
+#### 上下文壓縮
 
-agent 的消息历史会涨（工具结果累积）。策略：
+agent 的訊息歷史會漲（工具結果累積）。策略：
 
-1. **system 与最后 K 轮永不压缩**（K 默认 6）。
-2. 更早的 `tool` 消息**只留第一行 + 一句「（结果已省略，需要可重新调用）」**。
-3. 压缩发生时**记一条 warn 日志**说明省了几条（第 2 条：不静默截断）。
-4. 超过 token 上限仍然压不下去时**停止循环并报告**，不要静默丢用户的原始要求。
+1. **system 與最後 K 輪永不壓縮**（K 預設 6）。
+2. 更早的 `tool` 訊息**只留第一行 + 一句「（結果已省略，需要可重新呼叫）」**。
+3. 壓縮發生時**記一條 warn 日誌**說明省了幾條（第 2 條：不靜默截斷）。
+4. 超過 token 上限仍然壓不下去時**停止迴圈並報告**，不要靜默丟使用者的原始要求。
 
 ```ts
 export function buildAgentMessages(
@@ -274,22 +274,22 @@ export function buildAgentMessages(
 ): { messages: AgentMessage[]; droppedCount: number };
 ```
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: 寫失敗測試**
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| 状态注入含 `deriveNextStep` 的 label | 与 `deriveNextStep` 直接调用的结果一字不差 |
-| 老工程（99 章无细纲） | 状态说「已发布 99 章」，不说「待写剧情」 |
-| ⟳ 超 5 章 | 写「等 N 章」 |
-| 压缩触发 | 最后 6 轮完整，更早的 tool 结果只剩第一行 |
-| 压缩触发 | 打了一条 warn |
-| 压不下去 | 返回信号让循环停下 |
+| 狀態注入含 `deriveNextStep` 的 label | 與 `deriveNextStep` 直接呼叫的結果一字不差 |
+| 老工程（99 章無細綱） | 狀態說「已釋出 99 章」，不說「待寫劇情」 |
+| ⟳ 超 5 章 | 寫「等 N 章」 |
+| 壓縮觸發 | 最後 6 輪完整，更早的 tool 結果只剩第一行 |
+| 壓縮觸發 | 打了一條 warn |
+| 壓不下去 | 返回訊號讓迴圈停下 |
 
 - [ ] **Step 2–5: 同上**
 
 ---
 
-### Task 5: 预算闸门与无进展检测
+### Task 5: 預算閘門與無進展檢測
 
 **Files:**
 - Create: `src/core/agent/budget.ts`
@@ -297,58 +297,58 @@ export function buildAgentMessages(
 
 ```ts
 export interface BudgetLimits {
-  /** 最多几个回合（一个回合 = 一次模型调用 + 若干工具）。缺省 20。 */
+  /** 最多幾個回合（一個回合 = 一次模型呼叫 + 若干工具）。預設 20。 */
   steps: number;
-  /** 最多几次**花钱的**工具调用（generate）。缺省 10。 */
+  /** 最多幾次**花錢的**工具呼叫（generate）。預設 10。 */
   calls: number;
-  /** 累计输入+输出 token 上限。缺省 200_000。 */
+  /** 累計輸入+輸出 token 上限。預設 200_000。 */
   tokens: number;
 }
 
 export interface Budget {
   readonly limits: BudgetLimits;
   steps: number; calls: number; tokens: number;
-  /** 触顶了。循环据此停下并报告。 */
+  /** 觸頂了。迴圈據此停下並報告。 */
   exceeded(): { what: 'steps' | 'calls' | 'tokens'; message: string } | undefined;
-  /** 记一次工具调用，同时做无进展检测。 */
+  /** 記一次工具呼叫，同時做無進展檢測。 */
   recordTool(name: string, args: Record<string, unknown>): { stalled: boolean };
 }
 ```
 
-**无进展检测**：连续两次**同工具 + 同参数**（`JSON.stringify(args)` 相等）就 `stalled: true`。循环收到之后给模型一条 tool 结果说「你刚才用同样的参数调过这个工具，结果一样。换个思路或者结束。」，再来一次就直接停。
+**無進展檢測**：連續兩次**同工具 + 同引數**（`JSON.stringify(args)` 相等）就 `stalled: true`。迴圈收到之後給模型一條 tool 結果說「你剛才用同樣的引數調過這個工具，結果一樣。換個思路或者結束。」，再來一次就直接停。
 
-**这是最常见的烧钱方式**：模型卡在一个读不到的路径上反复重试。
+**這是最常見的燒錢方式**：模型卡在一個讀不到的路徑上反覆重試。
 
-**预算触顶时的行为**：**不静默停**。给模型最后一次机会用 `finish` 说明「做到哪了、还差什么」，再结束。
+**預算觸頂時的行為**：**不靜默停**。給模型最後一次機會用 `finish` 說明「做到哪了、還差什麼」，再結束。
 
-**用户可见**：每次 `generate` 之后在气泡里显示「已用 3/10 次生成，约 4.2 万 token」（第 4 条）。
+**使用者可見**：每次 `generate` 之後在氣泡裡顯示「已用 3/10 次生成，約 4.2 萬 token」（第 4 條）。
 
-- [ ] **Step 1: 写失败测试**（三条上限各一、无进展检测两连与三连、触顶后仍允许一次 finish）
+- [ ] **Step 1: 寫失敗測試**（三條上限各一、無進展檢測兩連與三連、觸頂後仍允許一次 finish）
 - [ ] **Step 2–5: 同上**
 
 ---
 
-### Task 6: agent 循环 + 协议 + 前端工具流
+### Task 6: agent 迴圈 + 協議 + 前端工具流
 
 **Files:**
 - Create: `src/core/agent/loop.ts`
 - Create: `src/core/agent/README.md`
 - Modify: `src/core/protocol/{in,out}.ts`
 - Modify: `src/core/controller/chat.ts`
-- Modify: `src/core/model/session.ts`（`ChatTurn` 加工具调用记录）
-- Modify: `media/src/view/messages.ts`（画工具调用流）
-- Modify: `src/shells/shared/panes.ts`（如果需要新按钮）
+- Modify: `src/core/model/session.ts`（`ChatTurn` 加工具呼叫記錄）
+- Modify: `media/src/view/messages.ts`（畫工具呼叫流）
+- Modify: `src/shells/shared/panes.ts`（如果需要新按鈕）
 - Create: `tests/integration/agent/loop.test.js`
 - Create: `tests/dom/view/agentTurn.test.js`
 
-#### 循环
+#### 迴圈
 
 ```ts
 export async function runAgent(opts: {
   project: NovelProject;
   workspace: Workspace;
   drafts: DraftStore;
-  provider: LlmProvider;      // 必须支持工具调用
+  provider: LlmProvider;      // 必須支援工具呼叫
   ask: string;
   limits: BudgetLimits;
   signal: AbortSignal;
@@ -356,23 +356,23 @@ export async function runAgent(opts: {
 }): Promise<AgentOutcome>;
 ```
 
-一个回合：
+一個回合：
 
 ```
-1. buildAgentMessages(system + 状态注入, turns, budgetTokens)
+1. buildAgentMessages(system + 狀態注入, turns, budgetTokens)
 2. provider.stream(messages, { tools: toolSpecs(READ_ONLY_TOOLS) })
-3. 收流：text → onDelta 推气泡；toolCall → 收集
-4. 没有 toolCall → 结束（模型给出了最终回答）
-5. 有 toolCall → 逐个执行（budget.recordTool → tool.run），
-   结果作为 role:'tool' 消息追加，回到 1
-6. budget.exceeded() → 最后一轮 toolChoice:'none' 让它总结，然后停
+3. 收流：text → onDelta 推氣泡；toolCall → 收集
+4. 沒有 toolCall → 結束（模型給出了最終回答）
+5. 有 toolCall → 逐個執行（budget.recordTool → tool.run），
+   結果作為 role:'tool' 訊息追加，回到 1
+6. budget.exceeded() → 最後一輪 toolChoice:'none' 讓它總結，然後停
 ```
 
-**取消要停在工具边界**：`signal.aborted` 时不再发起下一次模型调用，也不再执行下一个工具；**正在跑的 `generate` 靠它自己的 signal 停**。
+**取消要停在工具邊界**：`signal.aborted` 時不再發起下一次模型呼叫，也不再執行下一個工具；**正在跑的 `generate` 靠它自己的 signal 停**。
 
-**整个回合走 `runTask`**（第 11 条）：工程页顶部有进度条、能看见、能停。
+**整個回合走 `runTask`**（第 11 條）：工程頁頂部有進度條、能看見、能停。
 
-#### 协议
+#### 協議
 
 ```ts
 // out.ts
@@ -385,82 +385,82 @@ export async function runAgent(opts: {
 | { type: 'sendAgent'; text: string; limits?: Partial<BudgetLimits> }
 ```
 
-#### 会话记录
+#### 會話記錄
 
 `ChatTurn` 加：
 
 ```ts
-/** 仅 assistant 轮：这一轮 agent 调了哪些工具。重开面板要能回放。 */
+/** 僅 assistant 輪：這一輪 agent 調了哪些工具。重開面板要能回放。 */
 toolCalls?: { callId: string; name: string; title: string; ok: boolean; summary: string; elapsedMs: number }[];
 ```
 
-**不存工具的完整返回值**——那可能是几万字。只存展示摘要。
+**不存工具的完整返回值**——那可能是幾萬字。只存展示摘要。
 
 #### 前端
 
-对话页加一个入口（**建议：输入框旁一个「Agent」开关**，而不是新页签——它跟创作是同一件事，只是执行方式不同）。工具调用画成气泡里的一串折叠条：
+對話頁加一個入口（**建議：輸入框旁一個「Agent」開關**，而不是新頁籤——它跟創作是同一件事，只是執行方式不同）。工具呼叫畫成氣泡裡的一串摺疊條：
 
 ```
-🔧 search「北境」          2 处命中   0.3s
+🔧 search「北境」          2 處命中   0.3s
 🔧 read chapters/009…     142 行     0.1s
-✨ generate 剧情           620 字     12.4s   [采纳写入]
+✨ generate 劇情           620 字     12.4s   [採納寫入]
 ```
 
-**「采纳写入」按钮**仍然是现有那个（吃 draftId），三期不变。
+**「採納寫入」按鈕**仍然是現有那個（吃 draftId），三期不變。
 
-- [ ] **Step 1: 写失败测试** `tests/integration/agent/loop.test.js`
+- [ ] **Step 1: 寫失敗測試** `tests/integration/agent/loop.test.js`
 
-用假 provider（脚本化的事件序列）。至少覆盖：
+用假 provider（指令碼化的事件序列）。至少覆蓋：
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| 模型直接回答不调工具 | 一个回合结束 |
-| 模型调 `read` 再回答 | 两个回合，tool 消息形状正确 |
-| 模型连续两次同工具同参数 | 收到 stalled 提示 |
-| 三次 | 循环停下 |
-| 预算触顶 | 最后一轮 `toolChoice: 'none'`，有总结 |
-| 取消 | 停在工具边界，已产出的 draft 保留 |
-| 工具抛异常 | 变成 `error` 回给模型，循环继续 |
-| 全程 | 日志里没有 prompt 全文、没有参数值 |
+| 模型直接回答不調工具 | 一個回合結束 |
+| 模型調 `read` 再回答 | 兩個回合，tool 訊息形狀正確 |
+| 模型連續兩次同工具同引數 | 收到 stalled 提示 |
+| 三次 | 迴圈停下 |
+| 預算觸頂 | 最後一輪 `toolChoice: 'none'`，有總結 |
+| 取消 | 停在工具邊界，已產出的 draft 保留 |
+| 工具拋異常 | 變成 `error` 回給模型，迴圈繼續 |
+| 全程 | 日誌裡沒有 prompt 全文、沒有引數值 |
 
-- [ ] **Step 2: 跑测试确认失败**
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: dom 测试**（工具调用流渲染）
-- [ ] **Step 5: `npm test` + F5 手动验证**
+- [ ] **Step 2: 跑測試確認失敗**
+- [ ] **Step 3: 實現**
+- [ ] **Step 4: dom 測試**（工具呼叫流渲染）
+- [ ] **Step 5: `npm test` + F5 手動驗證**
 
-手动验证脚本（用一个真模型）：
-1. 「第 9 章里主角说过他没去过北境吗？」→ 应该看到 `search` + `read`，然后给出答案
-2. 「第 12 章的剧情有什么问题？」→ 应该 `read` 细纲后 `generate(capability:'critique')`
-3. 「把第 12 章的剧情排一下」→ 应该 `generate(capability:'generate')` 并给出采纳按钮
+手動驗證指令碼（用一個真模型）：
+1. 「第 9 章裡主角說過他沒去過北境嗎？」→ 應該看到 `search` + `read`，然後給出答案
+2. 「第 12 章的劇情有什麼問題？」→ 應該 `read` 細綱後 `generate(capability:'critique')`
+3. 「把第 12 章的劇情排一下」→ 應該 `generate(capability:'generate')` 並給出採納按鈕
 
-- [ ] **Step 6: 写 `src/core/agent/README.md`** + 更新 `src/core/README.md`、`AGENTS.md` 的模块地图
+- [ ] **Step 6: 寫 `src/core/agent/README.md`** + 更新 `src/core/README.md`、`AGENTS.md` 的模組地圖
 - [ ] **Step 7: Commit**
 
 ---
 
 ## 本期不做
 
-- **不给写工具**（`write` / `edit` / `run`）。四期。
-- **不做策略模式**（谨慎/默认/放手）。四期——这一期没有写盘，没有可确认的东西。
-- **不做 `supportsTools` 的设置页 UI**。可以先在 `ModelEntry` 上加字段并手改配置文件；UI 四期一起做。
-- **不接分档池**。`generate` 全走对话页选定的模型。
+- **不給寫工具**（`write` / `edit` / `run`）。四期。
+- **不做策略模式**（謹慎/預設/放手）。四期——這一期沒有寫盤，沒有可確認的東西。
+- **不做 `supportsTools` 的設定頁 UI**。可以先在 `ModelEntry` 上加欄位並手改配置檔案；UI 四期一起做。
+- **不接分檔池**。`generate` 全走對話頁選定的模型。
 
-## 给接手 agent 的提示词
+## 給接手 agent 的提示詞
 
-> 你在 novelwarden 仓库里执行「三期：agent 循环 + 只读四件套」。前置是零、一、二期，确认都已合入（`src/core/workspace/` 与 `src/core/generation/` 都在，`npm test` 绿）。
+> 你在 novelwarden 倉庫裡執行「三期：agent 迴圈 + 只讀四件套」。前置是零、一、二期，確認都已合入（`src/core/workspace/` 與 `src/core/generation/` 都在，`npm test` 綠）。
 >
-> 先读 `AGENTS.md` 的第 2、4、11、12、19、20 条与 `docs/design/specs/2026-08-15-agent-architecture-design.md` 的 L3 一节。然后读 `src/core/model/pipeline.ts`（状态机，你要注入它的结论而不是重新判断）、`src/core/workspace/index.ts`、`src/core/generation/generate.ts`。
+> 先讀 `AGENTS.md` 的第 2、4、11、12、19、20 條與 `docs/design/specs/2026-08-15-agent-architecture-design.md` 的 L3 一節。然後讀 `src/core/model/pipeline.ts`（狀態機，你要注入它的結論而不是重新判斷）、`src/core/workspace/index.ts`、`src/core/generation/generate.ts`。
 >
-> 这一期 agent **一个字都不写磁盘**——只注册 `list` / `read` / `search` / `generate` 四个工具，落盘仍走现有的采纳卡片。这是有意的：写权限等四期，那时前三期的保护已经全部就位。
+> 這一期 agent **一個字都不寫磁碟**——只註冊 `list` / `read` / `search` / `generate` 四個工具，落盤仍走現有的採納卡片。這是有意的：寫許可權等四期，那時前三期的保護已經全部就位。
 >
-> 按 `docs/design/plans/2026-08-15-agent-phase3-loop.md` 的 6 个 Task 逐个做，每个 Task 做完立刻 commit（前缀 `feat(agent)`，中文正文，**不要加 Co-Authored-By 或 Generated with 标记**）。
+> 按 `docs/design/plans/2026-08-15-agent-phase3-loop.md` 的 6 個 Task 逐個做，每個 Task 做完立刻 commit（字首 `feat(agent)`，中文正文，**不要加 Co-Authored-By 或 Generated with 標記**）。
 >
-> 六件最容易做错的事：
-> 1. **不要让 agent 自己判断「下一步」**。每回合注入 `deriveNextStep` 的结论，它拿着去执行。两处各判各的，界面上就会出现「徽章说待拆场景，agent 让你写正文」。
-> 2. **生成产物绝不回灌 agent 上下文**。`generate` 只回 draftId 与形状摘要，正文流给前端气泡。三千字正文塞回循环，每走一步重烧一遍。
-> 3. **工具描述里不写领域知识**。「剧情不写画面天气台词」在 `context/prompts.ts` 里，由 `generate` 内部那次调用自己带着。工具描述里写一遍会让两处慢慢跑偏。
-> 4. **日志不记参数值**——值里可能有正文片段。只记工具名与参数的键名。
-> 5. **`generate` 的 `history` 传空数组**。agent 的工具调用不是作者的讨论，混进装配器会把它当成创作要求。
-> 6. **无进展检测**：连续两次同工具同参数就提示，三次就停。这是最常见的烧钱方式。
+> 六件最容易做錯的事：
+> 1. **不要讓 agent 自己判斷「下一步」**。每回合注入 `deriveNextStep` 的結論，它拿著去執行。兩處各判各的，介面上就會出現「徽章說待拆場景，agent 讓你寫正文」。
+> 2. **生成產物絕不回灌 agent 上下文**。`generate` 只回 draftId 與形狀摘要，正文流給前端氣泡。三千字正文塞回迴圈，每走一步重燒一遍。
+> 3. **工具描述裡不寫領域知識**。「劇情不寫畫面天氣臺詞」在 `context/prompts.ts` 裡，由 `generate` 內部那次呼叫自己帶著。工具描述裡寫一遍會讓兩處慢慢跑偏。
+> 4. **日誌不記引數值**——值裡可能有正文片段。只記工具名與引數的鍵名。
+> 5. **`generate` 的 `history` 傳空陣列**。agent 的工具呼叫不是作者的討論，混進裝配器會把它當成創作要求。
+> 6. **無進展檢測**：連續兩次同工具同引數就提示，三次就停。這是最常見的燒錢方式。
 >
-> 参数 schema 尽量扁平（`{path, offset, limit}` 好过嵌套对象）——嵌套是模型最容易填错的地方。
+> 引數 schema 儘量扁平（`{path, offset, limit}` 好過巢狀物件）——巢狀是模型最容易填錯的地方。

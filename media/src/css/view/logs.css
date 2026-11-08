@@ -1,4 +1,4 @@
-/* 日志页。 */
+/* 日誌頁。 */
 
 #pane-logs {
   overflow: hidden;
@@ -19,9 +19,9 @@
 }
 
 /*
- * 级别下拉与过滤框。`width: 100%` 是 forms.css 给表单页定的（那里一列一个
- * 字段），在工具栏这种一行摆好几颗控件的地方必须收回来——不然下拉框会独占
- * 一整行，把后面那排按钮挤到第二行去。高度与按钮对齐走 `--nf-ctl-height`。
+ * 級別下拉與過濾框。`width: 100%` 是 forms.css 給表單頁定的（那裡一列一個
+ * 欄位），在工具欄這種一行擺好幾顆控制元件的地方必須收回來——不然下拉框會獨佔
+ * 一整行，把後面那排按鈕擠到第二行去。高度與按鈕對齊走 `--nf-ctl-height`。
  */
 .log-toolbar select,
 .log-toolbar input[type='search'] {
@@ -99,7 +99,7 @@
   color: var(--vscode-textLink-foreground);
 }
 
-/* 消息可以换行——一条错误的全文比对齐重要。 */
+/* 訊息可以換行——一條錯誤的全文比對齊重要。 */
 .log-msg {
   flex: 1;
   min-width: 0;

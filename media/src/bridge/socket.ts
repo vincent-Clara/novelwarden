@@ -1,9 +1,9 @@
 /**
- * 与后端的 WebSocket 连接，外加断线重连与那条提示条。
+ * 與後端的 WebSocket 連線，外加斷線重連與那條提示條。
  *
- * 对外只暴露一个 `send`：连接没就绪时先攒着，连上再一次性发出去——
- * 页面加载后第一条消息（view.js 的 `ready`）几乎必然早于握手完成，
- * 丢掉它整个界面就是空的。
+ * 對外只暴露一個 `send`：連線沒就緒時先攢著，連上再一次性發出去——
+ * 頁面載入後第一條訊息（view.js 的 `ready`）幾乎必然早於握手完成，
+ * 丟掉它整個介面就是空的。
  */
 import { el } from '../dom';
 
@@ -11,18 +11,18 @@ export interface Socket {
   send(message: unknown): void;
 }
 
-/** 重连间隔。够短到用户几乎察觉不到，又不至于把服务打满。 */
+/** 重連間隔。夠短到使用者幾乎察覺不到，又不至於把服務打滿。 */
 const RETRY_DELAY_MS = 1500;
 
 export function connect(): Socket {
   let ws: WebSocket | undefined;
-  /** 连接未就绪时暂存的消息。 */
+  /** 連線未就緒時暫存的訊息。 */
   const outbox: unknown[] = [];
   const banner = offlineBanner();
 
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    // 窗口开的是哪个工程：网址上的 `?project=` 原样带进握手。每次重连现读，网址跟着工程换过之后连回新的那个。
+    // 視窗開的是哪個工程：網址上的 `?project=` 原樣帶進握手。每次重連現讀，網址跟著工程換過之後連回新的那個。
     const project = new URLSearchParams(location.search).get('project');
     const query = project ? `?project=${encodeURIComponent(project)}` : '';
     ws = new WebSocket(`${proto}://${location.host}/ws${query}`);
@@ -39,8 +39,8 @@ export function connect(): Socket {
     };
 
     ws.onmessage = (event: MessageEvent<string>) => {
-      // 前端各处都用 window.addEventListener('message', e => e.data) 收消息，
-      // 派一个 MessageEvent 与 webview 的行为完全一致。
+      // 前端各處都用 window.addEventListener('message', e => e.data) 收訊息，
+      // 派一個 MessageEvent 與 webview 的行為完全一致。
       window.dispatchEvent(new MessageEvent('message', { data: JSON.parse(event.data) }));
     };
 
@@ -64,8 +64,8 @@ export function connect(): Socket {
 }
 
 /**
- * 断线提示条。惰性创建——正常连着的时候页面上不该有这个节点。
- * 样式走 standalone.css 的主题变量，不写死颜色。
+ * 斷線提示條。惰性建立——正常連著的時候頁面上不該有這個節點。
+ * 樣式走 standalone.css 的主題變數，不寫死顏色。
  */
 function offlineBanner() {
   let node: HTMLElement | undefined;
@@ -75,7 +75,7 @@ function offlineBanner() {
         node = el(
           'div',
           'wb-offline',
-          '与服务器的连接已断开，正在重连…（未保存的内容仍在页面里）'
+          '與伺服器的連線已斷開，正在重連…（未儲存的內容仍在頁面裡）'
         );
         document.body.appendChild(node);
       }

@@ -1,14 +1,14 @@
 /**
- * `extract` 工具：从已写的东西里提炼参考材料（文风指南、设定条目、叙事线）。
+ * `extract` 工具：從已寫的東西里提煉參考材料（文風指南、設定條目、敘事線）。
  *
- * 三样都是工程页工具栏上那几颗按钮背后的同一个函数，确认框照弹。
+ * 三樣都是工程頁工具欄上那幾顆按鈕背後的同一個函式，確認框照彈。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 作者取消就零调用，账上也记 0 | 文风、设定不报次数：次数只在确认框里，这里猜一个数就是第 4 条要防的对不上 |
- * | 排叙事线报次数；取消时回话说清没调模型 | 不说清楚它会原地再发一遍 |
- * | 补记叙事线（四期）：没有要补的章不弹框、零调用、回话说清 | 与工程页「从正文补记」同一个函数 |
- * | 一个参数都不认 | 几个动作都不要参数，给了就是模型记错了工具 |
+ * | 作者取消就零呼叫，賬上也記 0 | 文風、設定不報次數：次數只在確認框裡，這裡猜一個數就是第 4 條要防的對不上 |
+ * | 排敘事線報次數；取消時回話說清沒調模型 | 不說清楚它會原地再發一遍 |
+ * | 補記敘事線（四期）：沒有要補的章不彈框、零呼叫、回話說清 | 與工程頁「從正文補記」同一個函式 |
+ * | 一個引數都不認 | 幾個動作都不要引數，給了就是模型記錯了工具 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -65,19 +65,19 @@ before(async () => {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  // 一章排过的细纲 + 一章正文：三个动作都有东西可提炼，确认框一定会弹。
-  t = await makeTempProject(bundle.project, { prefix: 'extractTool', title: '青云剑录' });
+  // 一章排過的細綱 + 一章正文：三個動作都有東西可提煉，確認框一定會彈。
+  t = await makeTempProject(bundle.project, { prefix: 'extractTool', title: '青雲劍錄' });
   const ws = new bundle.ws.Workspace(t.project);
   await ws.writePlot({
     no: 1,
-    title: '夜入青云',
+    title: '夜入青雲',
     upstreamHash: '',
     done: false,
-    sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '进入宗门', 关键事件: '踩点、失手、翻墙。' },
+    sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '進入宗門', 关键事件: '踩點、失手、翻牆。' },
   });
-  t.write('chapters/001-夜入青云.md', '# 夜入青云\n\n雨下了三天。山门在雨里，林昭在门外。\n');
-  // 叙事线从情节大纲排：有大纲，确认框才会弹。
-  writeOutline(t, outlineOf(10, { text: { 1: '林昭夜入青云宗。' } }));
+  t.write('chapters/001-夜入青雲.md', '# 夜入青雲\n\n雨下了三天。山門在雨裡，林昭在門外。\n');
+  // 敘事線從情節大綱排：有大綱，確認框才會彈。
+  writeOutline(t, outlineOf(10, { text: { 1: '林昭夜入青雲宗。' } }));
   t.project.invalidate();
   await t.project.syncManifest();
   resetCtx();
@@ -87,7 +87,7 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-describe('排叙事线：转发给工程页那个动作', () => {
+describe('排敘事線：轉發給工程頁那個動作', () => {
   let r;
 
   before(async () => {
@@ -96,20 +96,20 @@ describe('排叙事线：转发给工程页那个动作', () => {
     r = await run({ action: 'threads' });
   });
 
-  test('确认框写着从情节大纲排、预计调用几次', () => {
-    assert.match(h.confirms.at(-1).message, /^要从情节大纲排出叙事线，预计 2 次调用，最多 3 次/);
+  test('確認框寫著從情節大綱排、預計呼叫幾次', () => {
+    assert.match(h.confirms.at(-1).message, /^要從情節大綱排出敘事線，預計 2 次呼叫，最多 3 次/);
   });
 
-  test('作者取消：一次模型都不调，账上也不记', () => {
+  test('作者取消：一次模型都不調，賬上也不記', () => {
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
     assert.equal(ctx.usage.calls, 0);
-    assert.ok(r.text.includes('排叙事线这一次没有调用模型'), r.text);
+    assert.ok(r.text.includes('排敘事線這一次沒有呼叫模型'), r.text);
   });
 });
 
-// 叙事线重做四期：从已写正文补记，与工程页「从正文补记」同一个函数。这一本一章都没定稿，没有要补的：不弹框、零调用、回话说清。
-describe('补记叙事线：转发给工程页那个动作', () => {
-  test('一章都没定稿：不弹确认框，零调用，回话说清没调模型；提示条说先定稿', async () => {
+// 敘事線重做四期：從已寫正文補記，與工程頁「從正文補記」同一個函式。這一本一章都沒定稿，沒有要補的：不彈框、零呼叫、回話說清。
+describe('補記敘事線：轉發給工程頁那個動作', () => {
+  test('一章都沒定稿：不彈確認框，零呼叫，回話說清沒調模型；提示條說先定稿', async () => {
     resetCtx();
     h.expect();
     const r = await run({ action: 'threadsFromText' });
@@ -117,27 +117,27 @@ describe('补记叙事线：转发给工程页那个动作', () => {
     assert.equal(h.confirms.length, 0);
     assert.equal(fake.calls.length, 0);
     assert.equal(ctx.usage.calls, 0);
-    assert.ok(r.text.includes('补记叙事线这一次没有调用模型'), r.text);
-    assert.ok(h.toasts.some((x) => x.includes('还没有同步过的章')), h.toasts.join('\n'));
+    assert.ok(r.text.includes('補記敘事線這一次沒有呼叫模型'), r.text);
+    assert.ok(h.toasts.some((x) => x.includes('還沒有同步過的章')), h.toasts.join('\n'));
   });
 });
 
-describe('文风与设定：交出去，账上记 0', () => {
-  // 样章先让作者挑（输入框）：取消就什么都不做。
-  test('style：作者取消挑样章，零调用，回话指到 style.md', async () => {
+describe('文風與設定：交出去，賬上記 0', () => {
+  // 樣章先讓作者挑（輸入框）：取消就什麼都不做。
+  test('style：作者取消挑樣章，零呼叫，回話指到 style.md', async () => {
     resetCtx();
     const inputs = h.inputs.length;
     h.expect();
     const r = await run({ action: 'style' });
-    assert.equal(h.inputs.length, inputs + 1, '该先让作者挑样章');
+    assert.equal(h.inputs.length, inputs + 1, '該先讓作者挑樣章');
     assert.equal(r.error, undefined, r.error);
     assert.ok(r.text.includes('.novelwarden/style.md'), r.text);
     assert.equal(fake.calls.length, 0);
     assert.equal(ctx.usage.calls, 0);
   });
 
-  // 设定条目不在 extract 里了（整本重扫删了，换成 lore 工具）。
-  test('没有 lore 动作：当场报错，零调用', async () => {
+  // 設定條目不在 extract 裡了（整本重掃刪了，換成 lore 工具）。
+  test('沒有 lore 動作：當場報錯，零呼叫', async () => {
     resetCtx();
     h.expect();
     const r = await run({ action: 'lore' });
@@ -147,23 +147,23 @@ describe('文风与设定：交出去，账上记 0', () => {
   });
 });
 
-describe('工具定义本身', () => {
-  test('参数只有 action', () => {
+describe('工具定義本身', () => {
+  test('引數只有 action', () => {
     assert.deepEqual(Object.keys(tool().parameters.properties), ['action']);
     assert.deepEqual(tool().parameters.properties.action.enum, ['style', 'threads', 'threadsFromText']);
   });
 
-  test('三个动作都调模型：costly、mutating', () => {
+  test('三個動作都調模型：costly、mutating', () => {
     assert.equal(tool().costly, true);
     assert.equal(tool().mutating, true);
   });
 
-  // 哪个动作都不认的参数：报错里不列「只有 X 认」。
-  test('给了参数当场报错，不弹框', async () => {
+  // 哪個動作都不認的引數：報錯裡不列「只有 X 認」。
+  test('給了引數當場報錯，不彈框', async () => {
     resetCtx();
     const before = h.confirms.length;
-    const r = await run({ action: 'threads', path: '.novelwarden/summaries/001-夜入青云.md' });
-    assert.equal(r.error, 'threads 不认 path。');
+    const r = await run({ action: 'threads', path: '.novelwarden/summaries/001-夜入青雲.md' });
+    assert.equal(r.error, 'threads 不認 path。');
     assert.equal(h.confirms.length, before);
   });
 });

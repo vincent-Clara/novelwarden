@@ -1,32 +1,32 @@
 /**
- * 情节大纲**一章一条**：`## 第3章：火折逼退`，下面第一行一句话写这一章发生什么、结果如何，
- * 最多再补两句（docs/design/plans/2026-10-21-outline-per-chapter.md）。
+ * 情節大綱**一章一條**：`## 第3章：火折逼退`，下面第一行一句話寫這一章發生什麼、結果如何，
+ * 最多再補兩句（docs/design/plans/2026-10-21-outline-per-chapter.md）。
  *
- * **纯函数、零 I/O、绝不抛。** 大纲是作者高频手改的纯 Markdown，这里只**读**它的结构：认不出来的
- * 标题与段落不算进任何一章。
+ * **純函式、零 I/O、絕不拋。** 大綱是作者高頻手改的純 Markdown，這裡只**讀**它的結構：認不出來的
+ * 標題與段落不算進任何一章。
  *
- * ## 它不是一份文件，是各章细纲「梗概」的汇总
+ * ## 它不是一份檔案，是各章細綱「梗概」的彙總
  *
- * 大纲一章一句，细纲里本来就有「梗概」，同一件事存两份（docs/design/plans/2026-10-22-outline-from-plots.md）。
- * 现在磁盘上没有 `outline.md`：读的时候把各章细纲的梗概拼成一章一条（{@link outlineEntriesOf}），存的时候按章号拆回
- * 各章细纲（{@link planOutlineSplit}）——只有梗概、别的几节都空的细纲是「空壳」：大纲排到了，细纲还没拆。
- * `.novelwarden/outline.md` 这个路径仍是情节大纲的身份，网关（`workspace/`）接住它的读写。
+ * 大綱一章一句，細綱裡本來就有「梗概」，同一件事存兩份（docs/design/plans/2026-10-22-outline-from-plots.md）。
+ * 現在磁碟上沒有 `outline.md`：讀的時候把各章細綱的梗概拼成一章一條（{@link outlineEntriesOf}），存的時候按章號拆回
+ * 各章細綱（{@link planOutlineSplit}）——只有梗概、別的幾節都空的細綱是「空殼」：大綱排到了，細綱還沒拆。
+ * `.novelwarden/outline.md` 這個路徑仍是情節大綱的身份，閘道器（`workspace/`）接住它的讀寫。
  *
- * ## 为什么一章一条
+ * ## 為什麼一章一條
  *
- * 从前按「第 a–b 章」分节，一节 3–5 章拼成一段叙述式的摘要。章与章的分界留给细纲去猜，
- * 摘要腔顺着大纲 → 细纲 → 正文一路往下传；续写时整份大纲进一次对话，越写越胖。一章一条之后：
+ * 從前按「第 a–b 章」分節，一節 3–5 章拼成一段敘述式的摘要。章與章的分界留給細綱去猜，
+ * 摘要腔順著大綱 → 細綱 → 正文一路往下傳；續寫時整份大綱進一次對話，越寫越胖。一章一條之後：
  *
- * 1. **按远近带**（{@link outlineWindow}）：最近 10 章带整条，再往前一章只带第一行、最多几章随上下文详细度，更早的
- *    交给全文大纲——写到几百章也不随章数涨。
- * 2. **续写大纲**：总章数超过 20 时一次写 20 章，细纲快追上时再续——判「追上没有」要知道覆盖到了第几章。
- * 3. **续写的那一段按章号合并**（{@link mergeOutline}）：写第 21–40 章不该把作者手改过的前 20 章整份替换掉。
+ * 1. **按遠近帶**（{@link outlineWindow}）：最近 10 章帶整條，再往前一章只帶第一行、最多幾章隨上下文詳細度，更早的
+ *    交給全文大綱——寫到幾百章也不隨章數漲。
+ * 2. **續寫大綱**：總章數超過 20 時一次寫 20 章，細綱快追上時再續——判「追上沒有」要知道覆蓋到了第幾章。
+ * 3. **續寫的那一段按章號合併**（{@link mergeOutline}）：寫第 21–40 章不該把作者手改過的前 20 章整份替換掉。
  *
- * ## 认哪些写法
+ * ## 認哪些寫法
  *
- * `##` 或 `###` 开头的 `第 N 章`，后面的冒号（中英文）可有可无。**只认阿拉伯数字**：「第一章」这种写法
- * 要做中文数字解析，而提示词一律要求阿拉伯数字。**区间标题（`第1–4章`、`第1章-第4章`）不认**——旧格式
- * 不兼容：它结束上一条，自己那一节被忽略。
+ * `##` 或 `###` 開頭的 `第 N 章`，後面的冒號（中英文）可有可無。**只認阿拉伯數字**：「第一章」這種寫法
+ * 要做中文數字解析，而提示詞一律要求阿拉伯數字。**區間標題（`第1–4章`、`第1章-第4章`）不認**——舊格式
+ * 不相容：它結束上一條，自己那一節被忽略。
  */
 import { takeLast } from './contextDetail';
 import { hasContent } from './markdown';
@@ -34,27 +34,27 @@ import { Plot, isPlotStub, normalizeSynopsis } from './plotFile';
 
 export interface OutlineEntry {
   no: number;
-  /** 冒号后面那一段，可能为空。 */
+  /** 冒號後面那一段，可能為空。 */
   title: string;
-  /** 这一条的正文（不含标题行，已 trim）。第一行是这一章的概要。 */
+  /** 這一條的正文（不含標題行，已 trim）。第一行是這一章的概要。 */
   text: string;
 }
 
 /**
- * 章标题（连同不认的区间标题一起认出来，好让区间标题也能结束上一条）。「章」字可以在区间末尾
- * （`第1-20章`），也可以两头各一个（`第1章-第20章`），但至少得有一个——`## 第 3 节` 不是章标题。
- * 分组：1 级别、2 起、3 第一个「章」、4 止（有它就是区间）、5 第二个「章」、6 标题。
+ * 章標題（連同不認的區間標題一起認出來，好讓區間標題也能結束上一條）。「章」字可以在區間末尾
+ * （`第1-20章`），也可以兩頭各一個（`第1章-第20章`），但至少得有一個——`## 第 3 節` 不是章標題。
+ * 分組：1 級別、2 起、3 第一個「章」、4 止（有它就是區間）、5 第二個「章」、6 標題。
  */
 export const OUTLINE_HEADING =
   /^(#{2,3})\s*第\s*(\d{1,5})\s*(章)?\s*(?:[-–—~～至到]\s*(?:第\s*)?(\d{1,5})\s*)?(章)?\s*[:：]?\s*(.*?)\s*$/;
 
-/** 任何 `#`–`###` 标题。一条到下一个**同级或更高级**的标题为止。 */
+/** 任何 `#`–`###` 標題。一條到下一個**同級或更高階**的標題為止。 */
 const ANY_HEADING = /^(#{1,3})\s+\S/;
 
-/** 按远近带时，离当前位置多近的带整条（{@link outlineWindow}）。 */
+/** 按遠近帶時，離當前位置多近的帶整條（{@link outlineWindow}）。 */
 export const OUTLINE_NEAR = 10;
 
-/** 只带第一行时，那一行最多几个字：提示词要的是一句话，作者手写的可能是一整段。 */
+/** 只帶第一行時，那一行最多幾個字：提示詞要的是一句話，作者手寫的可能是一整段。 */
 const BRIEF_MAX = 100;
 
 type HeadingMatch = { level: number; no: number; range: boolean; title: string };
@@ -73,8 +73,8 @@ function matchHeading(line: string): HeadingMatch | undefined {
 }
 
 /**
- * 大纲切成块：一章一条（标题行到下一个同级或更高级标题之前）与其余部分。区间标题起一个 `other` 块。
- * {@link parseOutline} 与 {@link mergeOutline} 共用这一套认法，合并时原样拼回去。
+ * 大綱切成塊：一章一條（標題行到下一個同級或更高階標題之前）與其餘部分。區間標題起一個 `other` 塊。
+ * {@link parseOutline} 與 {@link mergeOutline} 共用這一套認法，合併時原樣拼回去。
  */
 type OutlineBlock = { lines: string[] } & ({ kind: 'entry'; no: number; title: string } | { kind: 'other' });
 
@@ -103,7 +103,7 @@ function splitOutlineBlocks(text: string): OutlineBlock[] {
   return blocks;
 }
 
-/** 抽出全部条目，按出现顺序。同一章出现两次照收，取用时以先出现的为准。 */
+/** 抽出全部條目，按出現順序。同一章出現兩次照收，取用時以先出現的為準。 */
 export function parseOutline(text: string): OutlineEntry[] {
   const out: OutlineEntry[] = [];
   for (const b of splitOutlineBlocks(text)) {
@@ -114,7 +114,7 @@ export function parseOutline(text: string): OutlineEntry[] {
   return out;
 }
 
-/** 按章号去重（先出现的为准）、升序。 */
+/** 按章號去重（先出現的為準）、升序。 */
 function entriesByNo(text: string): OutlineEntry[] {
   const seen = new Map<number, OutlineEntry>();
   for (const e of parseOutline(text)) {
@@ -125,22 +125,22 @@ function entriesByNo(text: string): OutlineEntry[] {
   return [...seen.values()].sort((a, b) => a.no - b.no);
 }
 
-/** 区间标题（`## 第1–4章`）有几个：旧格式不认，生成之后要说一声。 */
+/** 區間標題（`## 第1–4章`）有幾個：舊格式不認，生成之後要說一聲。 */
 export function outlineRangeHeadings(text: string): number {
   return (text ?? '').split(/\r?\n/).filter((line) => matchHeading(line)?.range).length;
 }
 
-/** 大纲写过没有：至少认得出一章。旧格式（区间标题）与没有章标题的散文式大纲都算没写过。 */
+/** 大綱寫過沒有：至少認得出一章。舊格式（區間標題）與沒有章標題的散文式大綱都算沒寫過。 */
 export function isOutlineFilled(text: string): boolean {
   return parseOutline(text).length > 0;
 }
 
 /**
- * 文件里有没有人写的东西（不管认不认得出章标题）——整份换掉之前要不要先让作者对比一遍（第 3 条）。
+ * 檔案裡有沒有人寫的東西（不管認不認得出章標題）——整份換掉之前要不要先讓作者對比一遍（第 3 條）。
  *
- * 不能只看「有没有字」：模板里有一行 `>` 说明，老模板还有「（写一句话概括全书。）」这类括号提示和一串
- * 空的 `1.` `-`——那些都是给人看的脚手架。所以只认**实质行**：不是空行、不是 `>` 引用、不是标题、
- * 不是空的列表项、也不是整行一对括号的提示文字。
+ * 不能只看「有沒有字」：模板裡有一行 `>` 說明，老模板還有「（寫一句話概括全書。）」這類括號提示和一串
+ * 空的 `1.` `-`——那些都是給人看的腳手架。所以只認**實質行**：不是空行、不是 `>` 引用、不是標題、
+ * 不是空的列表項、也不是整行一對括號的提示文字。
  */
 export function hasOutlineContent(text: string): boolean {
   for (const raw of (text ?? '').replace(/^﻿/, '').split(/\r?\n/)) {
@@ -159,24 +159,24 @@ export function hasOutlineContent(text: string): boolean {
   return false;
 }
 
-/** 大纲覆盖到了第几章：最大的章号；一条都认不出是 0。 */
+/** 大綱覆蓋到了第幾章：最大的章號；一條都認不出是 0。 */
 export function outlineCoverage(text: string): number {
   return parseOutline(text).reduce((max, e) => Math.max(max, e.no), 0);
 }
 
-/** 第 `no` 章那一条；出现两次取先出现的；没有就 undefined。 */
+/** 第 `no` 章那一條；出現兩次取先出現的；沒有就 undefined。 */
 export function outlineEntryFor(text: string, no: number): OutlineEntry | undefined {
   return parseOutline(text).find((e) => e.no === no);
 }
 
-/** 大纲里有没有落在 [from, to] 里的条目——有，续写这一段才谈得上「覆盖」。 */
+/** 大綱裡有沒有落在 [from, to] 裡的條目——有，續寫這一段才談得上「覆蓋」。 */
 export function outlineOverlaps(text: string, range: { from: number; to: number }): boolean {
   return parseOutline(text).some((e) => e.no >= range.from && e.no <= range.to);
 }
 
-// ---------------------------------------------------------------- 按远近带
+// ---------------------------------------------------------------- 按遠近帶
 
-/** 一条只带第一行：`第3章 火折逼退：沈默用火折子逼退沈怀山，照骨镜开始搜人。` */
+/** 一條只帶第一行：`第3章 火折逼退：沈默用火摺子逼退沈懷山，照骨鏡開始搜人。` */
 export function outlineBrief(e: OutlineEntry): string {
   const first =
     e.text
@@ -189,43 +189,43 @@ export function outlineBrief(e: OutlineEntry): string {
   return line ? `${head}：${line}` : head;
 }
 
-/** 一条整条带：标题行规范成 `## 第N章：标题`。 */
+/** 一條整條帶：標題行規範成 `## 第N章：標題`。 */
 export function renderOutlineEntry(e: OutlineEntry): string {
   return `## 第${e.no}章${e.title ? `：${e.title}` : ''}${e.text ? `\n${e.text}` : ''}`;
 }
 
-/** 整份大纲每章只列第一行（排叙事线时整份放不下用它）。 */
+/** 整份大綱每章只列第一行（排敘事線時整份放不下用它）。 */
 export function outlineBriefs(text: string): string {
   return entriesByNo(text)
     .map((e) => `- ${outlineBrief(e)}`)
     .join('\n');
 }
 
-/** 「后面已经排好的」那一段的开头。 */
-const LATER_LEAD = '后面已经排好的（只列第一行）：';
+/** 「後面已經排好的」那一段的開頭。 */
+const LATER_LEAD = '後面已經排好的（只列第一行）：';
 
 export interface OutlineWindow {
-  /** 近段：带整条的，升序。 */
+  /** 近段：帶整條的，升序。 */
   near: OutlineEntry[];
-  /** 中段：近段之前只带第一行的，升序，已按 `maxBefore` 封顶。 */
+  /** 中段：近段之前只帶第一行的，升序，已按 `maxBefore` 封頂。 */
   before: OutlineEntry[];
-  /** 远段：封顶之外更早的章号，升序。不逐章列，前情交给全文大纲。 */
+  /** 遠段：封頂之外更早的章號，升序。不逐章列，前情交給全文大綱。 */
   folded: number[];
-  /** 区间之后已有的（`after` 时），升序，只带第一行。 */
+  /** 區間之後已有的（`after` 時），升序，只帶第一行。 */
   later: OutlineEntry[];
 }
 
 /**
- * 按远近带大纲，分三段（docs/design/plans/2026-10-22-planning-context-bands.md）：离这一次要写的地方最近的
- * {@link OUTLINE_NEAR} 章带整条（近段），再往前最多 `maxBefore` 章只带第一行（中段），更早的不逐章列（远段，
- * 交给全文大纲）。从前更早的一章不落地全列，写到几百章光这一行一行就能把窗口撑满。
+ * 按遠近帶大綱，分三段（docs/design/plans/2026-10-22-planning-context-bands.md）：離這一次要寫的地方最近的
+ * {@link OUTLINE_NEAR} 章帶整條（近段），再往前最多 `maxBefore` 章只帶第一行（中段），更早的不逐章列（遠段，
+ * 交給全文大綱）。從前更早的一章不落地全列，寫到幾百章光這一行一行就能把視窗撐滿。
  *
- * - 给了区间 [from, to]：第 from−10 章到第 to 章是近段；`after` 为真时 to 之后已有的也只带第一行（续写、
- *   重写大纲：后面已经排好的要接得上）。
- * - 没给区间（对话页讨论大纲）：最后 10 条是近段。
- * - `maxBefore` 缺省不限；`Infinity` 也是不限，0 是中段一章都不带。
+ * - 給了區間 [from, to]：第 from−10 章到第 to 章是近段；`after` 為真時 to 之後已有的也只帶第一行（續寫、
+ *   重寫大綱：後面已經排好的要接得上）。
+ * - 沒給區間（對話頁討論大綱）：最後 10 條是近段。
+ * - `maxBefore` 預設不限；`Infinity` 也是不限，0 是中段一章都不帶。
  *
- * 一条都认不出返回 undefined。
+ * 一條都認不出返回 undefined。
  */
 export function outlineWindow(
   text: string,
@@ -249,7 +249,7 @@ export function outlineWindow(
   };
 }
 
-/** 拼成一段：中段一章一行 → 近段整条 → 「后面已经排好的」一章一行。哪一段空着就不出。 */
+/** 拼成一段：中段一章一行 → 近段整條 → 「後面已經排好的」一章一行。哪一段空著就不出。 */
 export function renderOutlineWindow(win: Pick<OutlineWindow, 'before' | 'near' | 'later'>): string {
   return [
     win.before.map((e) => `- ${outlineBrief(e)}`).join('\n'),
@@ -261,9 +261,9 @@ export function renderOutlineWindow(win: Pick<OutlineWindow, 'before' | 'near' |
 }
 
 /**
- * 拆细纲时大纲带哪几条：**这一次要拆的**——区间里的（空壳上的梗概就是这一次的上游），外加区间前面还没拆的空壳
- * （`stubs`：没有关键事件，前序细纲一览不列它们）。已经拆过的章由前序细纲一览与前几章细纲带，同一份细纲不带两遍；
- * 区间之后的不带（后面的事别提前写掉）。`skip`：单章时这一章的梗概已经在本章细纲里。升序。
+ * 拆細綱時大綱帶哪幾條：**這一次要拆的**——區間裡的（空殼上的梗概就是這一次的上游），外加區間前面還沒拆的空殼
+ * （`stubs`：沒有關鍵事件，前序細綱一覽不列它們）。已經拆過的章由前序細綱一覽與前幾章細綱帶，同一份細綱不帶兩遍；
+ * 區間之後的不帶（後面的事別提前寫掉）。`skip`：單章時這一章的梗概已經在本章細綱裡。升序。
  */
 export function outlineToSplit(
   text: string,
@@ -275,25 +275,25 @@ export function outlineToSplit(
   );
 }
 
-// ---------------------------------------------------------------- 按章号合并
+// ---------------------------------------------------------------- 按章號合併
 
 function blockText(b: OutlineBlock): string {
   return b.lines.join('\n').replace(/\s+$/, '');
 }
 
 /**
- * 把第 [from, to] 章新写的那段大纲并进旧大纲。
+ * 把第 [from, to] 章新寫的那段大綱並進舊大綱。
  *
- * 大纲是一段一段续写的：写第 21–40 章时模型只输出这一段，不该让作者手改过的第 1–20 章被整份替换掉。规则：
+ * 大綱是一段一段續寫的：寫第 21–40 章時模型只輸出這一段，不該讓作者手改過的第 1–20 章被整份替換掉。規則：
  *
- * - 旧大纲一条都认不出（{@link isOutlineFilled}）→ 直接用新的（旧格式不兼容；有内容时调用方先审阅）。
- * - 删掉旧大纲里**落在 [from, to] 里**的条目，新的放在第一个被删条目的位置；一条都没删就按章号插在
- *   前后两条之间（找不到就接在最后）。
- * - 新产出里落在区间外、旧大纲已经有的章**不并进来**：那是作者没要它重写的，不静默换掉（第 3 条）。
- * - 区间之外的条目、认不出的标题与段落原样保留。
- * - 新产出里第一条之前的东西（多半是一行 `# 情节大纲`）在合并时丢掉——旧大纲已经有自己的开头。
+ * - 舊大綱一條都認不出（{@link isOutlineFilled}）→ 直接用新的（舊格式不相容；有內容時呼叫方先審閱）。
+ * - 刪掉舊大綱裡**落在 [from, to] 裡**的條目，新的放在第一個被刪條目的位置；一條都沒刪就按章號插在
+ *   前後兩條之間（找不到就接在最後）。
+ * - 新產出裡落在區間外、舊大綱已經有的章**不並進來**：那是作者沒要它重寫的，不靜默換掉（第 3 條）。
+ * - 區間之外的條目、認不出的標題與段落原樣保留。
+ * - 新產出裡第一條之前的東西（多半是一行 `# 情節大綱`）在合併時丟掉——舊大綱已經有自己的開頭。
  *
- * 结果仍要走覆盖审阅：合并规则再周全，也得让作者看一眼 diff（第 3 条）。
+ * 結果仍要走覆蓋審閱：合併規則再周全，也得讓作者看一眼 diff（第 3 條）。
  */
 export function mergeOutline(existing: string, incoming: string, range: { from: number; to: number }): string {
   const fresh = (incoming ?? '').trim();
@@ -321,7 +321,7 @@ export function mergeOutline(existing: string, incoming: string, range: { from: 
   if (first !== -1) {
     at = blocks.slice(0, first).filter((b) => !inRange(b)).length;
   } else {
-    // 插在「后面那一条」之前；没有后面的就紧跟「前面最后一条」——不跟在末尾的附注后面。
+    // 插在「後面那一條」之前；沒有後面的就緊跟「前面最後一條」——不跟在末尾的附註後面。
     const after = kept.findIndex((b) => b.kind === 'entry' && b.no > range.to);
     let before = -1;
     kept.forEach((b, i) => {
@@ -336,19 +336,19 @@ export function mergeOutline(existing: string, incoming: string, range: { from: 
   return `${parts.join('\n\n')}\n`;
 }
 
-// ---------------------------------------------------------------- 从细纲汇总
+// ---------------------------------------------------------------- 從細綱彙總
 
-/** 汇总文档的标题行。编辑器打开的那一份带它，装配器读的（{@link outlineEntriesOf}）不带。 */
-export const OUTLINE_DOC_HEADING = '# 情节大纲';
+/** 彙總文件的標題行。編輯器開啟的那一份帶它，裝配器讀的（{@link outlineEntriesOf}）不帶。 */
+export const OUTLINE_DOC_HEADING = '# 情節大綱';
 
-/** 汇总文档开头那段说明：给手改的作者看——存盘只认章标题与下面的梗概。 */
+/** 彙總文件開頭那段說明：給手改的作者看——存檔只認章標題與下面的梗概。 */
 export const OUTLINE_DOC_NOTE =
-  '> 一章一条，汇总自各章细纲的「梗概」。改了存盘就写回那一章的细纲；新加的章建一份只有梗概的细纲，删掉的空壳细纲进回收站。' +
-  '只认「## 第N章：标题」与下面那几句，别的文字不保存。';
+  '> 一章一條，彙總自各章細綱的「梗概」。改了存檔就寫回那一章的細綱；新加的章建一份只有梗概的細綱，刪掉的空殼細綱進回收站。' +
+  '只認「## 第N章：標題」與下面那幾句，別的文字不儲存。';
 
 /**
- * 各章细纲（每个章号认下的那一份，`NovelProject.pairPlots`）→ 一章一条：章号、标题、梗概。梗概空着的不算——
- * 那一章大纲里没有。
+ * 各章細綱（每個章號認下的那一份，`NovelProject.pairPlots`）→ 一章一條：章號、標題、梗概。梗概空著的不算——
+ * 那一章大綱裡沒有。
  */
 export function outlineEntriesOf(plots: readonly Pick<Plot, 'no' | 'title' | 'sections'>[]): OutlineEntry[] {
   return plots
@@ -357,20 +357,20 @@ export function outlineEntriesOf(plots: readonly Pick<Plot, 'no' | 'title' | 'se
     .sort((a, b) => a.no - b.no);
 }
 
-/** 一章一条拼成大纲正文（不带标题行与说明）。 */
+/** 一章一條拼成大綱正文（不帶標題行與說明）。 */
 export function renderOutline(entries: readonly OutlineEntry[]): string {
   return entries.map(renderOutlineEntry).join('\n\n');
 }
 
-/** 给编辑器、覆盖审阅看的整份：标题行、说明、一章一条。 */
+/** 給編輯器、覆蓋審閱看的整份：標題行、說明、一章一條。 */
 export function renderOutlineDoc(entries: readonly OutlineEntry[]): string {
   const body = renderOutline(entries);
   return `${OUTLINE_DOC_HEADING}\n\n${OUTLINE_DOC_NOTE}\n${body ? `\n${body}\n` : ''}`;
 }
 
-// ---------------------------------------------------------------- 按章号拆回各章细纲
+// ---------------------------------------------------------------- 按章號拆回各章細綱
 
-/** 拆回去的一步。`update` 里给了哪个字段就是哪个变了。 */
+/** 拆回去的一步。`update` 裡給了哪個欄位就是哪個變了。 */
 export type OutlineSplitOp =
   | { op: 'create'; no: number; title: string; synopsis: string }
   | { op: 'update'; no: number; rel: string; title?: string; synopsis?: string }
@@ -378,23 +378,23 @@ export type OutlineSplitOp =
 
 export interface OutlineSplitPlan {
   ops: OutlineSplitOp[];
-  /** 大纲里删掉了、但已经排了细纲或写了正文的章：不删，说一声。 */
+  /** 大綱裡刪掉了、但已經排了細綱或寫了正文的章：不刪，說一聲。 */
   kept: number[];
-  /** 只有章标题、下面没写一个字的章：没地方存，说一声。 */
+  /** 只有章標題、下面沒寫一個字的章：沒地方存，說一聲。 */
   empty: number[];
 }
 
 /**
- * 存一份汇总文档时，按章号拆回各章细纲要做哪几件事（落盘在 `Workspace.writeOutline`）。
+ * 存一份彙總文件時，按章號拆回各章細綱要做哪幾件事（落盤在 `Workspace.writeOutline`）。
  *
- * - 一条在、这一章有细纲：梗概或标题变了就改（标题空着 = 沿用细纲的标题）。
- * - 一条在、这一章没有细纲：建一份空壳。
- * - 原来在大纲里（梗概非空）、这一回没有了：空壳（{@link isPlotStub}，且这一章还没有正文）删掉；
- *   排了细纲或写了正文的不删，记进 `kept`。
- * - 同一章写了两条取先出现的；章号只按标题里写的认，**不搬细纲**（把第 5 章改叫第 6 章，等于改第 6 章、删第 5 章）。
+ * - 一條在、這一章有細綱：梗概或標題變了就改（標題空著 = 沿用細綱的標題）。
+ * - 一條在、這一章沒有細綱：建一份空殼。
+ * - 原來在大綱裡（梗概非空）、這一回沒有了：空殼（{@link isPlotStub}，且這一章還沒有正文）刪掉；
+ *   排了細綱或寫了正文的不刪，記進 `kept`。
+ * - 同一章寫了兩條取先出現的；章號只按標題裡寫的認，**不搬細綱**（把第 5 章改叫第 6 章，等於改第 6 章、刪第 5 章）。
  *
- * @param plots 每个章号认下的那一份细纲（`pairPlots`）
- * @param writtenNos 已经有正文的章号
+ * @param plots 每個章號認下的那一份細綱（`pairPlots`）
+ * @param writtenNos 已經有正文的章號
  */
 export function planOutlineSplit(text: string, plots: readonly Plot[], writtenNos: ReadonlySet<number>): OutlineSplitPlan {
   const byNo = new Map(plots.map((p) => [p.no, p]));

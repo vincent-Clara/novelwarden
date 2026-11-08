@@ -1,3 +1,4 @@
+import { traditionalLabel } from '../model/labels';
 import { readConfig } from '../config';
 import { getHost } from '../host';
 import { scoped } from '../runtime/logger';
@@ -19,18 +20,18 @@ import { LlmProvider } from './provider';
 const log = scoped('模型');
 
 /**
- * API Key 按服务商 id 存，不再按 kind——同一种协议下可以并存
- * 多个服务商（智谱官方、OpenRouter、本地 Ollama 都是 openai 兼容），
- * 它们各有各的 Key。
+ * API Key 按服務商 id 存，不再按 kind——同一種協議下可以並存
+ * 多個服務商（智谱官方、OpenRouter、本地 Ollama 都是 openai 相容），
+ * 它們各有各的 Key。
  *
- * 键名里的 `novel-forge.` 前缀**故意不改**：它是已存进 secrets.json 的键，
- * 跟着产品改名只会把作者录过的 Key 全丢掉。
+ * 鍵名裡的 `novel-forge.` 字首**故意不改**：它是已存進 secrets.json 的鍵，
+ * 跟著產品改名只會把作者錄過的 Key 全丟掉。
  */
 function secretKey(providerId: string): string {
   return `novel-forge.apiKey.provider.${providerId}`;
 }
 
-/** 0.1.x 按 kind 存的两个 Key，用于一次性迁移。 */
+/** 0.1.x 按 kind 存的兩個 Key，用於一次性遷移。 */
 const LEGACY_SECRET_KEYS: Record<string, string> = {
   openai: 'novel-forge.apiKey.openai',
   anthropic: 'novel-forge.apiKey.anthropic',
@@ -42,7 +43,7 @@ export function initSecrets(store: SecretStore): void {
   secrets = store;
 }
 
-/** vscode-lm 走 Copilot 授权，不需要 Key。 */
+/** vscode-lm 走 Copilot 授權，不需要 Key。 */
 export function needsApiKey(profile: ProviderProfile): boolean {
   return profile.kind !== 'vscode-lm';
 }
@@ -50,14 +51,14 @@ export function needsApiKey(profile: ProviderProfile): boolean {
 type ExtraProviderFactory = (active: ActiveModel) => LlmProvider | undefined;
 let extraFactory: ExtraProviderFactory | undefined;
 
-/** VS Code 壳启动时注册 vscode-lm provider 工厂（core 不反向依赖 vscode 层）。 */
+/** VS Code 殼啟動時註冊 vscode-lm provider 工廠（core 不反向依賴 vscode 層）。 */
 export function registerProviderFactory(fn: ExtraProviderFactory): void {
   extraFactory = fn;
 }
 
 /**
- * 按当前设置构造 provider。缺 API Key 时会引导用户录入；
- * 模型引用无效或用户放弃录入则返回 undefined（调用方给出说明）。
+ * 按當前設定構造 provider。缺 API Key 時會引導使用者錄入；
+ * 模型引用無效或使用者放棄錄入則返回 undefined（呼叫方給出說明）。
  */
 export async function resolveProvider(ref?: string): Promise<LlmProvider | undefined> {
   const config = readConfig();
@@ -65,14 +66,14 @@ export async function resolveProvider(ref?: string): Promise<LlmProvider | undef
   if (!active) {
     const issue = describeModelIssue(config.providers, ref ?? config.model);
     const wanted = ref ?? config.model;
-    log.error(issue, `请求的引用 ${wanted || '（空）'}｜已配置 ${config.providers.length} 个服务商`);
+    log.error(issue, `請求的引用 ${wanted || '（空）'}｜已配置 ${config.providers.length} 個服務商`);
     getHost().toast(`${issue}`, 'error');
     return undefined;
   }
   return buildProvider(active);
 }
 
-/** 已知模型时直接构造，不再读配置。 */
+/** 已知模型時直接構造，不再讀配置。 */
 export async function buildProvider(
   active: ActiveModel,
   opts: BuildProviderOptions = {}
@@ -85,9 +86,9 @@ export async function buildProvider(
     if (!provider) {
       const detail = `引用 ${active.ref}`;
       if (quiet) {
-        log.warn('当前环境不提供 VS Code 语言模型（Copilot）', detail);
+        log.warn('當前環境不提供 VS Code 語言模型（Copilot）', detail);
       } else {
-        log.error('当前环境不提供 VS Code 语言模型（Copilot）', detail);
+        log.error('當前環境不提供 VS Code 語言模型（Copilot）', detail);
       }
     }
     return provider;
@@ -96,16 +97,16 @@ export async function buildProvider(
   const key = quiet ? await lookupApiKey(profile) : await ensureApiKey(profile);
   if (!key) {
     const message = `未取得「${providerLabel(profile)}」的 API Key`;
-    // 静默构造用于备选模型：缺 Key 只是把它排除在池外，不是错误。
+    // 靜默構造用於備選模型：缺 Key 只是把它排除在池外，不是錯誤。
     if (quiet) {
-      log.warn(message, `引用 ${active.ref}｜可在设置页录入后重新参与`);
+      log.warn(message, `引用 ${active.ref}｜可在設定頁錄入後重新參與`);
     } else {
       log.error(message, `引用 ${active.ref}`);
     }
     return undefined;
   }
   const baseUrl = profile.baseUrl || defaultBaseUrl(profile.kind);
-  log.debug(`构造 provider ${active.ref}`, `${profile.kind}｜${baseUrl}｜模型 ${model.name}`);
+  log.debug(`構造 provider ${active.ref}`, `${traditionalLabel(profile.kind)}｜${baseUrl}｜模型 ${model.name}`);
   return profile.kind === 'anthropic'
     ? new AnthropicProvider(baseUrl, model.name, key)
     : new OpenAiProvider(baseUrl, model.name, key);
@@ -113,9 +114,9 @@ export async function buildProvider(
 
 export interface BuildProviderOptions {
   /**
-   * 缺 API Key 时是否弹输入框引导录入。缺省 true（与用户点了某个动作的
-   * 直觉一致）。**模型池构造备选模型时必须传 false**——一个池里有五个
-   * 模型就连弹五个输入框，那比没有 fallback 还糟。
+   * 缺 API Key 時是否彈輸入框引導錄入。預設 true（與使用者點了某個動作的
+   * 直覺一致）。**模型池構造備選模型時必須傳 false**——一個池裡有五個
+   * 模型就連彈五個輸入框，那比沒有 fallback 還糟。
    */
   promptForKey?: boolean;
 }
@@ -126,10 +127,10 @@ async function ensureApiKey(profile: ProviderProfile): Promise<string | undefine
 }
 
 /**
- * 取某服务商的 Key。
+ * 取某服務商的 Key。
  *
- * 找不到时回落到 0.1.x 按 kind 存的 Key，并顺手迁移到新键上——
- * 老用户升级后不该被要求重新输一遍。
+ * 找不到時回落到 0.1.x 按 kind 存的 Key，並順手遷移到新鍵上——
+ * 老使用者升級後不該被要求重新輸一遍。
  */
 async function lookupApiKey(profile: ProviderProfile): Promise<string | undefined> {
   const store = requireSecrets();
@@ -145,12 +146,12 @@ async function lookupApiKey(profile: ProviderProfile): Promise<string | undefine
   if (legacy) {
     await store.set(secretKey(profile.id), legacy);
     await store.delete(legacyKey);
-    log.info(`「${providerLabel(profile)}」的 API Key 已从 0.1.x 的键位迁移`);
+    log.info(`「${providerLabel(profile)}」的 API Key 已從 0.1.x 的鍵位遷移`);
   }
   return legacy ?? undefined;
 }
 
-/** 某个服务商是否已存过 Key——设置页据此显示状态，不回显 Key 本身。 */
+/** 某個服務商是否已存過 Key——設定頁據此顯示狀態，不回顯 Key 本身。 */
 export async function hasApiKey(providerId: string): Promise<boolean> {
   if (!secrets) {
     return false;
@@ -162,7 +163,7 @@ export async function hasApiKey(providerId: string): Promise<boolean> {
   return legacyKey ? !!(await secrets.get(legacyKey)) : false;
 }
 
-/** 每个服务商的 Key 状态，一次问完，设置页一次渲染。 */
+/** 每個服務商的 Key 狀態，一次問完，設定頁一次渲染。 */
 export async function apiKeyStatus(providers: ProviderProfile[]): Promise<Record<string, boolean>> {
   const out: Record<string, boolean> = {};
   for (const profile of providers) {
@@ -175,7 +176,7 @@ export async function promptForApiKey(providerId?: string): Promise<string | und
   const config = readConfig();
   const profile = providerId
     ? config.providers.find((p) => p.id === providerId)
-    : config.active?.profile ?? (await pickProvider(config.providers, '为哪个服务商设置 API Key？'));
+    : config.active?.profile ?? (await pickProvider(config.providers, '為哪個服務商設定 API Key？'));
 
   if (!profile) {
     getHost().toast(
@@ -185,26 +186,26 @@ export async function promptForApiKey(providerId?: string): Promise<string | und
     return undefined;
   }
   if (!needsApiKey(profile)) {
-    getHost().toast(`「${providerLabel(profile)}」使用 VS Code 语言模型（Copilot），无需 API Key。`);
+    getHost().toast(`「${providerLabel(profile)}」使用 VS Code 語言模型（Copilot），無需 API Key。`);
     return undefined;
   }
 
   const host = profile.baseUrl || defaultBaseUrl(profile.kind);
   const value = await getHost().input({
-    title: `设置「${providerLabel(profile)}」的 API Key`,
-    prompt: `安全保存在本机密钥存储中，不会写入配置文件。接口地址：${host}`,
+    title: `設定「${providerLabel(profile)}」的 API Key`,
+    prompt: `安全儲存在本機金鑰儲存中，不會寫入配置檔案。介面地址：${host}`,
     password: true,
     placeHolder: profile.kind === 'anthropic' ? 'sk-ant-...' : 'sk-...',
-    validate: (v) => (v.trim().length === 0 ? 'API Key 不能为空' : undefined),
+    validate: (v) => (v.trim().length === 0 ? 'API Key 不能為空' : undefined),
   });
 
   if (!value) {
-    log.info(`用户取消了「${providerLabel(profile)}」的 API Key 录入`);
+    log.info(`使用者取消了「${providerLabel(profile)}」的 API Key 錄入`);
     return undefined;
   }
   await requireSecrets().set(secretKey(profile.id), value.trim());
-  log.info(`「${providerLabel(profile)}」的 API Key 已保存`, `接口地址 ${host}`);
-  getHost().toast(`「${providerLabel(profile)}」的 API Key 已保存。`);
+  log.info(`「${providerLabel(profile)}」的 API Key 已儲存`, `介面地址 ${host}`);
+  getHost().toast(`「${providerLabel(profile)}」的 API Key 已儲存。`);
   return value.trim();
 }
 
@@ -212,10 +213,10 @@ export async function clearApiKey(providerId?: string): Promise<void> {
   const store = requireSecrets();
   const config = readConfig();
 
-  // 设置页会指名清哪个；从命令面板进来则要问一下。
+  // 設定頁會指名清哪個；從命令面板進來則要問一下。
   const profile = providerId
     ? config.providers.find((p) => p.id === providerId)
-    : await pickProvider(config.providers.filter(needsApiKey), '清除哪个服务商的 API Key？');
+    : await pickProvider(config.providers.filter(needsApiKey), '清除哪個服務商的 API Key？');
   if (!profile) {
     return;
   }
@@ -229,7 +230,7 @@ export async function clearApiKey(providerId?: string): Promise<void> {
   getHost().toast(`已清除「${providerLabel(profile)}」的 API Key。`);
 }
 
-/** 清掉配置里已不存在的服务商的 Key——删掉服务商后不该在钥匙串里留下孤儿。 */
+/** 清掉配置裡已不存在的服務商的 Key——刪掉服務商後不該在鑰匙串裡留下孤兒。 */
 export async function pruneApiKeys(providers: ProviderProfile[], removedIds: string[]): Promise<void> {
   if (!secrets || removedIds.length === 0) {
     return;
@@ -242,7 +243,7 @@ export async function pruneApiKeys(providers: ProviderProfile[], removedIds: str
       if (legacyKey) {
         await secrets.delete(legacyKey);
       }
-      log.info(`服务商「${id}」已删除，顺手清掉它的 API Key`);
+      log.info(`服務商「${id}」已刪除，順手清掉它的 API Key`);
     }
   }
 }
@@ -268,7 +269,7 @@ async function pickProvider(
   );
 }
 
-/** 命令面板里的模型切换器。 */
+/** 命令面板裡的模型切換器。 */
 export async function pickModelRef(): Promise<string | undefined> {
   const config = readConfig();
   const choices = listModelChoices(config.providers, getHost().supportsVscodeLm);
@@ -281,11 +282,11 @@ export async function pickModelRef(): Promise<string | undefined> {
     choices.map((choice) => ({
       label: choice.ref,
       description: choice.label !== choice.ref.slice(choice.ref.indexOf('/') + 1) ? choice.label : undefined,
-      detail: choice.contextWindow ? `窗口 ${choice.contextWindow} token` : undefined,
+      detail: choice.contextWindow ? `視窗 ${choice.contextWindow} token` : undefined,
       group: choice.group,
       value: choice.ref,
     })),
-    '选择模型'
+    '選擇模型'
   );
 }
 

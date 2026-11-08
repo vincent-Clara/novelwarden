@@ -1,17 +1,17 @@
 /**
- * 触屏与手机窄屏（2026-10-24，Android 壳实测之后）：样式里那几条能力探测的规矩、右键菜单与标题栏下拉整个落在可视区里、
- * 工程页三只悬停浮窗在手指下的入口（长按菜单最前面的「看一眼」、点感叹号）、窄屏上把欢迎页翻上来。
- * 摆位置的几何本身在 tests/unit/view/menuPlace.test.js；名词浮窗与叙事线总览的触屏交互在 nameMarks.test.js / threadsOverview.test.js；
- * 标题栏的书名在 welcome.test.js；窄屏底栏、标题栏「⋯」、返回键与编辑区顶上两行的交互在 mobileNav.test.js。真浏览器（360×640 触屏、1440×860 桌面）与 Android 真机的核对见 media/README.md「触屏与窄屏」。
+ * 觸屏與手機窄屏（2026-10-24，Android 殼實測之後）：樣式裡那幾條能力探測的規矩、右鍵選單與標題欄下拉整個落在可視區裡、
+ * 工程頁三隻懸停浮窗在手指下的入口（長按選單最前面的「看一眼」、點感嘆號）、窄屏上把歡迎頁翻上來。
+ * 擺位置的幾何本身在 tests/unit/view/menuPlace.test.js；名詞浮窗與敘事線總覽的觸屏互動在 nameMarks.test.js / threadsOverview.test.js；
+ * 標題欄的書名在 welcome.test.js；窄屏底欄、標題欄「⋯」、返回鍵與編輯區頂上兩行的互動在 mobileNav.test.js。真瀏覽器（360×640 觸屏、1440×860 桌面）與 Android 真機的核對見 media/README.md「觸屏與窄屏」。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 样式 | 整页的列不被 min-content 撑开；`(hover: none)` 里整页不选字、正文与要复制的那几样照常能选、悬停才露的东西常显、不提快捷键、不显示「外部打开」；`(pointer: coarse)`（与没登记指针的 `(pointer: none)`）里点击目标放大、文字按钮的点击区往四周借；窄屏上活动栏成了底栏（文件 / 历史 / 日志 / 设置收进「更多」）、标题栏藏菜单栏、编辑区顶上只留标签条与章节条、提示条浮在底栏上；软键盘弹着（kb-open）或可视高度很矮时、正在打字就让出底栏与流水线条 / 章节条；宽屏上窄屏那几颗不出来；区分只用媒体查询，不认 UA；页头声明了 `interactive-widget=resizes-content` 与 `theme-color` |
- * | 右键菜单 | 下半屏放不下：往上翻 / 平移贴底；比可视区还高：压 max-height；桌面上右下角照旧往左上翻 |
- * | 标题栏下拉与子菜单 | 「帮助」的下拉伸出右边就往左收（与按钮右沿对齐）；子菜单右边放不下翻到左边、贴边；点一下父菜单项也展开子菜单；手指点之前补发的 mouseenter / mouseover 不展开子菜单、不换菜单（实机上一点父项就打开了最近的书、点「编辑」把菜单全关了） |
- * | 工程页的「看一眼」 | 手指长按章节行：最前面「细纲速览」（挂着失败的还有「看失败原因」），点了钉住浮窗、按在外面才收；鼠标右键没有这几项；手指点之后补发的 mouseover 不弹浮窗；手指点感叹号钉住失败浮窗，鼠标点不弹；说明被截断的行长按有「看完整说明」 |
- * | 窄屏的欢迎页 | 空窗口与「帮助 → 欢迎页面」把编辑区那层覆盖翻上来；打开一本书之后收起；宽屏不碰 |
- * | 不顺手聚焦 | 手指点「对话」页签、手机上一载入、手指点编辑器页签切文件：都不把焦点放进输入框 / 正文区（一聚焦就弹软键盘）；鼠标照旧聚焦 |
+ * | 樣式 | 整頁的列不被 min-content 撐開；`(hover: none)` 裡整頁不選字、正文與要複製的那幾樣照常能選、懸停才露的東西常顯、不提快捷鍵、不顯示「外部開啟」；`(pointer: coarse)`（與沒登記指標的 `(pointer: none)`）裡點選目標放大、文字按鈕的點選區往四周借；窄屏上活動欄成了底欄（檔案 / 歷史 / 日誌 / 設定收進「更多」）、標題欄藏選單欄、編輯區頂上只留標籤條與章節條、提示條浮在底欄上；軟鍵盤彈著（kb-open）或可視高度很矮時、正在打字就讓出底欄與流水線條 / 章節條；寬屏上窄屏那幾顆不出來；區分只用媒體查詢，不認 UA；頁頭宣告瞭 `interactive-widget=resizes-content` 與 `theme-color` |
+ * | 右鍵選單 | 下半屏放不下：往上翻 / 平移貼底；比可視區還高：壓 max-height；桌面上右下角照舊往左上翻 |
+ * | 標題欄下拉與子選單 | 「幫助」的下拉伸出右邊就往左收（與按鈕右沿對齊）；子選單右邊放不下翻到左邊、貼邊；點一下父選單項也展開子選單；手指點之前補發的 mouseenter / mouseover 不展開子選單、不換選單（實機上一點父項就開啟了最近的書、點「編輯」把選單全關了） |
+ * | 工程頁的「看一眼」 | 手指長按章節行：最前面「細綱速覽」（掛著失敗的還有「看失敗原因」），點了釘住浮窗、按在外面才收；滑鼠右鍵沒有這幾項；手指點之後補發的 mouseover 不彈浮窗；手指點感嘆號釘住失敗浮窗，滑鼠點不彈；說明被截斷的行長按有「看完整說明」 |
+ * | 窄屏的歡迎頁 | 空視窗與「幫助 → 歡迎頁面」把編輯區那層覆蓋翻上來；開啟一本書之後收起；寬屏不碰 |
+ * | 不順手聚焦 | 手指點「對話」頁籤、手機上一載入、手指點編輯器頁籤切檔案：都不把焦點放進輸入框 / 正文區（一聚焦就彈軟鍵盤）；滑鼠照舊聚焦 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -22,7 +22,7 @@ const { ROOT } = require('../../helpers/load');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** 产物里某个 @media 块的内容（按花括号配对）。 */
+/** 產物裡某個 @media 塊的內容（按花括號配對）。 */
 function mediaBlocks(css, query) {
   const out = [];
   let from = 0;
@@ -43,35 +43,35 @@ function mediaBlocks(css, query) {
   }
 }
 
-describe('触屏与窄屏：样式', { skip: JSDOM_SKIP }, () => {
+describe('觸屏與窄屏：樣式', { skip: JSDOM_SKIP }, () => {
   const css = fs.readFileSync(path.join(ROOT, 'dist', 'media', 'standalone.css'), 'utf8');
   const hoverNone = mediaBlocks(css, '(hover: none)').join('\n');
   const coarse = mediaBlocks(css, '(pointer: coarse)').join('\n');
   const narrow = mediaBlocks(css, '(max-width: 900px)').join('\n');
 
-  test('整页的列写死成 minmax(0, 1fr)、高度跟布局视口（100%），不被标题栏里不折行的路径撑宽', () => {
+  test('整頁的列寫死成 minmax(0, 1fr)、高度跟佈局視口（100%），不被標題欄裡不折行的路徑撐寬', () => {
     const rule = /body\.workbench\s*\{[^}]*\}/.exec(css)[0];
     assert.match(rule, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
     assert.match(rule, /height:\s*100%/);
     assert.doesNotMatch(rule, /100vh/);
   });
 
-  test('(hover: none)：整页不选字；输入框、编辑区、预览、对话正文、浮窗、日志这些照常能选', () => {
+  test('(hover: none)：整頁不選字；輸入框、編輯區、預覽、對話正文、浮窗、日誌這些照常能選', () => {
     assert.match(hoverNone, /body\.workbench\s*\{[^}]*user-select:\s*none/);
     const reopen = /body\.workbench :is\(([^)]*)\)\s*\{[^}]*user-select:\s*text/.exec(hoverNone);
-    assert.ok(reopen, '没有重新打开选字的那一条');
+    assert.ok(reopen, '沒有重新開啟選字的那一條');
     for (const sel of ['input', 'textarea', '.ed-preview', '.msg-body', '.gen-body', '.summary-tip', '.failure-tip', '.log-msg']) {
-      assert.ok(reopen[1].includes(sel), `${sel} 应该能选字`);
+      assert.ok(reopen[1].includes(sel), `${sel} 應該能選字`);
     }
   });
 
-  test('(hover: none)：悬停才露出来的行内按钮、⋯、标签上的 × 常显', () => {
+  test('(hover: none)：懸停才露出來的行內按鈕、⋯、標籤上的 × 常顯', () => {
     assert.match(hoverNone, /\.row-actions\s*\{[^}]*opacity:\s*1/);
     assert.match(hoverNone, /\.msg-menu-btn\s*\{[^}]*opacity/);
     assert.match(hoverNone, /\.ed-tab \.ed-tab-close\s*\{[^}]*opacity/);
   });
 
-  test('(pointer: coarse)：菜单项、树的行、页签、图标按钮放大到 40px 上下；标题栏加高（窄屏覆盖层跟着它的变量走）', () => {
+  test('(pointer: coarse)：選單項、樹的行、頁籤、圖示按鈕放大到 40px 上下；標題欄加高（窄屏覆蓋層跟著它的變數走）', () => {
     assert.match(coarse, /\.wb-menu-item\s*\{[^}]*height:\s*40px/);
     assert.match(coarse, /\.ctx-menu button,\s*\.msg-menu button\s*\{[^}]*min-height:\s*40px/);
     assert.match(coarse, /\.row\s*\{[^}]*min-height:\s*40px/);
@@ -81,18 +81,18 @@ describe('触屏与窄屏：样式', { skip: JSDOM_SKIP }, () => {
     assert.match(narrow, /inset:\s*var\(--nf-title-height\) 0 var\(--nf-nav-height\)/);
   });
 
-  test('放大点击目标那一段也认 (pointer: none)（Android 模拟器 / 容器里没有登记触屏）', () => {
+  test('放大點選目標那一段也認 (pointer: none)（Android 模擬器 / 容器裡沒有登記觸屏）', () => {
     assert.match(css, /@media \(pointer: coarse\),\s*\(pointer: none\)/);
   });
 
-  test('窄屏 + 可视高度很矮（横屏或软键盘弹出来）：焦点在对话输入框里收起底栏、流水线条、下一步、输入框底下那行小字；在编辑区里收起章节条、工具栏与底栏', () => {
+  test('窄屏 + 可視高度很矮（橫屏或軟鍵盤彈出來）：焦點在對話輸入框裡收起底欄、流水線條、下一步、輸入框底下那行小字；在編輯區裡收起章節條、工具欄與底欄', () => {
     const short = mediaBlocks(css, '(max-width: 900px) and (max-height: 480px)').join('\n');
     assert.match(short, /body\.workbench:has\(#input:focus\) :is\(\.tabbar, \.pipeline, \.nextstep, \.composer-meta\)\s*\{[^}]*display:\s*none/);
     assert.match(short, /body\.workbench:has\(\.ed-area:focus\) :is\(\.ed-chapter-bar, \.ed-toolbar, \.tabbar\)\s*\{[^}]*display:\s*none/);
     assert.match(short, /--nf-nav-height:\s*0px/);
   });
 
-  test('窄屏 + 软键盘弹着（kb-open）：底栏让出来、编辑区落到底；在正文里打字时标题栏、章节条也让出来，编辑区顶到最上面；对话页让出流水线条', () => {
+  test('窄屏 + 軟鍵盤彈著（kb-open）：底欄讓出來、編輯區落到底；在正文裡打字時標題欄、章節條也讓出來，編輯區頂到最上面；對話頁讓出流水線條', () => {
     assert.match(narrow, /body\.kb-open\s*\{[^}]*--nf-nav-height:\s*0px/);
     assert.match(narrow, /body\.kb-open:has\(\.ed-area:focus\)\s*\{[^}]*--nf-title-height:\s*0px/);
     assert.match(narrow, /body\.kb-open:has\(\.ed-area:focus\) \.wb-title,/);
@@ -100,9 +100,9 @@ describe('触屏与窄屏：样式', { skip: JSDOM_SKIP }, () => {
     assert.match(narrow, /body\.kb-open:has\(\.ed-area:focus\) \.ed-chapter-bar,\s*body\.kb-open:has\(#input:focus\) :is\(\.pipeline, \.nextstep, \.composer-meta\)\s*\{[^}]*display:\s*none/);
   });
 
-  test('窄屏：活动栏成了底栏（排到侧栏下面），文件 / 历史 / 日志 / 设置收进「更多」；标题栏藏菜单栏、露书名；编辑区顶上只留标签条与章节条', () => {
+  test('窄屏：活動欄成了底欄（排到側欄下面），檔案 / 歷史 / 日誌 / 設定收進「更多」；標題欄藏選單欄、露書名；編輯區頂上只留標籤條與章節條', () => {
     assert.match(narrow, /\.workbench \.tabbar\s*\{[^}]*order:\s*1[^}]*height:\s*var\(--nf-nav-height\)/);
-    // 构建会把属性值的引号去掉。
+    // 構建會把屬性值的引號去掉。
     assert.match(narrow, /\.workbench \.tab:is\(\[data-tab='?files'?\], \[data-tab='?history'?\], \[data-tab='?logs'?\], \[data-tab='?settings'?\]\)\s*\{[^}]*display:\s*none/);
     assert.match(narrow, /\.wb-menubar\s*\{[^}]*display:\s*none/);
     assert.match(narrow, /\.wb-title-full\s*\{[^}]*display:\s*none/);
@@ -111,32 +111,32 @@ describe('触屏与窄屏：样式', { skip: JSDOM_SKIP }, () => {
     assert.match(narrow, /\.ed-chapter-actions,\s*\.ed-chapter-nav-word\s*\{[^}]*display:\s*none/);
     assert.match(narrow, /\.workbench \.toast\s*\{[^}]*bottom:\s*calc\(var\(--nf-nav-height\)/);
     assert.match(css, /\.wb-menu-btn\s*\{[^}]*white-space:\s*nowrap/);
-    // 宽屏上这几颗都不出来。
+    // 寬屏上這幾顆都不出來。
     const wide = mediaBlocks(css, '(min-width: 901px)').join('\n');
-    // 按钮要写成 button.…：button.primary / button.chip-btn 自带 display，只写类名压不过（桌面上露出来过）。
+    // 按鈕要寫成 button.…：button.primary / button.chip-btn 自帶 display，只寫類名壓不過（桌面上露出來過）。
     assert.match(wide, /\.tab\[data-nav\],\s*#wbMoreBtn,\s*button\.ed-tabs-icon,\s*button\.ed-tabs-save,\s*button\.ed-tabs-tools,\s*button\.ed-chapter-menu\s*\{[^}]*display:\s*none/);
   });
 
-  test('(hover: none)：能打字的框把整页关掉的长按 callout 还回来（走系统的选字菜单）', () => {
+  test('(hover: none)：能打字的框把整頁關掉的長按 callout 還回來（走系統的選字選單）', () => {
     assert.match(hoverNone, /body\.workbench :is\(input, textarea, \[contenteditable\]\)\s*\{[^}]*-webkit-touch-callout:\s*default/);
   });
 
-  test('(hover: none)：快捷键提示与「外部打开」不显示；(pointer: coarse)：文字按钮的点击区往四周借', () => {
+  test('(hover: none)：快捷鍵提示與「外部開啟」不顯示；(pointer: coarse)：文字按鈕的點選區往四周借', () => {
     assert.match(hoverNone, /\.wb-menu-kbd,\s*\.kbd-hint,[^{]*\{[^}]*display:\s*none/);
     assert.match(hoverNone, /\.ed-external-btn\s*\{[^}]*display:\s*none/);
     assert.match(coarse, /button\.link\s*\{[^}]*padding:\s*10px 4px;[^}]*margin:\s*-10px -2px/);
   });
 
-  test('区分形态只用能力探测：样式里没有按 UA、按壳分的选择器；页面声明了键盘弹出时缩布局视口', () => {
+  test('區分形態只用能力探測：樣式裡沒有按 UA、按殼分的選擇器；頁面宣告瞭鍵盤彈出時縮佈局視口', () => {
     assert.doesNotMatch(css, /android|user-agent|data-shell/i);
     const { standalonePage } = require('../../helpers/load').loadModule('src/shells/standalone/page.ts');
     assert.match(standalonePage(), /<meta name="viewport" content="[^"]*interactive-widget=resizes-content/);
-    // 系统栏的颜色：手机浏览器与 Android 壳都按它染，换主题时页面改它（look.test.js「护眼主题」）
+    // 系統欄的顏色：手機瀏覽器與 Android 殼都按它染，換主題時頁面改它（look.test.js「護眼主題」）
     assert.match(standalonePage(), /<meta name="theme-color" content="#[0-9a-f]{6}">/);
   });
 });
 
-/** 给右键菜单与标题栏的下拉装上尺寸：jsdom 里全是 0。 */
+/** 給右鍵選單與標題欄的下拉裝上尺寸：jsdom 裡全是 0。 */
 function sized(ui, sizes) {
   Object.defineProperty(ui.window, 'innerWidth', { get: () => 360, configurable: true });
   Object.defineProperty(ui.window, 'innerHeight', { get: () => 640, configurable: true });
@@ -155,7 +155,7 @@ function sized(ui, sizes) {
   });
 }
 
-describe('触屏与窄屏：菜单整个落在可视区里（360×640）', { skip: JSDOM_SKIP }, () => {
+describe('觸屏與窄屏：選單整個落在可視區裡（360×640）', { skip: JSDOM_SKIP }, () => {
   let ui;
   const size = { w: 150, h: 476 };
   const menu = () => ui.doc.querySelector('.ctx-menu');
@@ -165,7 +165,7 @@ describe('触屏与窄屏：菜单整个落在可视区里（360×640）', { ski
     sized(ui, { 'ctx-menu': size, submenu: { w: 260, h: 80 }, 'wb-menu-drop': { w: 220, h: 300 } });
   });
 
-  test('下半屏长按、菜单比剩下的高：先往上翻；翻不下就平移到贴着底边，整个看得见', () => {
+  test('下半屏長按、選單比剩下的高：先往上翻；翻不下就平移到貼著底邊，整個看得見', () => {
     size.h = 300;
     ui.rightClick(ui.doc.getElementById('messages'), 40, 560);
     assert.deepEqual(box(), { left: 40, top: 260, maxHeight: '' });
@@ -176,38 +176,38 @@ describe('触屏与窄屏：菜单整个落在可视区里（360×640）', { ski
     ui.closeMenu();
   });
 
-  test('比整个可视区还高：从顶上开始、压 max-height（菜单里滚）；右边放不下往左翻', () => {
+  test('比整個可視區還高：從頂上開始、壓 max-height（選單裡滾）；右邊放不下往左翻', () => {
     size.h = 900;
     ui.rightClick(ui.doc.getElementById('messages'), 300, 400);
     assert.deepEqual(box(), { left: 150, top: 4, maxHeight: '632px' });
     ui.closeMenu();
   });
 
-  test('「帮助」的下拉伸出右边就往左收；「打开最近打开的」子菜单右边放不下翻到左边、再不行贴边；点一下父项也展开', () => {
+  test('「幫助」的下拉伸出右邊就往左收；「開啟最近開啟的」子選單右邊放不下翻到左邊、再不行貼邊；點一下父項也展開', () => {
     const help = ui.doc.querySelector('[data-menu="help"]');
     help.getBoundingClientRect = () => ({ left: 300, right: 340, top: 0, bottom: 44, width: 40, height: 44 });
     ui.clickEl(help);
     const drop = ui.doc.querySelector('.wb-menu-drop');
-    // 右边伸出去：与按钮右沿对齐（往左收）
+    // 右邊伸出去：與按鈕右沿對齊（往左收）
     assert.equal(drop.style.left, `${340 - 220}px`);
     assert.equal(drop.style.top, '44px');
     ui.clickEl(help);
 
     ui.clickEl(ui.doc.querySelector('[data-menu="file"]'));
-    const parent = [...ui.doc.querySelectorAll('.wb-menu-item')].find((b) => b.textContent.includes('打开最近打开的'));
+    const parent = [...ui.doc.querySelectorAll('.wb-menu-item')].find((b) => b.textContent.includes('開啟最近開啟的'));
     parent.getBoundingClientRect = () => ({ left: 4, right: 224, top: 200, bottom: 240, width: 220, height: 40 });
     ui.clickEl(parent);
     const sub = ui.doc.querySelector('.wb-menu-drop.submenu');
-    assert.ok(sub, '点一下父菜单项就该展开子菜单（手指没有悬停）');
+    assert.ok(sub, '點一下父選單項就該展開子選單（手指沒有懸停）');
     assert.equal(sub.style.left, `${360 - 4 - 260}px`);
     assert.equal(sub.style.top, '200px');
     ui.closeMenu();
   });
 
-  test('手指点子菜单的父项：点之前补发的 mouseenter 不展开（不然紧跟的 click 落到盖过来的子菜单项上），靠 click 展开', () => {
+  test('手指點子選單的父項：點之前補發的 mouseenter 不展開（不然緊跟的 click 落到蓋過來的子選單項上），靠 click 展開', () => {
     const finger = (node) => node.dispatchEvent(new ui.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
     ui.clickEl(ui.doc.querySelector('[data-menu="file"]'));
-    const parent = [...ui.doc.querySelectorAll('.wb-menu-item')].find((b) => b.textContent.includes('打开最近打开的'));
+    const parent = [...ui.doc.querySelectorAll('.wb-menu-item')].find((b) => b.textContent.includes('開啟最近開啟的'));
     finger(parent);
     parent.dispatchEvent(new ui.window.MouseEvent('mouseenter'));
     assert.equal(ui.doc.querySelector('.wb-menu-drop.submenu'), null);
@@ -216,28 +216,28 @@ describe('触屏与窄屏：菜单整个落在可视区里（360×640）', { ski
     ui.closeMenu();
   });
 
-  test('开着「文件」时手指点「编辑」：换成「编辑」的下拉，不是全关掉；鼠标移过去照旧换', () => {
+  test('開著「檔案」時手指點「編輯」：換成「編輯」的下拉，不是全關掉；滑鼠移過去照舊換', () => {
     const finger = (node) => node.dispatchEvent(new ui.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
     const mouse = (node) => node.dispatchEvent(new ui.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' }));
     const file = ui.doc.querySelector('[data-menu="file"]');
     const edit = ui.doc.querySelector('[data-menu="edit"]');
     const dropText = () => ui.doc.querySelector('.wb-menu-drop')?.textContent ?? '';
     ui.clickEl(file);
-    assert.match(dropText(), /新建一本书/);
+    assert.match(dropText(), /新建一本書/);
     finger(edit);
     edit.dispatchEvent(new ui.window.MouseEvent('mouseover', { bubbles: true }));
     ui.clickEl(edit);
-    assert.match(dropText(), /撤销/);
+    assert.match(dropText(), /撤銷/);
     mouse(file);
     file.dispatchEvent(new ui.window.MouseEvent('mouseover', { bubbles: true }));
-    assert.match(dropText(), /新建一本书/);
+    assert.match(dropText(), /新建一本書/);
     ui.closeMenu();
   });
 });
 
-describe('触屏与窄屏：工程页浮窗在手指下的入口', { skip: JSDOM_SKIP }, () => {
+describe('觸屏與窄屏：工程頁浮窗在手指下的入口', { skip: JSDOM_SKIP }, () => {
   let ui;
-  const CHAPTER = 'chapters/002-入镇.md';
+  const CHAPTER = 'chapters/002-入鎮.md';
   const finger = (node) => node.dispatchEvent(new ui.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
   const mouse = (node) => node.dispatchEvent(new ui.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' }));
   const rowWith = (text) => [...ui.doc.querySelectorAll('#projectBody .row-plot[data-plot]')].find((n) => n.textContent.includes(text));
@@ -248,48 +248,48 @@ describe('触屏与窄屏：工程页浮窗在手指下的入口', { skip: JSDOM
   before(() => {
     ui = mount({ body: 'standalone', scripts: ['view.js'] });
     const tree = sampleTree();
-    tree.failures = { [CHAPTER]: [{ at: '2026-10-24T08:00:00.000Z', severity: 'error', message: '同步失败：模型返回无法解析' }] };
+    tree.failures = { [CHAPTER]: [{ at: '2026-10-24T08:00:00.000Z', severity: 'error', message: '同步失敗：模型返回無法解析' }] };
     ui.post({ type: 'state', state: viewState() });
     ui.post({ type: 'project', tree });
   });
 
-  test('手指长按章节行：菜单最前面「细纲速览」，挂着失败的还有「看失败原因」；鼠标右键没有这几项', () => {
-    finger(rowWith('入镇'));
-    let menu = ui.rightClick(rowWith('入镇').querySelector('.row-label'));
+  test('手指長按章節行：選單最前面「細綱速覽」，掛著失敗的還有「看失敗原因」；滑鼠右鍵沒有這幾項', () => {
+    finger(rowWith('入鎮'));
+    let menu = ui.rightClick(rowWith('入鎮').querySelector('.row-label'));
     const items = ui.itemsOf(menu);
-    assert.deepEqual(items.slice(0, 2), ['细纲速览', '看失败原因']);
+    assert.deepEqual(items.slice(0, 2), ['細綱速覽', '看失敗原因']);
     ui.closeMenu();
-    mouse(rowWith('入镇'));
-    menu = ui.rightClick(rowWith('入镇').querySelector('.row-label'));
-    assert.equal(ui.itemsOf(menu).includes('细纲速览'), false);
-    assert.equal(ui.itemsOf(menu).includes('看失败原因'), false);
+    mouse(rowWith('入鎮'));
+    menu = ui.rightClick(rowWith('入鎮').querySelector('.row-label'));
+    assert.equal(ui.itemsOf(menu).includes('細綱速覽'), false);
+    assert.equal(ui.itemsOf(menu).includes('看失敗原因'), false);
     ui.closeMenu();
   });
 
-  test('「细纲速览」：钉住这一章的细纲浮窗、去要细纲；按在浮窗里不收，按在外面才收', async () => {
+  test('「細綱速覽」：釘住這一章的細綱浮窗、去要細綱；按在浮窗裡不收，按在外面才收', async () => {
     ui.sent.length = 0;
     finger(rowWith('楔子'));
-    ui.pick(ui.rightClick(rowWith('楔子').querySelector('.row-label')), '细纲速览');
+    ui.pick(ui.rightClick(rowWith('楔子').querySelector('.row-label')), '細綱速覽');
     assert.ok(summaryTip());
     assert.equal(ui.last('requestSummary').plotRelPath, rowWith('楔子').dataset.plot);
     await wait(5);
-    // 补发的兼容鼠标事件（移开）不收钉住的浮窗
+    // 補發的相容滑鼠事件（移開）不收釘住的浮窗
     summaryTip().dispatchEvent(new ui.window.MouseEvent('mouseleave'));
     ui.doc.getElementById('projectBody').dispatchEvent(new ui.window.MouseEvent('mouseleave'));
     await wait(400);
     assert.ok(summaryTip());
     finger(summaryTip());
-    assert.ok(summaryTip(), '按在浮窗里（滚动、选字）不收');
+    assert.ok(summaryTip(), '按在浮窗裡（滾動、選字）不收');
     finger(ui.doc.body);
     assert.equal(summaryTip(), null);
   });
 
-  test('手指点一下之后补发的 mouseover 不当悬停：过了延迟也不弹细纲浮窗', async () => {
+  test('手指點一下之後補發的 mouseover 不當懸停：過了延遲也不彈細綱浮窗', async () => {
     finger(rowWith('楔子'));
     rowWith('楔子').dispatchEvent(new ui.window.MouseEvent('mouseover', { bubbles: true }));
     await wait(600);
     assert.equal(summaryTip(), null);
-    // 换回鼠标：照旧悬停就弹
+    // 換回滑鼠：照舊懸停就彈
     mouse(rowWith('楔子'));
     rowWith('楔子').dispatchEvent(new ui.window.MouseEvent('mouseover', { bubbles: true }));
     await wait(600);
@@ -298,8 +298,8 @@ describe('触屏与窄屏：工程页浮窗在手指下的入口', { skip: JSDOM
     assert.equal(summaryTip(), null);
   });
 
-  test('手指点感叹号：钉住失败浮窗（不打开这一章）；鼠标点不弹', async () => {
-    const mark = rowWith('入镇').querySelector('.row-failure');
+  test('手指點感嘆號：釘住失敗浮窗（不開啟這一章）；滑鼠點不彈', async () => {
+    const mark = rowWith('入鎮').querySelector('.row-failure');
     assert.ok(mark);
     ui.sent.length = 0;
     mouse(mark);
@@ -308,27 +308,27 @@ describe('触屏与窄屏：工程页浮窗在手指下的入口', { skip: JSDOM
     finger(mark);
     ui.clickEl(mark);
     assert.ok(failureTip());
-    assert.match(failureTip().textContent, /同步失败：模型返回无法解析/);
+    assert.match(failureTip().textContent, /同步失敗：模型返回無法解析/);
     assert.equal(ui.last('openChapter'), undefined);
     await wait(5);
     finger(ui.doc.body);
     assert.equal(failureTip(), null);
   });
 
-  test('说明被截断的行：长按有「看完整说明」，点了钉住那一行说明；没截断的没有', async () => {
+  test('說明被截斷的行：長按有「看完整說明」，點了釘住那一行說明；沒截斷的沒有', async () => {
     const row = castRow('林昭');
-    assert.ok(row, '要一行带说明的角色行');
+    assert.ok(row, '要一行帶說明的角色行');
     const detail = row.querySelector('.row-detail');
     finger(row);
     let menu = ui.rightClick(row.querySelector('.row-label'));
-    assert.equal(ui.itemsOf(menu).includes('看完整说明'), false);
+    assert.equal(ui.itemsOf(menu).includes('看完整說明'), false);
     ui.closeMenu();
     Object.defineProperty(detail, 'scrollWidth', { value: 300, configurable: true });
     Object.defineProperty(detail, 'clientWidth', { value: 100, configurable: true });
     finger(row);
     menu = ui.rightClick(row.querySelector('.row-label'));
-    assert.equal(ui.itemsOf(menu)[0], '看完整说明');
-    ui.pick(menu, '看完整说明');
+    assert.equal(ui.itemsOf(menu)[0], '看完整說明');
+    ui.pick(menu, '看完整說明');
     assert.equal(ui.doc.querySelector('.detail-tip')?.textContent, detail.textContent);
     await wait(5);
     finger(ui.doc.body);
@@ -336,13 +336,13 @@ describe('触屏与窄屏：工程页浮窗在手指下的入口', { skip: JSDOM
   });
 });
 
-describe('触屏与窄屏：切页、打开文件不顺手聚焦输入框（手机上一聚焦就弹软键盘）', { skip: JSDOM_SKIP }, () => {
+describe('觸屏與窄屏：切頁、開啟檔案不順手聚焦輸入框（手機上一聚焦就彈軟鍵盤）', { skip: JSDOM_SKIP }, () => {
   const finger = (ui, node) => node.dispatchEvent(new ui.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
   const mouse = (ui, node) => node.dispatchEvent(new ui.window.PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' }));
   const chatTab = (ui) => ui.doc.querySelector('.tab[data-tab="chat"]');
   const otherTab = (ui) => ui.doc.querySelector('.tab[data-tab="project"]');
 
-  test('手指点「对话」页签：不聚焦输入框；鼠标点照旧聚焦', () => {
+  test('手指點「對話」頁籤：不聚焦輸入框；滑鼠點照舊聚焦', () => {
     const ui = mount({ body: 'standalone', scripts: ['view.js'] });
     ui.post({ type: 'state', state: viewState() });
     const input = ui.doc.getElementById('input');
@@ -357,7 +357,7 @@ describe('触屏与窄屏：切页、打开文件不顺手聚焦输入框（手�
     assert.equal(ui.doc.activeElement, input);
   });
 
-  test('主指针不能悬停的设备（手机）：一载入停在对话页也不聚焦输入框', () => {
+  test('主指標不能懸停的裝置（手機）：一載入停在對話頁也不聚焦輸入框', () => {
     const ui = mount({ body: 'standalone', scripts: ['view.js'] });
     ui.window.matchMedia = (q) => ({ matches: /hover:\s*none/.test(q), addEventListener() {}, removeEventListener() {} });
     ui.doc.getElementById('input').blur();
@@ -367,16 +367,16 @@ describe('触屏与窄屏：切页、打开文件不顺手聚焦输入框（手�
     assert.notEqual(ui.doc.activeElement, ui.doc.getElementById('input'));
   });
 
-  test('手指点编辑器页签切文件：不把焦点放进正文区（点进正文才打字）；鼠标照旧', () => {
+  test('手指點編輯器頁籤切檔案：不把焦點放進正文區（點進正文才打字）；滑鼠照舊', () => {
     const ui = mount({
       body: 'standalone',
       scripts: ['view.js', 'editor.js'],
       shims: ['pointerCapture', 'confirm', 'scrollIntoView', 'clipboard'],
-      url: `http://localhost/?project=${encodeURIComponent('/书/青云剑录')}`,
+      url: `http://localhost/?project=${encodeURIComponent('/書/青雲劍錄')}`,
     });
     const open = (p, text) => ui.post({ type: 'editorOpen', file: file(p, text, { kind: 'chapter' }) });
     open('chapters/001-楔子.md', '第一章');
-    open('chapters/002-入镇.md', '第二章');
+    open('chapters/002-入鎮.md', '第二章');
     const area = ui.doc.getElementById('edArea');
     const tabOf = (name) => [...ui.doc.querySelectorAll('.ed-tab')].find((t) => t.textContent.includes(name));
     area.blur();
@@ -384,38 +384,38 @@ describe('触屏与窄屏：切页、打开文件不顺手聚焦输入框（手�
     ui.clickEl(tabOf('楔子'));
     assert.equal(area.value, '第一章');
     assert.notEqual(ui.doc.activeElement, area);
-    mouse(ui, tabOf('入镇'));
-    ui.clickEl(tabOf('入镇'));
+    mouse(ui, tabOf('入鎮'));
+    ui.clickEl(tabOf('入鎮'));
     assert.equal(area.value, '第二章');
     assert.equal(ui.doc.activeElement, area);
   });
 });
 
-describe('触屏与窄屏：窄屏上把欢迎页翻上来', { skip: JSDOM_SKIP }, () => {
+describe('觸屏與窄屏：窄屏上把歡迎頁翻上來', { skip: JSDOM_SKIP }, () => {
   const open = (ui, id) =>
     ui.post({ type: 'workspaces', currentId: id, items: id ? [{ id, root: id, name: path.basename(id) }] : [], recents: [] });
   const editorOpen = (ui) => ui.doc.body.classList.contains('editor-open');
 
-  test('窄屏：一打开就是空窗口——编辑区那层覆盖翻上来（欢迎页在里面）；打开一本书之后收起，露出侧栏', () => {
+  test('窄屏：一開啟就是空視窗——編輯區那層覆蓋翻上來（歡迎頁在裡面）；開啟一本書之後收起，露出側欄', () => {
     const ui = mount({ body: 'standalone', scripts: ['view.js'], empty: true, shims: ['clipboard', 'scrollIntoView', 'narrow'] });
-    assert.equal(editorOpen(ui), true, '装载时就是空窗口');
+    assert.equal(editorOpen(ui), true, '裝載時就是空視窗');
     open(ui, null);
     assert.equal(editorOpen(ui), true);
     open(ui, '/tmp/my-book');
     assert.equal(editorOpen(ui), false);
   });
 
-  test('窄屏：「帮助 → 欢迎页面」也翻上来', () => {
+  test('窄屏：「幫助 → 歡迎頁面」也翻上來', () => {
     const ui = mount({ body: 'standalone', scripts: ['view.js'], shims: ['clipboard', 'scrollIntoView', 'narrow'] });
     open(ui, '/tmp/my-book');
     assert.equal(editorOpen(ui), false);
     ui.clickEl(ui.doc.querySelector('[data-menu="help"]'));
-    ui.clickEl([...ui.doc.querySelectorAll('.wb-menu-item')].find((b) => b.textContent.includes('欢迎页面')));
+    ui.clickEl([...ui.doc.querySelectorAll('.wb-menu-item')].find((b) => b.textContent.includes('歡迎頁面')));
     assert.equal(ui.doc.body.classList.contains('show-welcome'), true);
     assert.equal(editorOpen(ui), true);
   });
 
-  test('宽屏：不碰 editor-open（编辑区常驻）', () => {
+  test('寬屏：不碰 editor-open（編輯區常駐）', () => {
     const ui = mount({ body: 'standalone', scripts: ['view.js'], empty: true });
     ui.window.matchMedia = () => ({ matches: false });
     open(ui, null);

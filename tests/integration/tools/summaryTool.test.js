@@ -1,14 +1,14 @@
 /**
- * `summary` 工具：定稿与全文大纲（定稿一章、把没定稿的章的细纲照正文同步、重建全文大纲）。
+ * `summary` 工具：定稿與全文大綱（定稿一章、把沒定稿的章的細綱照正文同步、重建全文大綱）。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 定稿按章号认，给细纲路径也行 | agent 手里多半是细纲路径；定稿改的就是那一份细纲，不另落一份 |
- * | 定稿记上正文的指纹，旧版进回收站 | `sourceHash` 是「这一章写完」的判据；旧版是作者可能推敲过的计划，要找得回来 |
- * | 还没有正文就不花钱 | 定稿是照正文改细纲，没有正文时调一次模型只能复述细纲 |
- * | 定稿调了几次、账上记几次 | 第 4 条：弹窗、账、回话三处的次数是同一个数 |
- * | 同步与重建的确认框照弹，作者取消就零调用 | 转发工程页那个动作，不给 agent 另开一条快路 |
- * | 越界路径给 error、不调模型 | 工程根之外的路径一律不认 |
+ * | 定稿按章號認，給細綱路徑也行 | agent 手裡多半是細綱路徑；定稿改的就是那一份細綱，不另落一份 |
+ * | 定稿記上正文的指紋，舊版進回收站 | `sourceHash` 是「這一章寫完」的判據；舊版是作者可能推敲過的計劃，要找得回來 |
+ * | 還沒有正文就不花錢 | 定稿是照正文改細綱，沒有正文時調一次模型只能複述細綱 |
+ * | 定稿調了幾次、賬上記幾次 | 第 4 條：彈窗、賬、回話三處的次數是同一個數 |
+ * | 同步與重建的確認框照彈，作者取消就零呼叫 | 轉發工程頁那個動作，不給 agent 另開一條快路 |
+ * | 越界路徑給 error、不調模型 | 工程根之外的路徑一律不認 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -26,15 +26,15 @@ let fake;
 let ctx;
 let reports;
 
-const PLOT1 = '.novelwarden/summaries/001-夜入青云.md';
-const PLOT2 = '.novelwarden/summaries/002-藏书阁.md';
-const CH1 = 'chapters/001-夜入青云.md';
+const PLOT1 = '.novelwarden/summaries/001-夜入青雲.md';
+const PLOT2 = '.novelwarden/summaries/002-藏書閣.md';
+const CH1 = 'chapters/001-夜入青雲.md';
 const SUMMARY_JSON = JSON.stringify({
-  梗概: '林昭夜入青云宗。',
+  梗概: '林昭夜入青雲宗。',
   出场人物: ['林昭'],
-  时间地点: '雨夜，山门外。',
-  关键事件: ['翻墙入宗'],
-  状态变更: '林昭进了宗门。',
+  时间地点: '雨夜，山門外。',
+  关键事件: ['翻牆入宗'],
+  状态变更: '林昭進了宗門。',
 });
 
 const tool = () => bundle.tools.NOVEL_TOOLS.find((x) => x.name === 'summary');
@@ -78,20 +78,20 @@ before(async () => {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  t = await makeTempProject(bundle.project, { prefix: 'summaryTool', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'summaryTool', title: '青雲劍錄' });
   project = t.project;
   const ws = new bundle.ws.Workspace(project);
-  // 两章细纲，只有第 1 章写了正文：第 2 章是「有细纲、没正文」的那一种。
-  for (const [no, title] of [[1, '夜入青云'], [2, '藏书阁']]) {
+  // 兩章細綱，只有第 1 章寫了正文：第 2 章是「有細綱、沒正文」的那一種。
+  for (const [no, title] of [[1, '夜入青雲'], [2, '藏書閣']]) {
     await ws.writePlot({
       no,
       title,
       upstreamHash: '',
       done: false,
-      sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '进入宗门', 关键事件: '踩点、翻墙。' },
+      sections: { ...bundle.plotFile.emptyPlotSections(), 梗概: '進入宗門', 关键事件: '踩點、翻牆。' },
     });
   }
-  t.write(CH1, '# 夜入青云\n\n雨下了三天。山门在雨里，林昭在门外。\n');
+  t.write(CH1, '# 夜入青雲\n\n雨下了三天。山門在雨裡，林昭在門外。\n');
   project.invalidate();
   await project.syncManifest();
   resetCtx();
@@ -101,61 +101,61 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-// 先跑取消的两条：此时第 1 章有正文、细纲还没定稿，同步与重建都有活可干，确认框一定会弹。
-describe('同步与重建：确认框照弹，作者取消就零调用', () => {
-  test('sync：框里写着几章过期、要调几次；取消后回话说清没调模型', async () => {
+// 先跑取消的兩條：此時第 1 章有正文、細綱還沒定稿，同步與重建都有活可幹，確認框一定會彈。
+describe('同步與重建：確認框照彈，作者取消就零呼叫', () => {
+  test('sync：框裡寫著幾章過期、要調幾次；取消後回話說清沒調模型', async () => {
     resetCtx();
     h.expect();
     const r = await run({ action: 'sync' });
     assert.equal(
       h.confirms.at(-1).message,
-      '有 1 章写了正文还没同步（或同步后正文又改过），逐章同步：照正文更新细纲、更新出场角色的当前状态、认这一章在叙事线上发生了什么、推这一章的故事时间。预计 6–12 次调用，最多 18 次。现在同步？'
+      '有 1 章寫了正文還沒同步（或同步後正文又改過），逐章同步：照正文更新細綱、更新出場角色的當前狀態、認這一章在敘事線上發生了什麼、推這一章的故事時間。預計 6–12 次呼叫，最多 18 次。現在同步？'
     );
-    assert.ok(r.text.includes('批量同步这一次没有调用模型'), r.text);
-    assert.ok(r.text.includes('不要重试'), r.text);
+    assert.ok(r.text.includes('批次同步這一次沒有呼叫模型'), r.text);
+    assert.ok(r.text.includes('不要重試'), r.text);
     assert.equal(fake.calls.length, 0);
     assert.equal(ctx.usage.calls, 0);
   });
 
-  // 重建不报次数：回话只说交出去了，次数以确认框为准，账上记 0。
-  test('rebuildGlobal：先提醒有没定稿的章；取消后零调用，回话说交出去了', async () => {
+  // 重建不報次數：回話只說交出去了，次數以確認框為準，賬上記 0。
+  test('rebuildGlobal：先提醒有沒定稿的章；取消後零呼叫，回話說交出去了', async () => {
     resetCtx();
     h.expect();
     const r = await run({ action: 'rebuildGlobal' });
     assert.ok(
-      h.confirms.at(-1).message.startsWith('有 1 章的细纲还没照正文更新'),
+      h.confirms.at(-1).message.startsWith('有 1 章的細綱還沒照正文更新'),
       h.confirms.at(-1).message
     );
     assert.equal(r.error, undefined, r.error);
-    assert.ok(r.text.includes('全文大纲重建已交给 Novelwarden 执行'), r.text);
+    assert.ok(r.text.includes('全文大綱重建已交給 Novelwarden 執行'), r.text);
     assert.equal(fake.calls.length, 0);
     assert.equal(ctx.usage.calls, 0);
   });
 });
 
-describe('定稿：参数', () => {
-  test('缺 path 当场报错，带上参数说明', async () => {
+describe('定稿：引數', () => {
+  test('缺 path 當場報錯，帶上引數說明', async () => {
     resetCtx();
     const r = await run({ action: 'finalize' });
-    assert.ok(r.error.startsWith('finalize 需要参数：path。path：那一章的章节路径或细纲路径'), r.error);
+    assert.ok(r.error.startsWith('finalize 需要引數：path。path：那一章的章節路徑或細綱路徑'), r.error);
   });
 
-  // summary 的哪个动作都不认区间：报错里不该凭空列出「只有 X 认」。
-  test('给了区间当场报错', async () => {
+  // summary 的哪個動作都不認區間：報錯裡不該憑空列出「只有 X 認」。
+  test('給了區間當場報錯', async () => {
     resetCtx();
     const r = await run({ action: 'finalize', path: PLOT1, from: 1 });
-    assert.equal(r.error, 'finalize 不认 from。');
+    assert.equal(r.error, 'finalize 不認 from。');
     assert.equal(fake.calls.length, 0);
   });
 
-  test('sync 不认 path，只有 finalize 认', async () => {
+  test('sync 不認 path，只有 finalize 認', async () => {
     resetCtx();
     const r = await run({ action: 'sync', path: PLOT1 });
-    assert.equal(r.error, 'sync 不认 path，只有 finalize 认。');
+    assert.equal(r.error, 'sync 不認 path，只有 finalize 認。');
   });
 });
 
-describe('定稿：还没有正文就不花钱', () => {
+describe('定稿：還沒有正文就不花錢', () => {
   let r;
 
   before(async () => {
@@ -163,22 +163,22 @@ describe('定稿：还没有正文就不花钱', () => {
     r = await run({ action: 'finalize', path: PLOT2 });
   });
 
-  test('给 error，说清这一章还没有正文', () => {
-    assert.ok(r.error && r.error.includes('还没有正文'), JSON.stringify(r));
+  test('給 error，說清這一章還沒有正文', () => {
+    assert.ok(r.error && r.error.includes('還沒有正文'), JSON.stringify(r));
   });
 
-  // 不是参数错，是执行失败：error 前面挂着动作的说法，模型知道是哪一步没成。
-  test('error 以动作的说法开头', () => {
+  // 不是引數錯，是執行失敗：error 前面掛著動作的說法，模型知道是哪一步沒成。
+  test('error 以動作的說法開頭', () => {
     assert.ok(r.error.startsWith('同步一章'), r.error);
   });
 
-  test('一次模型都没调，也一次都不报', () => {
+  test('一次模型都沒調，也一次都不報', () => {
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
     assert.equal(ctx.usage.calls, 0);
   });
 });
 
-describe('定稿：按章号认，给细纲路径也行', () => {
+describe('定稿：按章號認，給細綱路徑也行', () => {
   let r;
 
   before(async () => {
@@ -186,76 +186,76 @@ describe('定稿：按章号认，给细纲路径也行', () => {
     r = await run({ action: 'finalize', path: PLOT1 });
   });
 
-  test('没有 error', () => {
+  test('沒有 error', () => {
     assert.equal(r.error, undefined, r.error);
   });
 
-  test('报的是那一章的章号', () => {
+  test('報的是那一章的章號', () => {
     assert.ok(r.text.includes('第 1 章'), r.text);
   });
 
-  // 定稿改的是那一份细纲本身，不另落一份：同一章在 summaries/ 根下有两份就撞号了。
-  test('细纲照正文更新在原处，记上正文的指纹', async () => {
+  // 定稿改的是那一份細綱本身，不另落一份：同一章在 summaries/ 根下有兩份就撞號了。
+  test('細綱照正文更新在原處，記上正文的指紋', async () => {
     const plot = await project.readPlot(PLOT1);
     const chapter = (await project.listChapters()).find((c) => c.order === 1);
     assert.equal(plot.sourceHash, chapter.contentHash);
   });
 
-  test('旧版细纲先复制一份进回收站', () => {
-    assert.ok(t.has('.novelwarden/.trash/.novelwarden/summaries/001-夜入青云.md'));
+  test('舊版細綱先複製一份進回收站', () => {
+    assert.ok(t.has('.novelwarden/.trash/.novelwarden/summaries/001-夜入青雲.md'));
   });
 
-  // 更新细纲 1 次 + 认叙事线 1 次（叙事线重做：线是空的也认）+ 故事时间 1 次（2026-10-24 重做）；没有角色卡，角色状态不调。
-  test('调了三次、记了三次，气泡里也说了', () => {
+  // 更新細綱 1 次 + 認敘事線 1 次（敘事線重做：線是空的也認）+ 故事時間 1 次（2026-10-24 重做）；沒有角色卡，角色狀態不調。
+  test('調了三次、記了三次，氣泡裡也說了', () => {
     assert.equal(fake.calls.length, 3, String(fake.calls.length));
     assert.equal(ctx.usage.calls, 3);
-    assert.ok(reports.some((m) => m.includes('调用模型 3 次')), JSON.stringify(reports));
+    assert.ok(reports.some((m) => m.includes('呼叫模型 3 次')), JSON.stringify(reports));
   });
 
-  test('display 写着这一下调了几次', () => {
-    assert.deepEqual(r.display, { title: 'summary finalize', detail: '3 次调用' });
+  test('display 寫著這一下調了幾次', () => {
+    assert.deepEqual(r.display, { title: 'summary finalize', detail: '3 次呼叫' });
   });
 
-  test('越界路径给 error，且不调模型', async () => {
+  test('越界路徑給 error，且不調模型', async () => {
     resetCtx();
     const bad = await run({ action: 'finalize', path: '../../etc/passwd' });
     assert.ok(bad.error, JSON.stringify(bad));
     assert.equal(fake.calls.length, 0, String(fake.calls.length));
   });
 
-  // 只补没定稿的：定稿之后细纲与正文对得上，同步不弹框、不花钱。
-  test('定稿之后再同步：没事可做，不花钱', async () => {
+  // 只補沒定稿的：定稿之後細綱與正文對得上，同步不彈框、不花錢。
+  test('定稿之後再同步：沒事可做，不花錢', async () => {
     resetCtx();
     const before = h.confirms.length;
     const again = await run({ action: 'sync' });
-    assert.equal(h.confirms.length, before, '不该弹确认框');
+    assert.equal(h.confirms.length, before, '不該彈確認框');
     assert.equal(fake.calls.length, 0);
-    assert.ok(again.text.includes('没有调用模型'), again.text);
+    assert.ok(again.text.includes('沒有呼叫模型'), again.text);
   });
 });
 
-describe('工具定义本身', () => {
-  test('三个动作都调模型：costly、mutating', () => {
+describe('工具定義本身', () => {
+  test('三個動作都調模型：costly、mutating', () => {
     assert.equal(tool().costly, true);
     assert.equal(tool().mutating, true);
   });
 
-  test('参数只有 action 与 path', () => {
+  test('引數只有 action 與 path', () => {
     assert.deepEqual(Object.keys(tool().parameters.properties).sort(), ['action', 'path']);
     assert.deepEqual(tool().parameters.properties.action.enum, ['finalize', 'sync', 'rebuildGlobal']);
   });
 
-  // 定稿 = 照正文反向更新细纲（带连续性事实）+ 出场角色的当前状态 + 叙事线。
-  test('finalize 的说法是「同步」：反向更新细纲与连续性事实，再更新角色状态、认这一章在叙事线上发生了什么、推故事时间', () => {
+  // 定稿 = 照正文反向更新細綱（帶連續性事實）+ 出場角色的當前狀態 + 敘事線。
+  test('finalize 的說法是「同步」：反向更新細綱與連續性事實，再更新角色狀態、認這一章在敘事線上發生了什麼、推故事時間', () => {
     assert.ok(
       tool().description.includes(
-        'finalize=同步一章（照正文反向更新它的细纲与连续性事实，再更新出场角色的当前状态、认这一章在叙事线上发生了什么（带原文证据记下事件、更新各条线的当前进度，正文里新长出来的线也认出来）、推这一章的故事时间）（调模型，要 path）'
+        'finalize=同步一章（照正文反向更新它的細綱與連續性事實，再更新出場角色的當前狀態、認這一章在敘事線上發生了什麼（帶原文證據記下事件、更新各條線的當前進度，正文裡新長出來的線也認出來）、推這一章的故事時間）（調模型，要 path）'
       ),
       tool().description
     );
   });
 
-  test('动手前那一问写着是哪一章', () => {
+  test('動手前那一問寫著是哪一章', () => {
     const intent = tool().intent({ action: 'finalize', path: PLOT1 });
     assert.equal(intent.gate, 'mutating');
     assert.ok(intent.detail.startsWith(PLOT1), intent.detail);

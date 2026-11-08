@@ -1,10 +1,11 @@
+import { traditionalLabel } from '../../../src/core/model/labels';
 /**
- * 日志页。
+ * 日誌頁。
  *
- * 日志页是用户唯一能事后复查「刚才那 76 章卡在哪」的地方，所以：
- * - 全量缓冲留在前端，筛选纯在本地做，不往后端要；
- * - **增量不重画整表**——长任务每秒好几条，重画会让滚动位置乱跳，
- *   而且只在原本就贴着底时才跟着滚（用户翻上去看东西时不该被拽回来）。
+ * 日誌頁是使用者唯一能事後複查「剛才那 76 章卡在哪」的地方，所以：
+ * - 全量緩衝留在前端，篩選純在本地做，不往後端要；
+ * - **增量不重畫整表**——長任務每秒好幾條，重畫會讓滾動位置亂跳，
+ *   而且只在原本就貼著底時才跟著滾（使用者翻上去看東西時不該被拽回來）。
  */
 import { el as mk, maybeById, setHidden } from '../dom';
 import type { LogEntry, LogLevel } from '../protocol';
@@ -15,37 +16,37 @@ import { isTabActive } from './tabs';
 import { toast } from './toast';
 
 const LOG_ORDER: Record<string, number> = { debug: 10, info: 20, warn: 30, error: 40 };
-const LOG_LABEL: Record<string, string> = { debug: '调试', info: '信息', warn: '警告', error: '错误' };
+const LOG_LABEL: Record<string, string> = { debug: '除錯', info: '資訊', warn: '警告', error: '錯誤' };
 
-/** 与后端 MAX_ENTRIES 同量级，避免网页开一整天后攒下几万个节点。 */
+/** 與後端 MAX_ENTRIES 同量級，避免網頁開一整天后攢下幾萬個節點。 */
 const MAX_ROWS = 800;
-/** 离底多近算「贴着底」。 */
+/** 離底多近算「貼著底」。 */
 const AT_BOTTOM_SLACK = 40;
 
-/** 全量缓冲的前端副本。 */
+/** 全量緩衝的前端副本。 */
 let logs: LogEntry[] = [];
-/** 只在日志页之外累计，切过去就清零——徽标是「有没有没看过的错」。 */
+/** 只在日誌頁之外累計，切過去就清零——徽標是「有沒有沒看過的錯」。 */
 let unseenErrors = 0;
 /**
- * 从库里补进来的历史条数。
+ * 從庫裡補進來的歷史條數。
  *
- * 单独记一笔是为了让 `MAX_ROWS` 的裁剪不把刚加载的历史又切掉——
- * 用户点「加载更早」就是要往前看，结果最早那批被裁掉才是荒谬的。
+ * 單獨記一筆是為了讓 `MAX_ROWS` 的裁剪不把剛載入的歷史又切掉——
+ * 使用者點「載入更早」就是要往前看，結果最早那批被裁掉才是荒謬的。
  */
 let loadedHistory = 0;
-/** 再往前没有了。按钮据此禁用——一直点一个什么都不会发生的按钮很挫。 */
+/** 再往前沒有了。按鈕據此禁用——一直點一個什麼都不會發生的按鈕很挫。 */
 let historyExhausted = false;
 
 export function renderLogs(entries: LogEntry[]): void {
   logs = entries || [];
-  // 后端重推的是内存缓冲（不含历史），历史副本随之作废。
+  // 後端重推的是記憶體緩衝（不含歷史），歷史副本隨之作廢。
   loadedHistory = 0;
   historyExhausted = false;
   syncEarlierBtn();
   redraw();
 }
 
-/** 按当前筛选重画整表。加载历史与切筛选条件都走它。 */
+/** 按當前篩選重畫整表。載入歷史與切篩選條件都走它。 */
 function redraw(): void {
   el.logBody.innerHTML = '';
   const shown = logs.filter(matches);
@@ -59,10 +60,10 @@ function redraw(): void {
 }
 
 /**
- * 库里取来的更早日志，接在最前面。
+ * 庫裡取來的更早日誌，接在最前面。
  *
- * **不自动滚动**：用户点「加载更早」是要往前看，把他拽回底部等于白点。
- * 按 seq 去重——内存缓冲与库里那份必然重叠（同一条既进了缓冲也写了库）。
+ * **不自動滾動**：使用者點「載入更早」是要往前看，把他拽回底部等於白點。
+ * 按 seq 去重——記憶體緩衝與庫裡那份必然重疊（同一條既進了緩衝也寫了庫）。
  */
 export function prependLogHistory(entries: LogEntry[], exhausted: boolean): void {
   historyExhausted = exhausted;
@@ -71,7 +72,7 @@ export function prependLogHistory(entries: LogEntry[], exhausted: boolean): void
   if (fresh.length > 0) {
     logs = [...fresh, ...logs];
     loadedHistory += fresh.length;
-    // 保住滚动位置：重画后把视口挪回原先那条上，不然会跳到顶。
+    // 保住滾動位置：重畫後把視口挪回原先那條上，不然會跳到頂。
     const anchor = el.logBody.scrollHeight - el.logBody.scrollTop;
     redraw();
     el.logBody.scrollTop = el.logBody.scrollHeight - anchor;
@@ -79,20 +80,20 @@ export function prependLogHistory(entries: LogEntry[], exhausted: boolean): void
   syncEarlierBtn();
 }
 
-/** 没有更早的了（或没有库）就禁用按钮并改文案。 */
+/** 沒有更早的了（或沒有庫）就禁用按鈕並改文案。 */
 function syncEarlierBtn(): void {
   const btn = maybeById<HTMLButtonElement>('logEarlierBtn');
   if (!btn) {
     return;
   }
   btn.disabled = historyExhausted;
-  btn.textContent = historyExhausted ? '没有更早的了' : '加载更早';
+  btn.textContent = historyExhausted ? '沒有更早的了' : '載入更早';
 }
 
-/** 增量追加一条。 */
+/** 增量追加一條。 */
 export function appendLog(entry: LogEntry): void {
   logs.push(entry);
-  // 裁剪时把加载进来的历史算进上限：那是用户主动要的，不能被实时日志顶掉。
+  // 裁剪時把載入進來的歷史算進上限：那是使用者主動要的，不能被實時日誌頂掉。
   const cap = MAX_ROWS + loadedHistory;
   if (logs.length > cap) {
     logs.splice(0, logs.length - cap);
@@ -118,13 +119,13 @@ export function appendLog(entry: LogEntry): void {
   }
 }
 
-/** 切到日志页时把红点收掉。 */
+/** 切到日誌頁時把紅點收掉。 */
 export function clearUnseenErrors(): void {
   unseenErrors = 0;
   syncDot();
 }
 
-/** 独立版活动栏上的红点：有没看过的错误就亮着。插件里没这个节点。 */
+/** 獨立版活動欄上的紅點：有沒看過的錯誤就亮著。外掛裡沒這個節點。 */
 function syncDot(): void {
   const dot = maybeById('logsErrorDot');
   if (dot) {
@@ -157,14 +158,14 @@ function buildLogRow(entry: LogEntry): HTMLElement {
   const head = mk('div', 'log-head');
   head.appendChild(mk('span', 'log-time', logTime(entry.at)));
   head.appendChild(mk('span', 'log-level', levelLabel(entry.level)));
-  head.appendChild(mk('span', 'log-scope', entry.scope));
+  head.appendChild(mk('span', 'log-scope', traditionalLabel(entry.scope)));
   head.appendChild(mk('span', 'log-msg', entry.message));
   row.appendChild(head);
 
   if (entry.detail) {
-    // detail 默认收起：一次同步几十条，摊开就没法扫了。
+    // detail 預設收起：一次同步幾十條，攤開就沒法掃了。
     const det = mk('details', 'log-detail');
-    det.appendChild(mk('summary', undefined, '详情'));
+    det.appendChild(mk('summary', undefined, '詳情'));
     det.appendChild(mk('pre', undefined, entry.detail));
     row.appendChild(det);
   }
@@ -173,15 +174,15 @@ function buildLogRow(entry: LogEntry): HTMLElement {
 
 function updateMeta(shown: number): void {
   el.logMeta.textContent =
-    shown === logs.length ? `${logs.length} 条` : `${shown} / ${logs.length} 条`;
+    shown === logs.length ? `${logs.length} 條` : `${shown} / ${logs.length} 條`;
 }
 
-/** 复制当前筛选出来的那些行，格式与终端里看到的一致。 */
+/** 複製當前篩選出來的那些行，格式與終端裡看到的一致。 */
 function copyShown(): void {
   const text = logs
     .filter(matches)
     .map((e) => {
-      const head = `[${logTime(e.at)}] ${levelLabel(e.level)} ${e.scope}｜${e.message}`;
+      const head = `[${logTime(e.at)}] ${levelLabel(e.level)} ${traditionalLabel(e.scope)}｜${e.message}`;
       return e.detail
         ? `${head}\n${e.detail.split('\n').map((l) => `    ${l}`).join('\n')}`
         : head;
@@ -189,27 +190,27 @@ function copyShown(): void {
     .join('\n');
 
   if (!text) {
-    toast('没有可复制的日志。');
+    toast('沒有可複製的日誌。');
     return;
   }
   navigator.clipboard
     .writeText(text)
-    .then(() => toast('日志已复制到剪贴板。'))
-    .catch(() => toast('复制失败，可手动选中复制。', true));
+    .then(() => toast('日誌已複製到剪貼簿。'))
+    .catch(() => toast('複製失敗，可手動選中複製。', true));
 }
 
 export function installLogs(): void {
   el.logLevel.addEventListener('change', () => redraw());
   el.logFilter.addEventListener('input', () => redraw());
-  // 清空走后端：它要在缓冲里留一条「日志已清空」的痕迹。
+  // 清空走後端：它要在緩衝裡留一條「日誌已清空」的痕跡。
   el.logClearBtn.addEventListener('click', () => vscode.postMessage({ type: 'clearLogs' }));
   el.logCopyBtn.addEventListener('click', copyShown);
 
-  // 「加载更早」是唯一会查数据库的入口。默认进日志页只看内存缓冲，
-  // 一次查询都不做——那条路径必须保持零开销。
+  // 「載入更早」是唯一會查資料庫的入口。預設進日誌頁只看記憶體緩衝，
+  // 一次查詢都不做——那條路徑必須保持零開銷。
   const earlier = maybeById<HTMLButtonElement>('logEarlierBtn');
   earlier?.addEventListener('click', () => {
-    // 已显示的最早那条的时间戳，据它继续往前翻。
+    // 已顯示的最早那條的時間戳，據它繼續往前翻。
     vscode.postMessage({ type: 'requestLogHistory', before: logs[0]?.at });
   });
 }

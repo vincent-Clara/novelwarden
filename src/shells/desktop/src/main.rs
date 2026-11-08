@@ -1,16 +1,16 @@
-// Windows 的 release 构建不要挂控制台窗口。
+// Windows 的 release 構建不要掛控制檯視窗。
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-//! Novelwarden 桌面壳。
+//! Novelwarden 桌面殼。
 //!
-//! 它做三件事，没有第四件：
+//! 它做三件事，沒有第四件：
 //!
-//! 1. 起 sidecar（`src/standalone` 编出来的那个单文件可执行），**不传工程路径**
-//! 2. 等它就绪，把窗口从本地 splash 页导航到 `http://127.0.0.1:PORT/`
-//! 3. 退出时把 sidecar 收掉
+//! 1. 起 sidecar（`src/standalone` 編出來的那個單檔案可執行），**不傳工程路徑**
+//! 2. 等它就緒，把視窗從本地 splash 頁導航到 `http://127.0.0.1:PORT/`
+//! 3. 退出時把 sidecar 收掉
 //!
-//! 上次打开的工程由 sidecar 读 `~/.novelwarden/window.json`（旧 `~/.novelforge/` 兜底）恢复，与浏览器里
-//! 跑 `novelwarden` 同一条路。打开/关闭文件夹不重启 sidecar。
+//! 上次開啟的工程由 sidecar 讀 `~/.novelwarden/window.json`（舊 `~/.novelforge/` 兜底）恢復，與瀏覽器裡
+//! 跑 `novelwarden` 同一條路。開啟/關閉資料夾不重啟 sidecar。
 
 mod project;
 mod sidecar;
@@ -21,13 +21,13 @@ use std::sync::Mutex;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Url};
 
-/// splash 页要显示的状态。
+/// splash 頁要顯示的狀態。
 ///
-/// 既 emit（状态变了推一次）又能 invoke 拉取（`boot_state`）：页面加载完成的时刻
-/// 与 boot 任务推送的时刻没有先后保证，只推会丢事件，只拉又不知道何时更新。
+/// 既 emit（狀態變了推一次）又能 invoke 拉取（`boot_state`）：頁面載入完成的時刻
+/// 與 boot 任務推送的時刻沒有先後保證，只推會丟事件，只拉又不知道何時更新。
 #[derive(Clone, Serialize)]
 struct BootState {
-    /// `starting` 正在起服务 / `failed` 起失败了
+    /// `starting` 正在起服務 / `failed` 起失敗了
     phase: String,
     message: Option<String>,
 }
@@ -56,7 +56,7 @@ fn set_state(app: &AppHandle, phase: &str, message: Option<String>) {
     let _ = app.emit("boot-state", state);
 }
 
-/// 起服务并导航过去。失败则把原因交给 splash 页显示。
+/// 起服務並導航過去。失敗則把原因交給 splash 頁顯示。
 async fn launch(app: AppHandle) {
     set_state(&app, "starting", None);
 
@@ -65,14 +65,14 @@ async fn launch(app: AppHandle) {
             Ok(parsed) => {
                 if let Some(mut window) = app.get_webview_window("main") {
                     if let Err(err) = window.navigate(parsed) {
-                        set_state(&app, "failed", Some(format!("窗口导航失败：{err}")));
+                        set_state(&app, "failed", Some(format!("視窗導航失敗：{err}")));
                     }
                 }
             }
             Err(err) => set_state(
                 &app,
                 "failed",
-                Some(format!("服务给出的地址无法解析（{url}）：{err}")),
+                Some(format!("服務給出的地址無法解析（{url}）：{err}")),
             ),
         },
         Err(message) => set_state(&app, "failed", Some(message)),
@@ -91,7 +91,7 @@ fn boot_state(app: AppHandle) -> BootState {
         .unwrap_or_default()
 }
 
-/// 「重试」只再起 sidecar，不传路径。
+/// 「重試」只再起 sidecar，不傳路徑。
 #[tauri::command]
 fn retry(app: AppHandle) {
     tauri::async_runtime::spawn(launch(app));
@@ -99,13 +99,13 @@ fn retry(app: AppHandle) {
 
 #[tauri::command]
 fn open_logs(app: AppHandle) -> Result<String, String> {
-    let dir = sidecar::log_dir(&app).ok_or_else(|| "取不到日志目录".to_string())?;
+    let dir = sidecar::log_dir(&app).ok_or_else(|| "取不到日誌目錄".to_string())?;
     let _ = std::fs::create_dir_all(&dir);
     reveal(&dir);
     Ok(dir.display().to_string())
 }
 
-/// 用系统文件管理器打开一个目录。与 src/standalone/fileHost.ts 里的做法一致。
+/// 用系統檔案管理器開啟一個目錄。與 src/standalone/fileHost.ts 裡的做法一致。
 fn reveal(path: &Path) {
     #[cfg(target_os = "windows")]
     let program = "explorer";
@@ -119,7 +119,7 @@ fn reveal(path: &Path) {
 
 fn main() {
     tauri::Builder::default()
-        // single-instance 必须第一个注册。
+        // single-instance 必須第一個註冊。
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
@@ -134,7 +134,7 @@ fn main() {
         .setup(|app| {
             let handle = app.handle().clone();
             if let Err(err) = project::migrate_shell_json_once(&handle) {
-                eprintln!("迁移 shell.json 失败：{err}");
+                eprintln!("遷移 shell.json 失敗：{err}");
             }
             tauri::async_runtime::spawn(async move {
                 launch(handle).await;
@@ -142,7 +142,7 @@ fn main() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("构建 Tauri 应用失败")
+        .expect("構建 Tauri 應用失敗")
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
                 sidecar::kill(app);

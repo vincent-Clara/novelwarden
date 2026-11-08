@@ -1,14 +1,14 @@
 /**
- * 标签右键菜单里关闭类之后的那几项：
+ * 標籤右鍵選單裡關閉類之後的那幾項：
  *
- * - **固定**：只有临时标签有（把它转正）。
- * - **移到另一侧**：左 ↔ 右，连同未保存内容、撤销历史、冲突条、「磁盘上没了」一起搬过去——走现有的搬家机制
- *   （`Pane.closeSilently` 交出去、`upsertFile(…, carried)` 接上），只是不经后端重读：`moveOut` 交出来的就是
- *   它此刻的基线。**一个路径同一时刻只属于一块**照旧成立：先从这一块拿走，再交给那一块。
- * - **在文件页中定位**：`nf-reveal-in-files`（资源管理器展开到它、高亮那一行；view 切到「文件」页）。
- * - **复制相对路径**。
- * - **重新打开刚关闭的**：这一块最近关掉的那一个（按块记，`store.ts`）。没有快捷键（⚑）：Chrome 不让页面
- *   拦 Ctrl+Shift+T，换一个组合键作者也记不住；「▾」列表底下也列着最近关掉的几个。
+ * - **固定**：只有臨時標籤有（把它轉正）。
+ * - **移到另一側**：左 ↔ 右，連同未儲存內容、撤銷歷史、衝突條、「磁碟上沒了」一起搬過去——走現有的搬家機制
+ *   （`Pane.closeSilently` 交出去、`upsertFile(…, carried)` 接上），只是不經後端重讀：`moveOut` 交出來的就是
+ *   它此刻的基線。**一個路徑同一時刻只屬於一塊**照舊成立：先從這一塊拿走，再交給那一塊。
+ * - **在檔案頁中定位**：`nf-reveal-in-files`（資源管理器展開到它、高亮那一行；view 切到「檔案」頁）。
+ * - **複製相對路徑**。
+ * - **重新開啟剛關閉的**：這一塊最近關掉的那一個（按塊記，`store.ts`）。沒有快捷鍵（⚑）：Chrome 不讓頁面
+ *   攔 Ctrl+Shift+T，換一個組合鍵作者也記不住；「▾」列表底下也列著最近關掉的幾個。
  */
 import { revealInFiles, toast } from '../globals';
 import type { MenuItem } from '../globals';
@@ -27,22 +27,22 @@ export function extraTabItems(pane: Pane, path: string): MenuItem[] {
   }
   const side = PANE_LABEL[pane.id === 'main' ? 'draft' : 'main'];
   items.push(
-    { label: `移到另一侧（${side}）`, run: () => moveToOtherSide(pane, path) },
+    { label: `移到另一側（${side}）`, run: () => moveToOtherSide(pane, path) },
     { sep: true },
-    { label: '在文件页中定位', run: () => revealInFiles(path) },
-    { label: '复制相对路径', run: () => copyRelPath(path) },
+    { label: '在檔案頁中定位', run: () => revealInFiles(path) },
+    { label: '複製相對路徑', run: () => copyRelPath(path) },
     { sep: true }
   );
   const closed = lastClosed(pane.id);
   items.push({
-    label: closed ? `重新打开刚关闭的（${closed.title}）` : '重新打开刚关闭的',
+    label: closed ? `重新開啟剛關閉的（${closed.title}）` : '重新開啟剛關閉的',
     disabled: !closed,
     run: () => closed && reopenClosed(closed),
   });
   return items;
 }
 
-/** 把这一份搬到另一块（第二块还没造出来就现造），在那边成为当前的。 */
+/** 把這一份搬到另一塊（第二塊還沒造出來就現造），在那邊成為當前的。 */
 export function moveToOtherSide(from: Pane, path: string): void {
   const target = otherPane(from, true);
   if (!target) {
@@ -53,7 +53,7 @@ export function moveToOtherSide(from: Pane, path: string): void {
     return;
   }
   target.upsertFile(out.view, out.carried);
-  // activate：认下那一块、光标与滚动放回原处、焦点进去。
+  // activate：認下那一塊、游標與滾動放回原處、焦點進去。
   target.activate(path);
   syncDraftVisibility();
   persist();
@@ -61,11 +61,11 @@ export function moveToOtherSide(from: Pane, path: string): void {
 
 function copyRelPath(path: string): void {
   if (!navigator.clipboard?.writeText) {
-    toast('当前环境不支持剪贴板。', true);
+    toast('當前環境不支援剪貼簿。', true);
     return;
   }
   navigator.clipboard.writeText(path).then(
-    () => toast(`已复制：${path}`),
-    () => toast('复制失败，请手动选中。', true)
+    () => toast(`已複製：${path}`),
+    () => toast('複製失敗，請手動選中。', true)
   );
 }

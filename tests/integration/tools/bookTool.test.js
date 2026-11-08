@@ -1,14 +1,14 @@
 /**
- * `book` 工具：拆书（导入原稿、从已写正文补齐、从参考书学写法）。
+ * `book` 工具：拆書（匯入原稿、從已寫正文補齊、從參考書學寫法）。
  *
- * 都是工程页那几颗按钮背后的同一个函数。
+ * 都是工程頁那幾顆按鈕背後的同一個函式。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | import / learn 缺 path 当场报错、不弹框 | 不放它跑一趟空的 |
- * | path 只认工程里的 txt | 章节文件、隐藏目录、工程外的路径一律不认（`features/bookText.ts`） |
- * | 导入：作者取消就回「不要重试」、零调用 | 切分结果先给作者看，他说了算 |
- * | 补齐：作者在第一个框取消就零调用 | 动手前报调用次数（第 4 条） |
+ * | import / learn 缺 path 當場報錯、不彈框 | 不放它跑一趟空的 |
+ * | path 只認工程裡的 txt | 章節檔案、隱藏目錄、工程外的路徑一律不認（`features/bookText.ts`） |
+ * | 匯入：作者取消就回「不要重試」、零呼叫 | 切分結果先給作者看，他說了算 |
+ * | 補齊：作者在第一個框取消就零呼叫 | 動手前報呼叫次數（第 4 條） |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -18,7 +18,7 @@ const { makeFakeHost } = require('../../helpers/fakeHost');
 const { installFakeProvider } = require('../../helpers/fakeProvider');
 const { cleanup } = require('../../helpers/teardown');
 
-const CH1 = 'chapters/001-夜入青云.md';
+const CH1 = 'chapters/001-夜入青雲.md';
 
 let bundle;
 let t;
@@ -67,9 +67,9 @@ before(async () => {
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
 
-  // 已写了第 1 章正文（还没细纲）：从已写正文补齐有活可干。
-  t = await makeTempProject(bundle.project, { prefix: 'bookTool', title: '青云剑录' });
-  t.write(CH1, '# 夜入青云\n\n雨下了三天。山门在雨里，林昭在门外。\n');
+  // 已寫了第 1 章正文（還沒細綱）：從已寫正文補齊有活可幹。
+  t = await makeTempProject(bundle.project, { prefix: 'bookTool', title: '青雲劍錄' });
+  t.write(CH1, '# 夜入青雲\n\n雨下了三天。山門在雨裡，林昭在門外。\n');
   t.project.invalidate();
   await t.project.syncManifest();
   resetCtx();
@@ -79,64 +79,64 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-describe('参数', () => {
-  test('import / learn 要 path，缺了当场报错、不弹框', async () => {
+describe('引數', () => {
+  test('import / learn 要 path，缺了當場報錯、不彈框', async () => {
     resetCtx();
     h.expect();
     for (const action of ['import', 'learn']) {
       const r = await run({ action });
-      assert.ok(r.error?.startsWith(`${action} 需要参数：path。path：工程里那本 txt 的相对路径`), r.error);
+      assert.ok(r.error?.startsWith(`${action} 需要引數：path。path：工程裡那本 txt 的相對路徑`), r.error);
     }
     assert.equal(h.confirms.length + h.picks.length, 0);
   });
 
-  test('derive 不认 path，只有 import / learn 认', async () => {
+  test('derive 不認 path，只有 import / learn 認', async () => {
     resetCtx();
     const r = await run({ action: 'derive', path: '原稿.txt' });
-    assert.equal(r.error, 'derive 不认 path，只有 import / learn 认。');
+    assert.equal(r.error, 'derive 不認 path，只有 import / learn 認。');
     assert.equal(h.confirms.length, 0);
   });
 
-  test('path 只认工程里的 txt：章节文件报错回给模型，不花钱', async () => {
+  test('path 只認工程裡的 txt：章節檔案報錯回給模型，不花錢', async () => {
     resetCtx();
     const r = await run({ action: 'import', path: CH1 });
-    assert.match(r.error, /不是工程里能拆的 txt/, JSON.stringify(r));
+    assert.match(r.error, /不是工程裡能拆的 txt/, JSON.stringify(r));
     assert.equal(fake.calls.length, 0);
     assert.equal(ctx.usage.calls, 0);
   });
 });
 
-describe('转发给工程页那几个函数', () => {
-  test('导入：作者在确认框取消，回给模型「不要重试」、零调用', async () => {
+describe('轉發給工程頁那幾個函式', () => {
+  test('匯入：作者在確認框取消，回給模型「不要重試」、零呼叫', async () => {
     resetCtx();
     t.write('原稿.txt', '第一章 入宗\n林昭入宗。');
     t.project.invalidate();
     h.expect(undefined);
     const r = await run({ action: 'import', path: '原稿.txt' });
-    assert.match(h.confirms[0].message, /^从《原稿》认出 1 章/);
-    assert.match(r.text, /这一次没有导入/);
-    assert.match(r.text, /不要重试同一个动作/);
+    assert.match(h.confirms[0].message, /^從《原稿》認出 1 章/);
+    assert.match(r.text, /這一次沒有匯入/);
+    assert.match(r.text, /不要重試同一個動作/);
     assert.equal(ctx.usage.calls, 0);
   });
 
-  test('从已写正文补齐：作者在第一个框取消，零调用', async () => {
+  test('從已寫正文補齊：作者在第一個框取消，零呼叫', async () => {
     resetCtx();
     h.expect(undefined);
     const r = await run({ action: 'derive' });
-    assert.match(h.confirms[0].message, /^从已写正文补齐第 1–\d+ 章/);
-    assert.match(r.text, /从已写正文补齐这一次没有调用模型/);
+    assert.match(h.confirms[0].message, /^從已寫正文補齊第 1–\d+ 章/);
+    assert.match(r.text, /從已寫正文補齊這一次沒有呼叫模型/);
     assert.equal(fake.calls.length, 0);
   });
 });
 
-describe('工具定义本身', () => {
-  test('参数只有 action 与 path', () => {
+describe('工具定義本身', () => {
+  test('引數只有 action 與 path', () => {
     assert.deepEqual(Object.keys(tool().parameters.properties).sort(), ['action', 'path']);
     assert.deepEqual(tool().parameters.properties.action.enum, ['import', 'derive', 'learn']);
   });
 
-  // 典型顺序写在描述里：先导入再补齐，模型才不会拿着原稿直接 derive。
-  test('描述里写着先 import 再 derive', () => {
-    assert.ok(tool().description.includes('import 导入原稿 → derive'), tool().description);
+  // 典型順序寫在描述裡：先匯入再補齊，模型才不會拿著原稿直接 derive。
+  test('描述裡寫著先 import 再 derive', () => {
+    assert.ok(tool().description.includes('import 匯入原稿 → derive'), tool().description);
   });
 });

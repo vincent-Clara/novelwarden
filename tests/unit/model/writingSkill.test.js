@@ -1,19 +1,19 @@
 /**
- * 写作技能的纯函数（model/writingSkill.ts，移植自 AI-Novel-Writer 的 `writing-skills.ts`）。
+ * 寫作技能的純函式（model/writingSkill.ts，移植自 AI-Novel-Writer 的 `writing-skills.ts`）。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | frontmatter 一行一个键，正文去掉首尾空白 | 注入的就是正文那一段 |
- * | frontmatter 按 YAML 读顶层键：列表、嵌套块、块标量、BOM、CRLF | 常规技能原样能读；嵌套块不能拍平盖掉 name |
- * | 引用到的附带文件一起带，带不上的才算相对引用 | 常规技能的 `references/` 原样能用；模型没有读文件的工具 |
- * | allowed-tools 不算依赖工具，hooks 声明照旧算 | 前者是给 agent 预先放行的权限，后者要执行的东西 |
- * | 没写 name 用目录名，再没有用 unnamed-writing-skill | 用户与工程技能的身份是目录名 |
- * | 六条不兼容规则逐条命中 | 只收纯提示词：装进来的东西在这里没有可执行的地方 |
- * | 建议阶段：写明的优先，否则按关键词猜 | 只是建议，绑哪都行 |
- * | 名字可以是中文，不许斜杠与点开头 | 名字就是目录名，拼成路径不能越界 |
- * | 绑定文件读不懂不抛，说出来 | 第 1 条 + 第 2 条 |
- * | 讨论不带，审稿 / 修稿 / 写正文 / 规划各认各的 | 阶段与配方对得上 |
- * | GitHub 只认四种 https 地址 | 照搬上游 |
+ * | frontmatter 一行一個鍵，正文去掉首尾空白 | 注入的就是正文那一段 |
+ * | frontmatter 按 YAML 讀頂層鍵：列表、巢狀塊、塊標量、BOM、CRLF | 常規技能原樣能讀；巢狀塊不能拍平蓋掉 name |
+ * | 引用到的附帶檔案一起帶，帶不上的才算相對引用 | 常規技能的 `references/` 原樣能用；模型沒有讀檔案的工具 |
+ * | allowed-tools 不算依賴工具，hooks 宣告照舊算 | 前者是給 agent 預先放行的許可權，後者要執行的東西 |
+ * | 沒寫 name 用目錄名，再沒有用 unnamed-writing-skill | 使用者與工程技能的身份是目錄名 |
+ * | 六條不相容規則逐條命中 | 只收純提示詞：裝進來的東西在這裡沒有可執行的地方 |
+ * | 建議階段：寫明的優先，否則按關鍵詞猜 | 只是建議，綁哪都行 |
+ * | 名字可以是中文，不許斜槓與點開頭 | 名字就是目錄名，拼成路徑不能越界 |
+ * | 繫結檔案讀不懂不拋，說出來 | 第 1 條 + 第 2 條 |
+ * | 討論不帶，審稿 / 修稿 / 寫正文 / 規劃各認各的 | 階段與配方對得上 |
+ * | GitHub 只認四種 https 地址 | 照搬上游 |
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -23,57 +23,57 @@ const m = loadModule('src/core/model/writingSkill.ts');
 
 const md = (front, body) => `---\n${front.join('\n')}\n---\n${body}\n`;
 
-describe('inspectSkillMarkdown · 读', () => {
+describe('inspectSkillMarkdown · 讀', () => {
   const raw = md(
-    ['name: scene-craft', 'display_name: "场面写法"', 'description: 写场面的办法', 'version: 1.2.0', 'stage: drafting'],
-    '\n每一场都要有一个选择。\n'
+    ['name: scene-craft', 'display_name: "場面寫法"', 'description: 寫場面的辦法', 'version: 1.2.0', 'stage: drafting'],
+    '\n每一場都要有一個選擇。\n'
   );
   const i = m.inspectSkillMarkdown(raw, 'folder');
 
-  test('frontmatter 的几个键各就各位，引号去掉', () => {
+  test('frontmatter 的幾個鍵各就各位，引號去掉', () => {
     assert.deepEqual(
       [i.name, i.displayName, i.description, i.version, i.stage],
-      ['scene-craft', '场面写法', '写场面的办法', '1.2.0', 'drafting']
+      ['scene-craft', '場面寫法', '寫場面的辦法', '1.2.0', 'drafting']
     );
   });
 
-  test('正文去掉首尾空白，字节数按正文算', () => {
-    assert.equal(i.body, '每一场都要有一个选择。');
-    assert.equal(i.bytes, Buffer.byteLength('每一场都要有一个选择。'));
+  test('正文去掉首尾空白，位元組數按正文算', () => {
+    assert.equal(i.body, '每一場都要有一個選擇。');
+    assert.equal(i.bytes, Buffer.byteLength('每一場都要有一個選擇。'));
   });
 
-  test('纯提示词判兼容', () => {
+  test('純提示詞判相容', () => {
     assert.deepEqual([i.compatible, i.reasons], [true, []]);
   });
 
-  test('显示名优先 display_name', () => {
-    assert.equal(m.skillLabel(i), '场面写法');
+  test('顯示名優先 display_name', () => {
+    assert.equal(m.skillLabel(i), '場面寫法');
   });
 
-  test('没有 frontmatter：整份是正文，名字取目录名，描述有个缺省', () => {
-    const j = m.inspectSkillMarkdown('只是一段话。', '去AI味');
-    assert.deepEqual([j.name, j.body, j.description], ['去AI味', '只是一段话。', '写作技能：去AI味']);
+  test('沒有 frontmatter：整份是正文，名字取目錄名，描述有個預設', () => {
+    const j = m.inspectSkillMarkdown('只是一段話。', '去AI味');
+    assert.deepEqual([j.name, j.body, j.description], ['去AI味', '只是一段話。', '寫作技能：去AI味']);
   });
 
-  test('名字与目录都没有时叫 unnamed-writing-skill', () => {
+  test('名字與目錄都沒有時叫 unnamed-writing-skill', () => {
     assert.equal(m.inspectSkillMarkdown('x').name, 'unnamed-writing-skill');
   });
 
-  test('读不懂的输入不抛', () => {
+  test('讀不懂的輸入不拋', () => {
     assert.doesNotThrow(() => m.inspectSkillMarkdown(undefined));
   });
 });
 
-describe('inspectSkillMarkdown · 不兼容的六条', () => {
+describe('inspectSkillMarkdown · 不相容的六條', () => {
   const reasonsOf = (raw) => m.inspectSkillMarkdown(raw).reasons;
   const cases = [
-    ['相对引用', '照 [这份](./references/a.md) 写。', 'relative-reference'],
-    ['${skill_dir}', '读 ${SKILL_DIR}/x。', 'relative-reference'],
-    ['脚本路径', '先跑 scripts/check.py。', 'script-dependency'],
-    ['运行脚本', '写完运行一下检查脚本。', 'script-dependency'],
-    ['hook', '先安装那个钩子。', 'hook-dependency'],
-    ['子代理', '把审稿交给子代理。', 'subagent-dependency'],
-    ['调用工具', '写之前先调用读取工具看一眼。', 'tool-dependency'],
+    ['相對引用', '照 [這份](./references/a.md) 寫。', 'relative-reference'],
+    ['${skill_dir}', '讀 ${SKILL_DIR}/x。', 'relative-reference'],
+    ['指令碼路徑', '先跑 scripts/check.py。', 'script-dependency'],
+    ['執行指令碼', '寫完執行一下檢查指令碼。', 'script-dependency'],
+    ['hook', '先安裝那個鉤子。', 'hook-dependency'],
+    ['子代理', '把審稿交給子代理。', 'subagent-dependency'],
+    ['呼叫工具', '寫之前先呼叫讀取工具看一眼。', 'tool-dependency'],
     ['use … tool', 'Use the read_drafts tool first.', 'tool-dependency'],
   ];
   for (const [name, body, reason] of cases) {
@@ -82,34 +82,34 @@ describe('inspectSkillMarkdown · 不兼容的六条', () => {
     });
   }
 
-  test('frontmatter 的 allowed-tools 不算依赖工具（给 agent 预先放行的权限）', () => {
+  test('frontmatter 的 allowed-tools 不算依賴工具（給 agent 預先放行的許可權）', () => {
     assert.deepEqual(reasonsOf(md(['name: a', 'allowed-tools: [read]'], '正文')), []);
     assert.deepEqual(reasonsOf(md(['name: a', 'allowed-tools:', '  - Read', '  - Edit'], '正文')), []);
   });
 
-  test('frontmatter 声明了 hooks / mcp 照旧算依赖工具', () => {
+  test('frontmatter 宣告瞭 hooks / mcp 照舊算依賴工具', () => {
     assert.deepEqual(reasonsOf(md(['name: a', 'hooks:', '  PreToolUse: x'], '正文')), ['tool-dependency']);
     assert.deepEqual(reasonsOf(md(['name: a', 'mcp: [server]'], '正文')), ['tool-dependency']);
   });
 
-  test('嵌套块里的键不算顶层声明', () => {
+  test('巢狀塊裡的鍵不算頂層宣告', () => {
     assert.deepEqual(reasonsOf(md(['name: a', 'metadata:', '  scripts: none'], '正文')), []);
   });
 
-  test('整份超过 64 KiB 判太大', () => {
+  test('整份超過 64 KiB 判太大', () => {
     const big = m.inspectSkillMarkdown('字'.repeat(23000));
     assert.deepEqual([big.compatible, big.reasons], [false, ['content-too-large']]);
   });
 
-  test('原因有中文说法', () => {
-    assert.equal(m.describeIncompat(['script-dependency', 'content-too-large']), '依赖脚本、内容超过 64 KiB');
+  test('原因有中文說法', () => {
+    assert.equal(m.describeIncompat(['script-dependency', 'content-too-large']), '依賴指令碼、內容超過 64 KiB');
   });
 });
 
-describe('frontmatter · YAML 的写法', () => {
+describe('frontmatter · YAML 的寫法', () => {
   const read = (front, body = '正文') => m.inspectSkillMarkdown(md(front, body), 'dir');
 
-  test('列表与嵌套块整块归上一个键，嵌套的 name / version 不盖掉顶层的', () => {
+  test('列表與巢狀塊整塊歸上一個鍵，巢狀的 name / version 不蓋掉頂層的', () => {
     const i = read([
       'name: real',
       'allowed-tools:',
@@ -123,40 +123,40 @@ describe('frontmatter · YAML 的写法', () => {
     assert.deepEqual([i.name, i.version, i.compatible], ['real', '2.0', true]);
   });
 
-  test('块标量：| 保留换行，> 折成一行', () => {
+  test('塊標量：| 保留換行，> 折成一行', () => {
     assert.equal(read(['name: a', 'description: |', '  第一行', '  第二行']).description, '第一行\n第二行');
     assert.equal(read(['name: a', 'description: >-', '  Use when', '  rewriting.']).description, 'Use when rewriting.');
   });
 
-  test('不加引号的值可以折到下面缩进的几行', () => {
-    assert.equal(read(['name: a', 'description: 第一段', '  接着写']).description, '第一段 接着写');
+  test('不加引號的值可以折到下面縮排的幾行', () => {
+    assert.equal(read(['name: a', 'description: 第一段', '  接著寫']).description, '第一段 接著寫');
   });
 
-  test('引号：双引号认转义，单引号认两个单引号，行尾注释去掉', () => {
-    const i = read(['name: \'it\'\'s\'', 'display_name: "场面\\"写法\\""', 'version: 1.0 # 注释']);
-    assert.deepEqual([i.name, i.displayName, i.version], ["it's", '场面"写法"', '1.0']);
+  test('引號：雙引號認轉義，單引號認兩個單引號，行尾註釋去掉', () => {
+    const i = read(['name: \'it\'\'s\'', 'display_name: "場面\\"寫法\\""', 'version: 1.0 # 註釋']);
+    assert.deepEqual([i.name, i.displayName, i.version], ["it's", '場面"寫法"', '1.0']);
   });
 
-  test('注释行、BOM、CRLF、--- 后面的空白都认', () => {
-    const raw = '\uFEFF---  \r\n# 说明\r\nname: a\r\nstage: review\r\n---\r\n正文\r\n';
+  test('註釋行、BOM、CRLF、--- 後面的空白都認', () => {
+    const raw = '\uFEFF---  \r\n# 說明\r\nname: a\r\nstage: review\r\n---\r\n正文\r\n';
     const i = m.inspectSkillMarkdown(raw);
     assert.deepEqual([i.name, i.stage, i.body], ['a', 'review', '正文']);
   });
 
-  test('空的 frontmatter 也认得出', () => {
+  test('空的 frontmatter 也認得出', () => {
     assert.equal(m.inspectSkillMarkdown('---\n---\n正文', 'dir').body, '正文');
   });
 });
 
-describe('附带文件', () => {
+describe('附帶檔案', () => {
   const skill = (body) => md(['name: a'], body);
 
-  test('引用到的文本文件按引用先后带上，传递引用也带，没被引用的不带', () => {
-    const i = m.inspectSkillMarkdown(skill('读 [模式](references/patterns.md)，再看 references/checklist.md。'), 'a', {
-      'references/patterns.md': '见 [细节](detail.md)。',
-      'references/detail.md': '细节',
-      'references/checklist.md': '清单',
-      'README.md': '不带',
+  test('引用到的文字檔案按引用先後帶上，傳遞引用也帶，沒被引用的不帶', () => {
+    const i = m.inspectSkillMarkdown(skill('讀 [模式](references/patterns.md)，再看 references/checklist.md。'), 'a', {
+      'references/patterns.md': '見 [細節](detail.md)。',
+      'references/detail.md': '細節',
+      'references/checklist.md': '清單',
+      'README.md': '不帶',
     });
     assert.deepEqual(
       i.attachments.map((a) => a.path),
@@ -165,36 +165,36 @@ describe('附带文件', () => {
     assert.deepEqual([i.compatible, i.unresolved], [true, []]);
   });
 
-  test('字节数与 64 KiB 都按正文加附带文件算', () => {
+  test('位元組數與 64 KiB 都按正文加附帶檔案算', () => {
     const i = m.inspectSkillMarkdown(skill('看 references/a.md'), 'a', { 'references/a.md': '一二三' });
     assert.equal(i.bytes, Buffer.byteLength('看 references/a.md') + Buffer.byteLength('一二三'));
     const big = m.inspectSkillMarkdown(skill('看 references/a.md'), 'a', { 'references/a.md': '字'.repeat(23000) });
     assert.deepEqual(big.reasons, ['content-too-large']);
   });
 
-  test('明确引用的找不到、越出技能目录、不是文本：相对引用，说出是哪几个', () => {
-    const i = m.inspectSkillMarkdown(skill('看 references/gone.md、[上一层](../x.md) 和 assets/cover.png。'), 'a', {});
+  test('明確引用的找不到、越出技能目錄、不是文字：相對引用，說出是哪幾個', () => {
+    const i = m.inspectSkillMarkdown(skill('看 references/gone.md、[上一層](../x.md) 和 assets/cover.png。'), 'a', {});
     assert.deepEqual(i.reasons, ['relative-reference']);
     assert.deepEqual(i.unresolved, ['references/gone.md', '../x.md', 'assets/cover.png']);
-    assert.equal(m.describeIncompat(i.reasons, i.unresolved), '包含相对引用（带不上：references/gone.md、../x.md、assets/cover.png）');
+    assert.equal(m.describeIncompat(i.reasons, i.unresolved), '包含相對引用（帶不上：references/gone.md、../x.md、assets/cover.png）');
   });
 
-  test('普通链接找不到只是不带，网址与锚点不算引用', () => {
-    const i = m.inspectSkillMarkdown(skill('见 [例子](example.md)、[官网](https://x.y/a.md)、[上文](#a)。'), 'a', {});
+  test('普通連結找不到只是不帶，網址與錨點不算引用', () => {
+    const i = m.inspectSkillMarkdown(skill('見 [例子](example.md)、[官網](https://x.y/a.md)、[上文](#a)。'), 'a', {});
     assert.deepEqual([i.compatible, i.attachments], [true, []]);
   });
 
-  test('附带文件里要跑脚本，一样不兼容', () => {
+  test('附帶檔案裡要跑指令碼，一樣不相容', () => {
     const i = m.inspectSkillMarkdown(skill('看 references/a.md'), 'a', { 'references/a.md': '先跑 scripts/check.py。' });
     assert.deepEqual(i.reasons, ['script-dependency']);
   });
 
-  test('注入时附带文件标上路径接在正文后面', () => {
-    const block = m.renderSkillBlock('甲', '正文', [{ path: 'references/a.md', text: '内容\r\n第二行\n' }]);
-    assert.ok(block.endsWith('正文\n\n【附带文件：references/a.md】\n内容\n第二行'), block);
+  test('注入時附帶檔案標上路徑接在正文後面', () => {
+    const block = m.renderSkillBlock('甲', '正文', [{ path: 'references/a.md', text: '內容\r\n第二行\n' }]);
+    assert.ok(block.endsWith('正文\n\n【附帶檔案：references/a.md】\n內容\n第二行'), block);
   });
 
-  test('skillReferences：按所在目录解析，越界的没有 path', () => {
+  test('skillReferences：按所在目錄解析，越界的沒有 path', () => {
     const refs = m.skillReferences('[a](./b.md) [c](../../d.md)', 'references/x.md');
     assert.deepEqual(
       refs.map((r) => [r.target, r.path, r.strong]),
@@ -206,39 +206,39 @@ describe('附带文件', () => {
   });
 });
 
-describe('建议阶段', () => {
+describe('建議階段', () => {
   const stageOf = (front, body) => m.inspectSkillMarkdown(md(front, body)).suggestedStage;
 
-  test('写明了的优先', () => {
-    assert.equal(stageOf(['name: a', 'stage: review'], '润色的方法'), 'review');
+  test('寫明瞭的優先', () => {
+    assert.equal(stageOf(['name: a', 'stage: review'], '潤色的方法'), 'review');
   });
 
-  test('写了个认不出的阶段：当没写，按内容猜', () => {
-    assert.equal(stageOf(['name: a', 'stage: polish'], '大纲怎么排'), 'planning');
+  test('寫了個認不出的階段：當沒寫，按內容猜', () => {
+    assert.equal(stageOf(['name: a', 'stage: polish'], '大綱怎麼排'), 'planning');
   });
 
-  test('关键词：审稿 → review，润色 → refinement，大纲 → planning，其余 → drafting', () => {
+  test('關鍵詞：審稿 → review，潤色 → refinement，大綱 → planning，其餘 → drafting', () => {
     assert.deepEqual(
-      ['逐条检查', '润色句子', '大纲的节奏', '写好对白'].map((b) => stageOf(['name: a'], b)),
+      ['逐條檢查', '潤色句子', '大綱的節奏', '寫好對白'].map((b) => stageOf(['name: a'], b)),
       ['review', 'refinement', 'planning', 'drafting']
     );
   });
 });
 
-describe('名字与 id', () => {
-  test('中文、字母数字、. _ - 都行', () => {
-    assert.deepEqual(['去AI味', 'scene-craft', 'a.b_c', '章节钩子2'].map(m.isSkillName), [true, true, true, true]);
+describe('名字與 id', () => {
+  test('中文、字母數字、. _ - 都行', () => {
+    assert.deepEqual(['去AI味', 'scene-craft', 'a.b_c', '章節鉤子2'].map(m.isSkillName), [true, true, true, true]);
   });
 
-  test('斜杠、点开头、空格、空串、超长都不行', () => {
+  test('斜槓、點開頭、空格、空串、超長都不行', () => {
     assert.deepEqual(['a/b', '..', '.x', 'a b', '', 'x'.repeat(65)].map(m.isSkillName), [false, false, false, false, false, false]);
   });
 
-  test('id 是来源:名字，解析回来', () => {
+  test('id 是來源:名字，解析回來', () => {
     assert.deepEqual(m.parseSkillId(m.skillId('user', '去AI味')), { source: 'user', name: '去AI味' });
   });
 
-  test('认不出的来源与名字不合法的 id 解析不出', () => {
+  test('認不出的來源與名字不合法的 id 解析不出', () => {
     assert.deepEqual([m.parseSkillId('global:x'), m.parseSkillId('user:../x'), m.parseSkillId('x'), m.parseSkillId(3)], [
       undefined,
       undefined,
@@ -248,38 +248,38 @@ describe('名字与 id', () => {
   });
 });
 
-describe('绑定文件', () => {
-  test('空文件就是没绑', () => {
+describe('繫結檔案', () => {
+  test('空檔案就是沒綁', () => {
     assert.deepEqual(m.parseSkillBindings(''), { bindings: {}, problems: [] });
   });
 
-  test('读得懂的照读', () => {
+  test('讀得懂的照讀', () => {
     const raw = JSON.stringify({ version: 1, bindings: { drafting: 'user:a', review: 'builtin:b' } });
     assert.deepEqual(m.parseSkillBindings(raw).bindings, { drafting: 'user:a', review: 'builtin:b' });
   });
 
-  test('不是 JSON：不抛，整份当没绑，说出来', () => {
+  test('不是 JSON：不拋，整份當沒綁，說出來', () => {
     assert.deepEqual(m.parseSkillBindings('{'), { bindings: {}, problems: [{ text: '不是合法的 JSON' }] });
   });
 
-  test('版本不对也说出来', () => {
-    assert.equal(m.parseSkillBindings('{"version":2}').problems[0].text, '认不出的版本（应为 "version": 1）');
+  test('版本不對也說出來', () => {
+    assert.equal(m.parseSkillBindings('{"version":2}').problems[0].text, '認不出的版本（應為 "version": 1）');
   });
 
-  test('认不出的阶段与不合法的 id 跳过那一项，问题记在那个阶段上', () => {
+  test('認不出的階段與不合法的 id 跳過那一項，問題記在那個階段上', () => {
     const r = m.parseSkillBindings(JSON.stringify({ version: 1, bindings: { drafting: 'nope', foo: 'user:a', review: 'user:b' } }));
     assert.deepEqual(r.bindings, { review: 'user:b' });
     assert.deepEqual(r.problems.map((p) => p.stage), ['drafting', 'foo']);
   });
 
-  test('写回去按固定的阶段顺序，读回来一样', () => {
+  test('寫回去按固定的階段順序，讀回來一樣', () => {
     const text = m.renderSkillBindings({ review: 'user:b', planning: 'builtin:a' });
     assert.ok(text.indexOf('planning') < text.indexOf('review'), text);
     assert.deepEqual(m.parseSkillBindings(text).bindings, { planning: 'builtin:a', review: 'user:b' });
   });
 });
 
-describe('一次装配算哪个阶段', () => {
+describe('一次裝配算哪個階段', () => {
   const cases = [
     [{ stage: 'setting', capability: 'generate' }, undefined, 'planning'],
     [{ stage: 'outline', capability: 'generate' }, undefined, 'planning'],
@@ -292,53 +292,53 @@ describe('一次装配算哪个阶段', () => {
     [{ stage: 'manuscript', capability: 'generate' }, 'revise', 'refinement'],
   ];
   for (const [action, mode, want] of cases) {
-    test(`${action.stage} × ${action.capability}${mode ? ` × ${mode}` : ''} → ${want ?? '不带'}`, () => {
+    test(`${action.stage} × ${action.capability}${mode ? ` × ${mode}` : ''} → ${want ?? '不帶'}`, () => {
       assert.equal(m.skillStageOf(action, mode), want);
     });
   }
 });
 
-describe('注入的那一块', () => {
-  test('说法照搬上游，作者事实与输出合同优先', () => {
+describe('注入的那一塊', () => {
+  test('說法照搬上游，作者事實與輸出合同優先', () => {
     assert.equal(
-      m.renderSkillBlock('场面写法', '\n正文\n'),
-      '【补充写作 Skill：场面写法】\n以下内容只能补充创作方法；作者事实和后续输出合同始终优先。\n正文'
+      m.renderSkillBlock('場面寫法', '\n正文\n'),
+      '【補充寫作 Skill：場面寫法】\n以下內容只能補充創作方法；作者事實和後續輸出合同始終優先。\n正文'
     );
   });
 });
 
 describe('GitHub 地址', () => {
-  test('仓库首页：默认分支根下的 SKILL.md', () => {
+  test('倉庫首頁：預設分支根下的 SKILL.md', () => {
     const l = m.parseGitHubSkillUrl('https://github.com/o/r');
     assert.deepEqual([l.owner, l.repo, l.ref, l.path], ['o', 'r', undefined, 'SKILL.md']);
   });
 
-  test('tree 目录：补上 SKILL.md', () => {
+  test('tree 目錄：補上 SKILL.md', () => {
     const l = m.parseGitHubSkillUrl('https://github.com/o/r/tree/main/skills/scene');
     assert.deepEqual([l.ref, l.path], ['main', 'skills/scene/SKILL.md']);
   });
 
-  test('blob 文件与 raw 地址', () => {
+  test('blob 檔案與 raw 地址', () => {
     assert.equal(m.parseGitHubSkillUrl('https://github.com/o/r.git/blob/v1/a/SKILL.md').path, 'a/SKILL.md');
     assert.equal(m.parseGitHubSkillUrl('https://raw.githubusercontent.com/o/r/main/SKILL.md').ref, 'main');
   });
 
   const bad = [
     ['http', 'http://github.com/o/r'],
-    ['带端口', 'https://github.com:8443/o/r'],
-    ['别的站', 'https://gitlab.com/o/r'],
+    ['帶埠', 'https://github.com:8443/o/r'],
+    ['別的站', 'https://gitlab.com/o/r'],
     ['不是 SKILL.md', 'https://github.com/o/r/blob/main/README.md'],
-    ['issues 页', 'https://github.com/o/r/issues/1'],
-    ['路径里有 ..', 'https://raw.githubusercontent.com/o/r/main/%2E%2E/SKILL.md'],
+    ['issues 頁', 'https://github.com/o/r/issues/1'],
+    ['路徑裡有 ..', 'https://raw.githubusercontent.com/o/r/main/%2E%2E/SKILL.md'],
     ['不是地址', 'not a url'],
   ];
   for (const [name, url] of bad) {
-    test(`拒绝：${name}`, () => {
+    test(`拒絕：${name}`, () => {
       assert.throws(() => m.parseGitHubSkillUrl(url));
     });
   }
 
-  test('raw 下载地址逐段编码', () => {
+  test('raw 下載地址逐段編碼', () => {
     assert.equal(m.githubRawUrl('o', 'r', 'main', 'a/SKILL.md'), 'https://raw.githubusercontent.com/o/r/main/a/SKILL.md');
   });
 });

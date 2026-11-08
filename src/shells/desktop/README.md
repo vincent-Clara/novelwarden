@@ -1,95 +1,95 @@
-# desktop — 桌面壳（Windows / Linux）
+# desktop — 桌面殼（Windows / Linux）
 
-第三个壳。前两个是 VS Code 插件（[vscode](../vscode/README.md)）与独立 Web 服务
-（[standalone](../standalone/README.md)），这一个把**独立 Web 服务原封不动地装进一个桌面窗口**。
+第三個殼。前兩個是 VS Code 外掛（[vscode](../vscode/README.md)）與獨立 Web 服務
+（[standalone](../standalone/README.md)），這一個把**獨立 Web 服務原封不動地裝進一個桌面視窗**。
 
-## 它是一层纯壳
+## 它是一層純殼
 
-`core/` 与 `media/` 一行都没有为它改过（除了它自己搬进 `src/shells/` 时那次改路径）。壳只做三件事：
+`core/` 與 `media/` 一行都沒有為它改過（除了它自己搬進 `src/shells/` 時那次改路徑）。殼只做三件事：
 
-1. 起 sidecar —— 就是 `npm run dist` 那个单文件可执行，只换了个文件名。**不传工程路径**
-2. 等它就绪，把窗口从本地 `ui/splash.html` 导航到 `http://127.0.0.1:PORT/`
-3. 退出时把 sidecar 收掉
+1. 起 sidecar —— 就是 `npm run dist` 那個單檔案可執行，只換了個檔名。**不傳工程路徑**
+2. 等它就緒，把視窗從本地 `ui/splash.html` 導航到 `http://127.0.0.1:PORT/`
+3. 退出時把 sidecar 收掉
 
-上次打开的工程由 sidecar 读 `~/.novelwarden/window.json` 恢复，与浏览器里跑 `novelwarden` 同一条路。打开/关闭文件夹不 kill、不重启 sidecar。旧桌面记忆 `<app_config_dir>/shell.json` 只在 `window.json` 还不存在时迁一次。
+上次開啟的工程由 sidecar 讀 `~/.novelwarden/window.json` 恢復，與瀏覽器裡跑 `novelwarden` 同一條路。開啟/關閉資料夾不 kill、不重啟 sidecar。舊桌面記憶 `<app_config_dir>/shell.json` 只在 `window.json` 還不存在時遷一次。
 
-**所以桌面版没有任何功能是"适配"出来的。** sidecar 是同一台机器上的普通进程，
-`fs.watch`、`bun:sqlite`、`openExternal` 唤起系统程序全部照旧工作。用户看不到服务的存在，
-但架构上它还在那儿——这也是 web 模式一行不改就能继续跑的原因。
+**所以桌面版沒有任何功能是"適配"出來的。** sidecar 是同一臺機器上的普通程序，
+`fs.watch`、`bun:sqlite`、`openExternal` 喚起系統程式全部照舊工作。使用者看不到服務的存在，
+但架構上它還在那兒——這也是 web 模式一行不改就能繼續跑的原因。
 
-**这个目录本身就是 Tauri 工程根**（`tauri.conf.json` 直接放在这里，不再套一层 `src-tauri/`）。
-`npm run app:dev` / `app:build` 会先 `cd` 进来再调 CLI——Tauri 认「cwd 或 cwd/src-tauri 下的
-tauri.conf.json」，站在这里是最稳的那条发现路径。CI 里对应的是 tauri-action 的
+**這個目錄本身就是 Tauri 工程根**（`tauri.conf.json` 直接放在這裡，不再套一層 `src-tauri/`）。
+`npm run app:dev` / `app:build` 會先 `cd` 進來再調 CLI——Tauri 認「cwd 或 cwd/src-tauri 下的
+tauri.conf.json」，站在這裡是最穩的那條發現路徑。CI 裡對應的是 tauri-action 的
 `projectPath: src/shells/desktop`。
 
-这层壳之所以能这么薄，是因为独立版早就把需要的东西给齐了：`--no-open` 已有、
-端口占用会自愈、[server.ts](../standalone/server.ts) 已经往 stdout 打了带端口的 URL、
+這層殼之所以能這麼薄，是因為獨立版早就把需要的東西給齊了：`--no-open` 已有、
+埠占用會自愈、[server.ts](../standalone/server.ts) 已經往 stdout 打了帶埠的 URL、
 `isAllowedOrigin` 天然放行 `http://127.0.0.1:PORT` 的 webview。
 
-## 文件
+## 檔案
 
-| 文件 | 作用 |
+| 檔案 | 作用 |
 |---|---|
-| [src/main.rs](src/main.rs) | 启动编排、三个 `#[tauri::command]`、退出时收 sidecar。无原生 File/Help 菜单 |
-| [src/sidecar.rs](src/sidecar.rs) | sidecar 生命周期：预挑端口、spawn（只传 `--no-open --port`）、等就绪、日志落盘、kill |
-| [src/project.rs](src/project.rs) | 把旧 `shell.json` 的 `last_project` 迁到 `~/.novelwarden/window.json`（只一次） |
-| [ui/splash.html](ui/splash.html) + [ui/splash.js](ui/splash.js) | 启动页：启动中 / 失败（重试、查看日志）。不再选目录 |
-| [icons/source.svg](icons/source.svg) | app 图标源文件，改了重跑 `npx tauri icon icons/source.svg` |
+| [src/main.rs](src/main.rs) | 啟動編排、三個 `#[tauri::command]`、退出時收 sidecar。無原生 File/Help 選單 |
+| [src/sidecar.rs](src/sidecar.rs) | sidecar 生命週期：預挑埠、spawn（只傳 `--no-open --port`）、等就緒、日誌落盤、kill |
+| [src/project.rs](src/project.rs) | 把舊 `shell.json` 的 `last_project` 遷到 `~/.novelwarden/window.json`（只一次） |
+| [ui/splash.html](ui/splash.html) + [ui/splash.js](ui/splash.js) | 啟動頁：啟動中 / 失敗（重試、檢視日誌）。不再選目錄 |
+| [icons/source.svg](icons/source.svg) | app 圖示原始檔，改了重跑 `npx tauri icon icons/source.svg` |
 
-sidecar 由 [scripts/build-sidecar.js](../../../scripts/build-sidecar.js) 产出到 `binaries/`（不入库），
-由 `tauri.conf.json` 的 `beforeDevCommand` / `beforeBuildCommand` 自动触发。
+sidecar 由 [scripts/build-sidecar.js](../../../scripts/build-sidecar.js) 產出到 `binaries/`（不入庫），
+由 `tauri.conf.json` 的 `beforeDevCommand` / `beforeBuildCommand` 自動觸發。
 
 ## 用法
 
 ```bash
-npm run app:dev      # 开发运行（会自动先编 sidecar）
-npm run app:build    # 出安装包
-npm run sidecar      # 只编当前平台的 sidecar
-npm run sidecar:all  # 连 Windows 的一起编（Bun 交叉编译）
+npm run app:dev      # 開發執行（會自動先編 sidecar）
+npm run app:build    # 出安裝包
+npm run sidecar      # 只編當前平臺的 sidecar
+npm run sidecar:all  # 連 Windows 的一起編（Bun 交叉編譯）
 ```
 
-前置：Rust 工具链（[rustup](https://rustup.rs)）。Linux 上还需要
+前置：Rust 工具鏈（[rustup](https://rustup.rs)）。Linux 上還需要
 `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf`。
 
-## 三条不能改的约定
+## 三條不能改的約定
 
-1. **不再把工程路径传给 sidecar。** 恢复上次工程、打开/关闭文件夹全在 sidecar 里，
-   与 `novelwarden` 空窗口同一条路。
+1. **不再把工程路徑傳給 sidecar。** 恢復上次工程、開啟/關閉資料夾全在 sidecar 裡，
+   與 `novelwarden` 空視窗同一條路。
 
-2. **退出时必须 kill sidecar。** Windows 上的孤儿进程会占着端口，还会占着
-   `.novelwarden/novelwarden.db`（[db.ts](../../core/runtime/db.ts) 里记过这个 EBUSY 坑）。
+2. **退出時必須 kill sidecar。** Windows 上的孤兒程序會佔著埠，還會佔著
+   `.novelwarden/novelwarden.db`（[db.ts](../../core/runtime/db.ts) 裡記過這個 EBUSY 坑）。
 
-3. **绝不开 `dangerousRemoteDomainIpcAccess`。** 导航到 `http://127.0.0.1:PORT` 之后
-   页面属于远程内容，[capabilities/default.json](capabilities/default.json) 刻意没有
-   `remote` 段，所以它拿不到任何 IPC 权限。现有前端只用 WebSocket、不碰 Tauri API，
-   本来也不需要。
+3. **絕不開 `dangerousRemoteDomainIpcAccess`。** 導航到 `http://127.0.0.1:PORT` 之後
+   頁面屬於遠端內容，[capabilities/default.json](capabilities/default.json) 刻意沒有
+   `remote` 段，所以它拿不到任何 IPC 許可權。現有前端只用 WebSocket、不碰 Tauri API，
+   本來也不需要。
 
 ## 已知坑
 
-- **WSL2 里跑 `npm run app:dev`**：WSLg 能显示窗口，但 WebKitGTK 常需要
+- **WSL2 裡跑 `npm run app:dev`**：WSLg 能顯示視窗，但 WebKitGTK 常需要
   `WEBKIT_DISABLE_COMPOSITING_MODE=1 npm run app:dev`。
-- **Windows 安装包不能在 Linux 上编**。sidecar 可以（Bun 交叉编译），Rust 壳不行——
+- **Windows 安裝包不能在 Linux 上編**。sidecar 可以（Bun 交叉編譯），Rust 殼不行——
   用 [.github/workflows/app.yml](../../../.github/workflows/app.yml) 的 windows runner，或在
-  Windows 上原生构建。
-- **Bun 的 `--windows-*` 开关只在 Windows 上编译时接受**，交叉编译会直接报错。
-  build-sidecar.js 因此只在原生构建时加它们；少了也无妨，Tauri spawn sidecar 时本来
-  就带 `CREATE_NO_WINDOW`。
-- **体积**：sidecar 单文件 ~95 MB，NSIS 压缩后约 35~45 MB，AppImage 约 100 MB。
-  Tauri 的小体积优势在纯壳方案里没有——这是换来"零 core 改动"的代价。
-- **未签名**：Windows 首次运行会有 SmartScreen 警告。
-- **启动多一跳**：spawn + 起服务约 0.5~1.5 秒，splash 页负责让这段时间不难看。
-- **「视图 → 全屏」在 Windows 上不是真全屏**：页面用的是标准 Fullscreen API（能力探测，
-  不分是不是桌面壳）。Linux 的 WebKitGTK 自己会把窗口一起全屏；Windows 的 WebView2 只把元素
-  撑满 webview，窗口不变（标题栏、任务栏都还在）。要真全屏得在 `main.rs` 里经 `with_webview`
-  拿到 WebView2，接 `ContainsFullScreenElementChanged`、按 `ContainsFullScreenElement` 调
-  `window.set_fullscreen()`——页面是远程内容、拿不到 IPC（见上面第 3 条），前端做不了这件事。
-  还没做（这台开发机上编不了 Windows 壳，没法验证）；在那之前 Windows 上用「最大化」加专注模式代替。
+  Windows 上原生構建。
+- **Bun 的 `--windows-*` 開關只在 Windows 上編譯時接受**，交叉編譯會直接報錯。
+  build-sidecar.js 因此只在原生構建時加它們；少了也無妨，Tauri spawn sidecar 時本來
+  就帶 `CREATE_NO_WINDOW`。
+- **體積**：sidecar 單檔案 ~95 MB，NSIS 壓縮後約 35~45 MB，AppImage 約 100 MB。
+  Tauri 的小體積優勢在純殼方案裡沒有——這是換來"零 core 改動"的代價。
+- **未簽名**：Windows 首次執行會有 SmartScreen 警告。
+- **啟動多一跳**：spawn + 起服務約 0.5~1.5 秒，splash 頁負責讓這段時間不難看。
+- **「檢視 → 全屏」在 Windows 上不是真全屏**：頁面用的是標準 Fullscreen API（能力探測，
+  不分是不是桌面殼）。Linux 的 WebKitGTK 自己會把視窗一起全屏；Windows 的 WebView2 只把元素
+  撐滿 webview，視窗不變（標題欄、工作列都還在）。要真全屏得在 `main.rs` 裡經 `with_webview`
+  拿到 WebView2，接 `ContainsFullScreenElementChanged`、按 `ContainsFullScreenElement` 調
+  `window.set_fullscreen()`——頁面是遠端內容、拿不到 IPC（見上面第 3 條），前端做不了這件事。
+  還沒做（這臺開發機上編不了 Windows 殼，沒法驗證）；在那之前 Windows 上用「最大化」加專注模式代替。
 
 ## 排查
 
-sidecar 的全部 stdout / stderr 都落在 `<app_log_dir>/sidecar.log`（每次启动截断重来），
-失败闪屏上的「查看日志」打开它所在的目录。起不来的时候那是第一站。导航进页面之后，
-帮助 → 打开日志目录打开的是 `~/.novelwarden/`（配置与 window.json）。
+sidecar 的全部 stdout / stderr 都落在 `<app_log_dir>/sidecar.log`（每次啟動截斷重來），
+失敗閃屏上的「檢視日誌」開啟它所在的目錄。起不來的時候那是第一站。導航進頁面之後，
+幫助 → 開啟日誌目錄開啟的是 `~/.novelwarden/`（配置與 window.json）。
 
-注意这与网页里那个「日志」页是两回事：那一页是 sidecar 内部的业务日志（还会进
-SQLite），这个文件是**壳看到的进程输出**——服务压根没起来时，只有这里有线索。
+注意這與網頁裡那個「日誌」頁是兩回事：那一頁是 sidecar 內部的業務日誌（還會進
+SQLite），這個檔案是**殼看到的程序輸出**——服務壓根沒起來時，只有這裡有線索。

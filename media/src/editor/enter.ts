@@ -1,23 +1,23 @@
 /**
- * 回车。纯函数只算「把哪一段换成什么、之后选区落在哪」，由 {@link installEnter} 挂的按键处理函数
- * 交给 `Pane.applyEdit`——一次回车一步撤销。
+ * 回車。純函式只算「把哪一段換成什麼、之後選區落在哪」，由 {@link installEnter} 掛的按鍵處理函式
+ * 交給 `Pane.applyEdit`——一次回車一步撤銷。
  *
- * ## 正文（`isProse`：章节与草稿）
+ * ## 正文（`isProse`：章節與草稿）
  *
- * 按工程的分段格式另起一段：空行分段插 `\n\n`，段首缩进插 `\n` + 两个全角空格，缩进加空行插
- * `\n\n` + 两个全角空格（`paragraphBreak`）。有选区先替换选区；光标后面紧跟的空白删掉（新段开头不留空格）。
+ * 按工程的分段格式另起一段：空行分段插 `\n\n`，段首縮排插 `\n` + 兩個全形空格，縮排加空行插
+ * `\n\n` + 兩個全形空格（`paragraphBreak`）。有選區先替換選區；游標後面緊跟的空白刪掉（新段開頭不留空格）。
  *
- * - 这一行只有空白 / 缩进：只换行、不加缩进，并清掉这一行的空白——连按回车不会堆出一串只有缩进的行。
- * - 光标在段首（或段首的缩进里）：这一段整个往下推一行、格式原样，光标仍停在这一段的字前面。
- * - 标题行（`#` 开头）后面回车与段落一样：插段分隔，下一行是正文的一段（缩进的格式就带缩进）——与
- *   「一键排版」排出来的样子一致（标题与第一段之间也是段间隔）。
- * - `Shift+Enter` 只插 `\n`：诗、信、短句排列用。
+ * - 這一行只有空白 / 縮排：只換行、不加縮排，並清掉這一行的空白——連按回車不會堆出一串只有縮排的行。
+ * - 游標在段首（或段首的縮排裡）：這一段整個往下推一行、格式原樣，游標仍停在這一段的字前面。
+ * - 標題行（`#` 開頭）後面回車與段落一樣：插段分隔，下一行是正文的一段（縮排的格式就帶縮排）——與
+ *   「一鍵排版」排出來的樣子一致（標題與第一段之間也是段間隔）。
+ * - `Shift+Enter` 只插 `\n`：詩、信、短句排列用。
  *
  * ## 非正文
  *
- * - Markdown（`.md` / `.markdown`）：新行沿用这一行行首的空白；列表接着写（`- ` / `* ` / `+ ` 照抄，
- *   `1. ` / `1) ` 递增），在空的列表项上回车就去掉标记、结束列表（那一行变成空行，不再往下加一行）。
- * - json / yml / 其他：只沿用缩进。
+ * - Markdown（`.md` / `.markdown`）：新行沿用這一行行首的空白；列表接著寫（`- ` / `* ` / `+ ` 照抄，
+ *   `1. ` / `1) ` 遞增），在空的列表項上回車就去掉標記、結束列表（那一行變成空行，不再往下加一行）。
+ * - json / yml / 其他：只沿用縮排。
  */
 import type { ParagraphStyle } from '../protocol';
 import { paragraphBreak } from '../protocol';
@@ -25,7 +25,7 @@ import { addKeyHandler, isProse } from './api';
 import type { TextSelection } from './history';
 import { paragraphStyle } from './paragraphState';
 
-/** 一次回车要做的替换，参数与 `Pane.applyEdit` 一一对应。 */
+/** 一次回車要做的替換，引數與 `Pane.applyEdit` 一一對應。 */
 export interface EnterEdit {
   start: number;
   end: number;
@@ -33,7 +33,7 @@ export interface EnterEdit {
   selection: TextSelection;
 }
 
-/** 哪些文件按 Markdown 处理（列表接续）。与 `pane.ts` 判「能不能预览」是同一个口径。 */
+/** 哪些檔案按 Markdown 處理（列表接續）。與 `pane.ts` 判「能不能預覽」是同一個口徑。 */
 export const MARKDOWN_RE = /\.(md|markdown)$/i;
 
 const caret = (at: number): TextSelection => ({ start: at, end: at });
@@ -43,29 +43,29 @@ export function lineStartOf(value: string, pos: number): number {
   return pos <= 0 ? 0 : value.lastIndexOf('\n', pos - 1) + 1;
 }
 
-/** `pos` 所在行的行尾（不含换行）。 */
+/** `pos` 所在行的行尾（不含換行）。 */
 export function lineEndOf(value: string, pos: number): number {
   const nl = value.indexOf('\n', pos);
   return nl === -1 ? value.length : nl;
 }
 
-/** 行内空白：半角空格、制表符、全角空格、不换行空格。 */
+/** 行內空白：半形空格、製表符、全形空格、不換行空格。 */
 const INLINE_SPACE = /^[ \t　 ]*/;
 
 const isBlank = (s: string) => s.trim() === '';
 
-/** 正文里的回车（规则见文件头）。 */
+/** 正文裡的回車（規則見檔案頭）。 */
 export function proseEnter(value: string, sel: TextSelection, style: ParagraphStyle): EnterEdit {
   const lineStart = lineStartOf(value, sel.start);
   const lineEnd = lineEndOf(value, sel.end);
   const head = value.slice(lineStart, sel.start);
   const tail = value.slice(sel.end, lineEnd);
   if (isBlank(head) && isBlank(tail)) {
-    // 这一行只有空白：只换行、不加缩进，顺手清掉这一行的空白。
+    // 這一行只有空白：只換行、不加縮排，順手清掉這一行的空白。
     return { start: lineStart, end: lineEnd, text: '\n', selection: caret(lineStart + 1) };
   }
   if (isBlank(head)) {
-    // 光标在段首或段首的缩进里：整段往下推一行，光标停在字前面。
+    // 游標在段首或段首的縮排裡：整段往下推一行，游標停在字前面。
     const line = head + tail;
     const lead = INLINE_SPACE.exec(line)![0].length;
     return { start: lineStart, end: lineEnd, text: `\n${line}`, selection: caret(lineStart + 1 + lead) };
@@ -77,10 +77,10 @@ export function proseEnter(value: string, sel: TextSelection, style: ParagraphSt
 
 const BULLET = /^([ \t]*)([-*+])([ \t]+)/;
 const ORDERED = /^([ \t]*)(\d{1,9})([.)])([ \t]+)/;
-/** 分隔线（`---`、`* * *`）不是列表项。 */
+/** 分隔線（`---`、`* * *`）不是列表項。 */
 const RULE = /^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$/;
 
-/** Markdown 里的回车：列表接着写，空的列表项结束列表，其余沿用缩进。 */
+/** Markdown 裡的回車：列表接著寫，空的列表項結束列表，其餘沿用縮排。 */
 export function markdownEnter(value: string, sel: TextSelection): EnterEdit {
   const lineStart = lineStartOf(value, sel.start);
   const lineEnd = lineEndOf(value, sel.end);
@@ -93,7 +93,7 @@ export function markdownEnter(value: string, sel: TextSelection): EnterEdit {
     if (m) {
       const rest = head.slice(m[0].length) + tail;
       if (isBlank(rest)) {
-        // 空的列表项：去掉标记、结束列表。
+        // 空的列表項：去掉標記、結束列表。
         return { start: lineStart, end: lineEnd, text: '', selection: caret(lineStart) };
       }
       const marker = ordered
@@ -106,14 +106,14 @@ export function markdownEnter(value: string, sel: TextSelection): EnterEdit {
   return plainEnter(value, sel);
 }
 
-/** 其余文件的回车：新行沿用这一行行首的空白（光标在缩进中间时只沿用光标前那一截）。 */
+/** 其餘檔案的回車：新行沿用這一行行首的空白（游標在縮排中間時只沿用游標前那一截）。 */
 export function plainEnter(value: string, sel: TextSelection): EnterEdit {
   const head = value.slice(lineStartOf(value, sel.start), sel.start);
   const text = `\n${INLINE_SPACE.exec(head)![0]}`;
   return { start: sel.start, end: sel.end, text, selection: caret(sel.start + text.length) };
 }
 
-/** 挂回车的按键处理函数。`Ctrl/Cmd+Enter`（另起一段）在 `lines.ts`，这里不接。 */
+/** 掛回車的按鍵處理函式。`Ctrl/Cmd+Enter`（另起一段）在 `lines.ts`，這裡不接。 */
 export function installEnter(): void {
   addKeyHandler((e, { pane, file, area }) => {
     if (e.key !== 'Enter' || e.altKey || e.ctrlKey || e.metaKey) {
@@ -126,7 +126,7 @@ export function installEnter(): void {
         ? { start: sel.start, end: sel.end, text: '\n', selection: caret(sel.start + 1) }
         : proseEnter(area.value, sel, paragraphStyle());
     } else if (e.shiftKey) {
-      // 非正文的 Shift+Enter 交给浏览器（就是插一个换行）。
+      // 非正文的 Shift+Enter 交給瀏覽器（就是插一個換行）。
       return false;
     } else {
       edit = MARKDOWN_RE.test(file.path) ? markdownEnter(area.value, sel) : plainEnter(area.value, sel);

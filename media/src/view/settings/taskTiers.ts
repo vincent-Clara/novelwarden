@@ -1,12 +1,12 @@
 /**
- * 「哪个任务交给哪一档」的对照表。
+ * 「哪個任務交給哪一檔」的對照表。
  *
- * 八行，每行一个下拉框。默认值来自后端的 `DEFAULT_TASK_TIERS`（同一份定义，
- * 经 protocol.ts 引入）——设置页上写着「定稿 → 快速档」，跑起来就必须是
- * 快速档，两边各写一份迟早会漂。
+ * 八行，每行一個下拉框。預設值來自後端的 `DEFAULT_TASK_TIERS`（同一份定義，
+ * 經 protocol.ts 引入）——設定頁上寫著「定稿 → 快速檔」，跑起來就必須是
+ * 快速檔，兩邊各寫一份遲早會漂。
  *
- * 只有与内置默认不同的项才会写进配置：这样日后调整默认值时，用户没动过的
- * 任务会跟着新默认走，而不是被一份「当年抄下来的默认值」钉死。
+ * 只有與內建預設不同的項才會寫進配置：這樣日後調整預設值時，使用者沒動過的
+ * 任務會跟著新預設走，而不是被一份「當年抄下來的預設值」釘死。
  */
 import { el as mk, maybeById } from '../../dom';
 import { DEFAULT_TASK_TIERS, LLM_TASKS, MODEL_TIERS, TASK_HINT, TASK_LABEL, TIER_LABEL } from '../../protocol';
@@ -38,15 +38,15 @@ function buildRow(task: LlmTask): HTMLElement {
   for (const tier of MODEL_TIERS) {
     const opt = document.createElement('option');
     opt.value = tier;
-    // 标出哪个是内置默认，用户改乱了能找回来。
-    opt.textContent = tier === DEFAULT_TASK_TIERS[task] ? `${TIER_LABEL[tier]}（默认）` : TIER_LABEL[tier];
+    // 標出哪個是內建預設，使用者改亂了能找回來。
+    opt.textContent = tier === DEFAULT_TASK_TIERS[task] ? `${TIER_LABEL[tier]}（預設）` : TIER_LABEL[tier];
     sel.appendChild(opt);
   }
   sel.value = current;
   sel.addEventListener('change', () => {
     const picked = sel.value as ModelTier;
     if (picked === DEFAULT_TASK_TIERS[task]) {
-      // 选回默认就把覆盖删掉，配置里只留真正改过的项。
+      // 選回預設就把覆蓋刪掉，配置裡只留真正改過的項。
       delete draft.taskTiers[task];
     } else {
       draft.taskTiers[task] = picked;

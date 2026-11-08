@@ -1,14 +1,14 @@
 /**
- * 工程页「存档点…」弹窗的后端一半（`controller/checkpoints.ts`）：五条消息走一遍。存储与退回的细节在
+ * 工程頁「存檔點…」彈窗的後端一半（`controller/checkpoints.ts`）：五條訊息走一遍。儲存與退回的細節在
  * tests/integration/workspace/checkpoints.test.js。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 列表：还不是工程时说为什么；存一个之后 toast 说存了几份、列表重推，带正文章数与字数 | 面板上看得出每个点有多大 |
- * | 跟现在比：三类 + `hashNow`；存档点不在了回 `error` | 面板要据此画、退回时原样带回来 |
- * | 退回：toast 汇总、`pushState`、重推列表（多了「退回之前」）与这个存档点的比较（变成一模一样） | 作者看得到退回了什么、还能退回来 |
- * | 有任务在跑：拒绝，什么都不动 | 一边写一边退，谁也说不清 |
- * | 写备注：自动的留住 | 不被自动裁掉 |
+ * | 列表：還不是工程時說為什麼；存一個之後 toast 說存了幾份、列表重推，帶正文章數與字數 | 面板上看得出每個點有多大 |
+ * | 跟現在比：三類 + `hashNow`；存檔點不在了回 `error` | 面板要據此畫、退回時原樣帶回來 |
+ * | 退回：toast 彙總、`pushState`、重推列表（多了「退回之前」）與這個存檔點的比較（變成一模一樣） | 作者看得到退回了什麼、還能退回來 |
+ * | 有任務在跑：拒絕，什麼都不動 | 一邊寫一邊退，誰也說不清 |
+ * | 寫備註：自動的留住 | 不被自動裁掉 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -20,8 +20,8 @@ const { makeSettings } = require('../../helpers/fakeProvider');
 const { cleanup } = require('../../helpers/teardown');
 
 const CHAPTER = 'chapters/001-雨夜.md';
-const ORIGINAL = '# 雨夜\n\n他推开门。\n\n雨下了三天。\n';
-const CHANGED = '# 雨夜\n\n他慢慢推开门。\n\n雨下了三天。\n';
+const ORIGINAL = '# 雨夜\n\n他推開門。\n\n雨下了三天。\n';
+const CHANGED = '# 雨夜\n\n他慢慢推開門。\n\n雨下了三天。\n';
 
 let bundle;
 let fakeHost;
@@ -37,7 +37,7 @@ async function send(msg) {
   await controller.handle(msg);
 }
 
-/** 面板上点「整本退回」会发的那一份请求（从最近一次 `checkpointDiff` 里拼）。 */
+/** 面板上點「整本退回」會發的那一份請求（從最近一次 `checkpointDiff` 裡拼）。 */
 function wholeRequest(diff) {
   const expect = {};
   for (const e of diff.entries) expect[e.path] = e.hashNow ?? null;
@@ -56,7 +56,7 @@ before(async () => {
   const settings = makeSettings({ contextWindow: 100000 });
   fakeHost = makeFakeHost({ name: 'standalone', settings: () => settings });
   bundle.host.initHost(fakeHost.host);
-  t = await makeTempProject(bundle.project, { prefix: 'checkpoints-ctl', title: '青云剑录' });
+  t = await makeTempProject(bundle.project, { prefix: 'checkpoints-ctl', title: '青雲劍錄' });
   t.write(CHAPTER, ORIGINAL);
   controller = new bundle.controller.ChatController(t.project);
   controller.attach({ kind: 'sidebar', post: (m) => posted.push(m), reveal() {} });
@@ -67,17 +67,17 @@ after(() => {
   if (t) cleanup(t.dir, bundle?.db);
 });
 
-describe('列表与存', () => {
-  test('一个都没有时列表是空的', async () => {
+describe('列表與存', () => {
+  test('一個都沒有時列表是空的', async () => {
     await send({ type: 'listCheckpoints' });
     assert.deepEqual(ofType('checkpoints')[0], { type: 'checkpoints', entries: [] });
   });
 
-  test('存一个：toast 说存了几份，列表重推，带正文章数与字数', async () => {
-    await send({ type: 'createCheckpoint', note: '开头' });
-    assert.match(toasts(), /^info: 已存一个存档点：\d+ 份文件/);
+  test('存一個：toast 說存了幾份，列表重推，帶正文章數與字數', async () => {
+    await send({ type: 'createCheckpoint', note: '開頭' });
+    assert.match(toasts(), /^info: 已存一個存檔點：\d+ 份檔案/);
     const [entry] = ofType('checkpoints')[0].entries;
-    assert.equal(entry.note, '开头');
+    assert.equal(entry.note, '開頭');
     assert.equal(entry.auto, false);
     assert.equal(entry.chapters, 1);
     assert.ok(entry.chapterWords > 0);
@@ -85,7 +85,7 @@ describe('列表与存', () => {
     assert.deepEqual(entry.skipped, []);
   });
 
-  test('还不是小说工程：列表带上原因，存的时候说一句', async () => {
+  test('還不是小說工程：列表帶上原因，存的時候說一句', async () => {
     const dir = makeTempDir('checkpoints-ctl-empty');
     const other = new bundle.controller.ChatController(bundle.project.NovelProject.open(dir.dir));
     const got = [];
@@ -94,8 +94,8 @@ describe('列表与存', () => {
       await other.handle({ type: 'listCheckpoints' });
       await other.handle({ type: 'createCheckpoint', note: '' });
       const list = got.find((m) => m.type === 'checkpoints');
-      assert.match(list.unavailable, /还不是小说工程/);
-      assert.ok(got.some((m) => m.type === 'toast' && m.level === 'error' && /还不是小说工程/.test(m.message)));
+      assert.match(list.unavailable, /還不是小說工程/);
+      assert.ok(got.some((m) => m.type === 'toast' && m.level === 'error' && /還不是小說工程/.test(m.message)));
       assert.equal(fs.existsSync(`${dir.dir}/.novelwarden`), false);
     } finally {
       other.dispose();
@@ -104,7 +104,7 @@ describe('列表与存', () => {
   });
 });
 
-describe('跟现在比与退回', () => {
+describe('跟現在比與退回', () => {
   let id;
   let diff;
 
@@ -116,7 +116,7 @@ describe('跟现在比与退回', () => {
     diff = ofType('checkpointDiff')[0].diff;
   });
 
-  test('跟现在比：改过的那一章，带 hashNow', () => {
+  test('跟現在比：改過的那一章，帶 hashNow', () => {
     assert.equal(diff.id, id);
     assert.deepEqual(
       diff.entries.map((e) => [e.path, e.status, e.kind]),
@@ -126,19 +126,19 @@ describe('跟现在比与退回', () => {
     assert.ok(diff.unchanged > 0);
   });
 
-  test('存档点不在了：回 error', async () => {
+  test('存檔點不在了：回 error', async () => {
     await send({ type: 'checkpointDiff', id: '2020-01-01_00-00-00+0800' });
     const reply = ofType('checkpointDiff')[0];
     assert.equal(reply.diff, undefined);
-    assert.match(reply.error, /找不到这个存档点/);
+    assert.match(reply.error, /找不到這個存檔點/);
   });
 
-  test('有任务在跑：拒绝，什么都不动', async () => {
+  test('有任務在跑：拒絕，什麼都不動', async () => {
     let release;
-    const running = bundle.progress.runTask('批量写章', () => new Promise((r) => (release = r)));
+    const running = bundle.progress.runTask('批次寫章', () => new Promise((r) => (release = r)));
     try {
       await send({ type: 'restoreCheckpoint', request: wholeRequest(diff) });
-      assert.match(toasts(), /^error: 有任务在跑/);
+      assert.match(toasts(), /^error: 有任務在跑/);
       assert.equal(t.read(CHAPTER), CHANGED);
     } finally {
       release();
@@ -146,27 +146,27 @@ describe('跟现在比与退回', () => {
     }
   });
 
-  test('退回：toast 汇总，pushState，列表多了「退回之前」，这个存档点跟现在一模一样了', async () => {
+  test('退回：toast 彙總，pushState，列表多了「退回之前」，這個存檔點跟現在一模一樣了', async () => {
     await send({ type: 'restoreCheckpoint', request: wholeRequest(diff) });
     assert.equal(t.read(CHAPTER), ORIGINAL);
-    assert.match(toasts(), /^info: 已退回 1 份。退回之前的样子存成了一个存档点/);
-    assert.ok(posted.some((m) => m.type === 'state'), '退回之后要 pushState');
+    assert.match(toasts(), /^info: 已退回 1 份。退回之前的樣子存成了一個存檔點/);
+    assert.ok(posted.some((m) => m.type === 'state'), '退回之後要 pushState');
     const list = ofType('checkpoints')[0].entries;
     assert.equal(list.length, 2);
     assert.equal(list[0].auto, true);
-    assert.match(list[0].note, /^退回到.*「开头」之前$/);
+    assert.match(list[0].note, /^退回到.*「開頭」之前$/);
     const again = ofType('checkpointDiff')[0];
     assert.equal(again.id, id);
     assert.deepEqual(again.diff.entries, []);
   });
 
-  test('写备注：自动的「退回之前」就此留住', async () => {
+  test('寫備註：自動的「退回之前」就此留住', async () => {
     await send({ type: 'listCheckpoints' });
     const auto = ofType('checkpoints')[0].entries.find((e) => e.auto);
-    await send({ type: 'noteCheckpoint', id: auto.id, note: '改坏之前' });
+    await send({ type: 'noteCheckpoint', id: auto.id, note: '改壞之前' });
     const after = ofType('checkpoints')[0].entries.find((e) => e.id === auto.id);
     assert.equal(after.auto, false);
-    assert.equal(after.note, '改坏之前');
-    assert.match(toasts(), /会一直留着/);
+    assert.equal(after.note, '改壞之前');
+    assert.match(toasts(), /會一直留著/);
   });
 });

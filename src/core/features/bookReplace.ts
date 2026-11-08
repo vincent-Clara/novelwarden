@@ -1,51 +1,51 @@
 /**
- * 全书替换（独立版「编辑 → 全书查找替换…」→「预览替换」→「替换所选」）：把预览里勾着的那几处，经网关逐份写下去。
- * 查找与预览在 `views/bookFind.ts`（只读），这里只写。
+ * 全書替換（獨立版「編輯 → 全書查詢替換…」→「預覽替換」→「替換所選」）：把預覽裡勾著的那幾處，經閘道器逐份寫下去。
+ * 查詢與預覽在 `views/bookFind.ts`（只讀），這裡只寫。
  *
- * ## 一份文件怎么写（顺序不能换）
+ * ## 一份檔案怎麼寫（順序不能換）
  *
- * 1. **编辑器里有未保存修改的跳过**（前端随请求带来 `dirty`）：拿磁盘上的内容替换完写下去，编辑区那份未保存的修改要么
- *    被冲突条拦住、要么被作者一保存就盖掉替换——两头都不对。让作者先保存或放弃，再换一次。
- * 2. **乐观锁**：读磁盘上此刻那一份，hash 与预览时读到的（`file.hash`）对不上就跳过——预览之后它被改过，不拿预览时的
- *    内容替换完盖上去（第 3 条）。写的时候再带一次基线（`baseHash`），读与写之间又被改过，网关照样拒。
- * 3. **勾着的那几处在磁盘上那一份里逐处核对**（与预览同一个口径：`model/bookFind.ts` 的 `fileHits`，护住的字不算），
- *    再用 `textFind.replaceSelectedIn` 只换这几处——`$1` 在原文里逐处展开。
- * 4. **先强制存一版历史**（`snapshotNow`，跳过节流，与「恢复历史版本前强制存一版」同一个做法）：存档点（见下）存不下不挡替换，
- *    兜底的退路是每份文件在「历史」里的替换前那一版。存不下（还不是小说工程、超过 2 MB、出错）就**不换这一份**，说出来。
- * 5. **经网关写**：`workspace.write`，`mode: 'overwrite'`、`review: false`（预览本身就是审阅，第 19 条：落盘前人看过了，
- *    网关不再弹第二次覆盖审阅）、带 `baseHash`。守卫照过、种类的记账照做（细纲照常记 `upstreamHash`）、覆盖前的那一版
- *    网关自己也会再试着存（与刚存的一样，不重复存）。章节的写后记账（重算 manifest）延到最后做一次（`deferAfter`）。
+ * 1. **編輯器裡有未儲存修改的跳過**（前端隨請求帶來 `dirty`）：拿磁碟上的內容替換完寫下去，編輯區那份未儲存的修改要麼
+ *    被衝突條攔住、要麼被作者一儲存就蓋掉替換——兩頭都不對。讓作者先儲存或放棄，再換一次。
+ * 2. **樂觀鎖**：讀磁碟上此刻那一份，hash 與預覽時讀到的（`file.hash`）對不上就跳過——預覽之後它被改過，不拿預覽時的
+ *    內容替換完蓋上去（第 3 條）。寫的時候再帶一次基線（`baseHash`），讀與寫之間又被改過，閘道器照樣拒。
+ * 3. **勾著的那幾處在磁碟上那一份裡逐處核對**（與預覽同一個口徑：`model/bookFind.ts` 的 `fileHits`，護住的字不算），
+ *    再用 `textFind.replaceSelectedIn` 只換這幾處——`$1` 在原文裡逐處展開。
+ * 4. **先強制存一版歷史**（`snapshotNow`，跳過節流，與「恢復歷史版本前強制存一版」同一個做法）：存檔點（見下）存不下不擋替換，
+ *    兜底的退路是每份檔案在「歷史」裡的替換前那一版。存不下（還不是小說工程、超過 2 MB、出錯）就**不換這一份**，說出來。
+ * 5. **經閘道器寫**：`workspace.write`，`mode: 'overwrite'`、`review: false`（預覽本身就是審閱，第 19 條：落盤前人看過了，
+ *    閘道器不再彈第二次覆蓋審閱）、帶 `baseHash`。守衛照過、種類的記賬照做（細綱照常記 `upstreamHash`）、覆蓋前的那一版
+ *    閘道器自己也會再試著存（與剛存的一樣，不重複存）。章節的寫後記賬（重算 manifest）延到最後做一次（`deferAfter`）。
  *
- * 写的顺序按范围：其他创作文件 → 细纲 → 正文 → 草稿 → 角色卡 → 设定。情节大纲不单列：它是各章细纲梗概的汇总，
- * 没有文件，换细纲就换了它。
+ * 寫的順序按範圍：其他創作檔案 → 細綱 → 正文 → 草稿 → 角色卡 → 設定。情節大綱不單列：它是各章細綱梗概的彙總，
+ * 沒有檔案，換細綱就換了它。
  *
- * 逐份写之前（有要换的才）先存一个存档点（`features/checkpoint.ts`）：整本退得回替换之前。
+ * 逐份寫之前（有要換的才）先存一個存檔點（`features/checkpoint.ts`）：整本退得回替換之前。
  *
- * ## 指纹链（第 18 条，⚑）
+ * ## 指紋鏈（第 18 條，⚑）
  *
- * 替换只是换字，**不该改变任何一章的新鲜度判断**——除了一种情况：同一次替换里，一章的细纲与正文**都**改了（「把林晚全书
- * 改成林婉」），改之前这一环对得上，那么改之后它们仍是同一次替换的两头，指纹跟着刷新：
+ * 替換隻是換字，**不該改變任何一章的新鮮度判斷**——除了一種情況：同一次替換裡，一章的細綱與正文**都**改了（「把林晚全書
+ * 改成林婉」），改之前這一環對得上，那麼改之後它們仍是同一次替換的兩頭，指紋跟著重新整理：
  *
- * - `writtenFrom`（正文据以写成的细纲指纹）刷成替换之后的细纲指纹——不然几百章的正文一起挂 ⟳，全是误报；
- * - 定稿过的章，`sourceHash`（定稿时正文的指纹）刷成替换之后的正文指纹——不然几百章一起退回「待定稿」，主按钮推着作者
- *   把整本书重新定稿一遍（第 4、20 条）。
+ * - `writtenFrom`（正文據以寫成的細綱指紋）刷成替換之後的細綱指紋——不然幾百章的正文一起掛 ⟳，全是誤報；
+ * - 定稿過的章，`sourceHash`（定稿時正文的指紋）刷成替換之後的正文指紋——不然幾百章一起退回「待定稿」，主按鈕推著作者
+ *   把整本書重新定稿一遍（第 4、20 條）。
  *
- * 其余照常、而且照实说出来（汇总里列章）：**只改了细纲**、正文没跟着改（正文不在范围里、没有这个词、被勾掉、未保存跳过了）——
- * 正文挂 ⟳，那是对的：计划变了，正文可能跟不上；**只改了正文**、细纲没跟着改的定稿过的章——回到「待定稿」，定稿那份
- * 细纲还说着旧的。改之前就已经对不上的（本来就挂着 ⟳、本来就待定稿）不刷——那不是这次替换造成的。
+ * 其餘照常、而且照實說出來（彙總裡列章）：**只改了細綱**、正文沒跟著改（正文不在範圍裡、沒有這個詞、被勾掉、未儲存跳過了）——
+ * 正文掛 ⟳，那是對的：計劃變了，正文可能跟不上；**只改了正文**、細綱沒跟著改的定稿過的章——回到「待定稿」，定稿那份
+ * 細綱還說著舊的。改之前就已經對不上的（本來就掛著 ⟳、本來就待定稿）不刷——那不是這次替換造成的。
  *
- * 细纲自己的上游（`upstreamHash`，这一章梗概的指纹——梗概就是大纲里这一章那一条）同一个原则：网关写细纲时总是记下此刻
- * 梗概的指纹（「谁写都记」），这里把它退回替换之前的判断——本来挂着 ⟳ 的照旧挂（恢复原来那个指纹），本来没记过的照旧不记
- * （第 18a 条：手写的不进链）；本来对得上的，就是网关刚记的那一个（梗概与其余几节在同一份文件里一起换了，正好对上）。
+ * 細綱自己的上游（`upstreamHash`，這一章梗概的指紋——梗概就是大綱裡這一章那一條）同一個原則：閘道器寫細綱時總是記下此刻
+ * 梗概的指紋（「誰寫都記」），這裡把它退回替換之前的判斷——本來掛著 ⟳ 的照舊掛（恢復原來那個指紋），本來沒記過的照舊不記
+ * （第 18a 條：手寫的不進鏈）；本來對得上的，就是閘道器剛記的那一個（梗概與其餘幾節在同一份檔案裡一起換了，正好對上）。
  *
- * 角色卡「当前状态」的 `stateHash`、设定条目的 `bodyHash` **不刷**（⚑）：替换就是作者的改动，下次定稿 / 整合时机器照规矩
- * 把它们当作「作者改过」——不直接覆盖、先对比（第 19、27 条）。
+ * 角色卡「當前狀態」的 `stateHash`、設定條目的 `bodyHash` **不刷**（⚑）：替換就是作者的改動，下次定稿 / 整合時機器照規矩
+ * 把它們當作「作者改過」——不直接覆蓋、先對比（第 19、27 條）。
  *
  * ## 不做的事
  *
- * 不改文件名、不搬文件（角色卡的名字换了，`林晚.md` 还叫 `林晚.md`——认人看的是卡里的名字与别名，汇总里提一句）；
- * 跨文件的一步撤销不在这里（整本退回走存档点，每份文件的历史版本兜底）；派生数据（工程树、出场索引、设定名录）
- * 不在这里算——它们都从磁盘现算，控制器替换完照常 `pushState`。
+ * 不改檔名、不搬檔案（角色卡的名字換了，`林晚.md` 還叫 `林晚.md`——認人看的是卡裡的名字與別名，彙總裡提一句）；
+ * 跨檔案的一步撤銷不在這裡（整本退回走存檔點，每份檔案的歷史版本兜底）；派生資料（工程樹、出場索引、設定名錄）
+ * 不在這裡算——它們都從磁碟現算，控制器替換完照常 `pushState`。
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -73,9 +73,9 @@ import type {
   BookReplaceSummary,
 } from '../protocol';
 
-const log = scoped('全书替换');
+const log = scoped('全書替換');
 
-/** 核对过、算好了新内容、等着写的一份。 */
+/** 核對過、算好了新內容、等著寫的一份。 */
 interface Prepared {
   rel: string;
   label: string;
@@ -83,32 +83,32 @@ interface Prepared {
   scope: BookFindScope;
   text: string;
   next: string;
-  /** 网关乐观锁的基线：与 `guardWrite` 同一个读法（按 UTF-8 读出来的那一份）。 */
+  /** 閘道器樂觀鎖的基線：與 `guardWrite` 同一個讀法（按 UTF-8 讀出來的那一份）。 */
   lockHash: string;
   count: number;
 }
 
-/** 一份细纲在替换之前的指纹链判断（第 18 条）。 */
+/** 一份細綱在替換之前的指紋鏈判斷（第 18 條）。 */
 interface ChainBefore {
   plot: Plot;
-  /** 镜像它的那一章正文（有正文才有）。 */
+  /** 映象它的那一章正文（有正文才有）。 */
   chapterRel?: string;
   chapterLabel?: string;
-  /** 大纲 → 细纲：没记过 / 对得上 / 对不上，以及原来记的那个。 */
+  /** 大綱 → 細綱：沒記過 / 對得上 / 對不上，以及原來記的那個。 */
   upstream: 'none' | 'fresh' | 'stale';
-  /** 细纲 → 正文（`writtenFrom`）：有正文、记过、对得上。 */
+  /** 細綱 → 正文（`writtenFrom`）：有正文、記過、對得上。 */
   writtenFresh: boolean;
-  /** 正文 → 定稿（`sourceHash`）：有正文、定稿过、对得上。 */
+  /** 正文 → 定稿（`sourceHash`）：有正文、定稿過、對得上。 */
   sourceFresh: boolean;
 }
 
 const MESSAGE: Record<Exclude<BookReplaceSkipReason, 'noHistory' | 'error'>, string> = {
-  dirty: '编辑器里有未保存的修改：先保存（或放弃修改），再替换一次。',
-  changed: '预览之后这份文件改过了（编辑器里存过、或别处改过）：没有拿预览时的内容盖上去，重新预览一次。',
-  gone: '磁盘上已经没有这份文件了（被删或改了名）。',
-  mismatch: '勾着的那几处在这份文件里对不上了：重新预览一次。',
-  unchanged: '换完与原来一字不差，没有写。',
-  outOfScope: '不在这次全书替换勾着的范围里，没有动。',
+  dirty: '編輯器裡有未儲存的修改：先儲存（或放棄修改），再替換一次。',
+  changed: '預覽之後這份檔案改過了（編輯器裡存過、或別處改過）：沒有拿預覽時的內容蓋上去，重新預覽一次。',
+  gone: '磁碟上已經沒有這份檔案了（被刪或改了名）。',
+  mismatch: '勾著的那幾處在這份檔案裡對不上了：重新預覽一次。',
+  unchanged: '換完與原來一字不差，沒有寫。',
+  outOfScope: '不在這次全書替換勾著的範圍裡，沒有動。',
 };
 
 export async function replaceInBook(project: NovelProject, req: BookReplaceRequest): Promise<BookReplaceSummary> {
@@ -127,10 +127,10 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
   const opts = { caseSensitive: req.caseSensitive === true, regex: req.regex === true };
   const compiled = compileSearch(query, opts);
   if (!compiled) {
-    return { ...summary, error: '查找的内容是空的，没有替换。' };
+    return { ...summary, error: '查詢的內容是空的，沒有替換。' };
   }
   if (!compiled.ok) {
-    return { ...summary, error: `正则写错了，没有替换（${compiled.error}）。` };
+    return { ...summary, error: `正則寫錯了，沒有替換（${compiled.error}）。` };
   }
   const scopes = new Set((Array.isArray(req.scopes) ? req.scopes : []).filter(isBookFindScope));
   const dirty = new Set(
@@ -146,7 +146,7 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
     summary.skipped.push(s);
   };
 
-  // ---- 1. 逐份核对、算好新内容（只读）
+  // ---- 1. 逐份核對、算好新內容（只讀）
   project.invalidate();
   const prepared: Prepared[] = [];
   const seen = new Set<string>();
@@ -179,7 +179,7 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
       if (err instanceof WsError && (err.code === 'notFound' || err.code === 'notFile')) {
         skip(rel, 'gone');
       } else {
-        skip(rel, 'error', `读不了：${describe(err)}`);
+        skip(rel, 'error', `讀不了：${describe(err)}`);
       }
       continue;
     }
@@ -214,7 +214,7 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
     });
   }
 
-  // ---- 2. 替换之前的指纹链判断（第 18 条）
+  // ---- 2. 替換之前的指紋鏈判斷（第 18 條）
   const chapters = await project.listChapters();
   const chapterByPlot = new Map<string, { rel: string; contentHash: string }>();
   for (const c of chapters) {
@@ -236,8 +236,8 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
       sourceFresh: !!chapter && !!plot.sourceHash && plot.sourceHash === chapter.contentHash,
     });
   }
-  // 要换的正文：替换之前它镜像的那份细纲定稿过、对得上它没有（细纲也在这一次里的，上面已经算过；没在的这里读一次）。
-  // 写完之后正文换了、细纲没换（不在这一次里，或者在、却被跳过了）的，就是「只改了正文」。
+  // 要換的正文：替換之前它映象的那份細綱定稿過、對得上它沒有（細綱也在這一次裡的，上面已經算過；沒在的這裡讀一次）。
+  // 寫完之後正文換了、細綱沒換（不在這一次裡，或者在、卻被跳過了）的，就是「只改了正文」。
   const contentHashOf = new Map(chapters.map((c) => [c.relPath, c.contentHash]));
   const finalizedBodies = new Map<string, { mirror: string; fresh: boolean }>();
   for (const p of prepared.filter((x) => x.kind === 'chapter')) {
@@ -255,10 +255,10 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
     finalizedBodies.set(p.rel, { mirror, fresh: !!plot?.sourceHash && !!bodyHash && plot.sourceHash === bodyHash });
   }
 
-  // ---- 3. 逐份存一版历史、经网关写
+  // ---- 3. 逐份存一版歷史、經閘道器寫
   if (prepared.length > 0) {
-    // 先存一个存档点（features/checkpoint.ts）：一次改很多份，整本退得回去（每份的历史版本照存）。
-    await checkpointBefore(project, `全书替换之前（「${clip(query, 12)}」→「${clip(replacement, 12)}」，${prepared.length} 份）`);
+    // 先存一個存檔點（features/checkpoint.ts）：一次改很多份，整本退得回去（每份的歷史版本照存）。
+    await checkpointBefore(project, `全書替換之前（「${clip(query, 12)}」→「${clip(replacement, 12)}」，${prepared.length} 份）`);
   }
   const ws = new Workspace(project);
   const written = new Set<string>();
@@ -286,7 +286,7 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
       } else if (err instanceof WsError && (err.code === 'notFound' || err.code === 'notFile')) {
         skip(p.rel, 'gone');
       } else {
-        skip(p.rel, 'error', `没写成：${describe(err)}`);
+        skip(p.rel, 'error', `沒寫成：${describe(err)}`);
       }
       continue;
     }
@@ -304,11 +304,11 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
     }
   }
   if (wroteChapter) {
-    // 章节的写后记账（重算 manifest）延到这里做一次：逐章做是 O(n²) 次读盘。
+    // 章節的寫後記賬（重算 manifest）延到這裡做一次：逐章做是 O(n²) 次讀盤。
     await project.syncManifest();
   }
 
-  // ---- 4. 指纹链收尾（第 18 条）
+  // ---- 4. 指紋鏈收尾（第 18 條）
   project.invalidate();
   const chaptersAfter = new Map((await project.listChapters()).map((c) => [c.relPath, c.contentHash]));
   for (const [plotRel, before] of chainBefore) {
@@ -320,14 +320,14 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
       continue;
     }
     const patch: { upstreamHash?: string; writtenFrom?: string; sourceHash?: string } = {};
-    // 梗概 → 其余几节：退回替换之前的判断（网关写细纲时总是记下此刻梗概的指纹）。
+    // 梗概 → 其餘幾節：退回替換之前的判斷（閘道器寫細綱時總是記下此刻梗概的指紋）。
     if (before.upstream === 'stale' && after.upstreamHash !== before.plot.upstreamHash) {
       patch.upstreamHash = before.plot.upstreamHash;
     } else if (before.upstream === 'none' && after.upstreamHash) {
       patch.upstreamHash = undefined;
     }
     if (before.chapterRel && written.has(before.chapterRel)) {
-      // 细纲与正文这一次都改了：原本对得上的那一环刷成替换之后的。
+      // 細綱與正文這一次都改了：原本對得上的那一環刷成替換之後的。
       let kept = false;
       if (before.writtenFresh) {
         patch.writtenFrom = plotContentHash(after);
@@ -354,12 +354,12 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
     }
   }
   log.info(
-    `全书替换「${clip(query)}」→「${clip(replacement)}」`,
+    `全書替換「${clip(query)}」→「${clip(replacement)}」`,
     [
-      `${summary.files} 个文件 ${summary.hits} 处`,
-      summary.skipped.length ? `跳过 ${summary.skipped.length} 份：${summary.skipped.map((s) => `${s.path}（${s.reason}）`).join('、')}` : '',
-      summary.chainKept.length ? `细纲与正文一起改了、指纹跟着刷新：${summary.chainKept.join('、')}` : '',
-      summary.plotOnly.length ? `只改了细纲（正文挂 ⟳）：${summary.plotOnly.join('、')}` : '',
+      `${summary.files} 個檔案 ${summary.hits} 處`,
+      summary.skipped.length ? `跳過 ${summary.skipped.length} 份：${summary.skipped.map((s) => `${s.path}（${s.reason}）`).join('、')}` : '',
+      summary.chainKept.length ? `細綱與正文一起改了、指紋跟著重新整理：${summary.chainKept.join('、')}` : '',
+      summary.plotOnly.length ? `只改了細綱（正文掛 ⟳）：${summary.plotOnly.join('、')}` : '',
       summary.bodyOnly.length ? `只改了正文（回到待同步）：${summary.bodyOnly.join('、')}` : '',
     ]
       .filter(Boolean)
@@ -368,20 +368,20 @@ export async function replaceInBook(project: NovelProject, req: BookReplaceReque
   return summary;
 }
 
-/** 写的顺序：其他创作文件（大纲）在细纲之前，见文件头。按范围写成一张表——加了新范围忘了排，编译不过。 */
+/** 寫的順序：其他創作檔案（大綱）在細綱之前，見檔案頭。按範圍寫成一張表——加了新範圍忘了排，編譯不過。 */
 const WRITE_RANK: Record<BookFindScope, number> = { doc: 0, plot: 1, chapter: 2, draft: 3, character: 4, lore: 5 };
 
 function noHistoryMessage(reason: string | undefined, error: string | undefined): string {
   if (reason === 'notTracked') {
-    return '这个目录还不是小说工程（没有 .novelwarden/），存不了历史版本——这次替换的退路就是历史版本，所以没有替换。';
+    return '這個目錄還不是小說工程（沒有 .novelwarden/），存不了歷史版本——這次替換的退路就是歷史版本，所以沒有替換。';
   }
   if (reason === 'tooLarge') {
-    return '超过 2 MB，存不了历史版本——没有替换。';
+    return '超過 2 MB，存不了歷史版本——沒有替換。';
   }
-  return `没能先存一版历史（${error ?? '原因不明'}）——这次替换的退路就是历史版本，所以没有替换。`;
+  return `沒能先存一版歷史（${error ?? '原因不明'}）——這次替換的退路就是歷史版本，所以沒有替換。`;
 }
 
-/** 角色卡认人用的名字（与 `NovelProject.listCharacters` 同一个取法）与别名。 */
+/** 角色卡認人用的名字（與 `NovelProject.listCharacters` 同一個取法）與別名。 */
 function cardIdentity(text: string, rel: string): { name: string; aliases: string[] } {
   const { frontmatter, body } = parseMarkdown(text);
   return {
@@ -390,7 +390,7 @@ function cardIdentity(text: string, rel: string): { name: string; aliases: strin
   };
 }
 
-/** 角色卡的名字或别名换了：汇总里提一句文件名没跟着改。 */
+/** 角色卡的名字或別名換了：彙總裡提一句檔名沒跟著改。 */
 function renamedCard(p: Prepared): BookReplaceRenamedCard | undefined {
   const before = cardIdentity(p.text, p.rel);
   const after = cardIdentity(p.next, p.rel);

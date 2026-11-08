@@ -1,17 +1,17 @@
 /**
- * 段落那几个功能（回车、成对符号、段落快捷键、一键排版）共用的两样状态：
+ * 段落那幾個功能（回車、成對符號、段落快捷鍵、一鍵排版）共用的兩樣狀態：
  *
- * - **分段格式**：工程级设置（`config.md` 的 `paragraphStyle`），后端说了算。从 `init` / `state`
- *   （`ViewState.paragraphStyle`，哪个页签都会推）与 `project`（工程树，只在「工程」页签开着时推）里取，
- *   没收到之前按缺省 `blank`。前端不改它——切换走标题栏「编辑 → 段落格式」发 `setParagraphStyle`，
- *   后端写完 `pushState`，新值随下一条 `state` 回来。
- * - **编辑器偏好**：按浏览器记、不进工程的开关，存 localStorage `novelforge.editor.prefs`（不按工程分键：
- *   这是作者的手感，不是这本书的设置）。三项：成对符号自动补全（缺省开）、自动保存（缺省关，见
- *   `autosave.ts`）、单击打开为临时标签（缺省开，标题栏「视图」菜单，见 `viewPrefs.ts`）。localStorage
- *   不可写（隐私模式、jsdom 的 about:blank）时照样在内存里生效，只是刷新后回到缺省。
- *   同一个对象里还平铺着别的模块记的几项——外观与专注（`look.ts` / `focus.ts`，校验在 `lookCore.ts`）、码字统计的
- *   `stats` 子对象（`stats.ts`）。这里不认识它们，但**谁写都是读出整份、合上自己那几项再整份写回**
- *   （`storedPrefs` / `setStoredPrefs`），谁也不冲掉谁；读回来的坏值由各自的模块逐项回落缺省。
+ * - **分段格式**：工程級設定（`config.md` 的 `paragraphStyle`），後端說了算。從 `init` / `state`
+ *   （`ViewState.paragraphStyle`，哪個頁籤都會推）與 `project`（工程樹，只在「工程」頁籤開著時推）裡取，
+ *   沒收到之前按預設 `blank`。前端不改它——切換走標題欄「編輯 → 段落格式」發 `setParagraphStyle`，
+ *   後端寫完 `pushState`，新值隨下一條 `state` 回來。
+ * - **編輯器偏好**：按瀏覽器記、不進工程的開關，存 localStorage `novelforge.editor.prefs`（不按工程分鍵：
+ *   這是作者的手感，不是這本書的設定）。三項：成對符號自動補全（預設開）、自動儲存（預設關，見
+ *   `autosave.ts`）、單擊開啟為臨時標籤（預設開，標題欄「檢視」選單，見 `viewPrefs.ts`）。localStorage
+ *   不可寫（隱私模式、jsdom 的 about:blank）時照樣在記憶體裡生效，只是重新整理後回到預設。
+ *   同一個物件裡還平鋪著別的模組記的幾項——外觀與專注（`look.ts` / `focus.ts`，校驗在 `lookCore.ts`）、碼字統計的
+ *   `stats` 子物件（`stats.ts`）。這裡不認識它們，但**誰寫都是讀出整份、合上自己那幾項再整份寫回**
+ *   （`storedPrefs` / `setStoredPrefs`），誰也不沖掉誰；讀回來的壞值由各自的模組逐項回落預設。
  */
 import { DEFAULT_PARAGRAPH_STYLE, isParagraphStyle } from '../protocol';
 import type { ParagraphStyle } from '../protocol';
@@ -27,21 +27,21 @@ interface EditorPrefs {
 
 let style: ParagraphStyle = DEFAULT_PARAGRAPH_STYLE;
 /**
- * 整份偏好在内存里的那一份（含这里不认识的那几项）。localStorage 读得到时每次读都以它为准（别的模块、别的窗口
- * 可能刚写过）；读不了 / 写不进时（`storageOk` 落成 false）以内存里这一份为准，照样生效。
- * 这两个要在 `loadPrefs()` 之前声明：它会读它们。
+ * 整份偏好在記憶體裡的那一份（含這裡不認識的那幾項）。localStorage 讀得到時每次讀都以它為準（別的模組、別的視窗
+ * 可能剛寫過）；讀不了 / 寫不進時（`storageOk` 落成 false）以記憶體裡這一份為準，照樣生效。
+ * 這兩個要在 `loadPrefs()` 之前宣告：它會讀它們。
  */
 let stored: Record<string, unknown> = {};
 let storageOk = true;
 let prefs: EditorPrefs = loadPrefs();
 const prefListeners = new Set<() => void>();
 
-/** 当前工程的分段格式。 */
+/** 當前工程的分段格式。 */
 export function paragraphStyle(): ParagraphStyle {
   return style;
 }
 
-/** 成对符号自动补全开着没有。 */
+/** 成對符號自動補全開著沒有。 */
 export function autoPairEnabled(): boolean {
   return prefs.autoPair;
 }
@@ -50,7 +50,7 @@ export function setAutoPair(on: boolean): void {
   setPref('autoPair', on);
 }
 
-/** 自动保存开着没有（缺省关）。 */
+/** 自動儲存開著沒有（預設關）。 */
 export function autoSaveEnabled(): boolean {
   return prefs.autoSave;
 }
@@ -59,7 +59,7 @@ export function setAutoSave(on: boolean): void {
   setPref('autoSave', on);
 }
 
-/** 单击打开为临时标签（缺省开）。 */
+/** 單擊開啟為臨時標籤（預設開）。 */
 export function previewTabsEnabled(): boolean {
   return prefs.previewTabs;
 }
@@ -84,8 +84,8 @@ function notifyPrefs(): void {
 }
 
 /**
- * `novelforge.editor.prefs` 现存的那一整份（不是对象就当空对象）。往这个键里记东西的模块都先读它、合上自己那几项
- * 再整份写回（这里的 `setPref` / `setStoredPrefs`、码字统计的 `stats.ts`）。各项的值原样给，由各自的模块校验。
+ * `novelforge.editor.prefs` 現存的那一整份（不是物件就當空物件）。往這個鍵裡記東西的模組都先讀它、合上自己那幾項
+ * 再整份寫回（這裡的 `setPref` / `setStoredPrefs`、碼字統計的 `stats.ts`）。各項的值原樣給，由各自的模組校驗。
  */
 export function storedPrefs(): Readonly<Record<string, unknown>> {
   if (!storageOk) {
@@ -95,7 +95,7 @@ export function storedPrefs(): Readonly<Record<string, unknown>> {
   try {
     text = localStorage.getItem(PREFS_KEY);
   } catch {
-    // 读不了（隐私模式、about:blank）：以内存里那一份为准。
+    // 讀不了（隱私模式、about:blank）：以記憶體裡那一份為準。
     storageOk = false;
     return stored;
   }
@@ -103,28 +103,28 @@ export function storedPrefs(): Readonly<Record<string, unknown>> {
   try {
     raw = JSON.parse(text || 'null');
   } catch {
-    /* 写坏了（不是 JSON）：当没记过，各项回落缺省；下一次写把它整份换掉 */
+    /* 寫壞了（不是 JSON）：當沒記過，各項回落預設；下一次寫把它整份換掉 */
   }
   stored = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   return stored;
 }
 
 /**
- * 往同一处写几项（外观、专注），与上面三项一起整份写回、一起通知订阅者。值给 `undefined` 就是删掉这一项
- * （回到缺省）。上面三项不经这里改。
+ * 往同一處寫幾項（外觀、專注），與上面三項一起整份寫回、一起通知訂閱者。值給 `undefined` 就是刪掉這一項
+ * （回到預設）。上面三項不經這裡改。
  */
 export function setStoredPrefs(patch: Record<string, unknown>): void {
   writeAll({ ...storedPrefs(), ...patch, ...prefs });
   notifyPrefs();
 }
 
-/** 偏好变了时通知（成对符号关掉时要丢掉手上记着的那几对；自动保存开关要刷新状态栏）。 */
+/** 偏好變了時通知（成對符號關掉時要丟掉手上記著的那幾對；自動儲存開關要重新整理狀態列）。 */
 export function onPrefsChange(fn: () => void): () => void {
   prefListeners.add(fn);
   return () => prefListeners.delete(fn);
 }
 
-/** 跟着后端推来的 `ViewState` / 工程树更新分段格式。启动时装一次。 */
+/** 跟著後端推來的 `ViewState` / 工程樹更新分段格式。啟動時裝一次。 */
 export function trackParagraphStyle(): void {
   onMessage((msg) => {
     if (msg.type === 'init' || msg.type === 'state') {
@@ -135,7 +135,7 @@ export function trackParagraphStyle(): void {
   });
 }
 
-/** 旧后端推来的没有这个字段：留着原来的值，不回落。 */
+/** 舊後端推來的沒有這個欄位：留著原來的值，不回落。 */
 function take(value: unknown): void {
   if (isParagraphStyle(value)) {
     style = value;
@@ -144,7 +144,7 @@ function take(value: unknown): void {
 
 function loadPrefs(): EditorPrefs {
   const raw = storedPrefs() as Partial<Record<keyof EditorPrefs, unknown>>;
-  // 自动保存只认明明白白的 true：缺省关，写坏了也当关。临时标签与成对符号缺省开，只认明明白白的 false。
+  // 自動儲存只認明明白白的 true：預設關，寫壞了也當關。臨時標籤與成對符號預設開，只認明明白白的 false。
   return { autoPair: raw.autoPair !== false, autoSave: raw.autoSave === true, previewTabs: raw.previewTabs !== false };
 }
 
@@ -152,7 +152,7 @@ function savePrefs(): void {
   writeAll({ ...storedPrefs(), ...prefs });
 }
 
-/** 整份写回（`undefined` 的项 JSON 里自然没有）。写不进就只在内存里生效，之后读也只认内存里那一份。 */
+/** 整份寫回（`undefined` 的項 JSON 裡自然沒有）。寫不進就只在記憶體裡生效，之後讀也只認記憶體裡那一份。 */
 function writeAll(next: Record<string, unknown>): void {
   stored = next;
   try {

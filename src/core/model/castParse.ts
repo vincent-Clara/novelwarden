@@ -2,11 +2,11 @@ import { resolveRoleLabelName, sanitizeAliases } from './naming';
 import { SummaryCast } from './types';
 
 /**
- * `林昭(阿昭、昭儿)` ←→ `{ name: '林昭', aliases: ['阿昭', '昭儿'] }`。
+ * `林昭(阿昭、昭兒)` ←→ `{ name: '林昭', aliases: ['阿昭', '昭兒'] }`。
  *
- * 用括号而不是嵌套 YAML：本项目的 frontmatter 解析器（model/markdown.ts）
- * 刻意只支持字符串与字符串数组，为了一个字段引入真正的 YAML 依赖不值得。
- * 括号形式作者也能一眼看懂、直接手改。
+ * 用括號而不是巢狀 YAML：本專案的 frontmatter 解析器（model/markdown.ts）
+ * 刻意只支援字串與字串陣列，為了一個欄位引入真正的 YAML 依賴不值得。
+ * 括號形式作者也能一眼看懂、直接手改。
  */
 export function renderCastEntry(entry: SummaryCast): string {
   const aliases = entry.aliases.filter((a) => a.trim() && a.trim() !== entry.name);
@@ -18,7 +18,7 @@ export function parseCastEntry(raw: string): SummaryCast | undefined {
   if (!text) {
     return undefined;
   }
-  // 全角括号也认——作者手改时很可能打出中文括号。
+  // 全形括號也認——作者手改時很可能打出中文括號。
   const m = /^(.*?)[（(]([^）)]*)[）)]\s*$/.exec(text);
   if (!m) {
     return { name: text, aliases: [] };
@@ -37,9 +37,9 @@ export function parseCastEntry(raw: string): SummaryCast | undefined {
 }
 
 /**
- * frontmatter 的 `cast` 字段 → 结构化清单。
- * 字段**缺席**返回 undefined（调用方据此决定回退解析小节文本）；
- * 字段存在但为空数组返回 `[]`——那是「这一章确实没人出场」，不该回退。
+ * frontmatter 的 `cast` 欄位 → 結構化清單。
+ * 欄位**缺席**返回 undefined（呼叫方據此決定回退解析小節文字）；
+ * 欄位存在但為空陣列返回 `[]`——那是「這一章確實沒人出場」，不該回退。
  */
 export function parseCast(v: string | string[] | undefined): SummaryCast[] | undefined {
   if (v === undefined) {
@@ -54,9 +54,9 @@ export function parseCast(v: string | string[] | undefined): SummaryCast[] | und
 }
 
 /**
- * 一条出场人物落进清单。正式名是剧作称谓的（`主角(林昭)`，model/naming.ts）换成真名，换不出来的
- * （光一个 `反派`）丢掉——它不是一个人；换完撞上前面已有的同一个人，别名并过去。别名不在这里过滤，
- * 调用方各自过泛称关。老细纲 frontmatter 里已经写下的 `主角(林昭)` 读出来也就是林昭。
+ * 一條出場人物落進清單。正式名是劇作稱謂的（`主角(林昭)`，model/naming.ts）換成真名，換不出來的
+ * （光一個 `反派`）丟掉——它不是一個人；換完撞上前面已有的同一個人，別名並過去。別名不在這裡過濾，
+ * 呼叫方各自過泛稱關。老細綱 frontmatter 裡已經寫下的 `主角(林昭)` 讀出來也就是林昭。
  */
 export function pushCast(out: SummaryCast[], entry: SummaryCast | undefined): void {
   if (!entry?.name) {
@@ -79,17 +79,17 @@ export function pushCast(out: SummaryCast[], entry: SummaryCast | undefined): vo
 }
 
 /**
- * 从「出场人物」小节的文本回退解析，如 `林昭、沈氏、客栈掌柜`。
+ * 從「出場人物」小節的文字回退解析，如 `林昭、沈氏、客棧掌櫃`。
  *
- * 用于老工程留下的摘要与作者手写的细纲——这些文件没有 cast 字段，
- * 但角色页上不该因此凭空少一批人。允许列表写法（`- 林昭`）与顿号分隔混用。
+ * 用於老工程留下的摘要與作者手寫的細綱——這些檔案沒有 cast 欄位，
+ * 但角色頁上不該因此憑空少一批人。允許列表寫法（`- 林昭`）與頓號分隔混用。
  *
- * 难点在于模型有时把这一节写成句子（「本章没有新人物出场，只有林昭独坐」）。
- * 那种东西按标点切开会得到一串假人名，全都会跑到角色页的「未建卡」组里。
- * 两条判据挡住它：**长度**（中文人名/称呼极少超过 8 字）与**句子特征词**
- * （人名里不会有「的」「了」「没」这类虚词）。宁可漏掉一两个长称呼，
- * 也不能让角色页塞满句子碎片——漏掉的那个重新定稿就有了（定稿走
- * 结构化 cast，根本不经过这里）。
+ * 難點在於模型有時把這一節寫成句子（「本章沒有新人物出場，只有林昭獨坐」）。
+ * 那種東西按標點切開會得到一串假人名，全都會跑到角色頁的「未建卡」組裡。
+ * 兩條判據擋住它：**長度**（中文人名/稱呼極少超過 8 字）與**句子特徵詞**
+ * （人名裡不會有「的」「了」「沒」這類虛詞）。寧可漏掉一兩個長稱呼，
+ * 也不能讓角色頁塞滿句子碎片——漏掉的那個重新定稿就有了（定稿走
+ * 結構化 cast，根本不經過這裡）。
  */
 export function castFromText(text: string): SummaryCast[] {
   const out: SummaryCast[] = [];
@@ -106,8 +106,8 @@ export function castFromText(text: string): SummaryCast[] {
       }
       if (!seen.has(entry.name)) {
         seen.add(entry.name);
-        // 别名同样要过泛称关：这条回退路径产出的 cast 与 JSON 路径的一样，
-        // 会被 identity.ts 拿去判断「谁是谁」。
+        // 別名同樣要過泛稱關：這條回退路徑產出的 cast 與 JSON 路徑的一樣，
+        // 會被 identity.ts 拿去判斷「誰是誰」。
         pushCast(out, { name: entry.name, aliases: sanitizeAliases(entry.aliases, entry.name) });
       }
     }
@@ -115,15 +115,15 @@ export function castFromText(text: string): SummaryCast[] {
   return out;
 }
 
-/** 人名/称呼里不会出现的虚词。命中即判定为句子碎片。 */
-const SENTENCE_MARKERS = /[的了是在不没有和与也都而被把从向对为及则却就还很]/;
+/** 人名/稱呼裡不會出現的虛詞。命中即判定為句子碎片。 */
+const SENTENCE_MARKERS = /[的了是在不没有和与也都而被把从向对为及则却就还很沒與從對為則卻還]/;
 
 function isPlausibleName(name: string): boolean {
   if (name.length === 0 || name.length > 8) {
     return false;
   }
-  // 「无」「暂无」这类占位不是人名。
-  if (/^(无|暂无|没有|未知|none|n\/a)$/i.test(name)) {
+  // 「無」「暫無」這類佔位不是人名。
+  if (/^((?:无|無)|(?:暂|暫)(?:无|無)|(?:没|沒)有|未知|none|n\/a)$/i.test(name)) {
     return false;
   }
   return !SENTENCE_MARKERS.test(name);

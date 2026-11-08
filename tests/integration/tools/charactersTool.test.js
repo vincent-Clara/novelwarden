@@ -1,15 +1,15 @@
 /**
- * `characters` 工具：角色卡（提取、建卡、增量更新 / 重写、清理别名、合并重复、对比「当前状态」）。
+ * `characters` 工具：角色卡（提取、建卡、增量更新 / 重寫、清理別名、合併重複、對比「當前狀態」）。
  *
- * 每个动作都是工程页角色卡那几颗按钮背后的同一个函数，确认框、提示条都在 feature 自己那里；
- * 这几个 feature 不报调用次数，回给模型的只有一句「交出去了，去哪看结果」，账上记 0。
+ * 每個動作都是工程頁角色卡那幾顆按鈕背後的同一個函式，確認框、提示條都在 feature 自己那裡；
+ * 這幾個 feature 不報呼叫次數，回給模型的只有一句「交出去了，去哪看結果」，賬上記 0。
  *
- * | 断言 | 为什么 |
+ * | 斷言 | 為什麼 |
  * |---|---|
- * | 十个动作都在枚举里、都写进了描述 | 模型照着描述找动作 |
- * | 要角色卡路径 / 人名的动作缺了当场报错、不花钱 | 不放它跑一趟空的 |
- * | 给错参数（建卡给 path）当场报错，说清谁认 | 模型以为传了、其实被忽略，比多一次往返更糟 |
- * | 还没有角色卡时清理别名：feature 自己说明，不报错 | 转发，不是重写 |
+ * | 十個動作都在列舉裡、都寫進了描述 | 模型照著描述找動作 |
+ * | 要角色卡路徑 / 人名的動作缺了當場報錯、不花錢 | 不放它跑一趟空的 |
+ * | 給錯引數（建卡給 path）當場報錯，說清誰認 | 模型以為傳了、其實被忽略，比多一次往返更糟 |
+ * | 還沒有角色卡時清理別名：feature 自己說明，不報錯 | 轉發，不是重寫 |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -77,8 +77,8 @@ before(async () => {
     reply: () => '{}',
     errors: { LlmError: bundle.provider.LlmError, CancelledError: bundle.provider.CancelledError },
   });
-  // makeTempProject 会删掉模板里的示例角色卡：这是一个一张卡都没有的工程。
-  t = await makeTempProject(bundle.project, { prefix: 'charactersTool', title: '青云剑录' });
+  // makeTempProject 會刪掉模板裡的示例角色卡：這是一個一張卡都沒有的工程。
+  t = await makeTempProject(bundle.project, { prefix: 'charactersTool', title: '青雲劍錄' });
   resetCtx();
 });
 
@@ -86,23 +86,23 @@ after(() => {
   if (t) cleanup(t.dir, bundle && bundle.db);
 });
 
-describe('动作清单', () => {
-  test('十个动作都在可选动作里，也都写进了描述', () => {
+describe('動作清單', () => {
+  test('十個動作都在可選動作裡，也都寫進了描述', () => {
     assert.deepEqual(tool().parameters.properties.action.enum, ACTIONS);
     for (const a of ACTIONS) {
       assert.ok(tool().description.includes(`${a}=`), a);
     }
   });
 
-  // 清理别名、合并重复、对比当前状态不调模型，其余都调：描述里各自写明。
-  test('描述里写明哪几个调模型', () => {
+  // 清理別名、合併重複、對比當前狀態不調模型，其餘都調：描述裡各自寫明。
+  test('描述裡寫明哪幾個調模型', () => {
     const d = tool().description;
-    assert.ok(d.includes('cleanAliases=清理角色卡别名里的泛称与别人的名字（只改 aliases，正文不动）（不调模型）'), d);
-    assert.ok(d.includes('（调模型，要 name）'), d);
-    assert.ok(d.includes('（不调模型，要 path）'), d);
+    assert.ok(d.includes('cleanAliases=清理角色卡別名裡的泛稱與別人的名字（只改 aliases，正文不動）（不調模型）'), d);
+    assert.ok(d.includes('（調模型，要 name）'), d);
+    assert.ok(d.includes('（不調模型，要 path）'), d);
   });
 
-  test('参数只有 action、path、name', () => {
+  test('引數只有 action、path、name', () => {
     assert.deepEqual(Object.keys(tool().parameters.properties).sort(), ['action', 'name', 'path']);
   });
 
@@ -112,69 +112,69 @@ describe('动作清单', () => {
   });
 });
 
-describe('参数不对就当场报错，不花钱', () => {
+describe('引數不對就當場報錯，不花錢', () => {
   for (const action of ['update', 'rebuild', 'reviewState']) {
-    test(`${action} 缺角色卡路径`, async () => {
+    test(`${action} 缺角色卡路徑`, async () => {
       resetCtx();
       const r = await run({ action });
-      assert.ok(r.error?.startsWith(`${action} 需要参数：path。path：那张角色卡的工程内相对路径`), `${action}: ${r.error}`);
+      assert.ok(r.error?.startsWith(`${action} 需要引數：path。path：那張角色卡的工程內相對路徑`), `${action}: ${r.error}`);
       assert.equal(fake.calls.length, 0);
     });
   }
 
-  test('create 缺人名，说明里要求与细纲写法一致', async () => {
+  test('create 缺人名，說明裡要求與細綱寫法一致', async () => {
     resetCtx();
     const r = await run({ action: 'create' });
-    assert.ok(r.error?.startsWith('create 需要参数：name。name：出场人物的名字，与细纲里的写法一致'), r.error);
+    assert.ok(r.error?.startsWith('create 需要引數：name。name：出場人物的名字，與細綱裡的寫法一致'), r.error);
   });
 
-  // 空白字符串算没给：不放它拿一个空名字去建卡。
-  test('只给空白的 name 也算缺', async () => {
+  // 空白字串算沒給：不放它拿一個空名字去建卡。
+  test('只給空白的 name 也算缺', async () => {
     resetCtx();
     const r = await run({ action: 'create', name: '   ' });
-    assert.ok(r.error?.includes('需要参数：name'), r.error);
+    assert.ok(r.error?.includes('需要引數：name'), r.error);
   });
 
-  test('create 给了 path：说清只有哪几个认', async () => {
+  test('create 給了 path：說清只有哪幾個認', async () => {
     resetCtx();
     const r = await run({ action: 'create', name: '林昭', path: '.novelwarden/characters/林昭.md' });
-    assert.equal(r.error, 'create 不认 path，只有 update / rebuild / reviewState 认。');
+    assert.equal(r.error, 'create 不認 path，只有 update / rebuild / reviewState 認。');
   });
 
-  test('批量动作给了 name 当场报错', async () => {
+  test('批次動作給了 name 當場報錯', async () => {
     resetCtx();
     const r = await run({ action: 'updateAll', name: '林昭' });
-    assert.equal(r.error, 'updateAll 不认 name，只有 create 认。');
+    assert.equal(r.error, 'updateAll 不認 name，只有 create 認。');
     assert.equal(fake.calls.length, 0);
   });
 });
 
-describe('转发给工程页那几个函数', () => {
-  test('还没有角色卡时清理别名：feature 自己说明，不调模型、不报错', async () => {
+describe('轉發給工程頁那幾個函式', () => {
+  test('還沒有角色卡時清理別名：feature 自己說明，不調模型、不報錯', async () => {
     resetCtx();
     const r = await run({ action: 'cleanAliases' });
     assert.equal(r.error, undefined, r.error);
-    assert.ok(r.text.includes('别名清理已交给 Novelwarden 执行'), r.text);
-    assert.ok(h.toasts.some((m) => m.includes('还没有角色卡')), JSON.stringify(h.toasts));
+    assert.ok(r.text.includes('別名清理已交給 Novelwarden 執行'), r.text);
+    assert.ok(h.toasts.some((m) => m.includes('還沒有角色卡')), JSON.stringify(h.toasts));
     assert.equal(fake.calls.length, 0);
     assert.equal(ctx.usage.calls, 0);
   });
 
-  // 次数只在确认框里：回话里不猜一个数，display 也写「未调模型」。
-  test('交出去的动作账上记 0，display 写「未调模型」', async () => {
+  // 次數只在確認框裡：回話裡不猜一個數，display 也寫「未調模型」。
+  test('交出去的動作賬上記 0，display 寫「未調模型」', async () => {
     resetCtx();
     const r = await run({ action: 'mergeDuplicates' });
     assert.equal(r.error, undefined, r.error);
-    assert.deepEqual(r.display, { title: 'characters mergeDuplicates', detail: '未调模型' });
+    assert.deepEqual(r.display, { title: 'characters mergeDuplicates', detail: '未調模型' });
     assert.equal(ctx.usage.calls, 0);
   });
 });
 
-describe('动手前那一问', () => {
-  test('标题是动作的说法，框里写着那个人', () => {
+describe('動手前那一問', () => {
+  test('標題是動作的說法，框裡寫著那個人', () => {
     const intent = tool().intent({ action: 'create', name: '林昭' });
     assert.equal(intent.gate, 'mutating');
-    assert.equal(intent.title, '给一位还没有卡的出场人物建卡');
+    assert.equal(intent.title, '給一位還沒有卡的出場人物建卡');
     assert.ok(intent.detail.startsWith('林昭'), intent.detail);
   });
 });

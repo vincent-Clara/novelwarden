@@ -1,17 +1,17 @@
 /**
- * `vscode` 模块桩。
+ * `vscode` 模組樁。
  *
- * `src/core/` 是零 vscode 依赖的（见 tests/contract/corePurity.test.js），所以绝大多数
- * 测试用 `external: ['vscode']` 就够了。少数还没脱钩的路径（`project.ts` 的 readConfig、
- * `src/vscode/migrate.ts`、上下文装配走的 workspace.fs）需要这份桩。
+ * `src/core/` 是零 vscode 依賴的（見 tests/contract/corePurity.test.js），所以絕大多數
+ * 測試用 `external: ['vscode']` 就夠了。少數還沒脫鉤的路徑（`project.ts` 的 readConfig、
+ * `src/vscode/migrate.ts`、上下文裝配走的 workspace.fs）需要這份樁。
  *
- * 四档能力，逐级包含——按需取用，别一上来就 `full`：
- *   'minimal'   仅占位，让 import 不炸
+ * 四檔能力，逐級包含——按需取用，別一上來就 `full`：
+ *   'minimal'   僅佔位，讓 import 不炸
  *   'config'    + workspace.getConfiguration / window.show*Message
  *   'workspace' + workspaceFolders / asRelativePath / Uri / FileType
- *   'full'      + 真实文件系统支撑的 workspace.fs 与各类 class/enum 桩
+ *   'full'      + 真實檔案系統支撐的 workspace.fs 與各類 class/enum 樁
  *
- * 迁移前的四份桩都不还原 `Module._load`；这里返回 `restore()`，请挂到 `after()`。
+ * 遷移前的四份樁都不還原 `Module._load`；這裡返回 `restore()`，請掛到 `after()`。
  */
 const fs = require('fs');
 const path = require('path');
@@ -64,8 +64,8 @@ class EventEmitter {
 /**
  * @param {object} [opts]
  * @param {'minimal'|'config'|'workspace'|'full'} [opts.level]
- * @param {string} [opts.root] workspaceFolders 指向的目录
- * @param {object} [opts.config] getConfiguration 读到的设置（可后续 mutate）
+ * @param {string} [opts.root] workspaceFolders 指向的目錄
+ * @param {object} [opts.config] getConfiguration 讀到的設定（可後續 mutate）
  */
 function installVscodeStub(opts = {}) {
   const { level = 'config', root, config = {} } = opts;
@@ -140,7 +140,7 @@ function installVscodeStub(opts = {}) {
   return {
     stub,
     settings,
-    /** 挂到 after()：迁移前四份桩都不还原，这里补上。 */
+    /** 掛到 after()：遷移前四份樁都不還原，這裡補上。 */
     restore() { Module._load = originalLoad; },
   };
 }

@@ -1,9 +1,11 @@
+import { traditionalLabel } from './labels';
+
 /**
- * 轻量 Markdown 结构工具：YAML frontmatter 与「## 小节」的解析/序列化。
+ * 輕量 Markdown 結構工具：YAML frontmatter 與「## 小節」的解析/序列化。
  *
- * 这里刻意不引入 yaml 依赖：frontmatter 只支持 `key: value` 与
- * `key: [a, b]` / `key:\n  - a\n  - b` 两种数组写法，足够角色卡使用，
- * 且解析失败时退化为忽略该行而不是抛错——作者手改文件不该让插件崩掉。
+ * 這裡刻意不引入 yaml 依賴：frontmatter 只支援 `key: value` 與
+ * `key: [a, b]` / `key:\n  - a\n  - b` 兩種陣列寫法，足夠角色卡使用，
+ * 且解析失敗時退化為忽略該行而不是拋錯——作者手改檔案不該讓外掛崩掉。
  */
 
 export interface ParsedMarkdown {
@@ -35,7 +37,7 @@ function parseFrontmatter(raw: string): Record<string, string | string[]> {
       continue;
     }
 
-    // 缩进的 `- item` 归属于上一个键。
+    // 縮排的 `- item` 歸屬於上一個鍵。
     const listItem = /^\s*-\s+(.*)$/.exec(line);
     if (listItem && currentListKey) {
       const arr = result[currentListKey];
@@ -56,7 +58,7 @@ function parseFrontmatter(raw: string): Record<string, string | string[]> {
     const rawValue = kv[2].trim();
 
     if (rawValue === '') {
-      // 可能是块状数组的起始，先占位为空数组。
+      // 可能是塊狀陣列的起始，先佔位為空陣列。
       result[key] = [];
       currentListKey = key;
       continue;
@@ -106,21 +108,21 @@ function quoteIfNeeded(value: string): string {
 }
 
 /**
- * 只改 frontmatter，正文一个字节都不动。
+ * 只改 frontmatter，正文一個位元組都不動。
  *
- * 维护类动作（清理别名、合并重复角色卡）改的全是元数据，但作者的正文可能
- * 被手工排过版、加过自定义小节。用 `renderCharacterCard` 整卡重渲染会把这些
- * 悄悄抹平——那是「不静默覆盖」的反面。所以这里只重写 `---` 之间那一段，
- * 后面的内容原样接回去。
+ * 維護類動作（清理別名、合併重複角色卡）改的全是後設資料，但作者的正文可能
+ * 被手工排過版、加過自定義小節。用 `renderCharacterCard` 整卡重渲染會把這些
+ * 悄悄抹平——那是「不靜默覆蓋」的反面。所以這裡只重寫 `---` 之間那一段，
+ * 後面的內容原樣接回去。
  *
- * `patch` 里值为 `undefined` 的键表示**删除**该字段。原有字段的顺序保留，
- * 新字段追加在末尾。没有 frontmatter 的文件返回 undefined（调用方跳过）。
+ * `patch` 裡值為 `undefined` 的鍵表示**刪除**該欄位。原有欄位的順序保留，
+ * 新欄位追加在末尾。沒有 frontmatter 的檔案返回 undefined（呼叫方跳過）。
  */
 export function rewriteFrontmatter(
   text: string,
   patch: Record<string, string | number | string[] | undefined>
 ): string | undefined {
-  // BOM 要原样留着——它不属于 frontmatter，抹掉等于偷偷改了文件编码。
+  // BOM 要原樣留著——它不屬於 frontmatter，抹掉等於偷偷改了檔案編碼。
   const bom = text.startsWith('﻿') ? '﻿' : '';
   const rest = bom ? text.slice(1) : text;
   const match = FM_FENCE.exec(rest);
@@ -145,11 +147,11 @@ export function rewriteFrontmatter(
 }
 
 /**
- * 只换掉某一节（`## 小节名` 到下一个同级或更高级标题之前）的内容，其余一个字不动。
+ * 只換掉某一節（`## 小節名` 到下一個同級或更高階標題之前）的內容，其餘一個字不動。
  *
- * 与 {@link rewriteFrontmatter} 同一个理由：机器定稿时要改角色卡的「当前状态」（D15），
- * 整卡重渲染会抹掉作者自加的小节与排版。小节名按 `pickSections` 同一套宽松规则认
- * （忽略空白与常见标点）；没有这一节就追加在末尾。
+ * 與 {@link rewriteFrontmatter} 同一個理由：機器定稿時要改角色卡的「當前狀態」（D15），
+ * 整卡重渲染會抹掉作者自加的小節與排版。小節名按 `pickSections` 同一套寬鬆規則認
+ * （忽略空白與常見標點）；沒有這一節就追加在末尾。
  */
 export function replaceSection(text: string, key: string, value: string): string {
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
@@ -162,7 +164,7 @@ export function replaceSection(text: string, key: string, value: string): string
   const content = value.trim() || SECTION_PLACEHOLDER;
   if (start === -1) {
     const head = text.replace(/\s+$/, '');
-    return `${head}${eol}${eol}## ${key}${eol}${eol}${content.split('\n').join(eol)}${eol}`;
+    return `${head}${eol}${eol}## ${traditionalLabel(key)}${eol}${eol}${content.split('\n').join(eol)}${eol}`;
   }
   const level = /^(#{2,3})/.exec(lines[start])![1].length;
   let end = start + 1;
@@ -181,13 +183,13 @@ export function replaceSection(text: string, key: string, value: string): string
 
 // ---------------------------------------------------------------- frontmatter 取值
 //
-// 解析器只产出 `string | string[]`（见 parseFrontmatter），而调用方要的是
-// 字符串/数组/数字。这四个转换函数放在这里而不是各数据模块里，是因为
-// **作者会手改 frontmatter**：`targetWords: 三千`、`characters: 林昭`
-// （本该是数组）这类写法必须在同一个地方按同一套规则兜住，否则角色卡认
-// 一种、场景卡认另一种，同样的手改在两处表现不同。
+// 解析器只產出 `string | string[]`（見 parseFrontmatter），而呼叫方要的是
+// 字串/陣列/數字。這四個轉換函式放在這裡而不是各資料模組裡，是因為
+// **作者會手改 frontmatter**：`targetWords: 三千`、`characters: 林昭`
+// （本該是陣列）這類寫法必須在同一個地方按同一套規則兜住，否則角色卡認
+// 一種、場景卡認另一種，同樣的手改在兩處表現不同。
 
-/** 取字符串；数组取首项；缺席为空串。 */
+/** 取字串；陣列取首項；缺席為空串。 */
 export function asString(v: string | string[] | undefined): string {
   if (Array.isArray(v)) {
     return v[0] ?? '';
@@ -195,7 +197,7 @@ export function asString(v: string | string[] | undefined): string {
   return v ?? '';
 }
 
-/** 取字符串数组；写成 `a、b` 的单行也拆开——作者常常忘了写方括号。 */
+/** 取字串陣列；寫成 `a、b` 的單行也拆開——作者常常忘了寫方括號。 */
 export function asArray(v: string | string[] | undefined): string[] {
   if (Array.isArray(v)) {
     return v.filter((s) => s.trim().length > 0);
@@ -209,7 +211,7 @@ export function asArray(v: string | string[] | undefined): string[] {
   return [];
 }
 
-/** 取数字；解析不出（空、`三千`、`待定`）返回 undefined 而不是 NaN。 */
+/** 取數字；解析不出（空、`三千`、`待定`）返回 undefined 而不是 NaN。 */
 export function asNumber(v: string | string[] | undefined): number | undefined {
   const s = asString(v);
   if (!s) {
@@ -219,7 +221,7 @@ export function asNumber(v: string | string[] | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** frontmatter 里的数字数组（如 `appearsIn: [1, 3, 7]`）。去重并升序。 */
+/** frontmatter 裡的數字陣列（如 `appearsIn: [1, 3, 7]`）。去重並升序。 */
 export function asNumberArray(v: string | string[] | undefined): number[] {
   const out = new Set<number>();
   for (const s of asArray(v)) {
@@ -232,8 +234,8 @@ export function asNumberArray(v: string | string[] | undefined): number[] {
 }
 
 /**
- * 把正文按 `## 小节名` 切开。返回小节名 → 内容（不含标题行，已 trim）。
- * `##` 之前的前言内容放在 key `''` 下。
+ * 把正文按 `## 小節名` 切開。返回小節名 → 內容（不含標題行，已 trim）。
+ * `##` 之前的前言內容放在 key `''` 下。
  */
 export function splitSections(body: string): Map<string, string> {
   const sections = new Map<string, string>();
@@ -264,8 +266,8 @@ export function splitSections(body: string): Map<string, string> {
 }
 
 /**
- * 按给定键顺序抽取小节，缺失的填空串。
- * 小节名匹配时忽略空白与常见标点差异（如「语言习惯」/「语言 习惯」）。
+ * 按給定鍵順序抽取小節，缺失的填空串。
+ * 小節名匹配時忽略空白與常見標點差異（如「語言習慣」/「語言 習慣」）。
  */
 export function pickSections<K extends string>(body: string, keys: readonly K[]): Record<K, string> {
   const found = splitSections(body);
@@ -282,31 +284,31 @@ export function pickSections<K extends string>(body: string, keys: readonly K[])
 }
 
 function normalizeKey(s: string): string {
-  return s.replace(/[\s·・、,，.。:：/-]/g, '').toLowerCase();
+  return traditionalLabel(s.replace(/[\s·・、,，.。:：/-]/g, '').toLowerCase());
 }
 
 /**
- * 空小节的占位文字。
+ * 空小節的佔位文字。
  *
- * `keepEmpty` 写出的摘要里，没内容的小节仍会留一个 `## 小节名` + 这行字——
- * 文件结构保持完整，作者手改时知道该往哪填。读回来的一侧要认得它：
- * 展示摘要时六个小节全是「（待补充）」不如干脆不显示。
+ * `keepEmpty` 寫出的摘要裡，沒內容的小節仍會留一個 `## 小節名` + 這行字——
+ * 檔案結構保持完整，作者手改時知道該往哪填。讀回來的一側要認得它：
+ * 展示摘要時六個小節全是「（待補充）」不如乾脆不顯示。
  */
-export const SECTION_PLACEHOLDER = '（待补充）';
+export const SECTION_PLACEHOLDER = '（待補充）';
 
 /**
- * 这一节有没有实质内容：空白与占位文字（`（待补充）`，全角半角括号都认）不算。
+ * 這一節有沒有實質內容：空白與佔位文字（`（待補充）`，全形半形括號都認）不算。
  *
- * 「排过没有」「填过没有」这类判断全靠它——模板里带着占位的空壳被当成
- * 「已完成」的话，流水线状态从此撒谎。从前 plotFile / volumeFile 各有一份
- * 同样的私有函数，新文档格式一律用这一份。
+ * 「排過沒有」「填過沒有」這類判斷全靠它——模板裡帶著佔位的空殼被當成
+ * 「已完成」的話，流水線狀態從此撒謊。從前 plotFile / volumeFile 各有一份
+ * 同樣的私有函式，新文件格式一律用這一份。
  */
 export function hasContent(text: string | undefined): boolean {
   const t = (text ?? '').trim();
-  return t !== '' && t !== SECTION_PLACEHOLDER && t !== '(待补充)';
+  return t !== '' && !['（待补充）', '(待补充)', '（待補充）', '(待補充)'].includes(t);
 }
 
-/** 把小节 Record 序列化回 `## 小节名` 形式，跳过空小节。 */
+/** 把小節 Record 序列化回 `## 小節名` 形式，跳過空小節。 */
 export function stringifySections(
   sections: Record<string, string>,
   keys: readonly string[],
@@ -318,25 +320,25 @@ export function stringifySections(
     if (!value && !opts.keepEmpty) {
       continue;
     }
-    parts.push(`## ${key}\n\n${value || SECTION_PLACEHOLDER}`);
+    parts.push(`## ${traditionalLabel(key)}\n\n${value || SECTION_PLACEHOLDER}`);
   }
   return parts.join('\n\n');
 }
 
 /**
- * 取正文**首行**的 `# 标题`，首行不是标题则返回 undefined。
+ * 取正文**首行**的 `# 標題`，首行不是標題則返回 undefined。
  *
- * 刻意只看首行，与 stripH1 互为逆运算。早先这里带 `m` 标志扫全文，
- * 于是正文中段任何一行 `# xxx` 都会被当成标题——但 stripH1 只剥开头那行，
- * 结果是标题取自正文中段、那行却还留在正文里。章节可以是 .txt 之后，
- * 「正文里出现一行以 # 开头的字」不再是稀罕事，这个不对称必须堵上。
+ * 刻意只看首行，與 stripH1 互為逆運算。早先這裡帶 `m` 標誌掃全文，
+ * 於是正文中段任何一行 `# xxx` 都會被當成標題——但 stripH1 只剝開頭那行，
+ * 結果是標題取自正文中段、那行卻還留在正文裡。章節可以是 .txt 之後，
+ * 「正文裡出現一行以 # 開頭的字」不再是稀罕事，這個不對稱必須堵上。
  */
 export function extractH1(body: string): string | undefined {
   const m = /^#[ \t]+(.+?)[ \t]*(?:\r?\n|$)/.exec(body);
   return m ? m[1].trim() : undefined;
 }
 
-/** 去掉正文开头的 `# 标题` 行，返回纯正文。 */
+/** 去掉正文開頭的 `# 標題` 行，返回純正文。 */
 export function stripH1(body: string): string {
   return body.replace(/^#\s+.+?(\r?\n|$)/, '').trim();
 }

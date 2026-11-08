@@ -1,16 +1,16 @@
 /**
- * 统一入口守卫的八条。**一条都不能少**——少一条就是给 agent 开了一个后门。
+ * 統一入口守衛的八條。**一條都不能少**——少一條就是給 agent 開了一個後門。
  *
- * | # | 守卫 | 从前在哪 |
+ * | # | 守衛 | 從前在哪 |
  * |---|---|---|
- * | 1 | 路径规范化（绝对路径 / `..` / 空串） | fileOps.normalizeRel |
- * | 2 | 工程根包含检查 | fileEditing.resolveInRoot |
- * | 3 | 固定目录保护 | fileOps.isProtectedPath |
- * | 4 | `.trash/` 内容不可操作 | projectFiles |
- * | 5 | 读取大小上限 2MB | fileEditing.MAX_EDITABLE_BYTES |
- * | 6 | 同名不覆盖（mode: 'create'） | fileOps / projectFiles 各一份 |
- * | 7 | 覆盖前审阅 | creation.confirmOverwrite |
- * | 8 | 内容 hash 乐观锁 | fileEditing.saveFromEditor |
+ * | 1 | 路徑規範化（絕對路徑 / `..` / 空串） | fileOps.normalizeRel |
+ * | 2 | 工程根包含檢查 | fileEditing.resolveInRoot |
+ * | 3 | 固定目錄保護 | fileOps.isProtectedPath |
+ * | 4 | `.trash/` 內容不可操作 | projectFiles |
+ * | 5 | 讀取大小上限 2MB | fileEditing.MAX_EDITABLE_BYTES |
+ * | 6 | 同名不覆蓋（mode: 'create'） | fileOps / projectFiles 各一份 |
+ * | 7 | 覆蓋前審閱 | creation.confirmOverwrite |
+ * | 8 | 內容 hash 樂觀鎖 | fileEditing.saveFromEditor |
  */
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -25,14 +25,14 @@ let t;
 let project;
 let G;
 
-/** 跑一段一定会抛 WsError 的代码，把错误交回来断言 code。 */
+/** 跑一段一定會拋 WsError 的程式碼，把錯誤交回來斷言 code。 */
 async function codeOf(fn) {
   try {
     await fn();
   } catch (err) {
     return err?.code ?? `（不是 WsError：${err?.message}）`;
   }
-  return '（没抛）';
+  return '（沒拋）';
 }
 
 before(async () => {
@@ -49,22 +49,22 @@ before(async () => {
   G = bundle.guard;
 
   t.write('chapters/001-楔子.md', '# 楔子\n\n雨下了三天。\n');
-  t.write('.novelwarden/.trash/chapters/009-删过的.md', '删过的东西');
+  t.write('.novelwarden/.trash/chapters/009-刪過的.md', '刪過的東西');
 });
 
 after(() => {
   if (t) cleanup(t.dir);
 });
 
-describe('守卫 1 · 路径规范化', () => {
+describe('守衛 1 · 路徑規範化', () => {
   const bad = ['../etc/passwd', '/abs/path', 'C:\\Windows', '', '  ', '..'];
 
   for (const input of bad) {
-    test(`读 ${JSON.stringify(input)} 报越界`, async () => {
+    test(`讀 ${JSON.stringify(input)} 報越界`, async () => {
       assert.equal(await codeOf(() => G.guardRead(project, input)), 'outOfRoot');
     });
 
-    test(`写 ${JSON.stringify(input)} 报越界`, async () => {
+    test(`寫 ${JSON.stringify(input)} 報越界`, async () => {
       assert.equal(
         await codeOf(() => G.guardWrite(project, input, { mode: 'overwrite' })),
         'outOfRoot'
@@ -72,40 +72,40 @@ describe('守卫 1 · 路径规范化', () => {
     });
   }
 
-  test('越界的错是 WsError', async () => {
+  test('越界的錯是 WsError', async () => {
     try {
       await G.guardRead(project, '../x');
-      assert.fail('该抛');
+      assert.fail('該拋');
     } catch (err) {
       assert.equal(err instanceof G.WsError, true, err?.constructor?.name);
     }
   });
 });
 
-describe('守卫 2 · 工程根包含检查', () => {
-  // normalizeRel 已经拦掉了 `..`，但 `a/../../b` 这种归一化之后仍会逃出去的
-  // 要靠第二道：解析出绝对路径再比一次。
-  test('归一化之后仍逃出工程根的路径被拒', async () => {
+describe('守衛 2 · 工程根包含檢查', () => {
+  // normalizeRel 已經攔掉了 `..`，但 `a/../../b` 這種歸一化之後仍會逃出去的
+  // 要靠第二道：解析出絕對路徑再比一次。
+  test('歸一化之後仍逃出工程根的路徑被拒', async () => {
     assert.equal(await codeOf(() => G.guardRead(project, 'a/../../b')), 'outOfRoot');
   });
 
-  test('工程根自己不是可读对象', async () => {
+  test('工程根自己不是可讀物件', async () => {
     assert.equal(await codeOf(() => G.guardRead(project, '.')), 'outOfRoot');
   });
 
-  test('正常路径解析成绝对路径', async () => {
+  test('正常路徑解析成絕對路徑', async () => {
     const abs = await G.guardRead(project, 'chapters/001-楔子.md');
     assert.equal(abs, t.rel('chapters/001-楔子.md'));
   });
 });
 
-describe('守卫 3 · 固定目录保护', () => {
+describe('守衛 3 · 固定目錄保護', () => {
   const fixed = [
     'chapters',
     'drafts',
     '.novelwarden',
-    // 场景、卷、中转站三层删掉了，细纲也从 plots/ 搬进了 summaries/；代码不再读那几个目录，
-    // 但老工程磁盘上的它们是作者的文件（D11），不能被整棵搬走或删掉。
+    // 場景、卷、中轉站三層刪掉了，細綱也從 plots/ 搬進了 summaries/；程式碼不再讀那幾個目錄，
+    // 但老工程磁碟上的它們是作者的檔案（D11），不能被整棵搬走或刪掉。
     '.novelwarden/plots',
     '.novelwarden/scenes',
     '.novelwarden/volumes',
@@ -118,27 +118,27 @@ describe('守卫 3 · 固定目录保护', () => {
   ];
 
   for (const rel of fixed) {
-    test(`${rel} 不能改名/删除`, async () => {
+    test(`${rel} 不能改名/刪除`, async () => {
       assert.equal(await codeOf(() => G.guardMutate(project, rel)), 'protected');
     });
   }
 
-  // 固定目录只保护它自己，里面的东西照常能操作。
-  test('固定目录里的文件能操作', async () => {
+  // 固定目錄只保護它自己，裡面的東西照常能操作。
+  test('固定目錄裡的檔案能操作', async () => {
     const abs = await G.guardMutate(project, 'chapters/001-楔子.md');
     assert.equal(abs, t.rel('chapters/001-楔子.md'));
   });
 });
 
-describe('守卫 4 · 回收站里的内容不可操作', () => {
-  test('.trash 里的文件改不动', async () => {
+describe('守衛 4 · 回收站裡的內容不可操作', () => {
+  test('.trash 裡的檔案改不動', async () => {
     assert.equal(
-      await codeOf(() => G.guardMutate(project, '.novelwarden/.trash/chapters/009-删过的.md')),
+      await codeOf(() => G.guardMutate(project, '.novelwarden/.trash/chapters/009-刪過的.md')),
       'inTrash'
     );
   });
 
-  test('.trash 里的文件写不进去', async () => {
+  test('.trash 裡的檔案寫不進去', async () => {
     assert.equal(
       await codeOf(() =>
         G.guardWrite(project, '.novelwarden/.trash/新的.md', { mode: 'overwrite' })
@@ -147,58 +147,58 @@ describe('守卫 4 · 回收站里的内容不可操作', () => {
     );
   });
 
-  // 但**读**得到：作者要能翻回收站找回东西。
-  test('.trash 里的文件读得到', async () => {
-    const abs = await G.guardRead(project, '.novelwarden/.trash/chapters/009-删过的.md');
+  // 但**讀**得到：作者要能翻回收站找回東西。
+  test('.trash 裡的檔案讀得到', async () => {
+    const abs = await G.guardRead(project, '.novelwarden/.trash/chapters/009-刪過的.md');
     assert.ok(abs.includes('.trash'));
   });
 });
 
-// 历史版本（`.novelwarden/history/`）是网关自己存的副本：从前守卫只拦 `.trash/` 与 `sessions/`，往这里写、搬、复制都放行，
-// 作者的操作能往「历史」面板里塞一份假快照。现在与回收站同一个口径：读得到，写不进去。
-describe('守卫 4 · 历史版本写不进去（读得到）', () => {
+// 歷史版本（`.novelwarden/history/`）是閘道器自己存的副本：從前守衛只攔 `.trash/` 與 `sessions/`，往這裡寫、搬、複製都放行，
+// 作者的操作能往「歷史」面板裡塞一份假快照。現在與回收站同一個口徑：讀得到，寫不進去。
+describe('守衛 4 · 歷史版本寫不進去（讀得到）', () => {
   const SNAP = '.novelwarden/history/chapters/001-楔子.md/2026-10-18_14-32-05+0800.txt';
 
   before(() => {
-    t.write(SNAP, '旧稿');
+    t.write(SNAP, '舊稿');
   });
 
-  test('往历史版本里新建文件被拒', async () => {
+  test('往歷史版本裡新建檔案被拒', async () => {
     assert.equal(
-      await codeOf(() => G.guardWrite(project, '.novelwarden/history/chapters/001-楔子.md/伪造.txt', { mode: 'create' })),
+      await codeOf(() => G.guardWrite(project, '.novelwarden/history/chapters/001-楔子.md/偽造.txt', { mode: 'create' })),
       'inHistory'
     );
   });
 
-  test('覆盖一份快照被拒', async () => {
+  test('覆蓋一份快照被拒', async () => {
     assert.equal(await codeOf(() => G.guardWrite(project, SNAP, { mode: 'overwrite' })), 'inHistory');
   });
 
-  test('历史版本目录本身也写不进去', async () => {
+  test('歷史版本目錄本身也寫不進去', async () => {
     assert.equal(await codeOf(() => G.guardWrite(project, '.novelwarden/history', { mode: 'create' })), 'inHistory');
   });
 
-  test('快照读得到', async () => {
+  test('快照讀得到', async () => {
     const abs = await G.guardRead(project, SNAP);
     assert.equal(abs, t.rel(SNAP));
   });
 
-  test('名字只是像的目录不算（`.novelwarden/history2/`）', async () => {
-    const r = await G.guardWrite(project, '.novelwarden/history2/随手记.md', { mode: 'create' });
+  test('名字只是像的目錄不算（`.novelwarden/history2/`）', async () => {
+    const r = await G.guardWrite(project, '.novelwarden/history2/隨手記.md', { mode: 'create' });
     assert.equal(r.existed, false);
   });
 });
 
-describe('守卫 5 · 大小上限', () => {
+describe('守衛 5 · 大小上限', () => {
   before(() => {
     t.write('chapters/002-巨物.md', 'x'.repeat(G.MAX_EDITABLE_BYTES + 10));
   });
 
-  test('读超限文件报 tooLarge', async () => {
+  test('讀超限檔案報 tooLarge', async () => {
     assert.equal(await codeOf(() => G.guardRead(project, 'chapters/002-巨物.md')), 'tooLarge');
   });
 
-  test('写超限内容报 tooLarge', async () => {
+  test('寫超限內容報 tooLarge', async () => {
     assert.equal(
       await codeOf(() =>
         G.guardWrite(project, 'chapters/003-新的.md', {
@@ -215,124 +215,124 @@ describe('守卫 5 · 大小上限', () => {
   });
 });
 
-describe('守卫 6 · 同名不覆盖', () => {
-  test('mode: create 撞上已有文件报 exists', async () => {
+describe('守衛 6 · 同名不覆蓋', () => {
+  test('mode: create 撞上已有檔案報 exists', async () => {
     assert.equal(
       await codeOf(() => G.guardWrite(project, 'chapters/001-楔子.md', { mode: 'create' })),
       'exists'
     );
   });
 
-  test('mode: create 写新文件放行', async () => {
+  test('mode: create 寫新檔案放行', async () => {
     const r = await G.guardWrite(project, 'chapters/010-新的.md', { mode: 'create' });
     assert.equal(r.existed, false);
   });
 
-  test('mode: overwrite 撞上已有文件放行，但说出来它存在', async () => {
+  test('mode: overwrite 撞上已有檔案放行，但說出來它存在', async () => {
     const r = await G.guardWrite(project, 'chapters/001-楔子.md', { mode: 'overwrite' });
     assert.equal(r.existed, true);
   });
 
-  test('目标已存在时把当前内容一并交回（供审阅比对）', async () => {
+  test('目標已存在時把當前內容一併交回（供審閱比對）', async () => {
     const r = await G.guardWrite(project, 'chapters/001-楔子.md', { mode: 'overwrite' });
     assert.ok(r.current?.includes('雨下了三天'), r.current);
   });
 
-  test('目标是目录时报 notFile', async () => {
+  test('目標是目錄時報 notFile', async () => {
     assert.equal(
       await codeOf(() => G.guardWrite(project, 'chapters', { mode: 'overwrite' })),
       'notFile'
     );
   });
 
-  test('读不存在的文件报 notFound', async () => {
-    assert.equal(await codeOf(() => G.guardRead(project, 'chapters/查无此章.md')), 'notFound');
+  test('讀不存在的檔案報 notFound', async () => {
+    assert.equal(await codeOf(() => G.guardRead(project, 'chapters/查無此章.md')), 'notFound');
   });
 });
 
-describe('守卫 7 · 覆盖前审阅', () => {
-  // 逐字搬自 features/creation.ts 的 confirmOverwrite——那段文案是产品承诺的一部分。
-  test('宿主有 reviewReplace 时开 diff', async () => {
+describe('守衛 7 · 覆蓋前審閱', () => {
+  // 逐字搬自 features/creation.ts 的 confirmOverwrite——那段文案是產品承諾的一部分。
+  test('宿主有 reviewReplace 時開 diff', async () => {
     const withReview = makeFakeHost({ settings: () => ({}) });
     bundle.host.initHost(withReview.host);
     withReview.expect();
-    const { ok } = await G.reviewOverwrite('第 12 章的细纲', '.novelwarden/summaries/012.md', '旧', '新');
+    const { ok } = await G.reviewOverwrite('第 12 章的細綱', '.novelwarden/summaries/012.md', '舊', '新');
     assert.equal(ok, true);
     assert.equal(withReview.reviewed.length, 1, JSON.stringify(withReview.reviewed));
-    // 网关的覆盖审阅请求合并：独立版的合并视图可以交回作者挑过的那一份（五期 W11）。
+    // 閘道器的覆蓋審閱請求合併：獨立版的合併檢視可以交回作者挑過的那一份（五期 W11）。
     assert.equal(withReview.reviewed[0].merge, true);
     bundle.host.initHost(h.host);
   });
 
-  // diff 左侧要定位现有文件：从前只给称呼，插件壳按名字去找角色卡，
-  // 覆盖大纲、细纲时左侧一片空白。
-  test('把落点路径交给 reviewReplace', async () => {
+  // diff 左側要定位現有檔案：從前只給稱呼，外掛殼按名字去找角色卡，
+  // 覆蓋大綱、細綱時左側一片空白。
+  test('把落點路徑交給 reviewReplace', async () => {
     const withReview = makeFakeHost({ settings: () => ({}) });
     bundle.host.initHost(withReview.host);
-    await G.reviewOverwrite('第 12 章的细纲', '.novelwarden/summaries/012.md', '旧', '新');
+    await G.reviewOverwrite('第 12 章的細綱', '.novelwarden/summaries/012.md', '舊', '新');
     assert.equal(withReview.reviewed[0]?.relPath, '.novelwarden/summaries/012.md', JSON.stringify(withReview.reviewed));
     bundle.host.initHost(h.host);
   });
 
-  test('reviewReplace 说 discard 就不写', async () => {
+  test('reviewReplace 說 discard 就不寫', async () => {
     const withReview = makeFakeHost({ settings: () => ({}) });
     withReview.setReviewVerdict('discard');
     bundle.host.initHost(withReview.host);
-    const { ok } = await G.reviewOverwrite('第 12 章的细纲', '.novelwarden/summaries/012.md', '旧', '新');
+    const { ok } = await G.reviewOverwrite('第 12 章的細綱', '.novelwarden/summaries/012.md', '舊', '新');
     assert.equal(ok, false);
     bundle.host.initHost(h.host);
   });
 
-  test('合并视图交回的那一份：可以写，写的是它', async () => {
+  test('合併檢視交回的那一份：可以寫，寫的是它', async () => {
     const withReview = makeFakeHost({ settings: () => ({}) });
-    withReview.setReviewVerdict(() => ({ merged: '挑过的' }));
+    withReview.setReviewVerdict(() => ({ merged: '挑過的' }));
     bundle.host.initHost(withReview.host);
     try {
-      assert.deepEqual(await G.reviewOverwrite('第 1 章的正文', 'chapters/001.md', '旧', '新'), { ok: true, text: '挑过的' });
+      assert.deepEqual(await G.reviewOverwrite('第 1 章的正文', 'chapters/001.md', '舊', '新'), { ok: true, text: '挑過的' });
     } finally {
       bundle.host.initHost(h.host);
     }
   });
 
-  test('没有 reviewReplace 的宿主退化成确认框', async () => {
-    h.expect('覆盖');
-    const { ok } = await G.reviewOverwrite('全书大纲', '.novelwarden/outline.md', '旧的一段', '新的一段');
+  test('沒有 reviewReplace 的宿主退化成確認框', async () => {
+    h.expect('覆蓋');
+    const { ok } = await G.reviewOverwrite('全書大綱', '.novelwarden/outline.md', '舊的一段', '新的一段');
     assert.equal(ok, true);
     assert.equal(h.confirms.length, 1);
   });
 
-  test('确认框的文案一字不改', async () => {
-    h.expect('覆盖');
-    await G.reviewOverwrite('全书大纲', '.novelwarden/outline.md', '旧的一段', '新的一段');
-    assert.equal(h.confirms[0].message, '「全书大纲」已经有内容了，用新版本覆盖？');
+  test('確認框的文案一字不改', async () => {
+    h.expect('覆蓋');
+    await G.reviewOverwrite('全書大綱', '.novelwarden/outline.md', '舊的一段', '新的一段');
+    assert.equal(h.confirms[0].message, '「全書大綱」已經有內容了，用新版本覆蓋？');
   });
 
-  test('确认框的 detail 给字数对比与路径', async () => {
-    h.expect('覆盖');
-    await G.reviewOverwrite('全书大纲', '.novelwarden/outline.md', '旧的一段', '新的一段甲');
-    assert.equal(h.confirms[0].detail, '现有 4 字，新版 5 字。\n.novelwarden/outline.md');
+  test('確認框的 detail 給字數對比與路徑', async () => {
+    h.expect('覆蓋');
+    await G.reviewOverwrite('全書大綱', '.novelwarden/outline.md', '舊的一段', '新的一段甲');
+    assert.equal(h.confirms[0].detail, '現有 4 字，新版 5 字。\n.novelwarden/outline.md');
   });
 
-  test('用户选「保留原样」就不写', async () => {
-    h.expect('保留原样');
-    assert.equal((await G.reviewOverwrite('全书大纲', '.novelwarden/outline.md', '旧', '新')).ok, false);
+  test('使用者選「保留原樣」就不寫', async () => {
+    h.expect('保留原樣');
+    assert.equal((await G.reviewOverwrite('全書大綱', '.novelwarden/outline.md', '舊', '新')).ok, false);
   });
 
-  test('用户直接取消也不写', async () => {
+  test('使用者直接取消也不寫', async () => {
     h.expect();
-    assert.equal((await G.reviewOverwrite('全书大纲', '.novelwarden/outline.md', '旧', '新')).ok, false);
+    assert.equal((await G.reviewOverwrite('全書大綱', '.novelwarden/outline.md', '舊', '新')).ok, false);
   });
 
-  // 一字未变还弹个框，只会让人以为自己点错了。
-  test('内容一模一样时不弹框，直接算通过', async () => {
+  // 一字未變還彈個框，只會讓人以為自己點錯了。
+  test('內容一模一樣時不彈框，直接算通過', async () => {
     h.expect();
-    assert.equal((await G.reviewOverwrite('全书大纲', '.novelwarden/outline.md', ' 甲 ', '甲')).ok, true);
+    assert.equal((await G.reviewOverwrite('全書大綱', '.novelwarden/outline.md', ' 甲 ', '甲')).ok, true);
     assert.equal(h.confirms.length, 0);
   });
 });
 
-describe('守卫 8 · 内容 hash 乐观锁', () => {
-  test('baseHash 与磁盘一致时放行', async () => {
+describe('守衛 8 · 內容 hash 樂觀鎖', () => {
+  test('baseHash 與磁碟一致時放行', async () => {
     const disk = t.read('chapters/001-楔子.md');
     const r = await G.guardWrite(project, 'chapters/001-楔子.md', {
       mode: 'overwrite',
@@ -341,62 +341,62 @@ describe('守卫 8 · 内容 hash 乐观锁', () => {
     assert.equal(r.existed, true);
   });
 
-  test('baseHash 对不上抛 conflict', async () => {
+  test('baseHash 對不上拋 conflict', async () => {
     assert.equal(
       await codeOf(() =>
-        G.guardWrite(project, 'chapters/001-楔子.md', { mode: 'overwrite', baseHash: '过期的hash' })
+        G.guardWrite(project, 'chapters/001-楔子.md', { mode: 'overwrite', baseHash: '過期的hash' })
       ),
       'conflict'
     );
   });
 
-  test('冲突时把磁盘版本一并交回', async () => {
+  test('衝突時把磁碟版本一併交回', async () => {
     try {
       await G.guardWrite(project, 'chapters/001-楔子.md', {
         mode: 'overwrite',
-        baseHash: '过期的hash',
+        baseHash: '過期的hash',
       });
-      assert.fail('该抛');
+      assert.fail('該拋');
     } catch (err) {
       assert.ok(err.diskText?.includes('雨下了三天'), err.diskText);
       assert.equal(err.diskHash, bundle.fs.hash(t.read('chapters/001-楔子.md')));
     }
   });
 
-  test('冲突错是 WsConflictError，也是 WsError', async () => {
+  test('衝突錯是 WsConflictError，也是 WsError', async () => {
     try {
       await G.guardWrite(project, 'chapters/001-楔子.md', {
         mode: 'overwrite',
-        baseHash: '过期的hash',
+        baseHash: '過期的hash',
       });
-      assert.fail('该抛');
+      assert.fail('該拋');
     } catch (err) {
       assert.equal(err instanceof G.WsConflictError, true);
       assert.equal(err instanceof G.WsError, true);
     }
   });
 
-  // 文件被删了：当作新建处理，不拦（逐字沿用 fileEditing 的行为）。
-  test('文件不存在时 baseHash 不拦', async () => {
-    const r = await G.guardWrite(project, 'chapters/011-刚删的.md', {
+  // 檔案被刪了：當作新建處理，不攔（逐字沿用 fileEditing 的行為）。
+  test('檔案不存在時 baseHash 不攔', async () => {
+    const r = await G.guardWrite(project, 'chapters/011-剛刪的.md', {
       mode: 'overwrite',
       baseHash: '任意',
     });
     assert.equal(r.existed, false);
   });
 
-  test('不传 baseHash 就没有乐观锁', async () => {
+  test('不傳 baseHash 就沒有樂觀鎖', async () => {
     const r = await G.guardWrite(project, 'chapters/001-楔子.md', { mode: 'overwrite' });
     assert.equal(r.existed, true);
   });
 });
 
 describe('guardMutate · 存在性', () => {
-  test('改不存在的东西报 notFound', async () => {
-    assert.equal(await codeOf(() => G.guardMutate(project, 'chapters/查无此章.md')), 'notFound');
+  test('改不存在的東西報 notFound', async () => {
+    assert.equal(await codeOf(() => G.guardMutate(project, 'chapters/查無此章.md')), 'notFound');
   });
 
-  test('目录能改名（不是 notFile）', async () => {
+  test('目錄能改名（不是 notFile）', async () => {
     t.write('chapters/第一卷/005-甲.md', 'x');
     const abs = await G.guardMutate(project, 'chapters/第一卷');
     assert.equal(abs, t.rel('chapters/第一卷'));

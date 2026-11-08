@@ -1,10 +1,10 @@
-/* 工程页：页签条、分组、树行。 */
+/* 工程頁：頁籤條、分組、樹行。 */
 
 #pane-project {
   overflow: hidden;
 }
 
-/* 四个页签（概览 / 章节 / 角色 / 设定），样子同设置页的分类页签；最右边一颗刷新。 */
+/* 四個頁籤（概覽 / 章節 / 角色 / 設定），樣子同設定頁的分類頁籤；最右邊一顆重新整理。 */
 .project-tabs {
   display: flex;
   align-items: center;
@@ -44,7 +44,7 @@ button.project-tab.active {
   padding: 10px;
 }
 
-/* 撑满可见高度：分组下面的空白也属于这一页，右键给的是这一页主分组的菜单（groups.ts 的 `panel`）。 */
+/* 撐滿可見高度：分組下面的空白也屬於這一頁，右鍵給的是這一頁主分組的選單（groups.ts 的 `panel`）。 */
 .project-panel {
   min-height: 100%;
 }
@@ -80,7 +80,7 @@ button.project-tab.active {
   background: var(--vscode-list-hoverBackground);
 }
 
-/* 折叠开关吃掉整行的可点面积：标题栏上现在只有它，点哪儿都能折叠。 */
+/* 摺疊開關吃掉整行的可點面積：標題欄上現在只有它，點哪兒都能摺疊。 */
 .group-toggle {
   display: flex;
   align-items: baseline;
@@ -125,7 +125,7 @@ button.project-tab.active {
   background: var(--vscode-list-hoverBackground);
 }
 
-/* 文件夹行：折叠箭头与名字都可点，名字略加重以区别于文件。 */
+/* 資料夾行：摺疊箭頭與名字都可點，名字略加重以區別於檔案。 */
 .row-dir > .caret {
   width: 12px;
   flex: 0 0 12px;
@@ -166,13 +166,13 @@ button.project-tab.active {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* 别名/关键词再多也不许把正名挤没：副标题最多占半行，
-     截断的部分靠悬停浮窗看全文（detailTip.ts）。 */
+  /* 別名/關鍵詞再多也不許把正名擠沒：副標題最多佔半行，
+     截斷的部分靠懸停浮窗看全文（detailTip.ts）。 */
   max-width: 50%;
 }
 
-/* 「上次更新之后又出场了 N 章」。用强调色而非警告色——
-   角色卡没跟上正文不是错误，只是件待办。设定行的「＋N」（待整合）也用它。 */
+/* 「上次更新之後又出場了 N 章」。用強調色而非警告色——
+   角色卡沒跟上正文不是錯誤，只是件待辦。設定行的「＋N」（待整合）也用它。 */
 .cast-pending {
   flex: 0 0 auto;
   color: var(--vscode-textLink-foreground);
@@ -180,9 +180,9 @@ button.project-tab.active {
 }
 
 /*
- * 设定行右边的出现章（「第 3–57 章 · 12 章」）：不截断——几百条里扫一眼要看的就是
- * 哪条用得多、用到哪了。它不让，标题就得留几个字，不然窄侧栏里标题会被挤到一个字都不剩
- * （.row-label 的 flex-basis 是 0，挤的时候它先没）。被挤掉的是一句话副标题，浮窗看得全。
+ * 設定行右邊的出現章（「第 3–57 章 · 12 章」）：不截斷——幾百條裡掃一眼要看的就是
+ * 哪條用得多、用到哪了。它不讓，標題就得留幾個字，不然窄側欄裡標題會被擠到一個字都不剩
+ * （.row-label 的 flex-basis 是 0，擠的時候它先沒）。被擠掉的是一句話副標題，浮窗看得全。
  */
 .lore-span {
   flex: 0 0 auto;
@@ -194,7 +194,7 @@ button.project-tab.active {
   min-width: 4em;
 }
 
-/* 「出现过 · 未建条目」的建议分类（可以是好几层目录），太长就截。 */
+/* 「出現過 · 未建條目」的建議分類（可以是好幾層目錄），太長就截。 */
 .lore-category {
   flex: 0 1 auto;
   min-width: 0;
@@ -203,8 +203,8 @@ button.project-tab.active {
   white-space: nowrap;
 }
 
-/* 还没有文件的那几种行（`.row-cast`：未建卡的人物、未建条目、「待完善」里还没有条目的）点名字不做事
-   （建卡、建条目、展开都在右键里），筛选中被强制展开的文件夹点了也不折叠——都别给一个可点的样子。 */
+/* 還沒有檔案的那幾種行（`.row-cast`：未建卡的人物、未建條目、「待完善」裡還沒有條目的）點名字不做事
+   （建卡、建條目、展開都在右鍵裡），篩選中被強制展開的資料夾點了也不折疊——都別給一個可點的樣子。 */
 .row-cast .row-label,
 .row-dir-forced > .caret,
 .row-dir-forced .row-label {
@@ -217,9 +217,9 @@ button.project-tab.active {
 }
 
 /*
- * 「设定」组标题旁的筛选框。挂在 .group-head 里、折叠开关（.group-toggle）之外——
- * 点它、在里面打字都不会把组折起来。forms.css 给 input 的 padding / width 在这里收回来，
- * 压成与标题栏一样矮。
+ * 「設定」組標題旁的篩選框。掛在 .group-head 裡、摺疊開關（.group-toggle）之外——
+ * 點它、在裡面打字都不會把組折起來。forms.css 給 input 的 padding / width 在這裡收回來，
+ * 壓成與標題欄一樣矮。
  */
 .lore-filter {
   position: relative;
@@ -254,8 +254,8 @@ button.project-tab.active {
 }
 
 /*
- * 「叙事线」页签（叙事线重做第 8 个提交）。标题旁那一截（排线失败的 ❗ 与「从大纲排出 / 补充」）挂在 .group-head 里、
- * 折叠开关之外，点它不会把组折起来；与「设定」组的筛选框同一个位置。
+ * 「敘事線」頁籤（敘事線重做第 8 個提交）。標題旁那一截（排線失敗的 ❗ 與「從大綱排出 / 補充」）掛在 .group-head 裡、
+ * 摺疊開關之外，點它不會把組折起來；與「設定」組的篩選框同一個位置。
  */
 .threads-head {
   display: flex;
@@ -265,7 +265,7 @@ button.project-tab.active {
   margin-right: 4px;
 }
 
-/* 一条线一行的 ⚠（断了几章、伏笔逾期、过了计划收束章）：不截断、警告色——作者扫一眼要看的就是这几句。 */
+/* 一條線一行的 ⚠（斷了幾章、伏筆逾期、過了計劃收束章）：不截斷、警告色——作者掃一眼要看的就是這幾句。 */
 .thread-warn {
   flex: 0 0 auto;
   white-space: nowrap;
@@ -278,8 +278,8 @@ button.project-tab.active {
 }
 
 /*
- * 「时间线」组（故事时间，2026-10-24 重做）。章行的点按状态着色：推不出黄、认不出红、没推与推测淡、你定的与正文写明的用强调色——扫一眼
- * 看得出哪几章靠不住。（历法与起点那一行同日去掉了：挪到组标题的悬停里，改走右键。）
+ * 「時間線」組（故事時間，2026-10-24 重做）。章行的點按狀態著色：推不出黃、認不出紅、沒推與推測淡、你定的與正文寫明的用強調色——掃一眼
+ * 看得出哪幾章靠不住。（曆法與起點那一行同日去掉了：挪到組標題的懸停裡，改走右鍵。）
  */
 .timeline-issue {
   padding: 1px 10px 1px 30px;
@@ -293,7 +293,7 @@ button.project-tab.active {
   background: var(--vscode-list-hoverBackground);
 }
 
-/* 状态点的字形宽窄不一（★ ◆ · ?），定一个宽度，章名才对得齐。 */
+/* 狀態點的字形寬窄不一（★ ◆ · ?），定一個寬度，章名才對得齊。 */
 .row-time-chapter .dot {
   display: inline-block;
   width: 1em;
@@ -331,7 +331,7 @@ button.project-tab.active {
   color: var(--vscode-textLink-foreground, #3794ff);
 }
 
-/* 收束了、放弃了的线压暗：还在，但不用再管。 */
+/* 收束了、放棄了的線壓暗：還在，但不用再管。 */
 .row-thread-closed .row-label {
   color: var(--vscode-descriptionForeground);
 }
@@ -341,10 +341,10 @@ button.project-tab.active {
 }
 
 /*
- * 章节行上的流水线徽章：这一章现在该做哪一步。
+ * 章節行上的流水線徽章：這一章現在該做哪一步。
  *
- * 做得很小很淡——它是全书扫一眼时的定位标记，不该跟剧情名抢注意力。
- * 已完成的章不挂徽章（rows.ts），只有「待定稿」另给了颜色。
+ * 做得很小很淡——它是全書掃一眼時的定位標記，不該跟劇情名搶注意力。
+ * 已完成的章不掛徽章（rows.ts），只有「待定稿」另給了顏色。
  */
 .row-stage {
   flex: 0 0 auto;
@@ -357,15 +357,15 @@ button.project-tab.active {
 }
 
 /*
- * 待定稿：正文写够了，等作者点一下定稿（照正文更新细纲）。用醒目一点的颜色——
- * 它是流水线上最容易被忘掉的一步，而后面几百章都靠定稿过的细纲记住这一章。
+ * 待定稿：正文寫夠了，等作者點一下定稿（照正文更新細綱）。用醒目一點的顏色——
+ * 它是流水線上最容易被忘掉的一步，而後面幾百章都靠定稿過的細綱記住這一章。
  */
 .row-stage.stage-finalize {
   color: var(--vscode-charts-blue, #4daafc);
   border-color: currentColor;
 }
 
-/* 上游变过。暖色而非红色：这不是错误，是「回头看一眼」。 */
+/* 上游變過。暖色而非紅色：這不是錯誤，是「回頭看一眼」。 */
 .row-upstream {
   flex: 0 0 auto;
   color: var(--vscode-editorWarning-foreground, #cca700);
@@ -373,8 +373,8 @@ button.project-tab.active {
 }
 
 /*
- * 下一个该写的章。全书只有这一行有行内按钮（W2）：扫一眼就知道从哪接着写。
- * 行名加粗、按钮贴行尾；按钮只是「进入这一章」，花钱的那一下仍在对话页的主按钮。
+ * 下一個該寫的章。全書只有這一行有行內按鈕（W2）：掃一眼就知道從哪接著寫。
+ * 行名加粗、按鈕貼行尾；按鈕只是「進入這一章」，花錢的那一下仍在對話頁的主按鈕。
  */
 .row-next .row-label {
   font-weight: 600;
@@ -388,14 +388,14 @@ button.project-tab.active {
 }
 
 /*
- * 「故事架构」那六行。**复用章节行的全套样式**（同样的 .row-plot / .row-label），
- * 这里只把名字加粗一点——它们是后面一切的上游，扫一眼要先看见。
+ * 「故事架構」那六行。**複用章節行的全套樣式**（同樣的 .row-plot / .row-label），
+ * 這裡只把名字加粗一點——它們是後面一切的上游，掃一眼要先看見。
  */
 .row-architecture .row-label {
   font-weight: 600;
 }
 
-/* 定稿过的细纲里出现、还没建卡的人物：整行压暗，与真正的角色卡区分开。 */
+/* 定稿過的細綱裡出現、還沒建卡的人物：整行壓暗，與真正的角色卡區分開。 */
 .row-cast .row-label {
   color: var(--vscode-descriptionForeground);
 }
@@ -404,8 +404,8 @@ button.project-tab.active {
   color: var(--vscode-foreground);
 }
 
-/* 行内操作平时藏起来，免得每行都挂一串链接。
-   工程页的树行已经全部改走右键菜单，这里只剩「文风与摘要」那两行的链接。 */
+/* 行內操作平時藏起來，免得每行都掛一串連結。
+   工程頁的樹行已經全部改走右鍵選單，這裡只剩「文風與摘要」那兩行的連結。 */
 .row-actions {
   display: flex;
   gap: 5px;
@@ -423,8 +423,8 @@ button.project-tab.active {
 }
 
 /*
- * 空状态（W12）：一句说明 + 几颗小按钮。说明可以换行，按钮跟在后面，窄的时候整行折下去。
- * 「下一步：……」那一行加粗一点：它说的是全书现在该做的那一步，与对话页主按钮同一句话。
+ * 空狀態（W12）：一句說明 + 幾顆小按鈕。說明可以換行，按鈕跟在後面，窄的時候整行折下去。
+ * 「下一步：……」那一行加粗一點：它說的是全書現在該做的那一步，與對話頁主按鈕同一句話。
  */
 .row-hint-action {
   display: flex;
@@ -442,7 +442,7 @@ button.project-tab.active {
   color: var(--vscode-foreground);
 }
 
-/* 「多张卡抢同一个称呼」的提示行。出场统计有一处必然是错的，得看得见。 */
+/* 「多張卡搶同一個稱呼」的提示行。出場統計有一處必然是錯的，得看得見。 */
 .row-conflict {
   margin: 4px 10px 6px 16px;
   padding: 5px 8px;

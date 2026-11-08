@@ -1,27 +1,27 @@
 /**
- * 章节细纲的悬停浮窗。
+ * 章節細綱的懸停浮窗。
  *
- * 细纲此前只能右键「打开细纲」开一个编辑器标签页——想快速回忆「第 37 章讲了什么」
- * 代价太大。悬停浮窗把这件事变成不打断写作的一瞥。定稿过的细纲就是那一章写成的样子，
- * 没定稿的是计划，浮窗头上标出来。
+ * 細綱此前只能右鍵「開啟細綱」開一個編輯器標籤頁——想快速回憶「第 37 章講了什麼」
+ * 代價太大。懸停浮窗把這件事變成不打斷寫作的一瞥。定稿過的細綱就是那一章寫成的樣子，
+ * 沒定稿的是計劃，浮窗頭上標出來。
  *
- * 四条设计取舍：
- * - **细纲正文不进 `ProjectTree`**：那棵树每次文件变动都全量重推，两百章
- *   每章上千字等于每保存一次就推几百 KB。改成悬停时按路径单章去取。
- * - **前端缓存、收到新树即作废**：同一章反复扫过去只请求一次；正文或细纲一改
- *   （后端会重推树）缓存整体清掉，不会拿旧细纲糊弄人。
- * - **半秒延迟**：鼠标从工具栏划到某一行的路上会扫过好几行，立刻弹会闪。
- * - **浮窗可以进得去**：细纲有七个小节、可能上千字，一瞥看不完。鼠标移上去
- *   浮窗就一直留着（可滚动、可选中复制），移开才收。为此收起要延迟一点——
- *   从行挪到浮窗中间要跨过一道缝，那一两帧鼠标既不在行上也不在浮窗上，
- *   立刻收会让浮窗永远够不着。
+ * 四條設計取捨：
+ * - **細綱正文不進 `ProjectTree`**：那棵樹每次檔案變動都全量重推，兩百章
+ *   每章上千字等於每儲存一次就推幾百 KB。改成懸停時按路徑單章去取。
+ * - **前端快取、收到新樹即作廢**：同一章反覆掃過去只請求一次；正文或細綱一改
+ *   （後端會重推樹）快取整體清掉，不會拿舊細綱糊弄人。
+ * - **半秒延遲**：滑鼠從工具欄劃到某一行的路上會掃過好幾行，立刻彈會閃。
+ * - **浮窗可以進得去**：細綱有七個小節、可能上千字，一瞥看不完。滑鼠移上去
+ *   浮窗就一直留著（可滾動、可選中複製），移開才收。為此收起要延遲一點——
+ *   從行挪到浮窗中間要跨過一道縫，那一兩幀滑鼠既不在行上也不在浮窗上，
+ *   立刻收會讓浮窗永遠夠不著。
  *
- * 定位（挂 body、`position: fixed`、夹进视口）在 [../tip.ts](../tip.ts)，
- * 四只浮窗共用一份。
+ * 定位（掛 body、`position: fixed`、夾進視口）在 [../tip.ts](../tip.ts)，
+ * 四隻浮窗共用一份。
  *
- * **触屏**（手指没有悬停）：手指点一下之后补发的那串兼容鼠标事件不当悬停（`touch.ts`）；入口是长按章节行弹的菜单最前面
- * 那一项「细纲速览」（`menu.ts` 的 `onTouchPeek`），弹出来的浮窗是钉住的——按在浮窗外面才收（`tip.ts` 的
- * `closeOnOutsidePress`）。点章节名照旧是打开这一章，不改。
+ * **觸屏**（手指沒有懸停）：手指點一下之後補發的那串相容滑鼠事件不當懸停（`touch.ts`）；入口是長按章節行彈的選單最前面
+ * 那一項「細綱速覽」（`menu.ts` 的 `onTouchPeek`），彈出來的浮窗是釘住的——按在浮窗外面才收（`tip.ts` 的
+ * `closeOnOutsidePress`）。點章節名照舊是開啟這一章，不改。
  */
 import { el as mk, closestFrom } from '../../dom';
 import type { MenuContext, MenuItem } from '../../globals';
@@ -33,29 +33,29 @@ import { vscode } from '../store';
 import { closeOnOutsidePress, placeTip } from '../tip';
 
 const HOVER_DELAY_MS = 450;
-/** 收起的宽限期：够鼠标从行跨到浮窗，又不至于让它赖着不走。 */
+/** 收起的寬限期：夠滑鼠從行跨到浮窗，又不至於讓它賴著不走。 */
 const CLOSE_DELAY_MS = 200;
 
-/** 章节路径 -> PlotSummaryView。收到新的树时整体作废。 */
+/** 章節路徑 -> PlotSummaryView。收到新的樹時整體作廢。 */
 const summaryCache = new Map<string, PlotSummaryView>();
-/** 已经发出请求、还没等到回音的路径，避免同一章连发好几次。 */
+/** 已經發出請求、還沒等到迴音的路徑，避免同一章連發好幾次。 */
 const summaryPending = new Set<string>();
 
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
-/** 收起的宽限计时。与 hoverTimer 是两件事，别合并。 */
+/** 收起的寬限計時。與 hoverTimer 是兩件事，別合併。 */
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
-/** 当前浮窗。`unpin` 有值说明是钉住的（触屏的入口），收起时撤掉「按在外面就收」的监听。 */
+/** 當前浮窗。`unpin` 有值說明是釘住的（觸屏的入口），收起時撤掉「按在外面就收」的監聽。 */
 let hoverTip: { relPath: string; box: HTMLElement; unpin?: () => void } | null = null;
-/** 正在等延迟的那一行（延迟到点时用它定位）。 */
+/** 正在等延遲的那一行（延遲到點時用它定位）。 */
 let hoverRow: HTMLElement | null = null;
 
-/** 收到 `project` 消息时调用：那说明磁盘变过，缓存一律作废。 */
+/** 收到 `project` 訊息時呼叫：那說明磁碟變過，快取一律作廢。 */
 export function invalidateSummaries(): void {
   summaryCache.clear();
   summaryPending.clear();
 }
 
-/** 立刻收起。滚动 / Esc / 右键 / 重渲染用这个，不给宽限。 */
+/** 立刻收起。滾動 / Esc / 右鍵 / 重渲染用這個，不給寬限。 */
 export function hideSummaryTip(): void {
   if (hoverTimer) {
     clearTimeout(hoverTimer);
@@ -70,7 +70,7 @@ export function hideSummaryTip(): void {
   }
 }
 
-/** 鼠标离开行或浮窗：给一点宽限再收，好让鼠标能挪到浮窗上去。 */
+/** 滑鼠離開行或浮窗：給一點寬限再收，好讓滑鼠能挪到浮窗上去。 */
 function scheduleHide(): void {
   if (closeTimer) {
     clearTimeout(closeTimer);
@@ -81,7 +81,7 @@ function scheduleHide(): void {
   }, CLOSE_DELAY_MS);
 }
 
-/** 鼠标回到行上或进了浮窗：撤销待执行的收起。 */
+/** 滑鼠回到行上或進了浮窗：撤銷待執行的收起。 */
 function cancelScheduledHide(): void {
   if (closeTimer) {
     clearTimeout(closeTimer);
@@ -89,15 +89,15 @@ function cancelScheduledHide(): void {
   }
 }
 
-/** 悬停在某一行上：延迟后弹浮窗，数据没有就先要一份。 */
+/** 懸停在某一行上：延遲後彈浮窗，資料沒有就先要一份。 */
 function scheduleSummaryTip(row: HTMLElement): void {
   const relPath = row.dataset.plot;
   if (!relPath) {
     return;
   }
-  // mouseover 在行内子元素之间移动时也会冒泡上来。已经为这一行开着浮窗、
-  // 或已经在为它计时了，就什么都别做——否则光标在行上微动一下就重置延迟，
-  // 浮窗永远弹不出来。
+  // mouseover 在行內子元素之間移動時也會冒泡上來。已經為這一行開著浮窗、
+  // 或已經在為它計時了，就什麼都別做——否則游標在行上微動一下就重置延遲，
+  // 浮窗永遠彈不出來。
   if (hoverTip?.relPath === relPath || hoverRow === row) {
     return;
   }
@@ -105,7 +105,7 @@ function scheduleSummaryTip(row: HTMLElement): void {
   hoverRow = row;
   hoverTimer = setTimeout(() => {
     hoverTimer = null;
-    // 延迟期间行可能被重渲染丢弃，那就不弹了。
+    // 延遲期間行可能被重渲染丟棄，那就不彈了。
     if (!hoverRow?.isConnected) {
       return;
     }
@@ -122,8 +122,8 @@ function requestIfMissing(relPath: string): void {
 }
 
 /**
- * 触屏的入口：长按章节行，菜单最前面一项「细纲速览」。点了把这一章的细纲钉在行旁边，按在浮窗外面才收。
- * 按在别的地方（故事架构那几行也带 `.row-plot`，但没有 `data-plot`）不给。
+ * 觸屏的入口：長按章節行，選單最前面一項「細綱速覽」。點了把這一章的細綱釘在行旁邊，按在浮窗外面才收。
+ * 按在別的地方（故事架構那幾行也帶 `.row-plot`，但沒有 `data-plot`）不給。
  */
 function peekItems(at: MenuContext): MenuItem[] {
   const row = at.target?.closest<HTMLElement>('.row-plot[data-plot]');
@@ -131,10 +131,10 @@ function peekItems(at: MenuContext): MenuItem[] {
   if (!row || !relPath || !el.projectBody.contains(row)) {
     return [];
   }
-  return [{ label: '细纲速览', run: () => pinSummaryTip(row, relPath) }];
+  return [{ label: '細綱速覽', run: () => pinSummaryTip(row, relPath) }];
 }
 
-/** 钉住一只细纲浮窗（触屏）。 */
+/** 釘住一隻細綱浮窗（觸屏）。 */
 export function pinSummaryTip(row: HTMLElement, relPath: string): void {
   hideSummaryTip();
   if (!row.isConnected) {
@@ -147,15 +147,15 @@ export function pinSummaryTip(row: HTMLElement, relPath: string): void {
   requestIfMissing(relPath);
 }
 
-/** 建出浮窗并贴在行的下方/上方。数据还没到就先显示「读取中」。 */
+/** 建出浮窗並貼在行的下方/上方。資料還沒到就先顯示「讀取中」。 */
 function showSummaryTip(row: HTMLElement, relPath: string): void {
   const box = mk('div', 'summary-tip');
   box.appendChild(buildBody(summaryCache.get(relPath)));
-  // 鼠标进了浮窗就别收——用户正在读，或者要滚动、选中复制。
-  // 监听挂在 box 上，box 每次都是新建的，收起时随元素一起回收。
+  // 滑鼠進了浮窗就別收——使用者正在讀，或者要滾動、選中複製。
+  // 監聽掛在 box 上，box 每次都是新建的，收起時隨元素一起回收。
   box.addEventListener('mouseenter', cancelScheduledHide);
   box.addEventListener('mouseleave', () => {
-    // 钉住的（触屏）不跟鼠标走：手指点进浮窗之后补发的兼容鼠标事件也会走到这儿。
+    // 釘住的（觸屏）不跟滑鼠走：手指點進浮窗之後補發的相容滑鼠事件也會走到這兒。
     if (!hoverTip?.unpin) {
       scheduleHide();
     }
@@ -165,50 +165,50 @@ function showSummaryTip(row: HTMLElement, relPath: string): void {
   placeTip(row, box);
 }
 
-/** 浮窗内容。`view` 为 undefined 表示还在等后端。 */
+/** 浮窗內容。`view` 為 undefined 表示還在等後端。 */
 function buildBody(view?: PlotSummaryView): DocumentFragment {
   const frag = document.createDocumentFragment();
 
   if (!view) {
-    frag.appendChild(mk('div', 'hint', '读取细纲…'));
+    frag.appendChild(mk('div', 'hint', '讀取細綱…'));
     return frag;
   }
 
   const head = mk('div', 'summary-tip-head');
-  // 说法由后端给（`chapterLabel`：「第 12 章《夜访》」），前端不按 `no` 自己拼——
-  // 标题取正文还是细纲那一侧、没有标题时怎么说，只在后端定一次。
+  // 說法由後端給（`chapterLabel`：「第 12 章《夜訪》」），前端不按 `no` 自己拼——
+  // 標題取正文還是細綱那一側、沒有標題時怎麼說，只在後端定一次。
   head.appendChild(mk('span', 'summary-tip-title', view.label));
-  // 计划与过期都必须说出来：照着一份写之前的计划、或写于三次修改之前的定稿做判断，比没有更糟。
+  // 計劃與過期都必須說出來：照著一份寫之前的計劃、或寫於三次修改之前的定稿做判斷，比沒有更糟。
   if (view.exists && !view.finalized) {
-    head.appendChild(mk('span', 'summary-tip-stale', '计划'));
+    head.appendChild(mk('span', 'summary-tip-stale', '計劃'));
   } else if (view.exists && view.stale) {
-    head.appendChild(mk('span', 'summary-tip-stale', '已过期'));
+    head.appendChild(mk('span', 'summary-tip-stale', '已過期'));
   }
   frag.appendChild(head);
 
   if (!view.exists) {
-    // 原因分两种，后端给的那句话已经分好了：有正文的章可以右键定稿照正文整理一份，
-    // 什么都没有的章就只说没有。
-    frag.appendChild(mk('div', 'hint', view.emptyHint ?? '还没有细纲。'));
+    // 原因分兩種，後端給的那句話已經分好了：有正文的章可以右鍵定稿照正文整理一份，
+    // 什麼都沒有的章就只說沒有。
+    frag.appendChild(mk('div', 'hint', view.emptyHint ?? '還沒有細綱。'));
     return frag;
   }
 
   for (const section of view.sections) {
     frag.appendChild(mk('div', 'summary-tip-section', section.name));
-    // textContent 而非 innerHTML：细纲是模型写的，里面可能有任何字符。
+    // textContent 而非 innerHTML：細綱是模型寫的，裡面可能有任何字元。
     frag.appendChild(mk('div', 'summary-tip-text', section.text));
   }
   if (view.sections.length === 0) {
-    frag.appendChild(mk('div', 'hint', '细纲文件是空的。'));
+    frag.appendChild(mk('div', 'hint', '細綱檔案是空的。'));
   }
   return frag;
 }
 
 /**
- * 细纲到了：填进缓存，正开着的浮窗就地换掉内容（不重建，免得闪）。
+ * 細綱到了：填進快取，正開著的浮窗就地換掉內容（不重建，免得閃）。
  *
- * 细纲文件的路径与行的路径常常不同（一个在 summaries/，一个在 chapters/），
- * 所以按**当前开着的那一章**回填——同一时刻只可能有一个浮窗。
+ * 細綱檔案的路徑與行的路徑常常不同（一個在 summaries/，一個在 chapters/），
+ * 所以按**當前開著的那一章**回填——同一時刻只可能有一個浮窗。
  */
 export function applySummary(view: PlotSummaryView): void {
   const relPath = hoverTip?.relPath;
@@ -219,39 +219,39 @@ export function applySummary(view: PlotSummaryView): void {
   summaryCache.set(relPath, view);
   hoverTip!.box.innerHTML = '';
   hoverTip!.box.appendChild(buildBody(view));
-  // 内容换了尺寸也变了，重新定位一次。
+  // 內容換了尺寸也變了，重新定位一次。
   const row = el.projectBody.querySelector<HTMLElement>(`.row-plot[data-plot="${cssEscape(relPath)}"]`);
   if (row) {
     placeTip(row, hoverTip!.box);
   }
 }
 
-/** 属性选择器里的路径要转义（含 `/`、可能含引号）。 */
+/** 屬性選擇器裡的路徑要轉義（含 `/`、可能含引號）。 */
 function cssEscape(value: string): string {
   return value.replace(/["\\]/g, '\\$&');
 }
 
 export function installSummaryTip(): void {
-  // 事件委托挂在 projectBody 上：树每次重渲染都换掉全部行，
-  // 逐行 addEventListener 会随重渲染次数堆积。
+  // 事件委託掛在 projectBody 上：樹每次重渲染都換掉全部行，
+  // 逐行 addEventListener 會隨重渲染次數堆積。
   onTouchPeek(peekItems);
 
   el.projectBody.addEventListener('mouseover', (e) => {
-    // 手指点一下之后补发的兼容鼠标事件不是悬停（`touch.ts`）；钉住的浮窗也不跟鼠标走。
+    // 手指點一下之後補發的相容滑鼠事件不是懸停（`touch.ts`）；釘住的浮窗也不跟滑鼠走。
     if (lastPointerWasTouch() || hoverTip?.unpin) {
       return;
     }
-    // 只认带 data-plot 的章节行。「故事架构」那几行为了与章节行同一个版式也带
-    // `.row-plot`，但它们没有细纲可弹：认进来的话会撤销收起却不另开一只，
-    // 上一章的浮窗就一直挂着，指着一行鼠标早已不在的地方。
+    // 只認帶 data-plot 的章節行。「故事架構」那幾行為了與章節行同一個版式也帶
+    // `.row-plot`，但它們沒有細綱可彈：認進來的話會撤銷收起卻不另開一隻，
+    // 上一章的浮窗就一直掛著，指著一行滑鼠早已不在的地方。
     const row = closestFrom<HTMLElement>(e.target, '.row-plot[data-plot]');
     if (row) {
-      // 回到行上就撤销待执行的收起（从浮窗挪回行上时会走到这儿）。
+      // 回到行上就撤銷待執行的收起（從浮窗挪回行上時會走到這兒）。
       cancelScheduledHide();
       scheduleSummaryTip(row);
     } else if (hoverTip) {
-      // 挪到了别的行/空白处：给宽限而不是立刻收——鼠标要去浮窗的话，
-      // 半路会先扫过行下方的那道缝。
+      // 挪到了別的行/空白處：給寬限而不是立刻收——滑鼠要去浮窗的話，
+      // 半路會先掃過行下方的那道縫。
       scheduleHide();
     } else if (hoverTimer) {
       hideSummaryTip();
@@ -262,7 +262,7 @@ export function installSummaryTip(): void {
     if (lastPointerWasTouch() || hoverTip?.unpin) {
       return;
     }
-    // 往浮窗方向移出去也会触发这里，同样给宽限。
+    // 往浮窗方向移出去也會觸發這裡，同樣給寬限。
     if (hoverTip) {
       scheduleHide();
     } else {
@@ -270,13 +270,13 @@ export function installSummaryTip(): void {
     }
   });
 
-  // 右键菜单弹出来时浮窗该让路，两个都是 fixed 会叠在一起。
+  // 右鍵選單彈出來時浮窗該讓路，兩個都是 fixed 會疊在一起。
   el.projectBody.addEventListener('contextmenu', hideSummaryTip);
 
-  // 浮窗是 fixed 的，页面一滚就和目标行脱节（与右键菜单同一个理由）。
-  // 但**浮窗自己内部的滚动不算**——细纲有七个小节，滚动是要给用户用的，
-  // 一滚就把浮窗收掉等于这个滚动条形同虚设。捕获阶段才收得到内部容器
-  // （.project-body）的滚动。
+  // 浮窗是 fixed 的，頁面一滾就和目標行脫節（與右鍵選單同一個理由）。
+  // 但**浮窗自己內部的滾動不算**——細綱有七個小節，滾動是要給使用者用的，
+  // 一滾就把浮窗收掉等於這個捲軸形同虛設。捕獲階段才收得到內部容器
+  // （.project-body）的滾動。
   document.addEventListener(
     'scroll',
     (e) => {

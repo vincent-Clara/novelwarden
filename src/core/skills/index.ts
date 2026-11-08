@@ -1,6 +1,6 @@
 /**
- * 写作技能（Skill）：按创作阶段绑一份补充写作方法，生成时拼进提示词。
- * 详见 [README.md](README.md)；纯函数部分在 [model/writingSkill.ts](../model/writingSkill.ts)。
+ * 寫作技能（Skill）：按創作階段綁一份補充寫作方法，生成時拼進提示詞。
+ * 詳見 [README.md](README.md)；純函式部分在 [model/writingSkill.ts](../model/writingSkill.ts)。
  */
 export { BUILTIN_SKILL_DIRS } from './builtin/embedded';
 export {

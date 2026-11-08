@@ -1,57 +1,57 @@
 # 零期：事件流 provider Implementation Plan
 
-> **接手须知：** 这份计划面向新的 agent，假设你**没有读过**前面的对话。开工前必读：
-> 1. 根目录 [AGENTS.md](../../../AGENTS.md) —— 23 条产品承诺，一条都不能破
-> 2. 本期的设计依据 [docs/design/specs/2026-08-15-agent-architecture-design.md](../specs/2026-08-15-agent-architecture-design.md) 的 **L0 一节**
+> **接手須知：** 這份計劃面向新的 agent，假設你**沒有讀過**前面的對話。開工前必讀：
+> 1. 根目錄 [AGENTS.md](../../../AGENTS.md) —— 23 條產品承諾，一條都不能破
+> 2. 本期的設計依據 [docs/design/specs/2026-08-15-agent-architecture-design.md](../specs/2026-08-15-agent-architecture-design.md) 的 **L0 一節**
 > 3. [src/core/llm/README.md](../../../src/core/llm/README.md)
 >
-> 每个 Task 按 `- [ ]` 逐步执行，做完立刻 commit。
+> 每個 Task 按 `- [ ]` 逐步執行，做完立刻 commit。
 
-**Goal:** 把 `LlmProvider` 的唯一原语从「吐字符串的流」换成「吐事件的流」，让它能收发工具调用。三个 provider 全部改完，13 个既有调用点行为逐字节不变。
+**Goal:** 把 `LlmProvider` 的唯一原語從「吐字串的流」換成「吐事件的流」，讓它能收發工具呼叫。三個 provider 全部改完，13 個既有呼叫點行為逐位元組不變。
 
-**Architecture:** 先定类型与 `collectText`（纯新增，不动任何实现），再逐个 provider 改造并让老接口消失，最后一次性把 13 个调用点迁过去。**不留 `chatStream` 的兼容层**——同时存在两条路是这类改造最容易腐烂的地方。
+**Architecture:** 先定型別與 `collectText`（純新增，不動任何實現），再逐個 provider 改造並讓老介面消失，最後一次性把 13 個呼叫點遷過去。**不留 `chatStream` 的相容層**——同時存在兩條路是這類改造最容易腐爛的地方。
 
-**Tech Stack:** TypeScript（`src/core/llm/`，零 vscode 依赖；vscode-lm 那份在 `src/shells/vscode/`）+ `node:test` + `npm run typecheck`。不新增依赖。
+**Tech Stack:** TypeScript（`src/core/llm/`，零 vscode 依賴；vscode-lm 那份在 `src/shells/vscode/`）+ `node:test` + `npm run typecheck`。不新增依賴。
 
 ## Global Constraints
 
-- **行为不变**：13 个既有调用点产出的文本、reasoning 分流、usage 合并口径，一个字节都不能变。本期唯一的验收标准就是 `npm test` 全绿。
-- `src/core/` 零 `vscode` import（`tests/contract/corePurity.test.js` 守着）。
-- **日志不记 prompt 全文、不记正文全文、不出现 API Key**（AGENTS.md 第 11 条）。新加的工具调用日志只记工具名与参数的键名，**不记参数值**——参数值里可能有正文片段。
-- `args` 解析失败**绝不抛**：发一个 `args: {}` 的 `toolCall`，由上层报错。抛异常会炸掉整轮对话。
-- 每个 Task 结束立刻 commit；前缀 `refactor` / `feat` / `test`；中文正文。
-- 不要同时留下 `chatStream` 与 `stream`。
+- **行為不變**：13 個既有呼叫點產出的文字、reasoning 分流、usage 合併口徑，一個位元組都不能變。本期唯一的驗收標準就是 `npm test` 全綠。
+- `src/core/` 零 `vscode` import（`tests/contract/corePurity.test.js` 守著）。
+- **日誌不記 prompt 全文、不記正文全文、不出現 API Key**（AGENTS.md 第 11 條）。新加的工具呼叫日誌只記工具名與引數的鍵名，**不記引數值**——引數值裡可能有正文片段。
+- `args` 解析失敗**絕不拋**：發一個 `args: {}` 的 `toolCall`，由上層報錯。拋異常會炸掉整輪對話。
+- 每個 Task 結束立刻 commit；字首 `refactor` / `feat` / `test`；中文正文。
+- 不要同時留下 `chatStream` 與 `stream`。
 
 ---
 
-## 目标态文件结构
+## 目標態檔案結構
 
 ```
 src/core/llm/
 ├── provider.ts        ★ 大改：StreamEvent / AgentMessage / ToolSpec / LlmProvider.stream
 ├── collect.ts         ★ 新增：collectText（原 collectStream 的位置）
-├── openaiProvider.ts  ★ 改：SSE → StreamEvent，含 tool_calls 按 index 累积
+├── openaiProvider.ts  ★ 改：SSE → StreamEvent，含 tool_calls 按 index 累積
 ├── anthropicProvider.ts ★ 改：同上，含 tool_use content block
-├── registry.ts        不动
-└── pool.ts            不动（它只转发 provider，不碰消息形状）
+├── registry.ts        不動
+└── pool.ts            不動（它只轉發 provider，不碰訊息形狀）
 
 src/shells/vscode/
 └── vscodeLmProvider.ts ★ 改：LanguageModelToolCallPart
 ```
 
-## 提交节奏（5 个 commit）
+## 提交節奏（5 個 commit）
 
-| # | 前缀 | 主题 |
+| # | 字首 | 主題 |
 |---|---|---|
-| 1 | `refactor` | 定义 StreamEvent / AgentMessage / ToolSpec 与 collectText |
-| 2 | `refactor` | OpenAI provider 改事件流，支持 tool_calls |
-| 3 | `refactor` | Anthropic provider 改事件流，支持 tool_use |
+| 1 | `refactor` | 定義 StreamEvent / AgentMessage / ToolSpec 與 collectText |
+| 2 | `refactor` | OpenAI provider 改事件流，支援 tool_calls |
+| 3 | `refactor` | Anthropic provider 改事件流，支援 tool_use |
 | 4 | `refactor` | vscode-lm provider 改事件流 |
-| 5 | `refactor` | 13 个调用点迁到 collectText，删掉 chatStream |
+| 5 | `refactor` | 13 個呼叫點遷到 collectText，刪掉 chatStream |
 
 ---
 
-### Task 1: 定义事件流类型与 `collectText`
+### Task 1: 定義事件流型別與 `collectText`
 
 **Files:**
 - Modify: `src/core/llm/provider.ts`
@@ -60,15 +60,15 @@ src/shells/vscode/
 
 **Interfaces:**
 
-`provider.ts` 新增（`ChatMessage` / `chatStream` / `collectStream` **本 Task 先留着**，Task 5 才删）：
+`provider.ts` 新增（`ChatMessage` / `chatStream` / `collectStream` **本 Task 先留著**，Task 5 才刪）：
 
 ```ts
-/** 一次工具调用。args 已解析成对象；解析失败时是空对象。 */
+/** 一次工具呼叫。args 已解析成物件；解析失敗時是空物件。 */
 export interface ToolCall {
   id: string;
   name: string;
   args: Record<string, unknown>;
-  /** 参数原文。解析失败时上层要把它回显给模型看。 */
+  /** 引數原文。解析失敗時上層要把它回顯給模型看。 */
   raw: string;
 }
 
@@ -81,7 +81,7 @@ export type StreamEvent =
 export interface ToolSpec {
   name: string;
   description: string;
-  /** JSON Schema object，原样透传给各家 API。 */
+  /** JSON Schema object，原樣透傳給各家 API。 */
   parameters: Record<string, unknown>;
 }
 
@@ -127,22 +127,22 @@ export interface CollectResult {
   usage: TokenUsage;
 }
 
-/** 收全流，按字段合并 usage。既有调用点用它替代 collectStream。 */
+/** 收全流，按欄位合併 usage。既有呼叫點用它替代 collectStream。 */
 export async function collect(
   stream: AsyncIterable<StreamEvent>,
   handlers?: CollectHandlers
 ): Promise<CollectResult>;
 
-/** 只要文本那一份。13 个既有调用点用这个。 */
+/** 只要文字那一份。13 個既有呼叫點用這個。 */
 export async function collectText(
   stream: AsyncIterable<StreamEvent>,
   handlers?: CollectHandlers
 ): Promise<string>;
 ```
 
-**usage 合并口径必须与现状一致**：同一次请求可能回调多次（Anthropic 在 `message_start` 给输入、`message_delta` 给输出），**按字段合并，后到的覆盖同名字段，缺席的字段保留**。照抄 `features/creation.ts:145-152` 与 `features/summarize.ts` 里那段。
+**usage 合併口徑必須與現狀一致**：同一次請求可能回呼多次（Anthropic 在 `message_start` 給輸入、`message_delta` 給輸出），**按欄位合併，後到的覆蓋同名欄位，缺席的欄位保留**。照抄 `features/creation.ts:145-152` 與 `features/summarize.ts` 裡那段。
 
-- [ ] **Step 1: 写失败测试** `tests/unit/llm/collect.test.js`
+- [ ] **Step 1: 寫失敗測試** `tests/unit/llm/collect.test.js`
 
 ```js
 const { describe, test, before } = require('node:test');
@@ -164,7 +164,7 @@ describe('llm/collect', () => {
     assert.equal(text, '雨下了三天。');
   });
 
-  test('reasoning 不混进正文，单独回调', async () => {
+  test('reasoning 不混進正文，單獨回呼', async () => {
     const seen = [];
     await c.collectText(streamOf([
       { type: 'reasoning', text: 'a' },
@@ -174,7 +174,7 @@ describe('llm/collect', () => {
     assert.deepEqual(seen, [['a', 'a'], ['b', 'ab']]);
   });
 
-  test('usage 按字段合并，缺席字段保留', async () => {
+  test('usage 按欄位合併，缺席欄位保留', async () => {
     const r = await c.collect(streamOf([
       { type: 'usage', usage: { inputTokens: 100 } },
       { type: 'text', text: 'x' },
@@ -183,7 +183,7 @@ describe('llm/collect', () => {
     assert.deepEqual(r.usage, { inputTokens: 100, outputTokens: 20 });
   });
 
-  test('toolCall 收进数组并回调', async () => {
+  test('toolCall 收進陣列並回呼', async () => {
     const call = { id: 'c1', name: 'read', args: { path: 'a.md' }, raw: '{"path":"a.md"}' };
     const seen = [];
     const r = await c.collect(streamOf([{ type: 'toolCall', call }]), {
@@ -193,7 +193,7 @@ describe('llm/collect', () => {
     assert.deepEqual(seen, ['read']);
   });
 
-  test('onDelta 收到增量与全量', async () => {
+  test('onDelta 收到增量與全量', async () => {
     const seen = [];
     await c.collectText(streamOf([
       { type: 'text', text: 'a' }, { type: 'text', text: 'b' },
@@ -203,19 +203,19 @@ describe('llm/collect', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: 跑測試確認失敗**
 
 ```bash
 node --test "tests/unit/llm/collect.test.js"
 ```
 
-Expected: FAIL（模块不存在）
+Expected: FAIL（模組不存在）
 
-- [ ] **Step 3: 实现**
+- [ ] **Step 3: 實現**
 
-`provider.ts` 加上面那批类型（`LlmProvider` **暂时同时声明 `chatStream` 与可选的 `stream?`**，让三个 provider 能分 Task 迁移）。`collect.ts` 实现两个函数。
+`provider.ts` 加上面那批型別（`LlmProvider` **暫時同時宣告 `chatStream` 與可選的 `stream?`**，讓三個 provider 能分 Task 遷移）。`collect.ts` 實現兩個函式。
 
-- [ ] **Step 4: 跑测试**
+- [ ] **Step 4: 跑測試**
 
 ```bash
 node --test "tests/unit/llm/collect.test.js"
@@ -228,9 +228,9 @@ Expected: PASS
 
 ```bash
 git add src/core/llm/provider.ts src/core/llm/collect.ts tests/unit/llm/collect.test.js
-git commit -m "refactor(llm): 定义事件流类型与 collect
+git commit -m "refactor(llm): 定義事件流型別與 collect
 
-StreamEvent / AgentMessage / ToolSpec 就位，collectText 保持「传一个流拿一段文本」的形状。provider 实现下一步改。"
+StreamEvent / AgentMessage / ToolSpec 就位，collectText 保持「傳一個流拿一段文字」的形狀。provider 實現下一步改。"
 ```
 
 ---
@@ -241,17 +241,17 @@ StreamEvent / AgentMessage / ToolSpec 就位，collectText 保持「传一个流
 - Modify: `src/core/llm/openaiProvider.ts`
 - Create: `tests/unit/llm/openaiToolCalls.test.js`
 
-**关键实现点（照抄这几条，不要自己发挥）：**
+**關鍵實現點（照抄這幾條，不要自己發揮）：**
 
-1. **消息转换**。`AgentMessage[]` → OpenAI 的 `messages[]`：
-   - `system` / `user` 原样
-   - `assistant` 带 `toolCalls` 时输出 `tool_calls: [{id, type:'function', function:{name, arguments: raw}}]`；`content` 为空串时给 `null`
+1. **訊息轉換**。`AgentMessage[]` → OpenAI 的 `messages[]`：
+   - `system` / `user` 原樣
+   - `assistant` 帶 `toolCalls` 時輸出 `tool_calls: [{id, type:'function', function:{name, arguments: raw}}]`；`content` 為空串時給 `null`
    - `tool` → `{role:'tool', tool_call_id, content}`
-2. **tools 透传**：`tools: specs.map(s => ({type:'function', function:{name, description, parameters}}))`，`tool_choice` 直接给 `'auto'|'none'|'required'`。**没有 tools 时这两个字段一律不带**——有些兼容实现见到未知字段会直接 400（既有代码在 `stream_options` 上已经踩过这个坑，注释就在那儿）。
-3. **`tool_calls` 分片按 `index` 累积，不是按 `id`**：
+2. **tools 透傳**：`tools: specs.map(s => ({type:'function', function:{name, description, parameters}}))`，`tool_choice` 直接給 `'auto'|'none'|'required'`。**沒有 tools 時這兩個欄位一律不帶**——有些相容實現見到未知欄位會直接 400（既有程式碼在 `stream_options` 上已經踩過這個坑，註釋就在那兒）。
+3. **`tool_calls` 分片按 `index` 累積，不是按 `id`**：
 
 ```ts
-// 每个 index 一个累积槽。id 只在第一片给，name 通常也只给一次。
+// 每個 index 一個累積槽。id 只在第一片給，name 通常也只給一次。
 const slots = new Map<number, { id: string; name: string; args: string }>();
 // delta.tool_calls?.forEach(tc => {
 //   const slot = slots.get(tc.index) ?? { id: '', name: '', args: '' };
@@ -262,32 +262,32 @@ const slots = new Map<number, { id: string; name: string; args: string }>();
 // });
 ```
 
-4. **流结束时**（`finish_reason === 'tool_calls'` 或流自然结束）把每个槽 yield 成一个 `toolCall` 事件。`JSON.parse(args)` 失败时 **`args: {}`，`raw` 保留原文，不抛**。
-5. `reasoning_content` / `reasoning` → `{type:'reasoning'}`；`delta.content` → `{type:'text'}`；`usage` → `{type:'usage'}`。三条与现状逐字节一致。
-6. `stream_options: { include_usage: true }` 的条件从「调用方给了 onUsage」改成**恒开**——事件流里 usage 是一等公民，没有「调用方想不想听」这回事。
+4. **流結束時**（`finish_reason === 'tool_calls'` 或流自然結束）把每個槽 yield 成一個 `toolCall` 事件。`JSON.parse(args)` 失敗時 **`args: {}`，`raw` 保留原文，不拋**。
+5. `reasoning_content` / `reasoning` → `{type:'reasoning'}`；`delta.content` → `{type:'text'}`；`usage` → `{type:'usage'}`。三條與現狀逐位元組一致。
+6. `stream_options: { include_usage: true }` 的條件從「呼叫方給了 onUsage」改成**恆開**——事件流裡 usage 是一等公民，沒有「呼叫方想不想聽」這回事。
 
-- [ ] **Step 1: 写失败测试** `tests/unit/llm/openaiToolCalls.test.js`
+- [ ] **Step 1: 寫失敗測試** `tests/unit/llm/openaiToolCalls.test.js`
 
-测的是**纯函数**，不发网络请求。因此实现时要把两段逻辑抽成可导出的纯函数：
+測的是**純函式**，不髮網路請求。因此實現時要把兩段邏輯抽成可匯出的純函式：
 
 ```ts
 export function toOpenAiMessages(messages: AgentMessage[]): unknown[];
 export function accumulateToolCalls(chunks: OpenAiToolCallDelta[][]): ToolCall[];
 ```
 
-用例至少覆盖：
+用例至少覆蓋：
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| 单个工具调用分三片到达（id 只在第一片） | 拼出完整 `{id, name, args}` |
-| 两个并行工具调用（index 0 与 1 交错） | 各自拼对，不串味 |
-| `arguments` 是坏 JSON | `args` 为 `{}`，`raw` 保留原文，不抛 |
-| `assistant` 带 toolCalls 转换 | `content: null`，`tool_calls` 形状正确 |
-| `tool` 消息转换 | `{role:'tool', tool_call_id, content}` |
+| 單個工具呼叫分三片到達（id 只在第一片） | 拼出完整 `{id, name, args}` |
+| 兩個並行工具呼叫（index 0 與 1 交錯） | 各自拼對，不串味 |
+| `arguments` 是壞 JSON | `args` 為 `{}`，`raw` 保留原文，不拋 |
+| `assistant` 帶 toolCalls 轉換 | `content: null`，`tool_calls` 形狀正確 |
+| `tool` 訊息轉換 | `{role:'tool', tool_call_id, content}` |
 
-- [ ] **Step 2: 跑测试确认失败**
-- [ ] **Step 3: 实现** —— `chatStream` 改名为 `stream`，签名换成 `(AgentMessage[], StreamOptions) => AsyncIterable<StreamEvent>`
-- [ ] **Step 4: 跑测试**
+- [ ] **Step 2: 跑測試確認失敗**
+- [ ] **Step 3: 實現** —— `chatStream` 改名為 `stream`，簽名換成 `(AgentMessage[], StreamOptions) => AsyncIterable<StreamEvent>`
+- [ ] **Step 4: 跑測試**
 
 ```bash
 node --test "tests/unit/llm/*.test.js"
@@ -295,15 +295,15 @@ npm run typecheck
 node --test "tests/integration/llm/streaming.test.js"
 ```
 
-`streaming.test.js` 这一轮会红（它还在调 `chatStream`），**这是预期的**——Task 5 一起修。在 commit message 里写明。
+`streaming.test.js` 這一輪會紅（它還在調 `chatStream`），**這是預期的**——Task 5 一起修。在 commit message 裡寫明。
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git commit -m "refactor(llm): OpenAI provider 改事件流，支持 tool_calls
+git commit -m "refactor(llm): OpenAI provider 改事件流，支援 tool_calls
 
-分片按 index 累积不是按 id——id 只在第一片给。坏 JSON 不抛，发一个 args 为空的 toolCall 让上层去报。
-integration/llm/streaming.test.js 暂红，等调用点一起迁。"
+分片按 index 累積不是按 id——id 只在第一片給。壞 JSON 不拋，發一個 args 為空的 toolCall 讓上層去報。
+integration/llm/streaming.test.js 暫紅，等呼叫點一起遷。"
 ```
 
 ---
@@ -314,58 +314,58 @@ integration/llm/streaming.test.js 暂红，等调用点一起迁。"
 - Modify: `src/core/llm/anthropicProvider.ts`
 - Create: `tests/unit/llm/anthropicToolUse.test.js`
 
-**关键实现点：**
+**關鍵實現點：**
 
-1. **`tool_result` 不是独立 role**。Anthropic 把它放在 `user` 消息的 content block 里：
+1. **`tool_result` 不是獨立 role**。Anthropic 把它放在 `user` 訊息的 content block 裡：
 
 ```json
 {"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_x","content":"…"}]}
 ```
 
-所以 `AgentMessage[]` → Anthropic messages 的转换比 OpenAI 复杂：连续的 `tool` 消息要合并进**一条** `user` 消息的 content 数组。
+所以 `AgentMessage[]` → Anthropic messages 的轉換比 OpenAI 複雜：連續的 `tool` 訊息要合併進**一條** `user` 訊息的 content 陣列。
 
-2. **`assistant` 带 toolCalls** 输出成 content block 数组：
+2. **`assistant` 帶 toolCalls** 輸出成 content block 陣列：
 
 ```json
 {"role":"assistant","content":[{"type":"text","text":"…"},{"type":"tool_use","id":"…","name":"…","input":{…}}]}
 ```
 
-`text` 为空时不要放空的 text block（会 400）。
+`text` 為空時不要放空的 text block（會 400）。
 
-3. **工具调用分三个事件到达**：
-   - `content_block_start` → `content_block.type === 'tool_use'`，带 `id` / `name`，`input` 是 `{}`
-   - `content_block_delta` → `delta.type === 'input_json_delta'`，`partial_json` 是**逐字符拼的 JSON 串**
-   - `content_block_stop` → 这一块完了，此时才 `JSON.parse` 并 yield `toolCall`
+3. **工具呼叫分三個事件到達**：
+   - `content_block_start` → `content_block.type === 'tool_use'`，帶 `id` / `name`，`input` 是 `{}`
+   - `content_block_delta` → `delta.type === 'input_json_delta'`，`partial_json` 是**逐字元拼的 JSON 串**
+   - `content_block_stop` → 這一塊完了，此時才 `JSON.parse` 並 yield `toolCall`
 
-   按 `event.index` 累积（与 OpenAI 一样，多个并行调用各占一个 index）。
+   按 `event.index` 累積（與 OpenAI 一樣，多個並行呼叫各佔一個 index）。
 
-4. `mergeConsecutive` 那条「首条必须是 user、相邻同角色合并」的既有逻辑**要保留**，但现在 content 可能是数组，合并规则改成：相邻同角色时把 content 数组接起来（字符串先包成 `[{type:'text',text}]`）。
-5. `tools` 透传：`tools: specs.map(s => ({name, description, input_schema: parameters}))`。**字段名是 `input_schema` 不是 `parameters`。** `tool_choice`: `auto` → `{type:'auto'}`，`required` → `{type:'any'}`，`none` → 不带 tools。
-6. `text_delta` → `text`；`thinking_delta` → `reasoning`；两处 usage → `usage`。与现状逐字节一致。
+4. `mergeConsecutive` 那條「首條必須是 user、相鄰同角色合併」的既有邏輯**要保留**，但現在 content 可能是陣列，合併規則改成：相鄰同角色時把 content 陣列接起來（字串先包成 `[{type:'text',text}]`）。
+5. `tools` 透傳：`tools: specs.map(s => ({name, description, input_schema: parameters}))`。**欄位名是 `input_schema` 不是 `parameters`。** `tool_choice`: `auto` → `{type:'auto'}`，`required` → `{type:'any'}`，`none` → 不帶 tools。
+6. `text_delta` → `text`；`thinking_delta` → `reasoning`；兩處 usage → `usage`。與現狀逐位元組一致。
 
-- [ ] **Step 1: 写失败测试** `tests/unit/llm/anthropicToolUse.test.js`
+- [ ] **Step 1: 寫失敗測試** `tests/unit/llm/anthropicToolUse.test.js`
 
-同样抽纯函数来测：
+同樣抽純函式來測：
 
 ```ts
 export function toAnthropicMessages(messages: AgentMessage[]): unknown[];
 export function accumulateToolUse(events: AnthropicEvent[]): ToolCall[];
 ```
 
-用例至少覆盖：
+用例至少覆蓋：
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| `input_json_delta` 逐字符拼 | `content_block_stop` 后 yield 出完整 args |
-| 两个并行 tool_use（index 0 与 1） | 各自拼对 |
-| 坏 JSON | `args: {}`，`raw` 保留 |
-| 连续三条 `tool` 消息 | 合并成**一条** user，content 里三个 tool_result |
-| `assistant` 空 text + toolCalls | content 里没有空 text block |
-| 首条不是 user | 前面补一条 `（继续）` |
+| `input_json_delta` 逐字元拼 | `content_block_stop` 後 yield 出完整 args |
+| 兩個並行 tool_use（index 0 與 1） | 各自拼對 |
+| 壞 JSON | `args: {}`，`raw` 保留 |
+| 連續三條 `tool` 訊息 | 合併成**一條** user，content 裡三個 tool_result |
+| `assistant` 空 text + toolCalls | content 裡沒有空 text block |
+| 首條不是 user | 前面補一條 `（繼續）` |
 
-- [ ] **Step 2: 跑测试确认失败**
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 跑测试**
+- [ ] **Step 2: 跑測試確認失敗**
+- [ ] **Step 3: 實現**
+- [ ] **Step 4: 跑測試**
 - [ ] **Step 5: Commit**
 
 ---
@@ -375,61 +375,61 @@ export function accumulateToolUse(events: AnthropicEvent[]): ToolCall[];
 **Files:**
 - Modify: `src/shells/vscode/vscodeLmProvider.ts`
 
-**关键实现点：**
+**關鍵實現點：**
 
-1. `sendRequest(msgs, { tools, toolMode }, token)`。`vscode.LanguageModelChatTool` 的字段是 `{name, description, inputSchema}`。
-2. 响应流用 `response.stream`（不是 `response.text`），逐个判断 part 类型：
+1. `sendRequest(msgs, { tools, toolMode }, token)`。`vscode.LanguageModelChatTool` 的欄位是 `{name, description, inputSchema}`。
+2. 響應流用 `response.stream`（不是 `response.text`），逐個判斷 part 型別：
    - `vscode.LanguageModelTextPart` → `{type:'text'}`
-   - `vscode.LanguageModelToolCallPart` → `{type:'toolCall'}`，**`input` 已经是解析好的对象**，不用累积；`raw` 填 `JSON.stringify(part.input)`
-3. `tool` 消息 → `vscode.LanguageModelChatMessage.User([new vscode.LanguageModelToolResultPart(callId, [new vscode.LanguageModelTextPart(content)])])`
-4. `assistant` 带 toolCalls → `LanguageModelChatMessage.Assistant([...text, ...new LanguageModelToolCallPart(id, name, args)])`
-5. **系统提示并进首条 user 的既有逻辑保留**（`toLmMessages`）——那是这个 provider 的特点，不是缺陷。
-6. vscode-lm 不给 usage，不发 `usage` 事件（现状也没有）。
+   - `vscode.LanguageModelToolCallPart` → `{type:'toolCall'}`，**`input` 已經是解析好的物件**，不用累積；`raw` 填 `JSON.stringify(part.input)`
+3. `tool` 訊息 → `vscode.LanguageModelChatMessage.User([new vscode.LanguageModelToolResultPart(callId, [new vscode.LanguageModelTextPart(content)])])`
+4. `assistant` 帶 toolCalls → `LanguageModelChatMessage.Assistant([...text, ...new LanguageModelToolCallPart(id, name, args)])`
+5. **系統提示並進首條 user 的既有邏輯保留**（`toLmMessages`）——那是這個 provider 的特點，不是缺陷。
+6. vscode-lm 不給 usage，不發 `usage` 事件（現狀也沒有）。
 
-**注意**：这个文件在 `src/shells/vscode/` 下，可以 import `vscode`；但它 import 的类型来自 `core/llm/provider`，方向是对的。
+**注意**：這個檔案在 `src/shells/vscode/` 下，可以 import `vscode`；但它 import 的型別來自 `core/llm/provider`，方向是對的。
 
-- [ ] **Step 1: 实现**（这一份没有单元测试——它需要真实的 `vscode` 命名空间。靠 `npm run typecheck` 与手动 F5 验证）
-- [ ] **Step 2: 验证**
+- [ ] **Step 1: 實現**（這一份沒有單元測試——它需要真實的 `vscode` 名稱空間。靠 `npm run typecheck` 與手動 F5 驗證）
+- [ ] **Step 2: 驗證**
 
 ```bash
 npm run typecheck
 npm run compile
 ```
 
-然后 F5 起 Extension Development Host，用一个 Copilot 模型跑一次普通续写，确认文本照常流出来。
+然後 F5 起 Extension Development Host，用一個 Copilot 模型跑一次普通續寫，確認文字照常流出來。
 
 - [ ] **Step 3: Commit**
 
 ---
 
-### Task 5: 13 个调用点迁移，删掉 `chatStream`
+### Task 5: 13 個呼叫點遷移，刪掉 `chatStream`
 
 **Files:**
-- Modify: `src/core/llm/provider.ts`（删 `ChatMessage` / `chatStream` / `collectStream`；`ChatOptions` 的 `onReasoning` / `onUsage` 一并删掉）
-- Modify: `src/core/features/creation.ts`（2 处）
-- Modify: `src/core/features/summarize.ts`（3 处）
-- Modify: `src/core/features/pipelineBatch.ts`（3 处）
-- Modify: `src/core/features/characterCard.ts`（1 处）
-- Modify: `src/core/features/characters.ts`（1 处）
-- Modify: `src/core/features/lore.ts`（2 处）
-- Modify: `src/core/features/style.ts`（1 处）
+- Modify: `src/core/llm/provider.ts`（刪 `ChatMessage` / `chatStream` / `collectStream`；`ChatOptions` 的 `onReasoning` / `onUsage` 一併刪掉）
+- Modify: `src/core/features/creation.ts`（2 處）
+- Modify: `src/core/features/summarize.ts`（3 處）
+- Modify: `src/core/features/pipelineBatch.ts`（3 處）
+- Modify: `src/core/features/characterCard.ts`（1 處）
+- Modify: `src/core/features/characters.ts`（1 處）
+- Modify: `src/core/features/lore.ts`（2 處）
+- Modify: `src/core/features/style.ts`（1 處）
 - Modify: `tests/integration/llm/streaming.test.js`
 - Modify: `src/core/llm/README.md`
 
-**迁移模式**（三种形状，逐个对号入座）：
+**遷移模式**（三種形狀，逐個對號入座）：
 
 ```ts
-// ── 形状 A：collectStream + 无回调（summarize / lore / style / characters / characterCard）
+// ── 形狀 A：collectStream + 無回呼（summarize / lore / style / characters / characterCard）
 const raw = await collectStream(llm.chatStream(messages, options));
 // ↓
 const raw = await collectText(llm.stream(messages, options));
 
-// ── 形状 B：collectStream + onUsage 在 options 里（pipelineBatch）
+// ── 形狀 B：collectStream + onUsage 在 options 裡（pipelineBatch）
 const raw = await collectStream(llm.chatStream(messages, { …, onUsage: (u) => merge(u) }));
 // ↓
 const raw = await collectText(llm.stream(messages, { … }), { onUsage: (u) => merge(u) });
 
-// ── 形状 C：手写 for-await（creation.ts:164 与 :479）
+// ── 形狀 C：手寫 for-await（creation.ts:164 與 :479）
 for await (const delta of provider.chatStream(built.messages, options)) { full += delta; handlers.onDelta(delta, full); }
 // ↓
 for await (const ev of provider.stream(built.messages, options)) {
@@ -439,72 +439,72 @@ for await (const ev of provider.stream(built.messages, options)) {
 }
 ```
 
-`creation.ts` 的 `testConnection`（:479）是形状 C 的简化版：拿到任何 `text` 事件就 break。
+`creation.ts` 的 `testConnection`（:479）是形狀 C 的簡化版：拿到任何 `text` 事件就 break。
 
-**`ChatMessage` → `AgentMessage`**：13 处传的都是 `{role:'system'|'user'|'assistant', content}`，结构上已经是合法的 `AgentMessage`，**只需要改 import 的类型名**。`buildContext` 返回的 `BuiltContext.messages` 类型也跟着改（`context/types.ts` 与 `context/builder.ts` 各一处）。
+**`ChatMessage` → `AgentMessage`**：13 處傳的都是 `{role:'system'|'user'|'assistant', content}`，結構上已經是合法的 `AgentMessage`，**只需要改 import 的型別名**。`buildContext` 返回的 `BuiltContext.messages` 型別也跟著改（`context/types.ts` 與 `context/builder.ts` 各一處）。
 
-**usage 合并要抽成一个共享函数**：现在 `creation.ts` 与 `pipelineBatch.ts` 各写了一遍同样的 `if (u.inputTokens !== undefined) …`。搬进 `collect.ts` 导出 `mergeUsage(target, patch)`。
+**usage 合併要抽成一個共享函式**：現在 `creation.ts` 與 `pipelineBatch.ts` 各寫了一遍同樣的 `if (u.inputTokens !== undefined) …`。搬進 `collect.ts` 匯出 `mergeUsage(target, patch)`。
 
-- [ ] **Step 1: 改 `provider.ts`，删掉老接口**
+- [ ] **Step 1: 改 `provider.ts`，刪掉老介面**
 
-`LlmProvider` 上 `stream` 从可选改成必需，`chatStream` 删掉。此时全项目编译不过——这是预期的，下一步逐个修。
+`LlmProvider` 上 `stream` 從可選改成必需，`chatStream` 刪掉。此時全專案編譯不過——這是預期的，下一步逐個修。
 
-- [ ] **Step 2: 逐文件迁移**
+- [ ] **Step 2: 逐檔案遷移**
 
-顺序建议：`context/types.ts` → `context/builder.ts` → `features/creation.ts` → 其余六个 feature。每改完一个跑一次 `npm run typecheck` 看剩余错误在缩小。
+順序建議：`context/types.ts` → `context/builder.ts` → `features/creation.ts` → 其餘六個 feature。每改完一個跑一次 `npm run typecheck` 看剩餘錯誤在縮小。
 
-- [ ] **Step 3: 修集成测试**
+- [ ] **Step 3: 修整合測試**
 
-`tests/integration/llm/streaming.test.js` 现在调 `providerMod.collectStream(openai.chatStream(...))`。改成 `collectText(openai.stream(...))`，并**补两条新用例**：
+`tests/integration/llm/streaming.test.js` 現在調 `providerMod.collectStream(openai.chatStream(...))`。改成 `collectText(openai.stream(...))`，並**補兩條新用例**：
 
-| 用例 | 断言 |
+| 用例 | 斷言 |
 |---|---|
-| 假 SSE 里带 `tool_calls` 分片 | 收到一个 `toolCall` 事件，args 拼对 |
-| 假 SSE 里 `tool_calls` 的 arguments 是坏 JSON | `args` 为 `{}`，不抛 |
+| 假 SSE 裡帶 `tool_calls` 分片 | 收到一個 `toolCall` 事件，args 拼對 |
+| 假 SSE 裡 `tool_calls` 的 arguments 是壞 JSON | `args` 為 `{}`，不拋 |
 
-- [ ] **Step 4: 全量验证**
+- [ ] **Step 4: 全量驗證**
 
 ```bash
 npm run typecheck
 npm test
 ```
 
-Expected: 全绿。**这是本期唯一的验收标准**——13 个调用点的行为必须逐字节不变。
+Expected: 全綠。**這是本期唯一的驗收標準**——13 個呼叫點的行為必須逐位元組不變。
 
 - [ ] **Step 5: 更新 `src/core/llm/README.md`**
 
-至少写清三件事：`StreamEvent` 是唯一原语；三家的工具调用分片累积各有什么坑（OpenAI 按 index、Anthropic 按 content block、vscode-lm 不用累积）；坏 JSON 不抛的理由。
+至少寫清三件事：`StreamEvent` 是唯一原語；三家的工具呼叫分片累積各有什麼坑（OpenAI 按 index、Anthropic 按 content block、vscode-lm 不用累積）；壞 JSON 不拋的理由。
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git commit -m "refactor(llm): 13 个调用点迁到 collectText，删掉 chatStream
+git commit -m "refactor(llm): 13 個呼叫點遷到 collectText，刪掉 chatStream
 
-不留兼容层：同时存在两条路是这类改造最容易腐烂的地方。行为逐字节不变，npm test 全绿是本期唯一的验收标准。"
+不留相容層：同時存在兩條路是這類改造最容易腐爛的地方。行為逐位元組不變，npm test 全綠是本期唯一的驗收標準。"
 ```
 
 ---
 
 ## 本期不做
 
-- **不接 agent**。这一期结束时项目里没有任何一处**用**工具调用，只是**能**用。
-- **不改 `pool.ts`**。它只转发 provider，不碰消息形状。
-- **不加 `supportsTools` 字段**。那是三期的事（agent 模型选择器要用），这一期加了没人读。
-- **不改设置页**。
+- **不接 agent**。這一期結束時專案裡沒有任何一處**用**工具呼叫，只是**能**用。
+- **不改 `pool.ts`**。它只轉發 provider，不碰訊息形狀。
+- **不加 `supportsTools` 欄位**。那是三期的事（agent 模型選擇器要用），這一期加了沒人讀。
+- **不改設定頁**。
 
-## 给接手 agent 的提示词
+## 給接手 agent 的提示詞
 
-> 你在 novelwarden 仓库里执行「零期：事件流 provider」。
+> 你在 novelwarden 倉庫裡執行「零期：事件流 provider」。
 >
-> 先读 `AGENTS.md`（23 条产品承诺）与 `docs/design/specs/2026-08-15-agent-architecture-design.md` 的 L0 一节，再读 `src/core/llm/` 下的四个文件与 `src/shells/vscode/vscodeLmProvider.ts`。
+> 先讀 `AGENTS.md`（23 條產品承諾）與 `docs/design/specs/2026-08-15-agent-architecture-design.md` 的 L0 一節，再讀 `src/core/llm/` 下的四個檔案與 `src/shells/vscode/vscodeLmProvider.ts`。
 >
-> 这一期**没有新功能**，全部是重构。唯一的验收标准是 `npm test` 全绿——13 个既有调用点（摘要、角色卡、设定、文风、批量流水线、创作、连接测试）产出的文本、reasoning 分流、usage 合并口径，一个字节都不能变。
+> 這一期**沒有新功能**，全部是重構。唯一的驗收標準是 `npm test` 全綠——13 個既有呼叫點（摘要、角色卡、設定、文風、批次流水線、創作、連線測試）產出的文字、reasoning 分流、usage 合併口徑，一個位元組都不能變。
 >
-> 按 `docs/design/plans/2026-08-15-agent-phase0-provider-events.md` 的 5 个 Task 逐个做，每个 Task 做完立刻 commit（前缀 `refactor(llm)`，中文正文，**不要加 Co-Authored-By 或 Generated with 标记**）。
+> 按 `docs/design/plans/2026-08-15-agent-phase0-provider-events.md` 的 5 個 Task 逐個做，每個 Task 做完立刻 commit（字首 `refactor(llm)`，中文正文，**不要加 Co-Authored-By 或 Generated with 標記**）。
 >
-> 三件最容易做错的事：
-> 1. OpenAI 的 `tool_calls` 分片**按 `index` 累积，不是按 `id`**——`id` 只在第一片给。
-> 2. Anthropic 的 `tool_result` **不是独立 role**，要合并进一条 `user` 消息的 content 数组。
-> 3. `JSON.parse(args)` 失败**绝不抛**——发一个 `args: {}` 的 toolCall，`raw` 保留原文。抛异常会炸掉整轮对话。
+> 三件最容易做錯的事：
+> 1. OpenAI 的 `tool_calls` 分片**按 `index` 累積，不是按 `id`**——`id` 只在第一片給。
+> 2. Anthropic 的 `tool_result` **不是獨立 role**，要合併進一條 `user` 訊息的 content 陣列。
+> 3. `JSON.parse(args)` 失敗**絕不拋**——發一個 `args: {}` 的 toolCall，`raw` 保留原文。拋異常會炸掉整輪對話。
 >
-> 遇到「这里要不要顺手改一下」的念头时：不要。这一期只搬管道。
+> 遇到「這裡要不要順手改一下」的念頭時：不要。這一期只搬管道。

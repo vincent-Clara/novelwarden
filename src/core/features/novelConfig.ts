@@ -1,23 +1,24 @@
+import { traditionalLabel } from '../model/labels';
 /**
- * 小说配置的生成结果：JSON 合同 → `config.md` 的七节与 frontmatter，外加一段给
- * `style.md` 的文风。
+ * 小說配置的生成結果：JSON 合同 → `config.md` 的七節與 frontmatter，外加一段給
+ * `style.md` 的文風。
  *
- * **纯函数、绝不抛**。合同、「全局要求」质检与「保留作者原文」的合并规则移植自
+ * **純函式、絕不拋**。合同、「全域要求」質檢與「保留作者原文」的合併規則移植自
  * AI-Novel-Writer（GPL-3.0，源自 AI_NovelGenerator）：
  * `commands/architecture.command.ts` 的 `buildNovelConfigJSONContract` /
  * `decodeCompleteNovelConfig`，以及 `novel-config-expansion.ts`。
  *
- * ## 模型面向的键沿用上游的英文名
+ * ## 模型面向的鍵沿用上游的英文名
  *
- * `coreOutline`、`goldenFinger` 这些键是上游调过的提示词的一部分，换成中文键就得
- * 重新试错一遍。解码时映射到 `config.md` 的八节；「一句话」是作者的原话，模型给的 `logline`
- * 只在作者没写时补上（从已写正文补齐时就没有作者的原话）。
+ * `coreOutline`、`goldenFinger` 這些鍵是上游調過的提示詞的一部分，換成中文鍵就得
+ * 重新試錯一遍。解碼時對映到 `config.md` 的八節；「一句話」是作者的原話，模型給的 `logline`
+ * 只在作者沒寫時補上（從已寫正文補齊時就沒有作者的原話）。
  *
- * ## 比上游宽松
+ * ## 比上游寬鬆
  *
- * 上游缺任何一个字段、枚举写错一个都整份作废。这里缺的字段记进 `missing`、认不出的
- * 枚举丢掉并记一条 warning，其余照收：配置是一次一份、摊在落盘卡片上的产物，
- * 作者看得见缺了什么，手补一节比再花一轮钱便宜。
+ * 上游缺任何一個欄位、列舉寫錯一個都整份作廢。這裡缺的欄位記進 `missing`、認不出的
+ * 列舉丟掉並記一條 warning，其餘照收：配置是一次一份、攤在落盤卡片上的產物，
+ * 作者看得見缺了什麼，手補一節比再花一輪錢便宜。
  */
 import { hasContent } from '../model/markdown';
 import {
@@ -39,27 +40,27 @@ import { toSectionText } from './summarize';
 
 export { GUIDANCE_MAX_CHARS, GUIDANCE_MAX_RULES, GUIDANCE_MIN_RULES };
 
-/** 「第 3 章」「第 1–20 章」「Chapter 5」开头的一行——那是在逐章列大纲。 */
+/** 「第 3 章」「第 1–20 章」「Chapter 5」開頭的一行——那是在逐章列大綱。 */
 const CHAPTER_OUTLINE_LINE =
-  /^(?:[-*+]\s*|\d+[.)、]\s*)?(?:第\s*[0-9一二三四五六七八九十百零〇两]+\s*(?:[-–—~～至到]\s*[0-9一二三四五六七八九十百零〇两]+\s*)?章|chapters?\s+\d+(?:\s*[-–—~]\s*\d+)?)/iu;
+  /^(?:[-*+]\s*|\d+[.)、]\s*)?(?:第\s*[0-9一二三四五六七八九十百零〇两兩]+\s*(?:[-–—~～至到]\s*[0-9一二三四五六七八九十百零〇两兩]+\s*)?章|chapters?\s+\d+(?:\s*[-–—~]\s*\d+)?)/iu;
 
 function guidanceRules(text: string): string[] {
   return text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 }
 
-/** 「全局要求」哪里不合格；合格返回 undefined。 */
+/** 「全域要求」哪裡不合格；合格返回 undefined。 */
 export function guidanceProblem(text: string): string | undefined {
   const rules = guidanceRules(text);
   const length = Array.from(text.trim()).length;
   const chapterLines = rules.filter((l) => CHAPTER_OUTLINE_LINE.test(l)).length;
   if (length > GUIDANCE_MAX_CHARS) {
-    return `全局要求有 ${length} 字，超过 ${GUIDANCE_MAX_CHARS} 字`;
+    return `全域要求有 ${length} 字，超過 ${GUIDANCE_MAX_CHARS} 字`;
   }
   if (rules.length < GUIDANCE_MIN_RULES || rules.length > GUIDANCE_MAX_RULES) {
-    return `全局要求有 ${rules.length} 条，合同要求 ${GUIDANCE_MIN_RULES}–${GUIDANCE_MAX_RULES} 条`;
+    return `全域要求有 ${rules.length} 條，合同要求 ${GUIDANCE_MIN_RULES}–${GUIDANCE_MAX_RULES} 條`;
   }
   if (chapterLines >= 2) {
-    return '全局要求在逐章列大纲';
+    return '全域要求在逐章列大綱';
   }
   return undefined;
 }
@@ -68,7 +69,7 @@ export function isGuidanceValid(text: string): boolean {
   return guidanceProblem(text) === undefined;
 }
 
-/** 模型那边的键 → `config.md` 的小节。 */
+/** 模型那邊的鍵 → `config.md` 的小節。 */
 const SECTION_OF: Record<string, ConfigSectionKey> = {
   logline: '一句话',
   coreOutline: '核心梗概',
@@ -80,7 +81,7 @@ const SECTION_OF: Record<string, ConfigSectionKey> = {
   referenceWorks: '参考作品',
 };
 
-/** 必填的十个文本字段（上游 `REQUIRED_CONFIG_TEXT_FIELDS` 的九个，外加核心卖点）。缺了记进 `missing`。 */
+/** 必填的十個文字欄位（上游 `REQUIRED_CONFIG_TEXT_FIELDS` 的九個，外加核心賣點）。缺了記進 `missing`。 */
 const REQUIRED = [
   'genre',
   'targetAudience',
@@ -94,7 +95,7 @@ const REQUIRED = [
   'writingStyle',
 ] as const;
 
-/** 模型产出的那一份，还没和磁盘上的合并。 */
+/** 模型產出的那一份，還沒和磁碟上的合併。 */
 export interface GeneratedConfig {
   genre?: string;
   subGenre?: string;
@@ -104,7 +105,7 @@ export interface GeneratedConfig {
   totalChapters?: number;
   wordsPerChapter?: number;
   sections: Partial<Record<ConfigSectionKey, string>>;
-  /** 给 `style.md` 的文风。不进 `config.md`（D14）。 */
+  /** 給 `style.md` 的文風。不進 `config.md`（D14）。 */
   writingStyle?: string;
 }
 
@@ -123,8 +124,8 @@ function positive(v: unknown): number | undefined {
 }
 
 /**
- * 解码模型给的配置 JSON。中文键（`核心梗概`）也认：模型偶尔会照着工程里的文件写。
- * 整段不是 JSON 对象才算失败。
+ * 解碼模型給的配置 JSON。中文鍵（`核心梗概`）也認：模型偶爾會照著工程裡的檔案寫。
+ * 整段不是 JSON 物件才算失敗。
  */
 export function decodeNovelConfig(text: string): ConfigDecode {
   const whole = parseJson(text);
@@ -133,7 +134,7 @@ export function decodeNovelConfig(text: string): ConfigDecode {
   if (!obj) {
     const single = singleJsonObject(text);
     if (!single.ok) {
-      return { ok: false, reason: single.reason === 'truncated' ? '配置 JSON 没有写完' : '输出不是一个 JSON 对象' };
+      return { ok: false, reason: single.reason === 'truncated' ? '配置 JSON 沒有寫完' : '輸出不是一個 JSON 物件' };
     }
     obj = single.value;
   }
@@ -141,22 +142,22 @@ export function decodeNovelConfig(text: string): ConfigDecode {
   const warnings: string[] = [];
   const sections: GeneratedConfig['sections'] = {};
   for (const [key, section] of Object.entries(SECTION_OF)) {
-    const value = toSectionText(obj[key] ?? obj[section]);
+    const value = toSectionText(obj[key] ?? obj[section] ?? obj[traditionalLabel(section)]);
     if (value) {
       sections[section] = value;
     }
   }
   const text2 = (key: string, alias: string) => {
-    const v = obj![key] ?? obj![alias];
+    const v = obj![key] ?? obj![alias] ?? obj![traditionalLabel(alias)];
     return typeof v === 'string' && v.trim() ? v.trim() : undefined;
   };
   const structure = pickEnum<PlotStructure>(obj.plotStructure ?? obj.structure, PLOT_STRUCTURES);
   const pov = pickEnum<NarrativePov>(obj.narrativePOV ?? obj.pov, NARRATIVE_POVS);
   if ((obj.plotStructure ?? obj.structure) !== undefined && !structure) {
-    warnings.push(`故事结构「${String(obj.plotStructure ?? obj.structure)}」不在六种结构里，没有采用`);
+    warnings.push(`故事結構「${String(obj.plotStructure ?? obj.structure)}」不在六種結構裡，沒有采用`);
   }
   if ((obj.narrativePOV ?? obj.pov) !== undefined && !pov) {
-    warnings.push(`叙事视角「${String(obj.narrativePOV ?? obj.pov)}」认不出，没有采用`);
+    warnings.push(`敘事視角「${String(obj.narrativePOV ?? obj.pov)}」認不出，沒有采用`);
   }
 
   const value: GeneratedConfig = {
@@ -168,7 +169,7 @@ export function decodeNovelConfig(text: string): ConfigDecode {
     totalChapters: positive(obj.totalChapters),
     wordsPerChapter: positive(obj.wordsPerChapter),
     sections,
-    writingStyle: toSectionText(obj.writingStyle ?? obj.文风) || undefined,
+    writingStyle: toSectionText(obj.writingStyle ?? obj.文风 ?? obj['文風']) || undefined,
   };
 
   const present: Record<(typeof REQUIRED)[number], boolean> = {
@@ -188,7 +189,7 @@ export function decodeNovelConfig(text: string): ConfigDecode {
 }
 
 /**
- * 作者写过的长文本保留原文、生成的追加在后；生成的已经包含原文就用生成的
+ * 作者寫過的長文字保留原文、生成的追加在後；生成的已經包含原文就用生成的
  * （上游 `preserveAuthorText`）。
  */
 export function preserveAuthorText(existing: string | undefined, generated: string | undefined): string {
@@ -204,28 +205,28 @@ export function preserveAuthorText(existing: string | undefined, generated: stri
 }
 
 export interface MergeOptions {
-  /** 作者这一次给的那句话（一句话弹窗里的脑洞）。 */
+  /** 作者這一次給的那句話（一句話彈窗裡的腦洞）。 */
   idea?: string;
-  /** 作者定的规模。给了就以它为准——总章数与每章字数是作者的权威设置，模型改不得。 */
+  /** 作者定的規模。給了就以它為準——總章數與每章字數是作者的權威設定，模型改不得。 */
   setup?: { totalChapters: number; wordsPerChapter: number };
   /**
-   * 「保留原文，追加生成」：从一句话弹窗发起、而 `config.md` 已经写过东西时开。
-   * 关着的时候（作者在对话里说「重写金手指」）生成的那一份就是修改后的版本，
-   * 只有它漏掉的小节才沿用磁盘那份。
+   * 「保留原文，追加生成」：從一句話彈窗發起、而 `config.md` 已經寫過東西時開。
+   * 關著的時候（作者在對話裡說「重寫金手指」）生成的那一份就是修改後的版本，
+   * 只有它漏掉的小節才沿用磁碟那份。
    */
   preserve: boolean;
 }
 
-/** 生成结果并进磁盘上那份，得到将要落盘的配置（上游 `mergeExpandedNovelConfig` 的规则）。 */
+/** 生成結果並進磁碟上那份，得到將要落盤的配置（上游 `mergeExpandedNovelConfig` 的規則）。 */
 export function mergeWithAuthor(existing: BookConfig, generated: GeneratedConfig, opts: MergeOptions): WritableBookConfig {
   const sections = { ...existing.sections };
   for (const key of CONFIG_SECTION_KEYS) {
     const old = hasContent(existing.sections[key]) ? existing.sections[key] : '';
-    // 一句话：作者这次给的 > 作者原来写的 > 模型补的。
+    // 一句話：作者這次給的 > 作者原來寫的 > 模型補的。
     const fresh = key === '一句话' ? opts.idea?.trim() || (old ? undefined : generated.sections[key]) : generated.sections[key];
     sections[key] = opts.preserve ? preserveAuthorText(old, fresh) : fresh?.trim() || old;
   }
-  // 作者选过的类型 / 受众 / 结构 / 视角：保留原文时一律不改；否则生成的优先。
+  // 作者選過的型別 / 受眾 / 結構 / 視角：保留原文時一律不改；否則生成的優先。
   const choose = <T>(author: T | undefined, model: T | undefined): T | undefined =>
     opts.preserve ? (author || model) : (model || author);
   return {
@@ -236,19 +237,19 @@ export function mergeWithAuthor(existing: BookConfig, generated: GeneratedConfig
     pov: choose(existing.pov, generated.pov),
     totalChapters: opts.setup?.totalChapters ?? existing.totalChapters ?? generated.totalChapters,
     wordsPerChapter: opts.setup?.wordsPerChapter ?? existing.wordsPerChapter ?? generated.wordsPerChapter,
-    // 分段格式是作者在编辑器里切的，模型不生成它：磁盘上那份原样带过去，重写配置不能把它丢了。
+    // 分段格式是作者在編輯器裡切的，模型不生成它：磁碟上那份原樣帶過去，重寫配置不能把它丟了。
     paragraphStyle: existing.paragraphStyle,
     sections,
   };
 }
 
-/** 草稿里那一节文风的标题。落盘时它不进 `config.md`，只在 `style.md` 空着时写过去。 */
+/** 草稿裡那一節文風的標題。落盤時它不進 `config.md`，只在 `style.md` 空著時寫過去。 */
 export const STYLE_DRAFT_HEADING = '文风';
 
 /**
- * 规范化输出：将要落盘的 `config.md` 全文，后面接一节「文风」。
+ * 規範化輸出：將要落盤的 `config.md` 全文，後面接一節「文風」。
  *
- * 气泡里看到的就是会写下去的那一份；作者改完再点写入，采纳时按 `config.md` 的格式
+ * 氣泡裡看到的就是會寫下去的那一份；作者改完再點寫入，採納時按 `config.md` 的格式
  * 重新解析（artifact.ts）。
  */
 export function renderConfigDraft(config: WritableBookConfig, style?: string): string {

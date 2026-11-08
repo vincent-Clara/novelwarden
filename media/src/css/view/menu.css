@@ -1,10 +1,10 @@
-/* 菜单：气泡右上角的 ⋯ 与任意位置的右键共用同一套外观。 */
+/* 選單：氣泡右上角的 ⋯ 與任意位置的右鍵共用同一套外觀。 */
 
 .msg-head .spacer {
   flex: 1;
 }
 
-/* 菜单相对这里定位；头部高度由文字决定，不受绝对定位的菜单影响。 */
+/* 選單相對這裡定位；頭部高度由文字決定，不受絕對定位的選單影響。 */
 .msg-head {
   position: relative;
 }
@@ -18,8 +18,8 @@
   padding: 1px 6px;
   border-radius: 3px;
   cursor: pointer;
-  /* 平时压到很淡，hover 或菜单打开时才明显——每条消息都挂一个，
-     全亮起来会把消息流搅得很花。 */
+  /* 平時壓到很淡，hover 或選單開啟時才明顯——每條訊息都掛一個，
+     全亮起來會把訊息流攪得很花。 */
   opacity: 0;
 }
 
@@ -34,7 +34,7 @@
   opacity: 1;
 }
 
-/* ---- 菜单（气泡右上角的 ⋯ 与任意位置的右键共用同一套外观） */
+/* ---- 選單（氣泡右上角的 ⋯ 與任意位置的右鍵共用同一套外觀） */
 
 .msg-menu,
 .ctx-menu {
@@ -55,9 +55,9 @@
   z-index: 20;
 }
 
-/* 右键菜单挂在 body 上跟着光标走：要压过设置弹窗（20）与 toast（30），
-   否则在弹窗里右键会看不见菜单。 */
-/* 比可视区还高时 menu.ts 压一个 max-height（menuPlace.ts），菜单里滚。 */
+/* 右鍵選單掛在 body 上跟著游標走：要壓過設定彈窗（20）與 toast（30），
+   否則在彈窗裡右鍵會看不見選單。 */
+/* 比可視區還高時 menu.ts 壓一個 max-height（menuPlace.ts），選單裡滾。 */
 .ctx-menu {
   position: fixed;
   z-index: 40;
@@ -86,8 +86,8 @@
   color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground));
 }
 
-/* 全局 button.danger 是实心红底，用在「确认删除」那种按钮上。
-   菜单项平时要和其他项一样朴素，只在 hover 时才变红。 */
+/* 全域 button.danger 是實心紅底，用在「確認刪除」那種按鈕上。
+   選單項平時要和其他項一樣樸素，只在 hover 時才變紅。 */
 .msg-menu button.danger,
 .ctx-menu button.danger {
   background: none;

@@ -1,6 +1,6 @@
 /**
- * 标签上的名字（`media/src/editor/tabLabels.ts`，纯函数）：短标记 + 名字，仍然同名的加最短的区分目录。
- * 编辑器里的整条链路（两块编辑区放在一起比、关掉一个之后收起）在 tests/dom/standalone/tabs.test.js。
+ * 標籤上的名字（`media/src/editor/tabLabels.ts`，純函式）：短標記 + 名字，仍然同名的加最短的區分目錄。
+ * 編輯器裡的整條鏈路（兩塊編輯區放在一起比、關掉一個之後收起）在 tests/dom/standalone/tabs.test.js。
  */
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -15,29 +15,29 @@ const f = (path, tag, title) => ({
 });
 
 describe('tabNames', () => {
-  test('后端给了称呼：用它的短标记与名字', () => {
-    const names = tabNames([f('.novelwarden/summaries/003-夜访.md', '细纲', '003-夜访')]);
-    assert.deepEqual(names.get('.novelwarden/summaries/003-夜访.md'), { tag: '细纲', title: '003-夜访', desc: '' });
+  test('後端給了稱呼：用它的短標記與名字', () => {
+    const names = tabNames([f('.novelwarden/summaries/003-夜訪.md', '細綱', '003-夜訪')]);
+    assert.deepEqual(names.get('.novelwarden/summaries/003-夜訪.md'), { tag: '細綱', title: '003-夜訪', desc: '' });
   });
 
-  test('没给称呼：名字是文件名、不带短标记', () => {
+  test('沒給稱呼：名字是檔名、不帶短標記', () => {
     assert.deepEqual(tabNames([f('notes.txt')]).get('notes.txt'), { tag: '', title: 'notes.txt', desc: '' });
   });
 
-  test('名字一样、短标记不一样：不算同名', () => {
-    const names = tabNames([f('chapters/003-夜访.md', '', '003-夜访'), f('drafts/003-夜访.md', '草稿', '003-夜访')]);
+  test('名字一樣、短標記不一樣：不算同名', () => {
+    const names = tabNames([f('chapters/003-夜訪.md', '', '003-夜訪'), f('drafts/003-夜訪.md', '草稿', '003-夜訪')]);
     assert.deepEqual([...names.values()].map((n) => n.desc), ['', '']);
   });
 
-  test('同一种、不同目录：各写紧挨着它的那一级目录', () => {
-    const names = tabNames([f('chapters/第一卷/003-夜访.md', '', '003-夜访'), f('chapters/第二卷/003-夜访.md', '', '003-夜访')]);
+  test('同一種、不同目錄：各寫緊挨著它的那一級目錄', () => {
+    const names = tabNames([f('chapters/第一卷/003-夜訪.md', '', '003-夜訪'), f('chapters/第二卷/003-夜訪.md', '', '003-夜訪')]);
     assert.deepEqual([...names.values()].map((n) => n.desc), ['第一卷', '第二卷']);
   });
 
-  test('三份撞名只撞了一部分：只有撞上的那几份加', () => {
+  test('三份撞名只撞了一部分：只有撞上的那幾份加', () => {
     const names = tabNames([
-      f('chapters/第一卷/003-夜访.md', '', '003-夜访'),
-      f('chapters/第二卷/003-夜访.md', '', '003-夜访'),
+      f('chapters/第一卷/003-夜訪.md', '', '003-夜訪'),
+      f('chapters/第二卷/003-夜訪.md', '', '003-夜訪'),
       f('chapters/004-北行.md', '', '004-北行'),
     ]);
     assert.deepEqual([...names.values()].map((n) => n.desc), ['第一卷', '第二卷', '']);
@@ -45,16 +45,16 @@ describe('tabNames', () => {
 });
 
 describe('distinguish', () => {
-  test('紧挨着的那一级一样：往上加一级', () => {
+  test('緊挨著的那一級一樣：往上加一級', () => {
     assert.equal(distinguish('甲/卷一/003.md', ['乙/卷一/003.md']), '甲/卷一');
   });
 
-  test('一个在工程根、一个在子目录：根下那个写「工程根」', () => {
+  test('一個在工程根、一個在子目錄：根下那個寫「工程根」', () => {
     assert.equal(distinguish('003.md', ['chapters/003.md']), '工程根');
     assert.equal(distinguish('chapters/003.md', ['003.md']), 'chapters');
   });
 
-  test('目录完全一样（扩展名不同）：退到文件名本身', () => {
-    assert.equal(distinguish('chapters/003-夜访.md', ['chapters/003-夜访.txt']), '003-夜访.md');
+  test('目錄完全一樣（副檔名不同）：退到檔名本身', () => {
+    assert.equal(distinguish('chapters/003-夜訪.md', ['chapters/003-夜訪.txt']), '003-夜訪.md');
   });
 });

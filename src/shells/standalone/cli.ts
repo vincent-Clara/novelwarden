@@ -1,20 +1,20 @@
 import * as path from 'node:path';
 
 /**
- * 避开 Windows 的动态端口段（Hyper-V / WinNAT 会在里面随机整段保留，被保留的端口
- * listen 直接报 EADDRINUSE，顺延 20 个也可能跳不出去）：默认 49152 起，改过的机器常是 1024 起。
+ * 避開 Windows 的動態埠段（Hyper-V / WinNAT 會在裡面隨機整段保留，被保留的埠
+ * listen 直接報 EADDRINUSE，順延 20 個也可能跳不出去）：預設 49152 起，改過的機器常是 1024 起。
  */
 export const DEFAULT_PORT = 36800;
 
 export interface CliOptions {
-  /** 小说工程目录。不带位置参数且不是 `init` 时为空——进空窗口。 */
+  /** 小說工程目錄。不帶位置引數且不是 `init` 時為空——進空視窗。 */
   root: string | undefined;
   port: number;
-  /** 监听地址。缺省只绑本机；绑别的地址必须配令牌（见 auth.ts 的 `exposureError`）。 */
+  /** 監聽地址。預設只綁本機；綁別的地址必須配令牌（見 auth.ts 的 `exposureError`）。 */
   host: string;
   open: boolean;
   init: boolean;
-  /** 终端里连 debug 级日志一起打（逐章进度等）。网页的日志页始终收全量。 */
+  /** 終端裡連 debug 級日誌一起打（逐章進度等）。網頁的日誌頁始終收全量。 */
   verbose: boolean;
 }
 
@@ -22,9 +22,9 @@ export interface CliOptions {
  * novelwarden [dir] [--port N] [--host ADDR] [--no-open] [--verbose]
  * novelwarden init [dir]
  *
- * 不带目录起服务时 `root` 为 undefined（不再把 cwd 当成工程）。
- * `init` 不带目录时仍默认当前目录，与原来一致。
- * 令牌不走参数（会出现在 `ps` 里），只认环境变量 `NOVELWARDEN_TOKEN`（旧名 `NOVELFORGE_TOKEN` 兼容），由 main.ts 读。
+ * 不帶目錄起服務時 `root` 為 undefined（不再把 cwd 當成工程）。
+ * `init` 不帶目錄時仍預設當前目錄，與原來一致。
+ * 令牌不走引數（會出現在 `ps` 裡），只認環境變數 `NOVELWARDEN_TOKEN`（舊名 `NOVELFORGE_TOKEN` 相容），由 main.ts 讀。
  */
 export function parseArgs(argv: string[]): CliOptions {
   let port = DEFAULT_PORT;

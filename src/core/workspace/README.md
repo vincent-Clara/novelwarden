@@ -1,374 +1,374 @@
-# workspace — 工程的唯一读写网关
+# workspace — 工程的唯一讀寫閘道器
 
-`list` / `read` / `write` / `edit` / `move` / `copy` / `mkdir` / `remove` / `search` 九个方法（外加一批收领域对象的写入器，
-见末尾「领域写入器」；存档点的退回另有一个字节原样的 `restoreBytes`，也在那张表里），是整个工程**唯一**允许写盘的地方。网关之外还剩的写盘都是按设计不走这里的（见「历史版本」一节
-末尾那张清单），`tests/contract/gatewayWrites.test.js` 逐个文件数着，多出一处就红。
+`list` / `read` / `write` / `edit` / `move` / `copy` / `mkdir` / `remove` / `search` 九個方法（外加一批收領域物件的寫入器，
+見末尾「領域寫入器」；存檔點的退回另有一個位元組原樣的 `restoreBytes`，也在那張表裡），是整個工程**唯一**允許寫盤的地方。閘道器之外還剩的寫盤都是按設計不走這裡的（見「歷史版本」一節
+末尾那張清單），`tests/contract/gatewayWrites.test.js` 逐個檔案數著，多出一處就紅。
 
-## 为什么要有这一层
+## 為什麼要有這一層
 
-写盘从前散在六处，每处各带一部分保护，谁也不认识谁：
+寫盤從前散在六處，每處各帶一部分保護，誰也不認識誰：
 
-| 位置 | 管什么 | 带哪些保护 |
+| 位置 | 管什麼 | 帶哪些保護 |
 |---|---|---|
-| `model/project.ts` | 所有产物的读写 | 路径推导、frontmatter 渲染、伴生搬迁 |
-| `features/creation.ts` 的 `acceptArtifact` | 五条落盘路径 | `confirmOverwrite`、记 `upstreamHash` |
-| `files/fileOps.ts` | 三区类文件操作 | 区界限、同名不覆盖、`.trash` |
-| `files/fileEditing.ts` | 内置编辑器读写 | 工程根包含、扩展名白名单、大小上限、乐观锁 |
-| `files/projectFiles.ts` | 文件页的移动/复制/改名 | 工程根包含、`isProtectedPath`、同名不覆盖 |
-| 拆章（已删） | 拆分 | 章号接在最后一章之后、把落点记回段的 frontmatter |
+| `model/project.ts` | 所有產物的讀寫 | 路徑推導、frontmatter 渲染、伴生搬遷 |
+| `features/creation.ts` 的 `acceptArtifact` | 五條落盤路徑 | `confirmOverwrite`、記 `upstreamHash` |
+| `files/fileOps.ts` | 三區類檔案操作 | 區界限、同名不覆蓋、`.trash` |
+| `files/fileEditing.ts` | 內建編輯器讀寫 | 工程根包含、副檔名白名單、大小上限、樂觀鎖 |
+| `files/projectFiles.ts` | 檔案頁的移動/複製/改名 | 工程根包含、`isProtectedPath`、同名不覆蓋 |
+| 拆章（已刪） | 拆分 | 章號接在最後一章之後、把落點記回段的 frontmatter |
 
-既有落盘路径背着一批不变量，绕过任何一条都会**安静地**损坏工程：
+既有落盤路徑揹著一批不變數，繞過任何一條都會**安靜地**損壞工程：
 
-- 细纲镜像正文在章节根下的相对路径：正文改名/移动时细纲要跟着搬；还没有正文时文件名由「章号 + 标题」决定，改标题要清掉旧文件名
-- 写细纲要记 `upstreamHash`（大纲里这一章那一条的指纹），写正文要在细纲上记
-  `writtenFrom`（正文据以写成的细纲指纹），定稿要在同一份细纲上记 `sourceHash`（正文的指纹）
-  并刷新 `writtenFrom`，漏了新鲜度链就断
-- 删除一律进 `.trash/`；同名目标一律报错退出——**会话删除的落点也是同一套**（`trashPathFor`：保留原相对路径，会话落在
-  `.trash/.novelwarden/sessions/<id>.json`，同名加序号），不真删不是文件独有的行为（AGENTS 第 6 条）。会话不走网关的写入
-  （它是内部文件，网关本来就拒写 `sessions/`），只共用落点规则：`trashPathFor` 实现在 `model/project.ts`，这里重新导出
-  （`model/` 不能反过来依赖网关）。定稿改写细纲之前，旧版也照这一套复制一份进去
-- 覆盖一份已有的创作产物之前，旧内容先存一版历史（`history.ts`，见下面「历史版本」）
+- 細綱映象正文在章節根下的相對路徑：正文改名/移動時細綱要跟著搬；還沒有正文時檔名由「章號 + 標題」決定，改標題要清掉舊檔名
+- 寫細綱要記 `upstreamHash`（大綱裡這一章那一條的指紋），寫正文要在細綱上記
+  `writtenFrom`（正文據以寫成的細綱指紋），定稿要在同一份細綱上記 `sourceHash`（正文的指紋）
+  並重新整理 `writtenFrom`，漏了新鮮度鏈就斷
+- 刪除一律進 `.trash/`；同名目標一律報錯退出——**會話刪除的落點也是同一套**（`trashPathFor`：保留原相對路徑，會話落在
+  `.trash/.novelwarden/sessions/<id>.json`，同名加序號），不真刪不是檔案獨有的行為（AGENTS 第 6 條）。會話不走閘道器的寫入
+  （它是內部檔案，閘道器本來就拒寫 `sessions/`），只共用落點規則：`trashPathFor` 實現在 `model/project.ts`，這裡重新匯出
+  （`model/` 不能反過來依賴閘道器）。定稿改寫細綱之前，舊版也照這一套複製一份進去
+- 覆蓋一份已有的創作產物之前，舊內容先存一版歷史（`history.ts`，見下面「歷史版本」）
 
-所以 **`write` 不是「往这个路径写字节」**，而是「按这个路径**应有的种类**写一份
-合法产物」——种类判定、渲染、记账、伴生搬迁、覆盖审阅全在这一层做一次。
+所以 **`write` 不是「往這個路徑寫位元組」**，而是「按這個路徑**應有的種類**寫一份
+合法產物」——種類判定、渲染、記賬、伴生搬遷、覆蓋審閱全在這一層做一次。
 
-## 新代码不许绕过 guard 直接 `fs.writeFile`
+## 新程式碼不許繞過 guard 直接 `fs.writeFile`
 
-八条守卫只在这条路上做。绕过去等于给自己开一个后门，**而后门在界面上看不出来**。
+八條守衛只在這條路上做。繞過去等於給自己開一個後門，**而後門在介面上看不出來**。
 
-功能层自己已经问过作者的覆盖（更新角色卡、提取角色合并已有卡的审阅采纳，批量更新时的「全部直接采纳」，章节改名时
-同步正文的 `# 标题` 行，全书替换——预览就是那一问）也走 `write`，传 `mode: 'overwrite', review: false`：网关不再问第二次，
-但守卫照过、覆盖之前旧内容照样存一版历史。新建（如手动新建设定条目）传 `mode: 'create'`，同名报错退出。
+功能層自己已經問過作者的覆蓋（更新角色卡、提取角色合併已有卡的審閱採納，批次更新時的「全部直接採納」，章節改名時
+同步正文的 `# 標題` 行，全書替換——預覽就是那一問）也走 `write`，傳 `mode: 'overwrite', review: false`：閘道器不再問第二次，
+但守衛照過、覆蓋之前舊內容照樣存一版歷史。新建（如手動新建設定條目）傳 `mode: 'create'`，同名報錯退出。
 
-**全书替换**（`features/bookReplace.ts`）是这条路上一次写得最多的调用方，每一份都照这几条写：编辑器里有未保存修改的跳过；
-`write` 之前先 `snapshotNow`（**跳过节流**强制存一版——跨文件没有一步撤销，退路就是每份的替换前那一版；存不下就不换这一份），
-再 `write`（`overwrite`、`review: false`、带预览时读到的 `baseHash`：预览之后被改过就拒，不拿旧的盖新的）；章节传 `deferAfter`，
-manifest 最后同步一次。指纹链的收尾走 `restampPlotChain`（见下面「领域写入器」与 `features/README.md`）。
+**全書替換**（`features/bookReplace.ts`）是這條路上一次寫得最多的呼叫方，每一份都照這幾條寫：編輯器裡有未儲存修改的跳過；
+`write` 之前先 `snapshotNow`（**跳過節流**強制存一版——跨檔案沒有一步撤銷，退路就是每份的替換前那一版；存不下就不換這一份），
+再 `write`（`overwrite`、`review: false`、帶預覽時讀到的 `baseHash`：預覽之後被改過就拒，不拿舊的蓋新的）；章節傳 `deferAfter`，
+manifest 最後同步一次。指紋鏈的收尾走 `restampPlotChain`（見下面「領域寫入器」與 `features/README.md`）。
 
-**先写后搬的调用方先问 `checkMove`**：章节改名要先改正文的 `# 标题` 行、再 `move`（`files/fileOps.ts`）。新名字被占用时
-`move` 被拒，标题却已经改了——正文被悄悄改掉（第 3 条）。所以写标题之前先 `checkMove(from, to, { plot: true })`：与 `move`
-同一套守卫（来源在、不是固定目录 / 内部文件 / 回收站；落点在工程内、没有同名），外加细纲那一侧——正文镜像的细纲在、新镜像
-的位置上已经有东西（`move` 本身遇到这种情况照样搬正文、细纲留在原处说一句；先改了标题的这条路把它当成搬不成）。只读，
-搬不成抛 `WsError`，什么都不动。预检过了 `move` 仍可能失败（中间别处刚建了同名文件）：调用方把正文改回原样（经 `write`，
-`review: false`，带写下去那一份的 hash 当乐观锁——这期间又被改过就不盖），改不回去就在 toast 与日志里照实说。
+**先寫後搬的呼叫方先問 `checkMove`**：章節改名要先改正文的 `# 標題` 行、再 `move`（`files/fileOps.ts`）。新名字被佔用時
+`move` 被拒，標題卻已經改了——正文被悄悄改掉（第 3 條）。所以寫標題之前先 `checkMove(from, to, { plot: true })`：與 `move`
+同一套守衛（來源在、不是固定目錄 / 內部檔案 / 回收站；落點在工程內、沒有同名），外加細綱那一側——正文映象的細綱在、新映象
+的位置上已經有東西（`move` 本身遇到這種情況照樣搬正文、細綱留在原處說一句；先改了標題的這條路把它當成搬不成）。只讀，
+搬不成拋 `WsError`，什麼都不動。預檢過了 `move` 仍可能失敗（中間別處剛建了同名檔案）：呼叫方把正文改回原樣（經 `write`，
+`review: false`，帶寫下去那一份的 hash 當樂觀鎖——這期間又被改過就不蓋），改不回去就在 toast 與日誌裡照實說。
 
-## 八条守卫（`guard.ts`）
+## 八條守衛（`guard.ts`）
 
-| # | 守卫 | 触发时 |
+| # | 守衛 | 觸發時 |
 |---|---|---|
-| 1 | 路径规范化（绝对路径 / `..` 逃逸 / 空串） | `WsError('outOfRoot')` |
-| 2 | 工程根包含检查（解析成绝对路径再比一次） | `WsError('outOfRoot')` |
-| 3 | 固定目录保护（改名/删除） | `WsError('protected')` |
-| 4 | `.trash/` 内容不可改（**读得到**，作者要能找回东西）；历史版本 `.novelwarden/history/` **写不进去**（同样读得到）——往里写、搬进去、复制进去、在里面建目录都拒 | `WsError('inTrash')` / `WsError('inHistory')` |
-| 5 | 大小上限 2MB（读、写各一次） | `WsError('tooLarge')` |
-| 6 | 同名不覆盖（`mode: 'create'`） | `WsError('exists')` |
-| 7 | 覆盖前审阅（`reviewReplace` 或确认框）。请求合并（`opts.merge`），独立版的合并视图交回作者挑过、改过的那一份时写它（五期 W11） | 用户拒绝 → `{ skipped: true }` |
-| 8 | 内容 hash 乐观锁（给了基线、文件却不在：不算冲突，当新建写——内置编辑器那条路比这严一档，停下来问作者，见 `files/fileEditing.ts` 的 `FileGoneError`） | `WsConflictError(diskText, diskHash)` |
+| 1 | 路徑規範化（絕對路徑 / `..` 逃逸 / 空串） | `WsError('outOfRoot')` |
+| 2 | 工程根包含檢查（解析成絕對路徑再比一次） | `WsError('outOfRoot')` |
+| 3 | 固定目錄保護（改名/刪除） | `WsError('protected')` |
+| 4 | `.trash/` 內容不可改（**讀得到**，作者要能找回東西）；歷史版本 `.novelwarden/history/` **寫不進去**（同樣讀得到）——往裡寫、搬進去、複製進去、在裡面建目錄都拒 | `WsError('inTrash')` / `WsError('inHistory')` |
+| 5 | 大小上限 2MB（讀、寫各一次） | `WsError('tooLarge')` |
+| 6 | 同名不覆蓋（`mode: 'create'`） | `WsError('exists')` |
+| 7 | 覆蓋前審閱（`reviewReplace` 或確認框）。請求合併（`opts.merge`），獨立版的合併檢視交回作者挑過、改過的那一份時寫它（五期 W11） | 使用者拒絕 → `{ skipped: true }` |
+| 8 | 內容 hash 樂觀鎖（給了基線、檔案卻不在：不算衝突，當新建寫——內建編輯器那條路比這嚴一檔，停下來問作者，見 `files/fileEditing.ts` 的 `FileGoneError`） | `WsConflictError(diskText, diskHash)` |
 
-**区界限不在这里**：`fileOps` 的三区约束（章节挪不进角色目录）是**工程页的
-产品承诺**，比这里的工程根约束更严。那一层留在 `fileOps` 里，先判区再调网关。
+**區界限不在這裡**：`fileOps` 的三區約束（章節挪不進角色目錄）是**工程頁的
+產品承諾**，比這裡的工程根約束更嚴。那一層留在 `fileOps` 裡，先判區再調閘道器。
 
-**写不进去的三处**（`guardWrite`、`guardCreate` 共用一道）：Novelwarden 自己的内部文件（会话 `sessions/`、工程库、存档点 `checkpoints/`，`protected`）、
-回收站（`inTrash`）、历史版本（`inHistory`）。`write`、`move` 的落点、`copy` 的落点、`mkdir` 都过它。历史版本那一条是后补的：
-从前守卫只拦前两处，作者的操作能往「历史」面板里塞一份从没存过的「旧版」。回收站与历史版本都**读得到**（会话与存档点读当不存在）。
+**寫不進去的三處**（`guardWrite`、`guardCreate` 共用一道）：Novelwarden 自己的內部檔案（會話 `sessions/`、工程庫、存檔點 `checkpoints/`，`protected`）、
+回收站（`inTrash`）、歷史版本（`inHistory`）。`write`、`move` 的落點、`copy` 的落點、`mkdir` 都過它。歷史版本那一條是後補的：
+從前守衛只攔前兩處，作者的操作能往「歷史」面板裡塞一份從沒存過的「舊版」。回收站與歷史版本都**讀得到**（會話與存檔點讀當不存在）。
 
-## 复制与建目录（`copy` / `mkdir`）
+## 複製與建目錄（`copy` / `mkdir`）
 
-从前「文件」页粘贴的复制直接 `fs.cp`、新建文件夹直接 `fs.mkdir`，都不过守卫：能把文件复制进回收站、会话目录、历史版本，
-也能把会话文件、工程库复制出来。现在两条都在网关里。
+從前「檔案」頁貼上的複製直接 `fs.cp`、新建資料夾直接 `fs.mkdir`，都不過守衛：能把檔案複製進回收站、會話目錄、歷史版本，
+也能把會話檔案、工程庫複製出來。現在兩條都在閘道器裡。
 
-**`mkdir(rel)`**：可以一次建几层。落点过 `guardCreate`——工程内、不在写不进去的三处、**落点上有什么都算同名**（目录或文件，
-报 `exists`，什么都不动）。只建目录，没有种类、没有记账。工程页 / 文件页的「新建文件夹」走它（区界限仍由 `fileOps` 先判）。
-设定区的分类目录另有 `ensureLoreFolders`（锁在 `lore/` 里，设定清单落盘时建）；「按目录整理」不先建目录——`move` 落盘前自己补齐
-父目录，新目录只在真有条目搬进去时出现，搬不成不留空目录。
+**`mkdir(rel)`**：可以一次建幾層。落點過 `guardCreate`——工程內、不在寫不進去的三處、**落點上有什麼都算同名**（目錄或檔案，
+報 `exists`，什麼都不動）。只建目錄，沒有種類、沒有記賬。工程頁 / 檔案頁的「新建資料夾」走它（區界限仍由 `fileOps` 先判）。
+設定區的分類目錄另有 `ensureLoreFolders`（鎖在 `lore/` 裡，設定清單落盤時建）；「按目錄整理」不先建目錄——`move` 落盤前自己補齊
+父目錄，新目錄只在真有條目搬進去時出現，搬不成不留空目錄。
 
-**`copy(from, to)`**——文件页的「复制 → 粘贴」：
+**`copy(from, to)`**——檔案頁的「複製 → 貼上」：
 
-| | 规则 |
+| | 規則 |
 |---|---|
-| 来源（`guardCopySource`） | 工程内、存在、不是符号链接、不是固定目录（整个 `chapters/`、`.novelwarden/` 不收，与文件页从前一样）、不是内部文件（会话、工程库复制不出来）。**⚑ 回收站与历史版本里的东西复制得出来**：复制只读来源，读得到就复制得出来，原件一个字节不动——这是在工程里找回一份的入口（搬出来仍然不行，那是改回收站，`guardMutate`） |
-| 落点（`guardCreate`） | 写不进去的三处一律拒；**同名不覆盖、不加序号**（第 3 条，与文件页从前的粘贴一样：粘回原目录报「已经在这个目录里」，目标已有报「同名」）；目录不能复制进它自己里面（`intoSelf`）；父目录不在就补齐（与 `move` 一样） |
-| 目录 | 先把整棵树列出来、**逐个文件**过一遍落点守卫，全过了才动手——拦下一份就整个不复制，不留半棵树。目录里的符号链接不跟进去，跳过并在 `side` 里说出来 |
-| 字节 | 原样拷贝（`COPYFILE_EXCL`，竞态里也不盖掉别处刚建的文件）：GBK 的章节、图片都不转码。没有大小上限——与 `move` 一样，复制不把内容读进编辑器或模型 |
-| 章节 | 复制进 `chapters/` 的最后统一同步一次 manifest，像新建一样 |
-| **⚑ 伴生** | **没有**：复制一章不带草稿、也不带细纲（「移动」带）。副本是一章新的——第 8 条细纲按路径认，作者在外面复制出来的正文也是一章新的、旧细纲不冒认；草稿是作者对原章的笔记，细纲是原章的计划与档案，跟着复制会变成两份各自漂移的东西，带着定稿指纹的那份还会让出场统计、设定名录多数一章 |
-| **细纲副本**（`handlers/plot.ts` 的 `afterCopy`，第 18 条） | 去掉定稿那一侧的账：`writtenFrom` / `sourceHash` / `cast`——副本没写过、没定稿过，带着它们镜像位置上要是有正文，会被说成「定稿之后正文改过」或「细纲在正文之后改过」。`upstreamHash` **原样不重算**：内容一字没变、章号没变，它据以生成的仍是大纲里同一节——原件挂 ⟳ 的副本照样挂，不被复制顺手刷成新鲜（所以复制不走 `after`，`after` 会按大纲此刻的指纹重记）；**章号变了**（网关直接复制成另一个文件名）就去掉。作者定的（标题、目标字数、`status: done`、预检放行）与九节原样；没有 frontmatter 的手写细纲一个字节不碰 |
-| 历史版本 | 不存（没覆盖任何东西）；原件的快照也不抄过去 |
+| 來源（`guardCopySource`） | 工程內、存在、不是符號連結、不是固定目錄（整個 `chapters/`、`.novelwarden/` 不收，與檔案頁從前一樣）、不是內部檔案（會話、工程庫複製不出來）。**⚑ 回收站與歷史版本裡的東西複製得出來**：複製只讀來源，讀得到就複製得出來，原件一個位元組不動——這是在工程裡找回一份的入口（搬出來仍然不行，那是改回收站，`guardMutate`） |
+| 落點（`guardCreate`） | 寫不進去的三處一律拒；**同名不覆蓋、不加序號**（第 3 條，與檔案頁從前的貼上一樣：粘回原目錄報「已經在這個目錄裡」，目標已有報「同名」）；目錄不能複製進它自己裡面（`intoSelf`）；父目錄不在就補齊（與 `move` 一樣） |
+| 目錄 | 先把整棵樹列出來、**逐個檔案**過一遍落點守衛，全過了才動手——攔下一份就整個不復制，不留半棵樹。目錄裡的符號連結不跟進去，跳過並在 `side` 裡說出來 |
+| 位元組 | 原樣複製（`COPYFILE_EXCL`，競態裡也不蓋掉別處剛建的檔案）：GBK 的章節、圖片都不轉碼。沒有大小上限——與 `move` 一樣，複製不把內容讀進編輯器或模型 |
+| 章節 | 複製進 `chapters/` 的最後統一同步一次 manifest，像新建一樣 |
+| **⚑ 伴生** | **沒有**：複製一章不帶草稿、也不帶細綱（「移動」帶）。副本是一章新的——第 8 條細綱按路徑認，作者在外面複製出來的正文也是一章新的、舊細綱不冒認；草稿是作者對原章的筆記，細綱是原章的計劃與檔案，跟著複製會變成兩份各自漂移的東西，帶著定稿指紋的那份還會讓出場統計、設定名錄多數一章 |
+| **細綱副本**（`handlers/plot.ts` 的 `afterCopy`，第 18 條） | 去掉定稿那一側的賬：`writtenFrom` / `sourceHash` / `cast`——副本沒寫過、沒定稿過，帶著它們映象位置上要是有正文，會被說成「定稿之後正文改過」或「細綱在正文之後改過」。`upstreamHash` **原樣不重算**：內容一字沒變、章號沒變，它據以生成的仍是大綱裡同一節——原件掛 ⟳ 的副本照樣掛，不被複制順手刷成新鮮（所以複製不走 `after`，`after` 會按大綱此刻的指紋重記）；**章號變了**（閘道器直接複製成另一個檔名）就去掉。作者定的（標題、目標字數、`status: done`、預檢放行）與九節原樣；沒有 frontmatter 的手寫細綱一個位元組不碰 |
+| 歷史版本 | 不存（沒覆蓋任何東西）；原件的快照也不抄過去 |
 
-## 种类表（`kind.ts`）
+## 種類表（`kind.ts`）
 
-`kindOfPath(project, relPath)` —— **纯函数、零 I/O、绝不抛**（它会被前端传上来的
-路径调用）。认不出、越界一律 `{ kind: 'other' }`，越界时连 `rel` 都不给。
+`kindOfPath(project, relPath)` —— **純函式、零 I/O、絕不拋**（它會被前端傳上來的
+路徑呼叫）。認不出、越界一律 `{ kind: 'other' }`，越界時連 `rel` 都不給。
 
-| 种类 | 判定 | 解析 / 渲染 | 上游指纹 | 伴生 |
+| 種類 | 判定 | 解析 / 渲染 | 上游指紋 | 伴生 |
 |---|---|---|---|---|
-| `setting` | `config.md` / `premise.md` / `world.md`（带 `doc`） | `settingFile.ts`；配置的 frontmatter 产物没给就沿用磁盘那份 | — | — |
-| `outline` | 固定路径 `.novelwarden/outline.md`——**磁盘上没有这份文件**，见下面「情节大纲」 | 读：各章细纲梗概的汇总；写：按章号拆回各章细纲（`writeOutline`，不经 handler） | — | — |
-| `style` / `globalSummary` | 固定路径 | 纯文本 | — | — |
-| `threads` | `threads/` 这一层的 `.md`（叙事线重做：一条线一个文件，「未归属的伏笔.md」也是；子目录里的、别的扩展名、目录本身、七期的 `threads.md` 判 `other`）；`threads/` 是受保护的固定目录 | 纯文本（格式与外科式写入在 `model/threadFile.ts`） | —（链外） | — |
-| `skill` | `.novelwarden/skills.json` 与 `.novelwarden/skills/**` | 纯文本（`plain`，不加 frontmatter） | — | — |
-| `sensitive` | `.novelwarden/sensitive.txt`（自定义敏感词表，内置编辑器的写作体检用） | 纯文本（`plain`） | —（链外：没有创作阶段、不进装配器，改了它不让任何一章挂 ⟳） | — |
-| `plot` | `summaries/` 下（各级子目录都算，镜像正文的路径）+ 数字前缀 + markdown | `plotFile.ts`（七节加「设定」一节） | 写入记这一份梗概的指纹（`plotSynopsisHash`；梗概就是情节大纲里这一章那一条）；定稿记的 `sourceHash` / `cast` 由 `finalizePlot` 写，重写细纲时原样沿用 | — |
-| `chapter` | 章节根下 + 数字前缀 + 扩展名不在黑名单 | `chapterFile.ts` | —（正文依据的细纲指纹记在细纲的 `writtenFrom` 上） | 改名/移动带草稿与细纲（整个卷目录也带，连同它们的历史版本）；写后 `syncManifest` |
-| `character` / `lore` | 各自区 + `.md`（设定条目另给 `stage: 'setting'` 与单条设定目标 `{ kind: 'lore', relPath }`，完善设定：MCP 的 `generate` 给条目路径就是展开它；设定目录、角色目录本身仍是 `other`，设定清单、角色图谱只在 `generate` 里认） | frontmatter | — | — |
-| `draft` | `drafts/` 下 | 纯文本 | — | **永不自动进上下文** |
-| `other` | 其余工程内文本（含老工程的 `plots/` 与历史版本 `.novelwarden/history/`——后者读得到、写不进，守卫 4） | 纯文本 | — | — |
+| `setting` | `config.md` / `premise.md` / `world.md`（帶 `doc`） | `settingFile.ts`；配置的 frontmatter 產物沒給就沿用磁碟那份 | — | — |
+| `outline` | 固定路徑 `.novelwarden/outline.md`——**磁碟上沒有這份檔案**，見下面「情節大綱」 | 讀：各章細綱梗概的彙總；寫：按章號拆回各章細綱（`writeOutline`，不經 handler） | — | — |
+| `style` / `globalSummary` | 固定路徑 | 純文字 | — | — |
+| `threads` | `threads/` 這一層的 `.md`（敘事線重做：一條線一個檔案，「未归属的伏笔.md」也是；子目錄裡的、別的副檔名、目錄本身、七期的 `threads.md` 判 `other`）；`threads/` 是受保護的固定目錄 | 純文字（格式與外科式寫入在 `model/threadFile.ts`） | —（鏈外） | — |
+| `skill` | `.novelwarden/skills.json` 與 `.novelwarden/skills/**` | 純文字（`plain`，不加 frontmatter） | — | — |
+| `sensitive` | `.novelwarden/sensitive.txt`（自定義敏感詞表，內建編輯器的寫作體檢用） | 純文字（`plain`） | —（鏈外：沒有創作階段、不進裝配器，改了它不讓任何一章掛 ⟳） | — |
+| `plot` | `summaries/` 下（各級子目錄都算，映象正文的路徑）+ 數字字首 + markdown | `plotFile.ts`（七節加「設定」一節） | 寫入記這一份梗概的指紋（`plotSynopsisHash`；梗概就是情節大綱裡這一章那一條）；定稿記的 `sourceHash` / `cast` 由 `finalizePlot` 寫，重寫細綱時原樣沿用 | — |
+| `chapter` | 章節根下 + 數字字首 + 副檔名不在黑名單 | `chapterFile.ts` | —（正文依據的細綱指紋記在細綱的 `writtenFrom` 上） | 改名/移動帶草稿與細綱（整個卷目錄也帶，連同它們的歷史版本）；寫後 `syncManifest` |
+| `character` / `lore` | 各自區 + `.md`（設定條目另給 `stage: 'setting'` 與單條設定目標 `{ kind: 'lore', relPath }`，完善設定：MCP 的 `generate` 給條目路徑就是展開它；設定目錄、角色目錄本身仍是 `other`，設定清單、角色圖譜只在 `generate` 裡認） | frontmatter | — | — |
+| `draft` | `drafts/` 下 | 純文字 | — | **永不自動進上下文** |
+| `other` | 其餘工程內文字（含老工程的 `plots/` 與歷史版本 `.novelwarden/history/`——後者讀得到、寫不進，守衛 4） | 純文字 | — | — |
 
-三条判定上的取舍：
+三條判定上的取捨：
 
-1. **`chapter` 不看是不是 `.md`**（AGENTS 第 9 条：章节不认扩展名）。
-   `001-楔子.txt`、`001-楔子`（无扩展名）、`004.json` 都算章节；
-   角色 / 设定 / 细纲**不**跟着放宽，它们是插件自己的数据格式。
-2. **章节路径不带创作目标**：正文就是章节，第 N 章的细纲是正文路径在 `summaries/` 下的镜像
-   （`NovelProject.plotPathForChapter`），配对要读盘，不在这里做；还没有正文的章，正文落点由细纲
+1. **`chapter` 不看是不是 `.md`**（AGENTS 第 9 條：章節不認副檔名）。
+   `001-楔子.txt`、`001-楔子`（無副檔名）、`004.json` 都算章節；
+   角色 / 設定 / 細綱**不**跟著放寬，它們是外掛自己的資料格式。
+2. **章節路徑不帶創作目標**：正文就是章節，第 N 章的細綱是正文路徑在 `summaries/` 下的映象
+   （`NovelProject.plotPathForChapter`），配對要讀盤，不在這裡做；還沒有正文的章，正文落點由細綱
    反推（`views/pipeline.ts` 的 `chapterTargetOf`）。
-   `pathOfTarget` 对正文 target 直接抛，提示调用方改用它。
-3. **`summaries/global.md` 排在细纲之前判**：它是全文大纲（`globalSummary`），不是一份细纲。
-4. **老工程留下的 `scenes/`、`volumes/`、`manuscripts/`、`plots/` 都判成 `other`**：那几层已经删掉
-   （见 `model/pipeline.ts` 的文件头），细纲从 `plots/` 搬进了 `summaries/`、与单章摘要并成一份
-   （见 `model/plotFile.ts` 的文件头）。那些文件
-   是作者的东西，磁盘上一个字节都不动，但代码里彻底不认——`guard.ts` 的
-   `isProtectedPath` 仍然把那几个目录列为受保护目录，免得哪条文件操作把它们整棵删掉。
-5. **敏感词表单列一种 `sensitive`，不落 `other`**：它与 `other` 一样在指纹链之外、装配器不读，但它是作者手维护的词表，改坏了要找得回来——`other` 不存历史版本，`sensitive` 存。新建经「编辑敏感词表…」（`controller/check.ts`：`write` 的 `mode: 'create'`，同名报错、不覆盖；作者点的那一下就是那一问，文件本来不在，没有可审阅的），保存走内置编辑器那条路（乐观锁，`review: false`），都不弹覆盖审阅。
-6. **`.novelwarden/history/` 下的东西都判成 `other`**：那是一份份旧稿（历史版本），装配器只按种类与固定目录读，
-   碰不到它（与第 10 条「草稿不进上下文」同一个道理）；它们自己也就不会再被存历史版本。
+   `pathOfTarget` 對正文 target 直接拋，提示呼叫方改用它。
+3. **`summaries/global.md` 排在細綱之前判**：它是全文大綱（`globalSummary`），不是一份細綱。
+4. **老工程留下的 `scenes/`、`volumes/`、`manuscripts/`、`plots/` 都判成 `other`**：那幾層已經刪掉
+   （見 `model/pipeline.ts` 的檔案頭），細綱從 `plots/` 搬進了 `summaries/`、與單章摘要併成一份
+   （見 `model/plotFile.ts` 的檔案頭）。那些檔案
+   是作者的東西，磁碟上一個位元組都不動，但程式碼裡徹底不認——`guard.ts` 的
+   `isProtectedPath` 仍然把那幾個目錄列為受保護目錄，免得哪條檔案操作把它們整棵刪掉。
+5. **敏感詞表單列一種 `sensitive`，不落 `other`**：它與 `other` 一樣在指紋鏈之外、裝配器不讀，但它是作者手維護的詞表，改壞了要找得回來——`other` 不存歷史版本，`sensitive` 存。新建經「編輯敏感詞表…」（`controller/check.ts`：`write` 的 `mode: 'create'`，同名報錯、不覆蓋；作者點的那一下就是那一問，檔案本來不在，沒有可審閱的），儲存走內建編輯器那條路（樂觀鎖，`review: false`），都不彈覆蓋審閱。
+6. **`.novelwarden/history/` 下的東西都判成 `other`**：那是一份份舊稿（歷史版本），裝配器只按種類與固定目錄讀，
+   碰不到它（與第 10 條「草稿不進上下文」同一個道理）；它們自己也就不會再被存歷史版本。
 
-## 历史版本（`history.ts`）
+## 歷史版本（`history.ts`）
 
-网关**覆盖一份已存在的创作产物之前**，把磁盘上的旧内容存成一个快照。「不静默覆盖」（第 3 条）管的是落盘之前
-那一问；问过了、写下去了，作者回头想要刚才那一版，从前只有定稿写回细纲会在回收站里留一份旧的。
+閘道器**覆蓋一份已存在的創作產物之前**，把磁碟上的舊內容存成一個快照。「不靜默覆蓋」（第 3 條）管的是落盤之前
+那一問；問過了、寫下去了，作者回頭想要剛才那一版，從前只有定稿寫回細綱會在回收站裡留一份舊的。
 
-**布局**——每份文件一个目录，每个快照一个以时间命名的文件：
+**佈局**——每份檔案一個目錄，每個快照一個以時間命名的檔案：
 
 ```
 .novelwarden/history/
-├── .gitignore                                第一次建这个目录时放进来，内容 `*`
-├── chapters/第一卷/003-深处.txt/              目录名 = 原文件的相对路径（连扩展名，`003.md` 与 `003.txt` 不撞车）
-│   ├── 2026-10-18_14-32-05+0800.txt          被覆盖那一刻的本地时间 + 时区
-│   └── 2026-10-18_14-32-05+0800-2.txt        同一秒里的第二个
-└── .novelwarden/summaries/第一卷/003-深处.md/  `.novelwarden/` 里的文件同样原样镜像
+├── .gitignore                                第一次建這個目錄時放進來，內容 `*`
+├── chapters/第一卷/003-深处.txt/              目錄名 = 原檔案的相對路徑（連副檔名，`003.md` 與 `003.txt` 不撞車）
+│   ├── 2026-10-18_14-32-05+0800.txt          被覆蓋那一刻的本地時間 + 時區
+│   └── 2026-10-18_14-32-05+0800-2.txt        同一秒裡的第二個
+└── .novelwarden/summaries/第一卷/003-深处.md/  `.novelwarden/` 裡的檔案同樣原樣映象
 ```
 
-- 快照**字节原样拷贝**（不转码，GBK 的旧稿存下来还是 GBK），扩展名一律 `.txt`：插件壳的监听吃 `.novelwarden/**/*.md`，
-  不是 `.md` 就不会每存一版多跑一轮全量重扫；内置编辑器与「文件」页照样打得开。
-- 时间从文件名读（`parseSnapshotFileName`），不看 mtime——拷来拷去 mtime 会变；带时区，换了时区也排得对。
+- 快照**位元組原樣複製**（不轉碼，GBK 的舊稿存下來還是 GBK），副檔名一律 `.txt`：外掛殼的監聽吃 `.novelwarden/**/*.md`，
+  不是 `.md` 就不會每存一版多跑一輪全量重掃；內建編輯器與「檔案」頁照樣打得開。
+- 時間從檔名讀（`parseSnapshotFileName`），不看 mtime——拷來拷去 mtime 會變；帶時區，換了時區也排得對。
 
-**存不存**（`decideSnapshot`，纯函数）：
+**存不存**（`decideSnapshot`，純函式）：
 
 | 情形 | 存不存 |
 |---|---|
-| `kindOfPath` 是 `other`（工程根的随手记、`README`、老工程的 `plots/`……）、还不是小说工程（没有 `.novelwarden/`） | 不存——不替作者凭空建出一个工程目录（敏感词表是 `sensitive`，存） |
-| 新内容与旧内容一样（什么都没覆盖）、旧内容与最新一个快照一样 | 不存 |
-| 最新快照不到 10 分钟，且「旧内容 ↔ 最新快照」「旧内容 ↔ 新内容」两处改动都在 300 字以内（公共前后缀粗算，`changedChars`） | 不存——自动保存每两秒存一次时攒不出几百个快照 |
-| 其余（第一次、隔了 10 分钟以上、整章重写 / 修稿 / 一键排版 / 定稿这类大改） | 存 |
-| 「现在存一版」（`snapshotNow`，编辑器面板上的按钮） | 跳过节流；与最新快照一字不差时仍不重复存 |
+| `kindOfPath` 是 `other`（工程根的隨手記、`README`、老工程的 `plots/`……）、還不是小說工程（沒有 `.novelwarden/`） | 不存——不替作者憑空建出一個工程目錄（敏感詞表是 `sensitive`，存） |
+| 新內容與舊內容一樣（什麼都沒覆蓋）、舊內容與最新一個快照一樣 | 不存 |
+| 最新快照不到 10 分鐘，且「舊內容 ↔ 最新快照」「舊內容 ↔ 新內容」兩處改動都在 300 字以內（公共前字尾粗算，`changedChars`） | 不存——自動儲存每兩秒存一次時攢不出幾百個快照 |
+| 其餘（第一次、隔了 10 分鐘以上、整章重寫 / 修稿 / 一鍵排版 / 定稿這類大改） | 存 |
+| 「現在存一版」（`snapshotNow`，編輯器面板上的按鈕） | 跳過節流；與最新快照一字不差時仍不重複存 |
 
-**保留**：每份文件最多留最近 50 个（`HISTORY_KEEP`），多的删掉最旧的。**这些是网关自己存的副本，不是作者的文件**，
-删它们不违背第 6 条「不真删」——第 6 条护的是作者的东西，这里删的是网关为了「找得回来」额外抄的那几份，作者自己的
-文件一个字节都没动。
+**保留**：每份檔案最多留最近 50 個（`HISTORY_KEEP`），多的刪掉最舊的。**這些是閘道器自己存的副本，不是作者的檔案**，
+刪它們不違背第 6 條「不真刪」——第 6 條護的是作者的東西，這裡刪的是閘道器為了「找得回來」額外抄的那幾份，作者自己的
+檔案一個位元組都沒動。
 
-**`.gitignore`**：只在建出 `.novelwarden/history/` 的那一次放（内容 `*`，Git 默认不收快照）。作者删掉它就是想让 Git
-收这些快照，之后不再补回来。
+**`.gitignore`**：只在建出 `.novelwarden/history/` 的那一次放（內容 `*`，Git 預設不收快照）。作者刪掉它就是想讓 Git
+收這些快照，之後不再補回來。
 
-**哪些写入存**：`write`（`overwrite` 与 `append`；编辑器保存、生成落盘、`edit`、`setParagraphStyle`，以及功能层审阅过的
-覆盖——更新角色卡、提取角色合并已有卡、章节改名时同步正文的 `# 标题` 行——都走它）、`writePlot`
-（换掉的是这一章原来那份，改标题时它在旧路径上）、`retitlePlot`（章节改名时只改细纲的标题两行）、`finalizePlot`、`writeCharacter` / `writeLore` / `writeStyleGuide` /
-`writeGlobalSummary` / `updateThreads` / `writeSkillBindings`（经私有的 `overwrite`）。**只改 frontmatter 一个键的记账**
-（`recordWrittenFrom` / `recordPreflightOk` / `restampPlotChain`）不存——它们不吞任何内容。全书替换在 `write` 之前另外
-`snapshotNow` 一次（跳过节流），之后 `write` 自己那一次与它一字不差、不重复存。覆盖创作产物的写入都经网关（角色卡的清理别名、
-合并重复卡也是：`write` 传 `review: false`，动手前的确认框就是那一问；被合并的卡经 `remove` 进回收站）。只新建、不覆盖的
-（`copy`、`mkdir`、`createChapter`、新工程的空模板 `initializeProject`）没有旧内容可存。
+**哪些寫入存**：`write`（`overwrite` 與 `append`；編輯器儲存、生成落盤、`edit`、`setParagraphStyle`，以及功能層審閱過的
+覆蓋——更新角色卡、提取角色合併已有卡、章節改名時同步正文的 `# 標題` 行——都走它）、`writePlot`
+（換掉的是這一章原來那份，改標題時它在舊路徑上）、`retitlePlot`（章節改名時只改細綱的標題兩行）、`finalizePlot`、`writeCharacter` / `writeLore` / `writeStyleGuide` /
+`writeGlobalSummary` / `updateThreads` / `writeSkillBindings`（經私有的 `overwrite`）。**只改 frontmatter 一個鍵的記賬**
+（`recordWrittenFrom` / `recordPreflightOk` / `restampPlotChain`）不存——它們不吞任何內容。全書替換在 `write` 之前另外
+`snapshotNow` 一次（跳過節流），之後 `write` 自己那一次與它一字不差、不重複存。覆蓋創作產物的寫入都經閘道器（角色卡的清理別名、
+合併重複卡也是：`write` 傳 `review: false`，動手前的確認框就是那一問；被合併的卡經 `remove` 進回收站）。只新建、不覆蓋的
+（`copy`、`mkdir`、`createChapter`、新工程的空模板 `initializeProject`）沒有舊內容可存。
 
-**网关之外剩下的写盘**都不是作者的创作产物、按设计不走这里（`tests/contract/gatewayWrites.test.js` 逐个文件数着）：会话文件
-（`model/session.ts`，内部文件，网关拒写 `sessions/`；删会话只共用 `trashPathFor` 落点）、新工程的固定目录与 manifest
-（`model/project.ts` 的 `scaffold` / `createManifest`）、旧目录 `.novel/`、`.novelforge/` → `.novelwarden/` 的迁移（仅在作者确认后改名，不删旧目录）、工程库（SQLite，第 17 条）、
-工程外的配置（`stores.ts`，`~/.novelwarden/`）与我的技能库（`skills/library.ts`）。它们都不存历史版本。
+**閘道器之外剩下的寫盤**都不是作者的創作產物、按設計不走這裡（`tests/contract/gatewayWrites.test.js` 逐個檔案數著）：會話檔案
+（`model/session.ts`，內部檔案，閘道器拒寫 `sessions/`；刪會話只共用 `trashPathFor` 落點）、新工程的固定目錄與 manifest
+（`model/project.ts` 的 `scaffold` / `createManifest`）、舊目錄 `.novel/`、`.novelforge/` → `.novelwarden/` 的遷移（僅在作者確認後改名，不刪舊目錄）、工程庫（SQLite，第 17 條）、
+工程外的配置（`stores.ts`，`~/.novelwarden/`）與我的技能庫（`skills/library.ts`）。它們都不存歷史版本。
 
-**快照跟着改名、搬家走**（`moveHistory`）：快照按路径存，所以网关 `move` 成功之后，把搬的那一份（或整个目录）在
-`.novelwarden/history/` 下的快照目录也挪到新路径下——在新路径上打开「历史」面板，看得到改名之前存的版本（章节改名时同步
-标题行存下的那一版也在里面）。
+**快照跟著改名、搬家走**（`moveHistory`）：快照按路徑存，所以閘道器 `move` 成功之後，把搬的那一份（或整個目錄）在
+`.novelwarden/history/` 下的快照目錄也挪到新路徑下——在新路徑上開啟「歷史」面板，看得到改名之前存的版本（章節改名時同步
+標題行存下的那一版也在裡面）。
 
-- **覆盖面**：单个文件；整个目录（分卷目录改名，下面每份文件的快照整棵跟着走）；伴生搬家——章节改名、移动时草稿与细纲
-  跟着搬，它们不经 `move`（`handlers/chapter.ts` 的 `carryMirror` 直接 rename），快照在那里各自跟上；没搬动的伴生（目标已有、
-  移出了 `chapters/`）快照也留在原处。`writePlot` 改标题（还没有正文）、改章号换了文件名，细纲的快照同样跟过去。
-- **新路径下已经有快照目录**（以前那里有过同名文件）：两边合并，文件名撞了按存快照时的去重规矩加序号（同一刻，序号往上
-  加；拷贝用 `COPYFILE_EXCL`，绝不盖掉已有的那一个），合并完按保留上限（50 个）修剪。
-- **搬快照失败不挡搬家**：新位置被一个文件占了、磁盘满、权限……都只记一条 warn（「没能把 … 的历史版本搬到 …，搬家照常」），
-  `moveHistory` 不抛，搬家本身不失败也不回滚（与「存快照失败不挡保存」同一个口径）；没搬过去的快照留在旧路径下，一个不丢。
-- **删除不搬**：`remove` / `deletePlot` 进回收站时快照留在原路径。作者从 `.trash/` 把文件搬回原处，历史也就回来了。
-- 搬进、搬出 `.novelwarden/history/` 本身的东西不搬快照（那里的东西本来就不存历史）。
+- **覆蓋面**：單個檔案；整個目錄（分卷目錄改名，下面每份檔案的快照整棵跟著走）；伴生搬家——章節改名、移動時草稿與細綱
+  跟著搬，它們不經 `move`（`handlers/chapter.ts` 的 `carryMirror` 直接 rename），快照在那裡各自跟上；沒搬動的伴生（目標已有、
+  移出了 `chapters/`）快照也留在原處。`writePlot` 改標題（還沒有正文）、改章號換了檔名，細綱的快照同樣跟過去。
+- **新路徑下已經有快照目錄**（以前那裡有過同名檔案）：兩邊合併，檔名撞了按存快照時的去重規矩加序號（同一刻，序號往上
+  加；複製用 `COPYFILE_EXCL`，絕不蓋掉已有的那一個），合併完按保留上限（50 個）修剪。
+- **搬快照失敗不擋搬家**：新位置被一個檔案佔了、磁碟滿、許可權……都只記一條 warn（「沒能把 … 的歷史版本搬到 …，搬家照常」），
+  `moveHistory` 不拋，搬家本身不失敗也不回滾（與「存快照失敗不擋儲存」同一個口徑）；沒搬過去的快照留在舊路徑下，一個不丟。
+- **刪除不搬**：`remove` / `deletePlot` 進回收站時快照留在原路徑。作者從 `.trash/` 把檔案搬回原處，歷史也就回來了。
+- 搬進、搬出 `.novelwarden/history/` 本身的東西不搬快照（那裡的東西本來就不存歷史）。
 
-**定稿写回两份都留**：`.trash/` 那一份照旧（永不裁剪，定稿完成提示里说的就是它），历史版本里也存一版——编辑器的
-「历史」面板里找得到、对比得了；七节整体换掉，节流拦不住它。
+**定稿寫回兩份都留**：`.trash/` 那一份照舊（永不裁剪，定稿完成提示裡說的就是它），歷史版本裡也存一版——編輯器的
+「歷史」面板裡找得到、對比得了；七節整體換掉，節流攔不住它。
 
-**绝不挡住保存**：存快照的任何一步失败都只记一条 warn（「没能给 … 存历史版本，照常写盘」），`snapshotBeforeWrite`
-不抛，调用方照常写盘（第 1 条）。
+**絕不擋住儲存**：存快照的任何一步失敗都只記一條 warn（「沒能給 … 存歷史版本，照常寫盤」），`snapshotBeforeWrite`
+不拋，呼叫方照常寫盤（第 1 條）。
 
-**不进上下文、不触发重扫、删不掉、写不进**：`kindOfPath` 判 `other`；全文检索跳过它（`isInHistory`，与 `.trash/` 同一个理由：
-搜出来的不是现在的书）；`watchPolicy.shouldIgnoreChange` 挡掉它的变动；`isProtectedPath` 把 `.novelwarden/history`
-列为固定目录（类文件操作搬不走、删不掉整个目录；工程页的三个区本来就够不着它）；守卫 4 拒绝作者的操作往里写、搬、复制、
-建目录（`inHistory`——快照只由这一层自己存）。「文件」页照常看得见、点得开，单份快照也**复制得出来**。
+**不進上下文、不觸發重掃、刪不掉、寫不進**：`kindOfPath` 判 `other`；全文檢索跳過它（`isInHistory`，與 `.trash/` 同一個理由：
+搜出來的不是現在的書）；`watchPolicy.shouldIgnoreChange` 擋掉它的變動；`isProtectedPath` 把 `.novelwarden/history`
+列為固定目錄（類檔案操作搬不走、刪不掉整個目錄；工程頁的三個區本來就夠不著它）；守衛 4 拒絕作者的操作往裡寫、搬、複製、
+建目錄（`inHistory`——快照只由這一層自己存）。「檔案」頁照常看得見、點得開，單份快照也**複製得出來**。
 
-读的一半（列出快照、读全文、现在存一版）由 `controller/versions.ts` 接给内置编辑器的「版本」侧栏与对比标签（时间线上
-混着这份文件在各存档点里的样子，`checkpointVersionsOf`）；用回一处、恢复整份都只换编辑区里的内容，从不直接写盘。
-**放回编辑区之前**（前端用回、恢复之前发的 `saveVersion { quiet }`、冲突时的对比合并）
-磁盘上那一份先 `snapshotNow` 一次：放回的内容一存盘就盖掉它，而按节流它可能因为「改动小」不存——作者是在版本之间跳，
+讀的一半（列出快照、讀全文、現在存一版）由 `controller/versions.ts` 接給內建編輯器的「版本」側欄與對比標籤（時間線上
+混著這份檔案在各存檔點裡的樣子，`checkpointVersionsOf`）；用回一處、恢復整份都只換編輯區裡的內容，從不直接寫盤。
+**放回編輯區之前**（前端用回、恢復之前發的 `saveVersion { quiet }`、衝突時的對比合併）
+磁碟上那一份先 `snapshotNow` 一次：放回的內容一存檔就蓋掉它，而按節流它可能因為「改動小」不存——作者是在版本之間跳，
 跳走之前那一版得留住。
 
-## 存档点（`checkpoints.ts`）
+## 存檔點（`checkpoints.ts`）
 
-历史版本管**一份文件**被覆盖之前的那一版；存档点管**整本书一起**：作者在工程页「存档点…」里手动存一个（带一句备注），
-批量动作之前机器自动存一个（`features/checkpoint.ts` 的 `checkpointBefore`）。之后看每个存档点跟现在比改了哪几份，
-整本或单份退回去。设计见 [docs/design/plans/2026-10-20-checkpoints.md](../../../docs/design/plans/2026-10-20-checkpoints.md)。
-**不用 git**：作者自己可能在用 git，app 自动提交会刷作者的提交历史、整本 checkout 会盖掉没提交的改动；Novelwarden 不碰 `.git`。
+歷史版本管**一份檔案**被覆蓋之前的那一版；存檔點管**整本書一起**：作者在工程頁「存檔點…」裡手動存一個（帶一句備註），
+批次動作之前機器自動存一個（`features/checkpoint.ts` 的 `checkpointBefore`）。之後看每個存檔點跟現在比改了哪幾份，
+整本或單份退回去。設計見 [docs/design/plans/2026-10-20-checkpoints.md](../../../docs/design/plans/2026-10-20-checkpoints.md)。
+**不用 git**：作者自己可能在用 git，app 自動提交會刷作者的提交歷史、整本 checkout 會蓋掉沒提交的改動；Novelwarden 不碰 `.git`。
 
-**布局**——按内容寻址，同样的内容只存一份：
+**佈局**——按內容定址，同樣的內容只存一份：
 
 ```
 .novelwarden/checkpoints/
-├── .gitignore                               第一次建这个目录时放进来，内容 `*`（同历史版本）
-├── objects/3f/a9c1…                         文件内容：sha256 前两位当目录、余下 62 位当文件名；字节原样，不转码、不压缩
-└── points/2026-10-20_22-30-05+0800.json     一个存档点一份清单：time / note / auto / files（路径 → sha、字节、字数）/ skipped
+├── .gitignore                               第一次建這個目錄時放進來，內容 `*`（同歷史版本）
+├── objects/3f/a9c1…                         檔案內容：sha256 前兩位當目錄、餘下 62 位當檔名；位元組原樣，不轉碼、不壓縮
+└── points/2026-10-20_22-30-05+0800.json     一個存檔點一份清單：time / note / auto / files（路徑 → sha、位元組、字數）/ skipped
 ```
 
-- **存哪些**（`trackedFiles`）：`kindOfPath` 不是 `other` 的，与历史版本同一个口径；只扫章节根、草稿根与 `.novelwarden/`，
-  隐藏目录（含回收站）、会话、历史版本、存档点自己都不进。超过 2 MB 的单份不存，记进 `skipped`（第 2 条），跟现在比时
-  也不算「之后新建」。
-- **先写对象、最后写清单**，两样都先写临时文件再改名：清单是提交点，写到一半失败只剩没人引用的对象，清理时带走。
-- **自动的与最近一个一模一样就不另存**（沿用最近那一个）；手动的照存（只多一份清单）。
-- **保留**：手动的永远留；自动的留最近 30 个（`CHECKPOINT_AUTO_KEEP`），裁掉清单之后清理没人引用的对象（`collectGarbage`）——
-  只删写下超过一小时的（另一个进程可能正在存、对象写了清单还没写），有一份清单读不懂就整个不清。给自动的写备注就是留住它
-  （`noteCheckpoint`：变成手动）。删掉存档点的是网关自己的副本，不违背第 6 条（同历史版本的裁剪）。
-- **排队**：同一个工程的存、写备注、清理在进程里排队（`withCheckpointLock`，按工程根一把锁）。
-- **内部文件**：整个目录算 `isInternalPath`——读当不存在、写搬删都拒、`list` 与全文检索看不见，`watchPolicy` 挡掉它的变动，
-  `isProtectedPath` 也列着它。「文件」页那一层不藏东西，目录照样列得出来，点开读不到（与会话一样）。存档点只经面板看。
+- **存哪些**（`trackedFiles`）：`kindOfPath` 不是 `other` 的，與歷史版本同一個口徑；只掃章節根、草稿根與 `.novelwarden/`，
+  隱藏目錄（含回收站）、會話、歷史版本、存檔點自己都不進。超過 2 MB 的單份不存，記進 `skipped`（第 2 條），跟現在比時
+  也不算「之後新建」。
+- **先寫物件、最後寫清單**，兩樣都先寫臨時檔案再改名：清單是提交點，寫到一半失敗只剩沒人引用的物件，清理時帶走。
+- **自動的與最近一個一模一樣就不另存**（沿用最近那一個）；手動的照存（只多一份清單）。
+- **保留**：手動的永遠留；自動的留最近 30 個（`CHECKPOINT_AUTO_KEEP`），裁掉清單之後清理沒人引用的物件（`collectGarbage`）——
+  只刪寫下超過一小時的（另一個程序可能正在存、物件寫了清單還沒寫），有一份清單讀不懂就整個不清。給自動的寫備註就是留住它
+  （`noteCheckpoint`：變成手動）。刪掉存檔點的是閘道器自己的副本，不違背第 6 條（同歷史版本的裁剪）。
+- **排隊**：同一個工程的存、寫備註、清理在程序裡排隊（`withCheckpointLock`，按工程根一把鎖）。
+- **內部檔案**：整個目錄算 `isInternalPath`——讀當不存在、寫搬刪都拒、`list` 與全文檢索看不見，`watchPolicy` 擋掉它的變動，
+  `isProtectedPath` 也列著它。「檔案」頁那一層不藏東西，目錄照樣列得出來，點開讀不到（與會話一樣）。存檔點只經面板看。
 
-**跟现在比**（`diffCheckpoint`）：逐份比 sha，分改过的、之后删掉的、之后新建的，每份带当时与现在的字数和此刻的乐观锁 hash
-（`hashNow`，按 utf8 读出来算 `hash`，与 `guardWrite` 读盘的口径一致），退回时原样带回来。
+**跟現在比**（`diffCheckpoint`）：逐份比 sha，分改過的、之後刪掉的、之後新建的，每份帶當時與現在的字數和此刻的樂觀鎖 hash
+（`hashNow`，按 utf8 讀出來算 `hash`，與 `guardWrite` 讀盤的口徑一致），退回時原樣帶回來。
 
-**退回**写盘走网关的 `restoreBytes`（见「领域写入器」）：字节原样、守卫照过、覆盖之前存一版历史（跳过节流）、**不跑 handler**——
-细纲 frontmatter 里的指纹一起回到当时，不按大纲此刻重记（第 18 条）。编排（先存「退回之前」、编辑器未保存的跳过、乐观锁、
-勾了才搬进回收站、同步 manifest）在 `features/checkpoint.ts`。
+**退回**寫盤走閘道器的 `restoreBytes`（見「領域寫入器」）：位元組原樣、守衛照過、覆蓋之前存一版歷史（跳過節流）、**不跑 handler**——
+細綱 frontmatter 裡的指紋一起回到當時，不按大綱此刻重記（第 18 條）。編排（先存「退回之前」、編輯器未儲存的跳過、樂觀鎖、
+勾了才搬進回收站、同步 manifest）在 `features/checkpoint.ts`。
 
-## 记账下沉（网关收拢那一期唯一有意的行为变化）
+## 記賬下沉（閘道器收攏那一期唯一有意的行為變化）
 
-`upstreamHash` 从前**只在采纳路径上记**（`features/creation.ts` 的
+`upstreamHash` 從前**只在採納路徑上記**（`features/creation.ts` 的
 `acceptPlot` / `acceptManuscript`）。作者在
-内置编辑器里改一份细纲，指纹链就断了——那一章从此再也不挂 ⟳。
+內建編輯器裡改一份細綱，指紋鏈就斷了——那一章從此再也不掛 ⟳。
 
-下沉到写入路径本身之后，**任何一次 `workspace.write` 到 plot 路径都记**。细纲的
-上游是**它自己的梗概**（`plotSynopsisHash`；梗概就是情节大纲里这一章那一条，梗概空着就不记、不标脏）：写一份细纲
-等于把其余几节与梗概对齐了。在汇总的大纲里改一章那一条走的是 `writeOutline`（外科式只换「梗概」一节，不经 handler），
-指纹不动，排过细纲的那一章才挂 ⟳；续写第 21–40 章不让前 20 章挂 ⟳。正文那一环（`writtenFrom`）由正文落盘那一步记（`recordWrittenFrom`），
-作者在编辑器里手改正文不动它——chapter handler 写后只同步 manifest，所以任何一次 `write` 到章节路径（编辑器保存、
-章节改名时同步 `# 标题` 行）都不会把一章挂着的 ⟳ 刷掉。三条配套约束一条没变：
+下沉到寫入路徑本身之後，**任何一次 `workspace.write` 到 plot 路徑都記**。細綱的
+上游是**它自己的梗概**（`plotSynopsisHash`；梗概就是情節大綱裡這一章那一條，梗概空著就不記、不標髒）：寫一份細綱
+等於把其餘幾節與梗概對齊了。在彙總的大綱裡改一章那一條走的是 `writeOutline`（外科式只換「梗概」一節，不經 handler），
+指紋不動，排過細綱的那一章才掛 ⟳；續寫第 21–40 章不讓前 20 章掛 ⟳。正文那一環（`writtenFrom`）由正文落盤那一步記（`recordWrittenFrom`），
+作者在編輯器裡手改正文不動它——chapter handler 寫後只同步 manifest，所以任何一次 `write` 到章節路徑（編輯器儲存、
+章節改名時同步 `# 標題` 行）都不會把一章掛著的 ⟳ 刷掉。三條配套約束一條沒變：
 
-- **手写的产物永不标脏**：`upstreamHash` / `writtenFrom` 为空 = 不是这条链生出来的，不给它补一个
-- **`plotContentHash` 只哈希七个小节**（定义在 `model/plotFile.ts`），不含 frontmatter——
-  `upstreamHash` / `writtenFrom` / `sourceHash` 自己就在 frontmatter 里，算进去会让「排一次细纲」
-  「定稿一次」立刻使这一章的正文过期
-- **不哈希状态位**——作者把某一章标成 `done`（`status: done` 在 frontmatter 里），
-  那一次写入不该让刚写好的正文立刻显示「上游已变更」
+- **手寫的產物永不標髒**：`upstreamHash` / `writtenFrom` 為空 = 不是這條鏈生出來的，不給它補一個
+- **`plotContentHash` 只雜湊七個小節**（定義在 `model/plotFile.ts`），不含 frontmatter——
+  `upstreamHash` / `writtenFrom` / `sourceHash` 自己就在 frontmatter 裡，算進去會讓「排一次細綱」
+  「定稿一次」立刻使這一章的正文過期
+- **不雜湊狀態位**——作者把某一章標成 `done`（`status: done` 在 frontmatter 裡），
+  那一次寫入不該讓剛寫好的正文立刻顯示「上游已變更」
 
-## 定稿写回（`finalizePlot`）
+## 定稿寫回（`finalizePlot`）
 
-定稿照正文反向更新细纲，落盘不走 `write`，而是 `Workspace.finalizePlot(chapter, sections, cast)`
-（渲染在 `handlers/plot.ts` 的 `renderFinalizedPlot`）。反向更新的依据是正文；梗概照正文改了，记过的上游指纹刷成新梗概的
-（没记过的照旧不记，第 18a 条）——不然一定稿就挂 ⟳。
+定稿照正文反向更新細綱，落盤不走 `write`，而是 `Workspace.finalizePlot(chapter, sections, cast)`
+（渲染在 `handlers/plot.ts` 的 `renderFinalizedPlot`）。反向更新的依據是正文；梗概照正文改了，記過的上游指紋刷成新梗概的
+（沒記過的照舊不記，第 18a 條）——不然一定稿就掛 ⟳。
 
-- **旧版先复制一份进 `.trash/`**（`trashPathFor`：保留原相对路径，同名加序号）。定稿按钮本身就是
-  作者的确认，所以不弹覆盖审阅；但改的是一份作者可能逐字推敲过的计划，旧的那一版要找得回来。历史版本里也照常
-  存一版（见「历史版本」），编辑器的「历史」面板里对比得了。
-- **七节整体换掉**，「设定」一节换成这一次定稿记下的（校验过的）；frontmatter 里 `no` / `title` / `targetWords` / `status` /
-  `preflightOk` / `factCheckOk` 原样留着，`upstreamHash` 见上。
-- **写 `sourceHash`（正文的 `contentHash`）与 `cast`，并把 `writtenFrom` 刷成更新后的内容指纹**：
-  不刷的话定稿刚改完细纲，正文立刻挂 ⟳；刷了之后，作者定稿后再改细纲，正文才挂 ⟳。指纹按
-  「渲染 → 解析回来」的样子算，与流水线判脏同一个口径。
-- 写回的永远是**正文镜像的那一份**（`plotOfChapter`）；还没有细纲的章（拆书导入、作者手写的正文）就在镜像位置新建一份（`plotPathForChapter`），不在根下另起一份。
+- **舊版先複製一份進 `.trash/`**（`trashPathFor`：保留原相對路徑，同名加序號）。定稿按鈕本身就是
+  作者的確認，所以不彈覆蓋審閱；但改的是一份作者可能逐字推敲過的計劃，舊的那一版要找得回來。歷史版本裡也照常
+  存一版（見「歷史版本」），編輯器的「歷史」面板裡對比得了。
+- **七節整體換掉**，「設定」一節換成這一次定稿記下的（校驗過的）；frontmatter 裡 `no` / `title` / `targetWords` / `status` /
+  `preflightOk` / `factCheckOk` 原樣留著，`upstreamHash` 見上。
+- **寫 `sourceHash`（正文的 `contentHash`）與 `cast`，並把 `writtenFrom` 刷成更新後的內容指紋**：
+  不刷的話定稿剛改完細綱，正文立刻掛 ⟳；刷了之後，作者定稿後再改細綱，正文才掛 ⟳。指紋按
+  「渲染 → 解析回來」的樣子算，與流水線判髒同一個口徑。
+- 寫回的永遠是**正文映象的那一份**（`plotOfChapter`）；還沒有細綱的章（拆書匯入、作者手寫的正文）就在映象位置新建一份（`plotPathForChapter`），不在根下另起一份。
 
-反过来，重写一份定稿过的细纲（`write` 到 plot 路径）时 `sourceHash` 与 `cast` 沿用磁盘那份：
-定稿过的章不被拉回「待写」，只让正文挂 ⟳（第 18 条）。
+反過來，重寫一份定稿過的細綱（`write` 到 plot 路徑）時 `sourceHash` 與 `cast` 沿用磁碟那份：
+定稿過的章不被拉回「待寫」，只讓正文掛 ⟳（第 18 條）。
 
-## 情节大纲（`writeOutline`）
+## 情節大綱（`writeOutline`）
 
-情节大纲**没有文件**，是各章细纲「梗概」的汇总（[设计稿](../../../docs/design/plans/2026-10-22-outline-from-plots.md)）。
-`.novelwarden/outline.md` 这个路径仍是它的身份：`read` / `edit` / `write` 认出它（`isOutline`）就不碰磁盘——
+情節大綱**沒有檔案**，是各章細綱「梗概」的彙總（[設計稿](../../../docs/design/plans/2026-10-22-outline-from-plots.md)）。
+`.novelwarden/outline.md` 這個路徑仍是它的身份：`read` / `edit` / `write` 認出它（`isOutline`）就不碰磁碟——
 
-- **读**：`NovelProject.readOutlineDoc`——标题行、一段说明、一章一条（每个章号认下的那一份细纲里梗概非空的）。hash 按这一份算，
-  内置编辑器的乐观锁、磁盘核对（`checkEditorFiles`）照常用；编辑器存盘不因「磁盘上没有这份文件」报 `FileGoneError`。
-- **写**：守卫、乐观锁、覆盖审阅都在整份汇总上做（产物先规范成一章一条再审阅）；一条章标题都认不出却要换掉有条目的大纲，拒
-  （照拆会把空壳全删掉）。然后按章号拆回各章细纲（`model/outlineFile.ts` 的 `planOutlineSplit`）：改梗概只换「梗概」一节
-  （`patchPlotSynopsis`，先存一版历史，上游指纹不动）；改标题走 `writePlot`（还没有正文时文件名跟着改）；新的一章建只有梗概的空壳；
-  删掉的空壳进回收站（`deletePlot`）；排了细纲或写了正文的不删、说一声。一章写不成不挡别的章，返回的说明里列出来。
-- **没有历史版本、不进存档点**：它没有字节；拆回去时改了的每份细纲各自存历史，存档点里有细纲就退得回。全文检索跳过磁盘上残留的
-  老 `outline.md`（不是现在的书），全书查找替换不列它（搜细纲就搜到了）。
-- 老工程磁盘上若还有一份 `outline.md`：读写都绕开它，一个字节不动、不迁移。
+- **讀**：`NovelProject.readOutlineDoc`——標題行、一段說明、一章一條（每個章號認下的那一份細綱裡梗概非空的）。hash 按這一份算，
+  內建編輯器的樂觀鎖、磁碟核對（`checkEditorFiles`）照常用；編輯器存檔不因「磁碟上沒有這份檔案」報 `FileGoneError`。
+- **寫**：守衛、樂觀鎖、覆蓋審閱都在整份彙總上做（產物先規範成一章一條再審閱）；一條章標題都認不出卻要換掉有條目的大綱，拒
+  （照拆會把空殼全刪掉）。然後按章號拆回各章細綱（`model/outlineFile.ts` 的 `planOutlineSplit`）：改梗概只換「梗概」一節
+  （`patchPlotSynopsis`，先存一版歷史，上游指紋不動）；改標題走 `writePlot`（還沒有正文時檔名跟著改）；新的一章建只有梗概的空殼；
+  刪掉的空殼進回收站（`deletePlot`）；排了細綱或寫了正文的不刪、說一聲。一章寫不成不擋別的章，返回的說明裡列出來。
+- **沒有歷史版本、不進存檔點**：它沒有位元組；拆回去時改了的每份細綱各自存歷史，存檔點裡有細綱就退得回。全文檢索跳過磁碟上殘留的
+  老 `outline.md`（不是現在的書），全書查詢替換不列它（搜細綱就搜到了）。
+- 老工程磁碟上若還有一份 `outline.md`：讀寫都繞開它，一個位元組不動、不遷移。
 
-## 全文检索（`search.ts`）
+## 全文檢索（`search.ts`）
 
-**零模型调用的朴素扫描**。作者问「主角前面说过他没去过北境吗」，从前只能靠手动
-`@` 引用几章原文；把它做成 AI 功能等于每问一句烧一次钱，而且会给出看起来很像但
-没有依据的答案——与「新鲜度只靠 hash 传播，不调模型」是同一条取舍。
+**零模型呼叫的樸素掃描**。作者問「主角前面說過他沒去過北境嗎」，從前只能靠手動
+`@` 引用幾章原文；把它做成 AI 功能等於每問一句燒一次錢，而且會給出看起來很像但
+沒有依據的答案——與「新鮮度只靠 hash 傳播，不調模型」是同一條取捨。
 
-四条实现约束：
+四條實現約束：
 
-1. **跳过 `.trash/`、历史版本与二进制**——回收站里躺着刚删掉的东西，搜出来等于没删；`.novelwarden/history/`
-   是一份份被覆盖掉的旧稿，同理。
-2. **单文件读入有上限**（复用 `MAX_EDITABLE_BYTES`），超了跳过并计入 `dropped`。
-3. **`dropped > 0` 必须在返回值里说出来**（第 2 条）——agent 的工具会把它转述给
-   模型，模型不知道自己只看了一半会拿半份证据下结论。
-4. **默认按章号排序**，不按文件系统顺序：作者问「他前面说过吗」，时间线顺序才有意义。
+1. **跳過 `.trash/`、歷史版本與二進位制**——回收站裡躺著剛刪掉的東西，搜出來等於沒刪；`.novelwarden/history/`
+   是一份份被覆蓋掉的舊稿，同理。
+2. **單檔案讀入有上限**（複用 `MAX_EDITABLE_BYTES`），超了跳過並計入 `dropped`。
+3. **`dropped > 0` 必須在返回值裡說出來**（第 2 條）——agent 的工具會把它轉述給
+   模型，模型不知道自己只看了一半會拿半份證據下結論。
+4. **預設按章號排序**，不按檔案系統順序：作者問「他前面說過嗎」，時間線順序才有意義。
 
-坏正则**不抛**，降级成字面量并在 `note` 里说明。缺省就是字面量——作者搜的是人名
-地名，不是正则。
+壞正則**不拋**，降級成字面量並在 `note` 裡說明。預設就是字面量——作者搜的是人名
+地名，不是正則。
 
-## 目录
+## 目錄
 
 ```
 workspace/
-├── index.ts        Workspace 门面：list / read / write / edit / move（另有只读预检 checkMove）/ copy / mkdir / remove / search，外加领域写入器与新工程的 initializeProject
-├── kind.ts         ★ 路径 → 种类（纯函数，零 I/O，绝不抛）
-├── guard.ts        ★ 统一入口守卫（八条；写、建、复制的落点共用「写不进去的三处」，复制的来源另有 guardCopySource）
-├── history.ts      历史版本：覆盖之前存旧内容（布局、节流、保留；绝不挡住保存）；搬家时快照跟着走（moveHistory，绝不挡住搬家）
-├── checkpoints.ts  存档点：整本书存一版（按内容寻址去重）、列、跟现在比（读过的清单与算过的指纹按文件状态记着）、一份文件在各存档点里的样子、保留与清理；写盘是这一层自己的（内部文件）
-├── search.ts       全文检索（朴素扫描，零模型调用）
+├── index.ts        Workspace 門面：list / read / write / edit / move（另有隻讀預檢 checkMove）/ copy / mkdir / remove / search，外加領域寫入器與新工程的 initializeProject
+├── kind.ts         ★ 路徑 → 種類（純函式，零 I/O，絕不拋）
+├── guard.ts        ★ 統一入口守衛（八條；寫、建、複製的落點共用「寫不進去的三處」，複製的來源另有 guardCopySource）
+├── history.ts      歷史版本：覆蓋之前存舊內容（佈局、節流、保留；絕不擋住儲存）；搬家時快照跟著走（moveHistory，絕不擋住搬家）
+├── checkpoints.ts  存檔點：整本書存一版（按內容定址去重）、列、跟現在比（讀過的清單與算過的指紋按檔案狀態記著）、一份檔案在各存檔點裡的樣子、保留與清理；寫盤是這一層自己的（內部檔案）
+├── search.ts       全文檢索（樸素掃描，零模型呼叫）
 └── handlers/
-    ├── index.ts    种类 → handler 注册表（认不出落 plain，绝不抛）
+    ├── index.ts    種類 → handler 登錄檔（認不出落 plain，絕不拋）
     ├── types.ts    Handler 的五件事：render / resolve / after / companions / afterCopy（另有 onRemove）
-    ├── setting.ts  架构三件（小节换新、配置 frontmatter 合并）
-    ├── plot.ts     渲染 + 记 upstreamHash；定稿写回的渲染（renderFinalizedPlot）；副本去掉定稿那一侧的指纹（afterCopy）
-    ├── chapter.ts  草稿与细纲跟随（carryDraft / carryPlot，连同它们的快照）+ manifest 同步（删章节不删草稿、不删细纲）
-    ├── doc.ts      style / globalSummary / threads / character / lore（情节大纲不经 handler，见「情节大纲」）
-    └── plain.ts    other / draft（纯文本，无记账）
+    ├── setting.ts  架構三件（小節換新、配置 frontmatter 合併）
+    ├── plot.ts     渲染 + 記 upstreamHash；定稿寫回的渲染（renderFinalizedPlot）；副本去掉定稿那一側的指紋（afterCopy）
+    ├── chapter.ts  草稿與細綱跟隨（carryDraft / carryPlot，連同它們的快照）+ manifest 同步（刪章節不刪草稿、不刪細綱）
+    ├── doc.ts      style / globalSummary / threads / character / lore（情節大綱不經 handler，見「情節大綱」）
+    └── plain.ts    other / draft（純文字，無記賬）
 ```
 
-## 领域写入器
+## 領域寫入器
 
-上面九个方法收的是**路径**。另有一批收**领域对象**：
+上面九個方法收的是**路徑**。另有一批收**領域物件**：
 
-| 方法 | 落点由什么决定 |
+| 方法 | 落點由什麼決定 |
 |---|---|
-| `writePlot` / `deletePlot` | 有正文：正文的镜像（文件名跟着正文，改标题只改 frontmatter 里的标题）；没有正文：已有那份所在的子目录，或调用方给的落点 `at` 的子目录，都没有就跟上一章同一个子目录，文件名按章号 + 标题（改章号要传原路径）。删除进 `.trash/` 的落点与 `remove` 同一套（`trashPathFor`），不会盖掉定稿时复制进去的旧版；删掉之后各条线与「未归属的伏笔」里那一章的计划事件一起删（`dropPlannedThreadEvents`，第 28 条「计划事件随细纲走」，复跑之后加的；同一章还有另一份细纲时不删），改之前存一版历史 |
-| `recordWrittenFrom` | 细纲路径（只改 frontmatter 的 `writtenFrom`，正文一个字节不动） |
-| `recordPreflightOk` | 细纲路径（只改 frontmatter 的 `preflightOk`：一致性预检的永久放行，一行「名字：理由」，同名换新理由；没有 frontmatter 的手写细纲不补，五期补遗 §2） |
-| `retitlePlot(rel, from, to)` | 细纲路径（章节改名之后、跟着搬过去的细纲把标题改成新名：只改 frontmatter 的 `title` 与 `# 第N章 标题` 那一行，别的一个字节不动，改之前存一版历史；细纲的标题不是正文的旧名（作者另起过）就不动，回 `kept`；没有 frontmatter 的手写细纲不补，只换标题行。标题不进内容指纹，不挂 ⟳。`files/fileOps.ts` 的章节改名与 `actions.ts` 的新建章节用） |
-| `restampPlotChain(rel, patch)` | 细纲路径（只改 frontmatter 里给出的指纹键：`upstreamHash` / `writtenFrom` / `sourceHash`，值为空就删掉这个键；别的键与正文一个字节不动，不存历史版本，没有 frontmatter 的手写细纲不补）。只给全书替换的指纹链收尾用（第 18 条，`features/bookReplace.ts`）：同一次里细纲与正文都改了、原本对得上的，`writtenFrom` / `sourceHash` 刷成替换后的；细纲的 `upstreamHash` 退回替换前的判断——`write` 写细纲时总是记下大纲此刻的指纹（「谁写都记」），这一次替换不该顺手把本来挂着的 ⟳ 擦掉、也不该把没记过的手写细纲拉进链 |
-| `patchPlotLore` | 细纲路径（只换「设定」一节，没有就加在末尾，另外七节与 frontmatter 一个字不动；单独记设定、补记用。「设定」一节不进内容指纹，正文不会因此挂 ⟳） |
-| `restoreBytes(rel, bytes, { baseHash?, absent? })` | 调用方给的路径（存档点的退回，`features/checkpoint.ts`）。**字节原样**写回，不跑 handler（不渲染、不记账：细纲的指纹一起回到当时，第 18 条；章节的 manifest 由调用方最后同步一次）；不弹覆盖审阅（面板上点两下就是那一问）。守卫照过：越界、写不进去的三处、大小上限、乐观锁（`absent`：当时磁盘上没有，这期间又建出来报 `exists`）；覆盖之前存一版历史（跳过节流）；父目录不在就补齐 |
-| `createChapter` / `ensureDraft` | 章号 + 标题 / 章节路径的镜像。新建正文一律出 `.txt`（2026-10-24，不写标题行） |
-| `writeExport(rel, text)` | 调用方给的路径（导出全文，`features/exportBook.ts`：`导出/<书名>.txt`）。照章节现拼的副本，不是作者的产物：**不过 2MB 上限**（一本书动辄几 MB）、不审阅、不存历史、不跑 handler，已有就整份覆盖；越界与写不进去的三处照常拦 |
-| `createChapterAt(rel, content, plotRelPath)` | 调用方给的路径（照细纲写正文时由 `views/pipeline.ts` 的 `chapterTargetOf` 算：细纲所在的子目录）。细纲路径与新正文的镜像对不上（纯序号的 `030.md`、正文按标题落成 `030-雪夜.txt`）就把细纲改名过去；镜像位置已有文件时不动、记 warn |
-| `createChapters(items)` | 同 `createChapter`，一次好几章（导入原稿）：每章照样过 `write`（同名报错退出、大小上限），只是 chapter handler 的 manifest 同步**延到最后做一次**（`WriteOptions.deferAfter`，只对章节生效）——逐章重扫全部章节是 O(n²) 次读盘，三百章十几秒。撞了同名就抛，前面写好的留着、manifest 照样同步 |
-| `finalizePlot` | 章节：正文镜像的那一份细纲，没有就在镜像位置新建（见上一节「定稿写回」） |
-| `writeCharacter` / `writeLore` | slug（可带子目录） |
-| `writeStyleGuide` / `writeGlobalSummary` | 固定路径 |
-| `markThreadsJudged(no)` | 第 `no` 章的叙事线判过了（叙事线重做四期）：推 `project.json` 里的水位 `threadsThrough`（正好是水位 + 1 就推、顺着后面已经判过的接着推，更靠后的记进 `threadsJudged`；水位以内的不写盘）。同全文大纲的水位：manifest 是链外的索引，没有上游指纹；不放 SQLite（第 17 条） |
-| `writeSkillBindings(text)` | 固定路径（`skills.json`）。设置页「技能」与 `skills bind` 动手前都已经问过作者，这里不再弹覆盖审阅——每换一次下拉框弹一个 JSON 的 diff 只是噪声 |
-| `createThread(thread)` | 新建一条叙事线 `threads/<线名>.md`（排线、定稿认出新线）：**同名跳过**——文件已经在了就一个字节不动、返回 undefined（第 19、28 条：机器只追加）。链外文件，没有上游指纹 |
-| `updateThread(rel, edit)` | 改写一份叙事线文件（一条线，或「未归属的伏笔」，还没有这份文件当空串）：读**此刻**的原文交给 `edit`、写回它给的新原文（覆盖前存一版历史）：排线、定稿要调几十秒模型（拆细纲写计划事件也走它，叙事线二期），写之前重读、只在上面外科式地改，作者这期间的改动才不会被一份旧全文冲掉；种类不是 `threads` 的拒写 |
-| `setParagraphStyle(style)` | 固定路径（`config.md`）。内置编辑器「编辑 → 段落格式」：**只改 frontmatter 的 `paragraphStyle` 这一行**（`setConfigParagraphStyle`），别的字节一个不动；没有 `config.md` 就新建一份只有这一段 frontmatter 的（没有小节，「小说配置」仍算没填，主按钮不变）。经 `write` 落盘、不弹覆盖审阅（改的只是作者在菜单里点的那一个键），带读到时的 hash 当乐观锁；已经是这个值时不写 |
-| `initializeProject(meta)` | 新工程（`actions.ts` 的 `initProjectFlow`：插件命令、网页按钮、CLI 共用）：固定目录（`model` 的 `scaffold`）→ 几份空模板（架构三件、文风、全文大纲；情节大纲没有文件；落点与内容由 `model` 的 `newProjectTemplates` 给，纯数据）→ manifest（`model` 的 `createManifest`，最后写：模板写到一半失败时工程不算建好，再点一次就补齐）。**模板经 `write` 写，`mode: 'create'`，落点上已经有东西（文件或目录）就一个字节不动**——与从前 `model/project.ts` 里的 `writeIfAbsent` 同一个口径，那一处绕过了网关，而 `model/` 不能反过来依赖网关，所以拆成「数据层给脚手架与模板内容、网关写模板」。经网关不多出动作：create 不弹审阅、不存历史；这几种（setting / style / globalSummary）的 handler 不记账，不写细纲，已有细纲不会被补上 `upstreamHash`、没有东西因此挂 ⟳；没有伴生也就不记日志。返回新建了哪几份 |
+| `writePlot` / `deletePlot` | 有正文：正文的映象（檔名跟著正文，改標題只改 frontmatter 裡的標題）；沒有正文：已有那份所在的子目錄，或呼叫方給的落點 `at` 的子目錄，都沒有就跟上一章同一個子目錄，檔名按章號 + 標題（改章號要傳原路徑）。刪除進 `.trash/` 的落點與 `remove` 同一套（`trashPathFor`），不會蓋掉定稿時複製進去的舊版；刪掉之後各條線與「未歸屬的伏筆」裡那一章的計劃事件一起刪（`dropPlannedThreadEvents`，第 28 條「計劃事件隨細綱走」，復跑之後加的；同一章還有另一份細綱時不刪），改之前存一版歷史 |
+| `recordWrittenFrom` | 細綱路徑（只改 frontmatter 的 `writtenFrom`，正文一個位元組不動） |
+| `recordPreflightOk` | 細綱路徑（只改 frontmatter 的 `preflightOk`：一致性預檢的永久放行，一行「名字：理由」，同名換新理由；沒有 frontmatter 的手寫細綱不補，五期補遺 §2） |
+| `retitlePlot(rel, from, to)` | 細綱路徑（章節改名之後、跟著搬過去的細綱把標題改成新名：只改 frontmatter 的 `title` 與 `# 第N章 標題` 那一行，別的一個位元組不動，改之前存一版歷史；細綱的標題不是正文的舊名（作者另起過）就不動，回 `kept`；沒有 frontmatter 的手寫細綱不補，只換標題行。標題不進內容指紋，不掛 ⟳。`files/fileOps.ts` 的章節改名與 `actions.ts` 的新建章節用） |
+| `restampPlotChain(rel, patch)` | 細綱路徑（只改 frontmatter 裡給出的指紋鍵：`upstreamHash` / `writtenFrom` / `sourceHash`，值為空就刪掉這個鍵；別的鍵與正文一個位元組不動，不存歷史版本，沒有 frontmatter 的手寫細綱不補）。只給全書替換的指紋鏈收尾用（第 18 條，`features/bookReplace.ts`）：同一次裡細綱與正文都改了、原本對得上的，`writtenFrom` / `sourceHash` 刷成替換後的；細綱的 `upstreamHash` 退回替換前的判斷——`write` 寫細綱時總是記下大綱此刻的指紋（「誰寫都記」），這一次替換不該順手把本來掛著的 ⟳ 擦掉、也不該把沒記過的手寫細綱拉進鏈 |
+| `patchPlotLore` | 細綱路徑（只換「設定」一節，沒有就加在末尾，另外七節與 frontmatter 一個字不動；單獨記設定、補記用。「設定」一節不進內容指紋，正文不會因此掛 ⟳） |
+| `restoreBytes(rel, bytes, { baseHash?, absent? })` | 呼叫方給的路徑（存檔點的退回，`features/checkpoint.ts`）。**位元組原樣**寫回，不跑 handler（不渲染、不記賬：細綱的指紋一起回到當時，第 18 條；章節的 manifest 由呼叫方最後同步一次）；不彈覆蓋審閱（面板上點兩下就是那一問）。守衛照過：越界、寫不進去的三處、大小上限、樂觀鎖（`absent`：當時磁碟上沒有，這期間又建出來報 `exists`）；覆蓋之前存一版歷史（跳過節流）；父目錄不在就補齊 |
+| `createChapter` / `ensureDraft` | 章號 + 標題 / 章節路徑的映象。新建正文一律出 `.txt`（2026-10-24，不寫標題行） |
+| `writeExport(rel, text)` | 呼叫方給的路徑（匯出全文，`features/exportBook.ts`：`导出/<书名>.txt`）。照章節現拼的副本，不是作者的產物：**不過 2MB 上限**（一本書動輒幾 MB）、不審閱、不存歷史、不跑 handler，已有就整份覆蓋；越界與寫不進去的三處照常攔 |
+| `createChapterAt(rel, content, plotRelPath)` | 呼叫方給的路徑（照細綱寫正文時由 `views/pipeline.ts` 的 `chapterTargetOf` 算：細綱所在的子目錄）。細綱路徑與新正文的映象對不上（純序號的 `030.md`、正文按標題落成 `030-雪夜.txt`）就把細綱改名過去；映象位置已有檔案時不動、記 warn |
+| `createChapters(items)` | 同 `createChapter`，一次好幾章（匯入原稿）：每章照樣過 `write`（同名報錯退出、大小上限），只是 chapter handler 的 manifest 同步**延到最後做一次**（`WriteOptions.deferAfter`，只對章節生效）——逐章重掃全部章節是 O(n²) 次讀盤，三百章十幾秒。撞了同名就拋，前面寫好的留著、manifest 照樣同步 |
+| `finalizePlot` | 章節：正文映象的那一份細綱，沒有就在映象位置新建（見上一節「定稿寫回」） |
+| `writeCharacter` / `writeLore` | slug（可帶子目錄） |
+| `writeStyleGuide` / `writeGlobalSummary` | 固定路徑 |
+| `markThreadsJudged(no)` | 第 `no` 章的敘事線判過了（敘事線重做四期）：推 `project.json` 裡的水位 `threadsThrough`（正好是水位 + 1 就推、順著後面已經判過的接著推，更靠後的記進 `threadsJudged`；水位以內的不寫盤）。同全文大綱的水位：manifest 是鏈外的索引，沒有上游指紋；不放 SQLite（第 17 條） |
+| `writeSkillBindings(text)` | 固定路徑（`skills.json`）。設定頁「技能」與 `skills bind` 動手前都已經問過作者，這裡不再彈覆蓋審閱——每換一次下拉框彈一個 JSON 的 diff 只是噪聲 |
+| `createThread(thread)` | 新建一條敘事線 `threads/<线名>.md`（排線、定稿認出新線）：**同名跳過**——檔案已經在了就一個位元組不動、返回 undefined（第 19、28 條：機器只追加）。鏈外檔案，沒有上游指紋 |
+| `updateThread(rel, edit)` | 改寫一份敘事線檔案（一條線，或「未歸屬的伏筆」，還沒有這份檔案當空串）：讀**此刻**的原文交給 `edit`、寫回它給的新原文（覆蓋前存一版歷史）：排線、定稿要調幾十秒模型（拆細綱寫計劃事件也走它，敘事線二期），寫之前重讀、只在上面外科式地改，作者這期間的改動才不會被一份舊全文沖掉；種類不是 `threads` 的拒寫 |
+| `setParagraphStyle(style)` | 固定路徑（`config.md`）。內建編輯器「編輯 → 段落格式」：**只改 frontmatter 的 `paragraphStyle` 這一行**（`setConfigParagraphStyle`），別的位元組一個不動；沒有 `config.md` 就新建一份只有這一段 frontmatter 的（沒有小節，「小說配置」仍算沒填，主按鈕不變）。經 `write` 落盤、不彈覆蓋審閱（改的只是作者在選單裡點的那一個鍵），帶讀到時的 hash 當樂觀鎖；已經是這個值時不寫 |
+| `initializeProject(meta)` | 新工程（`actions.ts` 的 `initProjectFlow`：外掛命令、網頁按鈕、CLI 共用）：固定目錄（`model` 的 `scaffold`）→ 幾份空模板（架構三件、文風、全文大綱；情節大綱沒有檔案；落點與內容由 `model` 的 `newProjectTemplates` 給，純資料）→ manifest（`model` 的 `createManifest`，最後寫：模板寫到一半失敗時工程不算建好，再點一次就補齊）。**模板經 `write` 寫，`mode: 'create'`，落點上已經有東西（檔案或目錄）就一個位元組不動**——與從前 `model/project.ts` 裡的 `writeIfAbsent` 同一個口徑，那一處繞過了閘道器，而 `model/` 不能反過來依賴閘道器，所以拆成「資料層給腳手架與模板內容、閘道器寫模板」。經閘道器不多出動作：create 不彈審閱、不存歷史；這幾種（setting / style / globalSummary）的 handler 不記賬，不寫細綱，已有細綱不會被補上 `upstreamHash`、沒有東西因此掛 ⟳；沒有伴生也就不記日誌。返回新建了哪幾份 |
 
-调用方手里只有对象，让它自己去拼路径等于把命名规则复制一份出去。
+呼叫方手裡只有物件，讓它自己去拼路徑等於把命名規則複製一份出去。
 
-它们仍然经同一套 handler 记账与伴生，只是路径由这一层算出来。
+它們仍然經同一套 handler 記賬與伴生，只是路徑由這一層算出來。

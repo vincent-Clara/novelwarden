@@ -1,4 +1,4 @@
-/* 消息流：气泡、思考过程、上下文明细。 */
+/* 訊息流：氣泡、思考過程、上下文明細。 */
 
 .messages {
   flex: 1;
@@ -8,8 +8,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  /* 跟滚由 JS 管：浏览器默认的 overflow-anchor 在末气泡变高时会自己挪
-     视口，翻上去看前面的人会被拽回去。 */
+  /* 跟滾由 JS 管：瀏覽器預設的 overflow-anchor 在末氣泡變高時會自己挪
+     視口，翻上去看前面的人會被拽回去。 */
   overflow-anchor: none;
 }
 
@@ -24,7 +24,7 @@
   margin: 0 0 8px;
 }
 
-/* 还不是小说工程（W12）：消息区只放初始化那一块，平时它不出现。 */
+/* 還不是小說工程（W12）：訊息區只放初始化那一塊，平時它不出現。 */
 .messages:not(.uninit) #initHint,
 .messages.uninit #emptyHint {
   display: none;
@@ -49,7 +49,7 @@
   color: var(--vscode-foreground);
 }
 
-/* 外部 agent 经 MCP 留下的气泡：角色名旁一枚小标签。 */
+/* 外部 agent 經 MCP 留下的氣泡：角色名旁一枚小標籤。 */
 .msg-tag {
   padding: 0 5px;
   border-radius: 3px;
@@ -73,12 +73,12 @@
 }
 
 /*
- * 命令类的轮次（写细纲、写正文、审稿）作者一个字都不必打，于是气泡是空的。
- * 那一枚 `/写细纲` 标签就是这条消息的全部内容——翻回去看时，它是唯一能
- * 说出「刚才点的是哪一下」的东西。
+ * 命令類的輪次（寫細綱、寫正文、審稿）作者一個字都不必打，於是氣泡是空的。
+ * 那一枚 `/寫細綱` 標籤就是這條訊息的全部內容——翻回去看時，它是唯一能
+ * 說出「剛才點的是哪一下」的東西。
  *
- * `pre-wrap` 会把标签与后面文字之间的换行原样留着，所以这里改 flex 排：
- * 有补充要求时标签在上、正文在下；没有时只有标签，不多出一行空白。
+ * `pre-wrap` 會把標籤與後面文字之間的換行原樣留著，所以這裡改 flex 排：
+ * 有補充要求時標籤在上、正文在下；沒有時只有標籤，不多出一行空白。
  */
 .msg.user .msg-body.has-command {
   display: flex;
@@ -97,12 +97,12 @@
   color: var(--vscode-badge-foreground);
 }
 
-/* 正文那一段自己管换行：外层 has-command 时是 normal（见上）。 */
+/* 正文那一段自己管換行：外層 has-command 時是 normal（見上）。 */
 .msg-text {
   white-space: pre-wrap;
 }
 
-/* 旧会话里既没话也没记下命令的空轮次。 */
+/* 舊會話裡既沒話也沒記下命令的空輪次。 */
 .msg-text-empty {
   color: var(--vscode-descriptionForeground);
   font-style: italic;
@@ -145,8 +145,8 @@
   font-size: 0.82em;
 }
 
-/* 思考过程折叠区（推理模型）。样式跟随上下文明细，视觉上更淡一层——
-   它是过程信息，不该抢正文的注意力。 */
+/* 思考過程摺疊區（推理模型）。樣式跟隨上下文明細，視覺上更淡一層——
+   它是過程資訊，不該搶正文的注意力。 */
 
 details.reasoning {
   font-size: 0.82em;
@@ -171,12 +171,12 @@ details.reasoning > summary {
   line-height: 1.6;
   color: var(--vscode-descriptionForeground);
   font-family: var(--vscode-editor-font-family);
-  /* 思考往往比正文还长，限高滚动，别把正文顶出屏幕。 */
+  /* 思考往往比正文還長，限高滾動，別把正文頂出螢幕。 */
   max-height: 220px;
   overflow-y: auto;
 }
 
-/* 上下文明细折叠区 */
+/* 上下文明細摺疊區 */
 
 details.ctx {
   font-size: 0.82em;
@@ -191,7 +191,7 @@ details.ctx > summary {
   list-style: revert;
 }
 
-/* 摘要行末尾的「复制完整上下文」：点它只复制，不开合折叠块（见 messages.ts）。 */
+/* 摘要行末尾的「複製完整上下文」：點它只複製，不開合折疊塊（見 messages.ts）。 */
 details.ctx > summary .ctx-copy {
   margin-left: 8px;
 }
@@ -254,9 +254,9 @@ details.ctx li.degraded .label {
   font-weight: 600;
 }
 
-/* agent 的工具调用条。
-   一行一次调用，行上只有名字、结果摘要与耗时；参数与返回文本收在折叠里，
-   点开才画——摊出来会把作者真正要看的那段回答挤到屏幕外。 */
+/* agent 的工具呼叫條。
+   一行一次呼叫，行上只有名字、結果摘要與耗時；引數與返回文字收在摺疊裡，
+   點開才畫——攤出來會把作者真正要看的那段回答擠到螢幕外。 */
 
 .tools {
   display: flex;
@@ -271,7 +271,7 @@ details.ctx li.degraded .label {
   background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.05));
 }
 
-/* 一行的排布：能展开的那一条排在 summary 上，没明细的老会话排在条本身上。 */
+/* 一行的排布：能展開的那一條排在 summary 上，沒明細的老會話排在條本身上。 */
 .tool-line,
 .tool-row.tool-flat {
   display: flex;
@@ -282,7 +282,7 @@ details.ctx li.degraded .label {
 
 details.tool-row > summary.tool-line {
   cursor: pointer;
-  /* 默认那个三角会把图标顶开半格，自己在左边留出位置画一个更淡的。 */
+  /* 預設那個三角會把圖示頂開半格，自己在左邊留出位置畫一個更淡的。 */
   list-style: none;
 }
 
@@ -306,7 +306,7 @@ details.tool-row > summary.tool-line:hover {
   border-radius: 4px;
 }
 
-/* 没明细的那一条左边空出三角的位置，一串条的图标才对得齐。 */
+/* 沒明細的那一條左邊空出三角的位置，一串條的圖示才對得齊。 */
 .tool-row.tool-flat {
   padding-left: 21px;
 }
@@ -315,8 +315,8 @@ details.tool-row > summary.tool-line:hover {
   color: var(--vscode-editorWarning-foreground, #cca700);
 }
 
-/* 明细：参数与返回各一段。限高滚动——返回文本后端截到两千字，仍然比
-   一条摘要长得多，铺开会把回答顶出屏幕。 */
+/* 明細：引數與返回各一段。限高滾動——返回文字後端截到兩千字，仍然比
+   一條摘要長得多，鋪開會把回答頂出螢幕。 */
 .tool-detail {
   margin: 2px 6px 6px 20px;
   padding-left: 8px;
@@ -353,7 +353,7 @@ details.tool-row > summary.tool-line:hover {
   text-overflow: ellipsis;
 }
 
-/* 摘要吃掉中间的空间，耗时贴右——扫一列就看得出哪一步慢。 */
+/* 摘要吃掉中間的空間，耗時貼右——掃一列就看得出哪一步慢。 */
 .tool-summary {
   flex: 1 1 auto;
   overflow: hidden;
@@ -368,20 +368,20 @@ details.tool-row > summary.tool-line:hover {
 
 /* ----------------------------------------------------------------- generate 卡
  *
- * `generate` 那一次不画成一行流水账，画成一张卡：`read` 回来的东西是它查资料
- * 的过程，而这几千字是**产物本身**——作者接下来要判断「这份要不要落盘」，读的
- * 就是它。从前它顺着 `delta` 和模型说的话拌在同一个文本节点里，谁也认不出边界。
+ * `generate` 那一次不畫成一行流水賬，畫成一張卡：`read` 回來的東西是它查資料
+ * 的過程，而這幾千字是**產物本身**——作者接下來要判斷「這份要不要落盤」，讀的
+ * 就是它。從前它順著 `delta` 和模型說的話拌在同一個文字節點裡，誰也認不出邊界。
  *
- * 默认展开、**卡内滚动**：铺开会把整轮对话顶出屏幕，藏起来又等于让作者隔着一
- * 行摘要去决定要不要写进书里。头两行（在做什么 / 结果如何）长在 `<summary>` 里，
- * 收起来之后还在，折叠只藏正文。
+ * 預設展開、**卡內滾動**：鋪開會把整輪對話頂出螢幕，藏起來又等於讓作者隔著一
+ * 行摘要去決定要不要寫進書裡。頭兩行（在做什麼 / 結果如何）長在 `<summary>` 裡，
+ * 收起來之後還在，摺疊只藏正文。
  */
 
 .gen {
   border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.3)));
   border-radius: var(--radius);
   background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.06));
-  /* 圆角要切住里面那块 pre 的方角。 */
+  /* 圓角要切住裡面那塊 pre 的方角。 */
   overflow: hidden;
 }
 
@@ -391,7 +391,7 @@ details.tool-row > summary.tool-line:hover {
   gap: 2px;
   padding: 5px 9px;
   cursor: pointer;
-  /* 默认那个三角会把 ✨ 顶开半格；自己在右边画一个更淡的。 */
+  /* 預設那個三角會把 ✨ 頂開半格；自己在右邊畫一個更淡的。 */
   list-style: none;
 }
 
@@ -431,7 +431,7 @@ details.tool-row > summary.tool-line:hover {
   flex: 0 0 auto;
 }
 
-/* 收起 / 展开：三角贴在耗时后面。 */
+/* 收起 / 展開：三角貼在耗時後面。 */
 .gen-line::after {
   content: '▸';
   flex: 0 0 auto;
@@ -443,8 +443,8 @@ details.tool-row > summary.tool-line:hover {
   content: '▾';
 }
 
-/* 「已生成 4/4 节 · 已写入 .novelwarden/outline.md」——单独一行，不挤进上面那行
-   （侧栏那点宽度会把它截成 `已写入 .novelward…`，而这正是最要看清的一句）。 */
+/* 「已生成 4/4 節 · 已寫入 .novelwarden/outline.md」——單獨一行，不擠進上面那行
+   （側欄那點寬度會把它截成 `已寫入 .novelward…`，而這正是最要看清的一句）。 */
 .gen-state {
   display: flex;
   align-items: baseline;
@@ -479,12 +479,12 @@ details.tool-row > summary.tool-line:hover {
   line-height: 1.75;
 }
 
-/* 还没有一个字的时候不留一块空白（也不留那道分隔线）。 */
+/* 還沒有一個字的時候不留一塊空白（也不留那道分隔線）。 */
 .gen-body:empty {
   display: none;
 }
 
-/* 参数与返回：再一层折叠。花钱那一下更要查得出它动的是哪一章。 */
+/* 引數與返回：再一層摺疊。花錢那一下更要查得出它動的是哪一章。 */
 .gen-args {
   font-size: 0.82em;
   padding: 2px 9px 5px;
@@ -499,8 +499,8 @@ details.tool-row > summary.tool-line:hover {
   margin-left: 0;
 }
 
-/* ---- 写正文的进度（W7）：气泡顶上一行字 + 一条细进度条。
-   到了目标的八成换成「已达标」的颜色；没有目标字数时来回扫（只说明还在写）。 */
+/* ---- 寫正文的進度（W7）：氣泡頂上一行字 + 一條細進度條。
+   到了目標的八成換成「已達標」的顏色；沒有目標字數時來回掃（只說明還在寫）。 */
 .write-progress {
   display: flex;
   flex-direction: column;

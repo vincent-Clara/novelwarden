@@ -1,4 +1,4 @@
-/* 弹窗：服务商配置与独立版的 prompt。 */
+/* 彈窗：服務商配置與獨立版的 prompt。 */
 
 .modal-overlay {
   position: fixed;
@@ -72,7 +72,7 @@
   border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.25));
 }
 
-/* 独立版 prompt 弹窗里的选项列表（Host.pick） */
+/* 獨立版 prompt 彈窗裡的選項列表（Host.pick） */
 .picklist {
   display: flex;
   flex-direction: column;
@@ -96,7 +96,7 @@
   background: var(--vscode-list-hoverBackground);
 }
 
-/* 通用表单弹窗（view/form.ts）：一句话、拆细纲。多行文本占满一行，数字框并排在下面。 */
+/* 通用表單彈窗（view/form.ts）：一句話、拆細綱。多行文字佔滿一行，數字框並排在下面。 */
 .nf-form {
   display: flex;
   flex-direction: column;
@@ -116,7 +116,7 @@
   color: var(--vscode-errorForeground, #f48771);
 }
 
-/* 调模型之前的确认框（独立版 prompt.ts 的 confirmCall）：两个下拉框，「按分档」时下面列出各项活交给谁。 */
+/* 調模型之前的確認框（獨立版 prompt.ts 的 confirmCall）：兩個下拉框，「按分檔」時下面列出各項活交給誰。 */
 .call-picker {
   display: flex;
   flex-direction: column;

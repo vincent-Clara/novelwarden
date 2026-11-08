@@ -1,25 +1,25 @@
 /**
- * 侧栏「版本」页（`media/src/editor/versions.ts`）、编辑区里的对比标签（`media/src/editor/versionDiff.ts`）与标题栏
- * 「文件 → 历史版本…」（`media/src/view/versionsMenu.ts`）。列表、全文都由后端推来（`versions` / `versionText`），这里按消息造。
- * 比的口径（按行、逐字、用回一处换哪一截）在 tests/unit/editor/versionDiffCore.test.js。
+ * 側欄「版本」頁（`media/src/editor/versions.ts`）、編輯區裡的對比標籤（`media/src/editor/versionDiff.ts`）與標題欄
+ * 「檔案 → 歷史版本…」（`media/src/view/versionsMenu.ts`）。列表、全文都由後端推來（`versions` / `versionText`），這裡按訊息造。
+ * 比的口徑（按行、逐字、用回一處換哪一截）在 tests/unit/editor/versionDiffCore.test.js。
  *
- * | 用例 | 钉的是什么 |
+ * | 用例 | 釘的是什麼 |
  * |---|---|
- * | 工具栏「历史」与「文件」菜单 | 插在「保存」前面；章节可用；不是创作产物 / 没打开工程 / 还不是小说工程时置灰并说为什么；点了切到「版本」页 |
- * | 活动栏 | 「版本」排在「文件」后面；藏着时不拉列表，切过来拉一次 |
- * | 列表 | 新的在前「3 分钟前 · 14:32」、字数、比现在多 / 少几个字；存档点 ◆ ◇ 带备注；空的照实说；别的文件的不画；没保存时最上面多一行 |
- * | 跟着当前文件走 | 换了文件重拉；不存历史版本的照实说；保存回执到了重拉（一秒最多一次）；对比标签显示着时留在那份文件上 |
- * | 点一行 | 发 `readVersion`，编辑区开「对比 · 名字」（只有一个，再点别的换掉内容）；全文到了画两栏：删的 `<del>`、加的 `<ins>`，没改的折起来；那一行标成选中 |
- * | 上一处 / 下一处 | 一开就停在第一处；到头了按钮置灰 |
- * | 用回这一处 | 编辑区那一处换回左边那样：一步撤销、成为未保存、**不写盘**；先发不说话的 `saveVersion`；对比标签留着、少一处 |
- * | 还没保存的改动 | 磁盘上的 ↔ 编辑器里的；用回一处 = 换回磁盘上那样 |
- * | 跟后一版比 | 两边都是存下的，只能看：没有「用回这一处」「恢复整份」 |
- * | 恢复整份 | 编辑区换成那一版、不写盘，停在那份文件上；开着自动保存时停笔 2 秒照常存，`saveVersion` 排在 `saveFile` 前面 |
- * | 刷新 | 对比标签不进刷新恢复 |
- * | 全书改动 | 切过来拉存档点列表；缺省跟最近一个**手动**的比（发 `checkpointDiff`），下拉换过就一直是它；按种类分组、改 / 新 / 删、字数差；
- *   没有存档点给一颗「现在存一个存档点」；显示着时后端推 `state` 停一下再比；标题点了收起 |
- * | 点全书改动的一份 | 没开着的先 `openEditor`（临时标签），进了编辑区再开对比标签、要存档点里那一份（`cp:`）；删掉的右边是空的、只能看；
- *   新建的左边是空的 |
+ * | 工具欄「歷史」與「檔案」選單 | 插在「儲存」前面；章節可用；不是創作產物 / 沒開啟工程 / 還不是小說工程時置灰並說為什麼；點了切到「版本」頁 |
+ * | 活動欄 | 「版本」排在「檔案」後面；藏著時不拉列表，切過來拉一次 |
+ * | 列表 | 新的在前「3 分鐘前 · 14:32」、字數、比現在多 / 少幾個字；存檔點 ◆ ◇ 帶備註；空的照實說；別的檔案的不畫；沒儲存時最上面多一行 |
+ * | 跟著當前檔案走 | 換了檔案重拉；不存歷史版本的照實說；儲存回執到了重拉（一秒最多一次）；對比標籤顯示著時留在那份檔案上 |
+ * | 點一行 | 發 `readVersion`，編輯區開「對比 · 名字」（只有一個，再點別的換掉內容）；全文到了畫兩欄：刪的 `<del>`、加的 `<ins>`，沒改的折起來；那一行標成選中 |
+ * | 上一處 / 下一處 | 一開就停在第一處；到頭了按鈕置灰 |
+ * | 用回這一處 | 編輯區那一處換回左邊那樣：一步撤銷、成為未儲存、**不寫盤**；先發不說話的 `saveVersion`；對比標籤留著、少一處 |
+ * | 還沒儲存的改動 | 磁碟上的 ↔ 編輯器裡的；用回一處 = 換回磁碟上那樣 |
+ * | 跟後一版比 | 兩邊都是存下的，只能看：沒有「用回這一處」「恢復整份」 |
+ * | 恢復整份 | 編輯區換成那一版、不寫盤，停在那份檔案上；開著自動儲存時停筆 2 秒照常存，`saveVersion` 排在 `saveFile` 前面 |
+ * | 重新整理 | 對比標籤不進重新整理恢復 |
+ * | 全書改動 | 切過來拉存檔點列表；預設跟最近一個**手動**的比（發 `checkpointDiff`），下拉換過就一直是它；按種類分組、改 / 新 / 刪、字數差；
+ *   沒有存檔點給一顆「現在存一個存檔點」；顯示著時後端推 `state` 停一下再比；標題點了收起 |
+ * | 點全書改動的一份 | 沒開著的先 `openEditor`（臨時標籤），進了編輯區再開對比標籤、要存檔點裡那一份（`cp:`）；刪掉的右邊是空的、只能看；
+ *   新建的左邊是空的 |
  */
 const { describe, test, before } = require('node:test');
 const assert = require('node:assert/strict');
@@ -28,18 +28,18 @@ const { mount, JSDOM_SKIP, file, viewState } = require('../../helpers/dom');
 const PATH = 'chapters/001-雨夜.md';
 const MIN = 60_000;
 const pad = (n) => String(n).padStart(2, '0');
-const DISK = '他推开门。\n\n雨下了三天。\n\n灯还亮着。\n';
-/** 2 小时前那一版：第二段不一样，末尾多一段。比起来两处改动。 */
-const OLD = '他推开门。\n\n雨还没有停。\n\n灯还亮着。\n\n远处有人在喊。\n';
+const DISK = '他推開門。\n\n雨下了三天。\n\n燈還亮著。\n';
+/** 2 小時前那一版：第二段不一樣，末尾多一段。比起來兩處改動。 */
+const OLD = '他推開門。\n\n雨還沒有停。\n\n燈還亮著。\n\n遠處有人在喊。\n';
 const tick = () => new Promise((r) => setImmediate(r));
 
-/** 与侧栏上同一种说法（只用在「几分钟前」这档；跨了午夜就是「昨天」）。 */
+/** 與側欄上同一種說法（只用在「幾分鐘前」這檔；跨了午夜就是「昨天」）。 */
 function whenOf(time, now = Date.now()) {
   const d = new Date(time);
   const sameDay = d.toDateString() === new Date(now).toDateString();
   const minutes = Math.floor((now - time) / MIN);
   return sameDay
-    ? `${minutes} 分钟前 · ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    ? `${minutes} 分鐘前 · ${pad(d.getHours())}:${pad(d.getMinutes())}`
     : `昨天 · ${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
@@ -60,7 +60,7 @@ function harness(extraShims = [], opts = {}) {
     rows: () => [...doc.querySelectorAll('#versionsBody .vs-timeline .vs-row')],
     row: (id) => doc.querySelector(`#versionsBody .vs-row[data-id="${id}"]`),
     unsaved: () => doc.querySelector('#versionsBody .vs-unsaved'),
-    /** 当前文件那一块的字。 */
+    /** 當前檔案那一塊的字。 */
     body: () => doc.querySelector('#versionsBody .vs-timeline').textContent,
     fileTitle: () => doc.querySelector('#versionsBody .vs-timeline .vs-section-title').textContent,
     book: () => doc.querySelector('#versionsBody .vs-book'),
@@ -88,13 +88,13 @@ function harness(extraShims = [], opts = {}) {
     key(key) {
       area().dispatchEvent(new ui.window.KeyboardEvent('keydown', { key, ctrlKey: true, bubbles: true, cancelable: true }));
     },
-    /** 后端回 `readVersion`（最近那一次），等对比标签收下（全文经 Promise 交过去，晚一拍）。 */
+    /** 後端回 `readVersion`（最近那一次），等對比標籤收下（全文經 Promise 交過去，晚一拍）。 */
     async answerRead(text, id) {
       const req = [...ui.sent].reverse().find((m) => m.type === 'readVersion' && (!id || m.id === id));
       ui.post({ type: 'versionText', requestId: req.requestId, path: req.path, id: req.id, text });
       await tick();
     },
-    /** 打开「文件」菜单，按标签找一项。 */
+    /** 開啟「檔案」選單，按標籤找一項。 */
     fileItem(label) {
       ui.closeMenu();
       ui.clickEl(doc.querySelector('[data-menu="file"]'));
@@ -111,70 +111,70 @@ function harness(extraShims = [], opts = {}) {
   return h;
 }
 
-describe('「历史」按钮与「文件 → 历史版本…」', { skip: JSDOM_SKIP }, () => {
+describe('「歷史」按鈕與「檔案 → 歷史版本…」', { skip: JSDOM_SKIP }, () => {
   let h;
   before(() => {
     h = harness();
   });
 
-  test('没开文件：菜单项置灰，提示说没有打开的文件', () => {
-    const item = h.fileItem('历史版本…');
-    assert.ok(item, '「文件」菜单里没有「历史版本…」');
+  test('沒開檔案：選單項置灰，提示說沒有開啟的檔案', () => {
+    const item = h.fileItem('歷史版本…');
+    assert.ok(item, '「檔案」選單裡沒有「歷史版本…」');
     assert.equal(item.disabled, true);
-    assert.match(item.title, /没有打开的文件/);
+    assert.match(item.title, /沒有開啟的檔案/);
     h.ui.closeMenu();
   });
 
-  test('「历史版本…」紧跟在「另存为…」后面', () => {
+  test('「歷史版本…」緊跟在「另存為…」後面', () => {
     const labels = h.fileLabels();
-    assert.equal(labels[labels.indexOf('另存为…') + 1], '历史版本…');
+    assert.equal(labels[labels.indexOf('另存為…') + 1], '歷史版本…');
   });
 
-  test('章节：工具栏「历史」插在「保存」前面、可以点', () => {
+  test('章節：工具欄「歷史」插在「儲存」前面、可以點', () => {
     h.open(PATH, DISK);
     assert.ok(h.btn());
     assert.equal(h.btn().nextElementSibling.id, 'edSaveBtn');
     assert.equal(h.btn().disabled, false);
-    assert.equal(h.fileItem('历史版本…').disabled, false);
+    assert.equal(h.fileItem('歷史版本…').disabled, false);
     h.ui.closeMenu();
   });
 
-  test('不是创作产物（kind 是 other）：两处都置灰，说为什么', () => {
-    h.open('笔记.md', '随手记', { kind: 'other' });
+  test('不是創作產物（kind 是 other）：兩處都置灰，說為什麼', () => {
+    h.open('筆記.md', '隨手記', { kind: 'other' });
     assert.equal(h.btn().disabled, true);
-    assert.match(h.btn().title, /不是工程里的创作产物/);
-    const item = h.fileItem('历史版本…');
+    assert.match(h.btn().title, /不是工程裡的創作產物/);
+    const item = h.fileItem('歷史版本…');
     assert.equal(item.disabled, true);
-    assert.match(item.title, /不是工程里的创作产物/);
+    assert.match(item.title, /不是工程裡的創作產物/);
     h.ui.closeMenu();
   });
 
-  test('没打开工程（后端没给 kind）：置灰', () => {
-    h.ui.post({ type: 'editorOpen', file: file('杂项.md', '一') });
+  test('沒開啟工程（後端沒給 kind）：置灰', () => {
+    h.ui.post({ type: 'editorOpen', file: file('雜項.md', '一') });
     assert.equal(h.btn().disabled, true);
-    assert.match(h.btn().title, /没打开工程/);
+    assert.match(h.btn().title, /沒開啟工程/);
   });
 
-  test('还不是小说工程：置灰；变成工程之后放开', () => {
+  test('還不是小說工程：置灰；變成工程之後放開', () => {
     h.open(PATH, DISK);
     h.ui.post({ type: 'state', state: viewState({ initialized: false }) });
     assert.equal(h.btn().disabled, true);
-    assert.match(h.btn().title, /还不是小说工程/);
+    assert.match(h.btn().title, /還不是小說工程/);
     h.ui.post({ type: 'state', state: viewState() });
     assert.equal(h.btn().disabled, false);
   });
 
-  test('点菜单项：切到侧栏「版本」页、发 listVersions', async () => {
+  test('點選單項：切到側欄「版本」頁、發 listVersions', async () => {
     h.ui.sent.length = 0;
-    h.ui.clickEl(h.fileItem('历史版本…'));
+    h.ui.clickEl(h.fileItem('歷史版本…'));
     await tick();
     assert.ok(h.side().classList.contains('active'));
     assert.deepEqual({ ...h.ui.last('switchTab') }, { type: 'switchTab', tab: 'versions' });
     assert.deepEqual({ ...h.ui.last('listVersions') }, { type: 'listVersions', path: PATH });
-    assert.match(h.body(), /载入中/);
+    assert.match(h.body(), /載入中/);
   });
 
-  test('点工具栏「历史」：同样切过来', async () => {
+  test('點工具欄「歷史」：同樣切過來', async () => {
     await h.showChat();
     assert.ok(!h.side().classList.contains('active'));
     h.ui.clickEl(h.btn());
@@ -183,12 +183,12 @@ describe('「历史」按钮与「文件 → 历史版本…」', { skip: JSDOM_
   });
 });
 
-describe('侧栏「版本」页', { skip: JSDOM_SKIP }, () => {
+describe('側欄「版本」頁', { skip: JSDOM_SKIP }, () => {
   let h;
   const now = Date.now();
   const entries = [
     { id: 'b.txt', time: now - 3 * MIN, words: 12, bytes: 40 },
-    { id: 'cp:2026-10-20_22-30-05+0800', time: now - 20 * MIN, words: 9, bytes: 30, checkpoint: { note: '第一卷写完', auto: false } },
+    { id: 'cp:2026-10-20_22-30-05+0800', time: now - 20 * MIN, words: 9, bytes: 30, checkpoint: { note: '第一卷寫完', auto: false } },
     { id: 'cp:2026-10-20_21-00-00+0800', time: now - 25 * MIN, words: 9, bytes: 30, checkpoint: { note: '', auto: true } },
     { id: 'a.txt', time: now - 30 * MIN, words: 3, bytes: 12 },
   ];
@@ -198,104 +198,104 @@ describe('侧栏「版本」页', { skip: JSDOM_SKIP }, () => {
     h.open(PATH, DISK, { hash: 'h-base' });
   });
 
-  test('活动栏：「版本」排在「文件」后面', () => {
+  test('活動欄：「版本」排在「檔案」後面', () => {
     const tabs = [...h.doc.querySelectorAll('#tabbar .tab')].map((b) => b.dataset.tab);
     assert.equal(tabs[tabs.indexOf('files') + 1], 'versions');
   });
 
-  test('藏着时不拉列表；切过来拉一次', async () => {
+  test('藏著時不拉列表；切過來拉一次', async () => {
     assert.equal(h.ui.last('listVersions'), undefined);
     await h.showSide();
     assert.deepEqual({ ...h.ui.last('listVersions') }, { type: 'listVersions', path: PATH });
     assert.equal(h.fileTitle(), PATH.split('/').pop());
   });
 
-  test('没有存下的版本：照实说，并说明什么时候会存', () => {
+  test('沒有存下的版本：照實說，並說明什麼時候會存', () => {
     h.ui.post({ type: 'versions', path: PATH, entries: [] });
-    assert.match(h.body(), /还没有存下的版本/);
-    assert.match(h.body(), /覆盖保存这份文件时/);
+    assert.match(h.body(), /還沒有存下的版本/);
+    assert.match(h.body(), /覆蓋儲存這份檔案時/);
   });
 
-  test('别的文件的列表不画到这里来', () => {
-    h.ui.post({ type: 'versions', path: 'chapters/009-别处.md', entries });
+  test('別的檔案的列表不畫到這裡來', () => {
+    h.ui.post({ type: 'versions', path: 'chapters/009-別處.md', entries });
     assert.equal(h.rows().length, 0);
   });
 
-  test('列表：新的在前，「3 分钟前 · 14:32」、字数、比现在多 / 少几个字', () => {
+  test('列表：新的在前，「3 分鐘前 · 14:32」、字數、比現在多 / 少幾個字', () => {
     h.ui.post({ type: 'versions', path: PATH, entries });
     const rows = h.rows();
     assert.equal(rows.length, 4);
     assert.equal(rows[0].querySelector('.vs-when').textContent, whenOf(entries[0].time, now));
-    // 编辑区里现在 13 个字（countWords 只数汉字，标点不算）。
-    assert.equal(rows[0].querySelector('.vs-meta').textContent, '12 字 · 比现在少 1 字');
-    assert.equal(rows[3].querySelector('.vs-meta').textContent, '3 字 · 比现在少 10 字');
+    // 編輯區裡現在 13 個字（countWords 只數漢字，標點不算）。
+    assert.equal(rows[0].querySelector('.vs-meta').textContent, '12 字 · 比現在少 1 字');
+    assert.equal(rows[3].querySelector('.vs-meta').textContent, '3 字 · 比現在少 10 字');
   });
 
-  test('存档点那几行：◆ 手动、◇ 自动，带备注（自动的没备注写「自动存档点」）', () => {
+  test('存檔點那幾行：◆ 手動、◇ 自動，帶備註（自動的沒備註寫「自動存檔點」）', () => {
     const [, manual, auto] = h.rows();
     assert.ok(manual.classList.contains('vs-checkpoint'));
     assert.match(manual.querySelector('.vs-when').textContent, /^◆ /);
-    assert.equal(manual.querySelector('.vs-note').textContent, '第一卷写完');
+    assert.equal(manual.querySelector('.vs-note').textContent, '第一卷寫完');
     assert.match(auto.querySelector('.vs-when').textContent, /^◇ /);
-    assert.equal(auto.querySelector('.vs-note').textContent, '自动存档点');
+    assert.equal(auto.querySelector('.vs-note').textContent, '自動存檔點');
   });
 
-  test('打字：最上面多一行「还没保存的改动」，「比现在」跟着变', async () => {
+  test('打字：最上面多一行「還沒儲存的改動」，「比現在」跟著變', async () => {
     assert.equal(h.unsaved(), null);
-    h.type(`${DISK}风停了。\n`);
+    h.type(`${DISK}風停了。\n`);
     await new Promise((r) => setTimeout(r, 350));
     assert.ok(h.unsaved());
-    assert.match(h.unsaved().textContent, /还没保存的改动.*比磁盘上多 3 字/);
-    assert.equal(h.row('b.txt').querySelector('.vs-meta').textContent, '12 字 · 比现在少 4 字');
+    assert.match(h.unsaved().textContent, /還沒儲存的改動.*比磁碟上多 3 字/);
+    assert.equal(h.row('b.txt').querySelector('.vs-meta').textContent, '12 字 · 比現在少 4 字');
   });
 
-  test('保存回执到了（hash 变了）：重拉一次列表；那一行没了', () => {
+  test('儲存回執到了（hash 變了）：重拉一次列表；那一行沒了', () => {
     h.ui.sent.length = 0;
-    h.ui.post({ type: 'editorSaved', file: file(PATH, `${DISK}风停了。\n`, { kind: 'chapter', hash: 'h-saved' }) });
+    h.ui.post({ type: 'editorSaved', file: file(PATH, `${DISK}風停了。\n`, { kind: 'chapter', hash: 'h-saved' }) });
     assert.deepEqual({ ...h.ui.last('listVersions') }, { type: 'listVersions', path: PATH });
     h.ui.post({ type: 'versions', path: PATH, entries });
     assert.equal(h.unsaved(), null);
   });
 
-  test('连着几次保存回执（自动保存那样）：一秒之内只重拉一次，最后那次挪到一秒之后', async () => {
+  test('連著幾次儲存回執（自動儲存那樣）：一秒之內只重拉一次，最後那次挪到一秒之後', async () => {
     h.ui.sent.length = 0;
-    h.ui.post({ type: 'editorSaved', file: file(PATH, `${DISK}风停了。\n`, { kind: 'chapter', hash: 'h-saved-2' }) });
-    h.ui.post({ type: 'editorSaved', file: file(PATH, `${DISK}风停了。\n`, { kind: 'chapter', hash: 'h-saved-3' }) });
-    assert.equal(h.ui.sent.filter((m) => m.type === 'listVersions').length, 0, '上一次刚拉过，先攒着');
+    h.ui.post({ type: 'editorSaved', file: file(PATH, `${DISK}風停了。\n`, { kind: 'chapter', hash: 'h-saved-2' }) });
+    h.ui.post({ type: 'editorSaved', file: file(PATH, `${DISK}風停了。\n`, { kind: 'chapter', hash: 'h-saved-3' }) });
+    assert.equal(h.ui.sent.filter((m) => m.type === 'listVersions').length, 0, '上一次剛拉過，先攢著');
     await new Promise((r) => setTimeout(r, 1100));
     assert.equal(h.ui.sent.filter((m) => m.type === 'listVersions').length, 1);
   });
 
-  test('「＋」现在存一版：发 saveVersion，提示里说清存的是磁盘上的那一份', () => {
+  test('「＋」現在存一版：發 saveVersion，提示裡說清存的是磁碟上的那一份', () => {
     const save = h.doc.getElementById('versionsSave');
-    assert.match(save.title, /磁盘上现在这一份/);
-    assert.match(save.title, /没保存的修改不在里面/);
+    assert.match(save.title, /磁碟上現在這一份/);
+    assert.match(save.title, /沒儲存的修改不在裡面/);
     h.ui.clickEl(save);
     assert.deepEqual({ ...h.ui.last('saveVersion') }, { type: 'saveVersion', path: PATH });
   });
 
-  test('换到另一份文件：重拉那一份的列表', () => {
+  test('換到另一份檔案：重拉那一份的列表', () => {
     h.ui.sent.length = 0;
-    h.open('chapters/002-风起.md', '风起了。');
-    assert.equal(h.ui.last('listVersions').path, 'chapters/002-风起.md');
+    h.open('chapters/002-風起.md', '風起了。');
+    assert.equal(h.ui.last('listVersions').path, 'chapters/002-風起.md');
     assert.equal(h.rows().length, 0);
   });
 
-  test('换到不存历史版本的文件：照实说，不发请求，「＋」点不了', () => {
+  test('換到不存歷史版本的檔案：照實說，不發請求，「＋」點不了', () => {
     h.ui.sent.length = 0;
-    h.open('笔记.md', '随手记', { kind: 'other' });
+    h.open('筆記.md', '隨手記', { kind: 'other' });
     assert.equal(h.ui.last('listVersions'), undefined);
-    assert.match(h.body(), /不是工程里的创作产物/);
+    assert.match(h.body(), /不是工程裡的創作產物/);
     assert.equal(h.doc.getElementById('versionsSave').disabled, true);
   });
 
-  test('后端说不存（unavailable）：照实说', () => {
+  test('後端說不存（unavailable）：照實說', () => {
     h.open('chapters/003-夜雨.md', '夜雨。');
-    h.ui.post({ type: 'versions', path: 'chapters/003-夜雨.md', entries: [], unavailable: '这个目录还不是小说工程（没有 .novelwarden/），不存历史版本。' });
-    assert.match(h.body(), /还不是小说工程/);
+    h.ui.post({ type: 'versions', path: 'chapters/003-夜雨.md', entries: [], unavailable: '這個目錄還不是小說工程（沒有 .novelwarden/），不存歷史版本。' });
+    assert.match(h.body(), /還不是小說工程/);
   });
 
-  test('藏着时换了文件：不拉；切回来再拉那一份', async () => {
+  test('藏著時換了檔案：不拉；切回來再拉那一份', async () => {
     await h.showChat();
     h.ui.sent.length = 0;
     h.ui.clickEl(h.fileTab(PATH));
@@ -305,7 +305,7 @@ describe('侧栏「版本」页', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('对比标签：点一行就看', { skip: JSDOM_SKIP }, () => {
+describe('對比標籤：點一行就看', { skip: JSDOM_SKIP }, () => {
   let h;
   const now = Date.now();
   const entries = [
@@ -320,119 +320,119 @@ describe('对比标签：点一行就看', { skip: JSDOM_SKIP }, () => {
     h.ui.post({ type: 'versions', path: PATH, entries });
   });
 
-  test('点一行：发 readVersion，编辑区开「对比 · 名字」，全文没到之前说载入中', () => {
+  test('點一行：發 readVersion，編輯區開「對比 · 名字」，全文沒到之前說載入中', () => {
     h.ui.sent.length = 0;
     h.ui.clickEl(h.row('a.txt'));
     const req = h.ui.last('readVersion');
     assert.equal(req.path, PATH);
     assert.equal(req.id, 'a.txt');
     assert.ok(h.diffTab());
-    assert.match(h.diffTab().textContent, /对比 · 001-雨夜\.md/);
+    assert.match(h.diffTab().textContent, /對比 · 001-雨夜\.md/);
     assert.ok(!h.diff().classList.contains('hidden'));
-    assert.match(h.diff().querySelector('.vd-body').textContent, /载入中/);
+    assert.match(h.diff().querySelector('.vd-body').textContent, /載入中/);
   });
 
-  test('那一行标成选中', () => {
+  test('那一行標成選中', () => {
     assert.ok(h.row('a.txt').classList.contains('selected'));
     assert.ok(!h.row('b.txt').classList.contains('selected'));
   });
 
-  test('全文到了：两栏的称呼，「2 处改动」，删的 <del>、加的 <ins>', async () => {
+  test('全文到了：兩欄的稱呼，「2 處改動」，刪的 <del>、加的 <ins>', async () => {
     await h.answerRead(OLD);
     const cols = [...h.diff().querySelectorAll('.vd-col')].map((c) => c.textContent);
-    assert.match(cols[0], /2 小时前.*的快照/);
-    assert.equal(cols[1], '现在');
-    assert.match(h.diff().querySelector('.vd-meta').textContent, /^2 处改动/);
+    assert.match(cols[0], /2 小時前.*的快照/);
+    assert.equal(cols[1], '現在');
+    assert.match(h.diff().querySelector('.vd-meta').textContent, /^2 處改動/);
     const [first, second] = h.changes();
-    assert.equal(first.querySelector('.vd-old').textContent, '雨还没有停。');
+    assert.equal(first.querySelector('.vd-old').textContent, '雨還沒有停。');
     assert.equal(first.querySelector('.vd-new').textContent, '雨下了三天。');
-    assert.ok(first.querySelector('.vd-old del'), '左边删掉的标出来');
-    assert.ok(first.querySelector('.vd-new ins'), '右边加上的标出来');
-    assert.equal(second.querySelector('.vd-old').textContent, '远处有人在喊。');
-    assert.match(second.querySelector('.vd-new').textContent, /删掉了/);
+    assert.ok(first.querySelector('.vd-old del'), '左邊刪掉的標出來');
+    assert.ok(first.querySelector('.vd-new ins'), '右邊加上的標出來');
+    assert.equal(second.querySelector('.vd-old').textContent, '遠處有人在喊。');
+    assert.match(second.querySelector('.vd-new').textContent, /刪掉了/);
   });
 
-  test('一开就停在第一处：「上一处」置灰', () => {
+  test('一開就停在第一處：「上一處」置灰', () => {
     assert.ok(h.changes()[0].classList.contains('current'));
     assert.equal(h.diff().querySelector('.vd-prev').disabled, true);
     assert.equal(h.diff().querySelector('.vd-next').disabled, false);
   });
 
-  test('下一处：停到第二处，到头了「下一处」置灰', () => {
+  test('下一處：停到第二處，到頭了「下一處」置灰', () => {
     h.ui.clickEl(h.diff().querySelector('.vd-next'));
     assert.ok(h.changes()[1].classList.contains('current'));
     assert.equal(h.diff().querySelector('.vd-next').disabled, true);
     assert.equal(h.diff().querySelector('.vd-prev').disabled, false);
   });
 
-  test('对比标签显示着（那一块没有当前文件）：侧栏留在这份文件上', () => {
+  test('對比標籤顯示著（那一塊沒有當前檔案）：側欄留在這份檔案上', () => {
     assert.equal(h.fileTitle(), '001-雨夜.md');
     assert.equal(h.rows().length, 2);
   });
 
-  test('用回这一处：编辑区那一处换回左边那样、成为未保存、不写盘；先发不说话的 saveVersion', () => {
+  test('用回這一處：編輯區那一處換回左邊那樣、成為未儲存、不寫盤；先發不說話的 saveVersion', () => {
     h.ui.sent.length = 0;
     h.ui.clickEl(h.changes()[0].querySelector('.vd-revert'));
     assert.deepEqual({ ...h.ui.last('saveVersion') }, { type: 'saveVersion', path: PATH, quiet: true });
-    assert.equal(h.ui.last('saveFile'), undefined, '不该写盘');
+    assert.equal(h.ui.last('saveFile'), undefined, '不該寫盤');
     assert.ok(h.fileTab().classList.contains('dirty'));
   });
 
-  test('对比标签留着，少了一处', () => {
+  test('對比標籤留著，少了一處', () => {
     assert.ok(!h.diff().classList.contains('hidden'));
     assert.equal(h.changes().length, 1);
-    assert.equal(h.changes()[0].querySelector('.vd-old').textContent, '远处有人在喊。');
+    assert.equal(h.changes()[0].querySelector('.vd-old').textContent, '遠處有人在喊。');
   });
 
-  test('右边写成「现在（编辑器里，还没保存）」；侧栏最上面多一行', () => {
-    assert.equal(h.diff().querySelector('.vd-col-right').textContent, '现在（编辑器里，还没保存）');
+  test('右邊寫成「現在（編輯器裡，還沒儲存）」；側欄最上面多一行', () => {
+    assert.equal(h.diff().querySelector('.vd-col-right').textContent, '現在（編輯器裡，還沒儲存）');
     assert.ok(h.unsaved());
   });
 
-  test('回到那份文件：内容换了，一步撤销退回', () => {
+  test('回到那份檔案：內容換了，一步撤銷退回', () => {
     h.ui.clickEl(h.fileTab());
-    assert.equal(h.area().value, '他推开门。\n\n雨还没有停。\n\n灯还亮着。\n');
+    assert.equal(h.area().value, '他推開門。\n\n雨還沒有停。\n\n燈還亮著。\n');
     h.key('z');
     assert.equal(h.area().value, DISK);
   });
 
-  test('编辑器里那份变了：切回对比标签时重比', () => {
-    h.type(`${DISK}风停了。\n`);
+  test('編輯器裡那份變了：切回對比標籤時重比', () => {
+    h.type(`${DISK}風停了。\n`);
     h.ui.clickEl(h.diffTab());
     assert.equal(h.changes().length, 2);
-    assert.equal(h.changes()[1].querySelector('.vd-new').textContent, '风停了。');
+    assert.equal(h.changes()[1].querySelector('.vd-new').textContent, '風停了。');
   });
 
-  test('还没保存的改动：磁盘上的 ↔ 编辑器里的；用回一处 = 换回磁盘上那样', async () => {
+  test('還沒儲存的改動：磁碟上的 ↔ 編輯器裡的；用回一處 = 換回磁碟上那樣', async () => {
     await new Promise((r) => setTimeout(r, 350));
     h.ui.clickEl(h.unsaved());
     const cols = [...h.diff().querySelectorAll('.vd-col')].map((c) => c.textContent);
-    assert.deepEqual(cols, ['磁盘上的（上次保存的）', '现在（编辑器里，还没保存）']);
+    assert.deepEqual(cols, ['磁碟上的（上次儲存的）', '現在（編輯器裡，還沒儲存）']);
     assert.equal(h.changes().length, 1);
-    assert.equal(h.diff().querySelector('.vd-restore').classList.contains('hidden'), true, '磁盘那一份用「还原」，这里不给恢复整份');
+    assert.equal(h.diff().querySelector('.vd-restore').classList.contains('hidden'), true, '磁碟那一份用「還原」，這裡不給恢復整份');
     h.ui.clickEl(h.changes()[0].querySelector('.vd-revert'));
-    assert.match(h.diff().querySelector('.vd-body').textContent, /没有还没保存的改动了/);
+    assert.match(h.diff().querySelector('.vd-body').textContent, /沒有還沒儲存的改動了/);
   });
 
-  test('只有一个对比标签：再点别的一行换掉里面的内容', () => {
+  test('只有一個對比標籤：再點別的一行換掉裡面的內容', () => {
     h.ui.clickEl(h.row('b.txt'));
     assert.equal(h.doc.querySelectorAll('.ed-tab-special[data-special="version-diff"]').length, 1);
     assert.ok(h.row('b.txt').classList.contains('selected'));
   });
 
-  test('只有空白不同：照实说', async () => {
-    await h.answerRead('　　他推开门。\n\n\n　　雨下了三天。\n\n　　灯还亮着。\n', 'b.txt');
+  test('只有空白不同：照實說', async () => {
+    await h.answerRead('　　他推開門。\n\n\n　　雨下了三天。\n\n　　燈還亮著。\n', 'b.txt');
     assert.match(h.diff().querySelector('.vd-body').textContent, /只有空白不同/);
   });
 
-  test('关掉对比标签：侧栏不再标选中', () => {
+  test('關掉對比標籤：側欄不再標選中', () => {
     h.ui.clickEl(h.diffTab().querySelector('.ed-tab-close'));
     assert.equal(h.diffTab(), null);
     assert.equal(h.doc.querySelectorAll('#versionsBody .vs-row.selected').length, 0);
   });
 });
 
-describe('右键：跟后一版比、恢复整份', { skip: JSDOM_SKIP }, () => {
+describe('右鍵：跟後一版比、恢復整份', { skip: JSDOM_SKIP }, () => {
   let h;
   const now = Date.now();
   const entries = [
@@ -447,45 +447,45 @@ describe('右键：跟后一版比、恢复整份', { skip: JSDOM_SKIP }, () => 
     h.ui.post({ type: 'versions', path: PATH, entries });
   });
 
-  test('右键一行：跟现在比、跟后一版比、恢复整份到编辑区', () => {
+  test('右鍵一行：跟現在比、跟後一版比、恢復整份到編輯區', () => {
     const menu = h.ui.rightClick(h.row('a.txt'));
-    assert.deepEqual(h.ui.itemsOf(menu), ['跟现在比', '跟后一版比（那一次改了什么）', '恢复整份到编辑区']);
+    assert.deepEqual(h.ui.itemsOf(menu), ['跟現在比', '跟後一版比（那一次改了什麼）', '恢復整份到編輯區']);
     h.ui.closeMenu();
   });
 
-  test('跟后一版比：两边都要全文；只能看，没有「用回这一处」「恢复整份」', async () => {
+  test('跟後一版比：兩邊都要全文；只能看，沒有「用回這一處」「恢復整份」', async () => {
     h.ui.sent.length = 0;
-    h.ui.pick(h.ui.rightClick(h.row('a.txt')), '跟后一版比（那一次改了什么）');
+    h.ui.pick(h.ui.rightClick(h.row('a.txt')), '跟後一版比（那一次改了什麼）');
     const ids = h.ui.sent.filter((m) => m.type === 'readVersion').map((m) => m.id);
     assert.deepEqual(ids.sort(), ['a.txt', 'b.txt']);
     await h.answerRead(OLD, 'a.txt');
-    await h.answerRead('他推开门。\n\n雨还没有停。\n\n灯还亮着。\n', 'b.txt');
+    await h.answerRead('他推開門。\n\n雨還沒有停。\n\n燈還亮著。\n', 'b.txt');
     const cols = [...h.diff().querySelectorAll('.vd-col')].map((c) => c.textContent);
-    assert.match(cols[0], /2 小时前/);
-    assert.match(cols[1], /3 分钟前/);
+    assert.match(cols[0], /2 小時前/);
+    assert.match(cols[1], /3 分鐘前/);
     assert.equal(h.changes().length, 1);
     assert.equal(h.diff().querySelector('.vd-revert'), null);
     assert.ok(h.diff().querySelector('.vd-restore').classList.contains('hidden'));
   });
 
-  test('恢复整份到编辑区：编辑区换成那一版、未保存、不写盘，停在那份文件上', async () => {
+  test('恢復整份到編輯區：編輯區換成那一版、未儲存、不寫盤，停在那份檔案上', async () => {
     h.ui.sent.length = 0;
-    h.ui.pick(h.ui.rightClick(h.row('a.txt')), '恢复整份到编辑区');
+    h.ui.pick(h.ui.rightClick(h.row('a.txt')), '恢復整份到編輯區');
     await tick();
-    // 全文记着（刚才读过），不再要。
+    // 全文記著（剛才讀過），不再要。
     assert.equal(h.ui.last('readVersion'), undefined);
     assert.equal(h.area().value, OLD);
     assert.ok(h.fileTab().classList.contains('dirty'));
-    assert.ok(h.diff().classList.contains('hidden'), '停在那份文件上');
+    assert.ok(h.diff().classList.contains('hidden'), '停在那份檔案上');
     assert.equal(h.ui.last('saveFile'), undefined);
     assert.deepEqual({ ...h.ui.last('saveVersion') }, { type: 'saveVersion', path: PATH, quiet: true });
-    assert.match(h.toasts.at(-1), /还没保存/);
+    assert.match(h.toasts.at(-1), /還沒儲存/);
   });
 
 });
 
-describe('对比标签不进刷新恢复', { skip: JSDOM_SKIP }, () => {
-  test('存下来的快照里没有它；当前那份记的是它后面那份文件，刷新之后回到那份文件', async () => {
+describe('對比標籤不進重新整理恢復', { skip: JSDOM_SKIP }, () => {
+  test('存下來的快照裡沒有它；當前那份記的是它後面那份檔案，重新整理之後回到那份檔案', async () => {
     const h = harness([], { storage: {} });
     h.open(PATH, DISK);
     await h.showSide();
@@ -498,8 +498,8 @@ describe('对比标签不进刷新恢复', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('草稿区也有自己的「历史」', { skip: JSDOM_SKIP }, () => {
-  test('按钮在那一块的「保存」前面；对比标签开在那一块里', async () => {
+describe('草稿區也有自己的「歷史」', { skip: JSDOM_SKIP }, () => {
+  test('按鈕在那一塊的「儲存」前面；對比標籤開在那一塊裡', async () => {
     const h = harness();
     h.ui.post({ type: 'editorOpen', pane: 'draft', file: file('drafts/001-雨夜.md', '草稿。', { kind: 'draft' }) });
     const draft = h.ui.panes()[1];
@@ -516,62 +516,62 @@ describe('草稿区也有自己的「历史」', { skip: JSDOM_SKIP }, () => {
   });
 });
 
-describe('开着自动保存时恢复一版', { skip: JSDOM_SKIP }, () => {
+describe('開著自動儲存時恢復一版', { skip: JSDOM_SKIP }, () => {
   let h;
 
   before(async () => {
     h = harness(['fakeTimers']);
-    h.open(PATH, '现在磁盘上的。', { hash: 'h-disk' });
+    h.open(PATH, '現在磁碟上的。', { hash: 'h-disk' });
     h.ui.window.dispatchEvent(new h.ui.window.CustomEvent('nf-editor-command', { detail: { name: 'toggleAutoSave' } }));
     await h.showSide();
     h.ui.post({ type: 'versions', path: PATH, entries: [{ id: 'a.txt', time: Date.now() - 5 * MIN, words: 4, bytes: 12 }] });
   });
 
-  test('底下说清：放回之后停笔 2 秒就写回磁盘，被盖掉的那一版先进这里', () => {
-    assert.match(h.doc.getElementById('versionsFoot').textContent, /自动保存开着.*停笔 2 秒.*先存进这里/);
+  test('底下說清：放回之後停筆 2 秒就寫回磁碟，被蓋掉的那一版先進這裡', () => {
+    assert.match(h.doc.getElementById('versionsFoot').textContent, /自動儲存開著.*停筆 2 秒.*先存進這裡/);
   });
 
-  test('恢复：先发不说话的 saveVersion，停笔 2 秒照常自动保存，saveFile 排在它后面', async () => {
+  test('恢復：先發不說話的 saveVersion，停筆 2 秒照常自動儲存，saveFile 排在它後面', async () => {
     h.ui.sent.length = 0;
-    h.ui.pick(h.ui.rightClick(h.row('a.txt')), '恢复整份到编辑区');
-    await h.answerRead('旧的那一版。');
+    h.ui.pick(h.ui.rightClick(h.row('a.txt')), '恢復整份到編輯區');
+    await h.answerRead('舊的那一版。');
     await tick();
-    assert.equal(h.area().value, '旧的那一版。');
-    assert.equal(h.ui.last('saveFile'), undefined, '当场不写盘');
+    assert.equal(h.area().value, '舊的那一版。');
+    assert.equal(h.ui.last('saveFile'), undefined, '當場不寫盤');
     h.ui.window.__clock.tick(2000);
     const types = h.ui.sent.map((m) => m.type);
     const snap = types.indexOf('saveVersion');
     const save = types.indexOf('saveFile');
     assert.ok(snap >= 0 && save > snap, types.join(' → '));
-    assert.equal(h.ui.sent[save].text, '旧的那一版。');
+    assert.equal(h.ui.sent[save].text, '舊的那一版。');
     assert.equal(h.ui.sent[save].baseHash, 'h-disk');
   });
 
-  test('编辑区里已经是这一版：不发 saveVersion', async () => {
+  test('編輯區裡已經是這一版：不發 saveVersion', async () => {
     h.ui.sent.length = 0;
-    h.ui.pick(h.ui.rightClick(h.row('a.txt')), '恢复整份到编辑区');
+    h.ui.pick(h.ui.rightClick(h.row('a.txt')), '恢復整份到編輯區');
     await tick();
     assert.equal(h.ui.last('saveVersion'), undefined);
-    assert.match(h.toasts.at(-1), /已经是这一版/);
+    assert.match(h.toasts.at(-1), /已經是這一版/);
   });
 
-  test('关掉自动保存：那句说明跟着撤掉', () => {
+  test('關掉自動儲存：那句說明跟著撤掉', () => {
     h.ui.window.dispatchEvent(new h.ui.window.CustomEvent('nf-editor-command', { detail: { name: 'toggleAutoSave' } }));
-    assert.doesNotMatch(h.doc.getElementById('versionsFoot').textContent, /自动保存开着/);
+    assert.doesNotMatch(h.doc.getElementById('versionsFoot').textContent, /自動儲存開著/);
   });
 });
 
-describe('全书改动', { skip: JSDOM_SKIP }, () => {
+describe('全書改動', { skip: JSDOM_SKIP }, () => {
   let h;
   const now = Date.now();
   const MANUAL = '2026-10-20_22-30-05+0800';
   const AUTO = '2026-10-21_09-00-00+0800';
   const cps = [
-    { id: AUTO, time: now - 10 * MIN, note: '批量写章之前（第 4–6 章）', auto: true, files: 20, chapters: 3, chapterWords: 9000, skipped: [] },
-    { id: MANUAL, time: now - 60 * MIN, note: '第一卷写完', auto: false, files: 18, chapters: 3, chapterWords: 8000, skipped: [] },
+    { id: AUTO, time: now - 10 * MIN, note: '批次寫章之前（第 4–6 章）', auto: true, files: 20, chapters: 3, chapterWords: 9000, skipped: [] },
+    { id: MANUAL, time: now - 60 * MIN, note: '第一卷寫完', auto: false, files: 18, chapters: 3, chapterWords: 8000, skipped: [] },
   ];
-  const CH2 = 'chapters/002-客栈.md';
-  const CH3 = 'chapters/003-夜访.md';
+  const CH2 = 'chapters/002-客棧.md';
+  const CH3 = 'chapters/003-夜訪.md';
   const CH4 = 'chapters/004-渡口.md';
   const LIN = '.novelwarden/characters/林昭.md';
   const diff = (id) => ({
@@ -591,75 +591,75 @@ describe('全书改动', { skip: JSDOM_SKIP }, () => {
     await h.showSide();
   });
 
-  test('切过来：拉存档点列表；没到之前说载入中', () => {
+  test('切過來：拉存檔點列表；沒到之前說載入中', () => {
     assert.ok(h.ui.last('listCheckpoints'));
-    assert.match(h.book().textContent, /全书改动.*载入中/);
+    assert.match(h.book().textContent, /全書改動.*載入中/);
   });
 
-  test('缺省跟最近一个手动存档点比（自动的更新也不选它），发 checkpointDiff', () => {
+  test('預設跟最近一個手動存檔點比（自動的更新也不選它），發 checkpointDiff', () => {
     h.ui.sent.length = 0;
     h.ui.post({ type: 'checkpoints', entries: cps });
     assert.deepEqual({ ...h.ui.last('checkpointDiff') }, { type: 'checkpointDiff', id: MANUAL });
     assert.equal(h.book().querySelector('.vs-base-select').value, MANUAL);
-    assert.match(h.book().textContent, /比着呢/);
+    assert.match(h.book().textContent, /比著呢/);
   });
 
-  test('别的存档点的比较不认（存档点弹窗要的）', () => {
+  test('別的存檔點的比較不認（存檔點彈窗要的）', () => {
     h.ui.post({ type: 'checkpointDiff', id: AUTO, diff: diff(AUTO) });
     assert.equal(h.bookRows().length, 0);
   });
 
-  test('比出来了：按种类分组，改 / 新 / 删、字数差，标题上是份数', () => {
+  test('比出來了：按種類分組，改 / 新 / 刪、字數差，標題上是份數', () => {
     h.ui.post({ type: 'checkpointDiff', id: MANUAL, diff: diff(MANUAL) });
     const groups = [...h.book().querySelectorAll('.vs-group')].map((g) => g.textContent);
-    assert.deepEqual(groups, ['章节 3', '角色卡 1']);
+    assert.deepEqual(groups, ['章節 3', '角色卡 1']);
     assert.equal(h.book().querySelector('.vs-count').textContent, '4');
     const text = (p) => h.bookRow(p).textContent;
-    assert.equal(text(CH2), '改002-客栈多了 20 字');
-    assert.equal(text(CH3), '删003-夜访之后删掉了 · 原来 300 字');
-    assert.equal(text(CH4), '新004-渡口之后新建的 · 10 字');
+    assert.equal(text(CH2), '改002-客棧多了 20 字');
+    assert.equal(text(CH3), '刪003-夜訪之後刪掉了 · 原來 300 字');
+    assert.equal(text(CH4), '新004-渡口之後新建的 · 10 字');
     assert.equal(text(LIN), '改林昭少了 10 字');
   });
 
-  test('点一份没开着的：先开成临时标签，进了编辑区再开对比标签、要存档点里那一份', async () => {
+  test('點一份沒開著的：先開成臨時標籤，進了編輯區再開對比標籤、要存檔點裡那一份', async () => {
     h.ui.sent.length = 0;
     h.ui.clickEl(h.bookRow(CH2));
     assert.deepEqual({ ...h.ui.last('openEditor') }, { type: 'openEditor', path: CH2, preview: true });
-    assert.equal(h.diffTab(), null, '文件还没到，先不开');
-    h.ui.post({ type: 'editorOpen', file: file(CH2, '现在的第二章。\n', { kind: 'chapter' }), preview: true });
+    assert.equal(h.diffTab(), null, '檔案還沒到，先不開');
+    h.ui.post({ type: 'editorOpen', file: file(CH2, '現在的第二章。\n', { kind: 'chapter' }), preview: true });
     await tick();
     assert.ok(h.diffTab());
     assert.equal(h.ui.last('readVersion').id, `cp:${MANUAL}`);
-    await h.answerRead('当时的第二章。\n');
+    await h.answerRead('當時的第二章。\n');
     const cols = [...h.diff().querySelectorAll('.vd-col')].map((c) => c.textContent);
-    assert.match(cols[0], /存档点「第一卷写完」/);
-    assert.equal(cols[1], '现在');
+    assert.match(cols[0], /存檔點「第一卷寫完」/);
+    assert.equal(cols[1], '現在');
     assert.ok(h.changes()[0].querySelector('.vd-revert'), '可以用回');
     assert.ok(h.bookRow(CH2).classList.contains('selected'));
   });
 
-  test('之后删掉的：右边是空的，只能看', async () => {
+  test('之後刪掉的：右邊是空的，只能看', async () => {
     h.ui.sent.length = 0;
     h.ui.clickEl(h.bookRow(CH3));
-    assert.equal(h.ui.last('openEditor'), undefined, '删掉的不去开');
-    await h.answerRead('当时的第三章。\n');
+    assert.equal(h.ui.last('openEditor'), undefined, '刪掉的不去開');
+    await h.answerRead('當時的第三章。\n');
     const cols = [...h.diff().querySelectorAll('.vd-col')].map((c) => c.textContent);
-    assert.match(cols[1], /现在已经没有这一份了/);
+    assert.match(cols[1], /現在已經沒有這一份了/);
     assert.equal(h.diff().querySelector('.vd-revert'), null);
     assert.ok(h.diff().querySelector('.vd-restore').classList.contains('hidden'));
   });
 
-  test('之后新建的：左边是空的，不要全文', async () => {
-    h.ui.post({ type: 'editorOpen', file: file(CH4, '船来了。\n', { kind: 'chapter' }) });
+  test('之後新建的：左邊是空的，不要全文', async () => {
+    h.ui.post({ type: 'editorOpen', file: file(CH4, '船來了。\n', { kind: 'chapter' }) });
     h.ui.sent.length = 0;
     h.ui.clickEl(h.bookRow(CH4));
     assert.equal(h.ui.last('readVersion'), undefined);
     const cols = [...h.diff().querySelectorAll('.vd-col')].map((c) => c.textContent);
-    assert.equal(cols[0], '存档点里还没有这一份');
+    assert.equal(cols[0], '存檔點裡還沒有這一份');
     assert.equal(h.changes().length, 1);
   });
 
-  test('下拉换一个：比它；之后列表重推也还是它', () => {
+  test('下拉換一個：比它；之後列表重推也還是它', () => {
     const select = h.book().querySelector('.vs-base-select');
     select.value = AUTO;
     select.dispatchEvent(new h.ui.window.Event('change', { bubbles: true }));
@@ -669,21 +669,21 @@ describe('全书改动', { skip: JSDOM_SKIP }, () => {
     assert.equal(h.book().querySelector('.vs-base-select').value, AUTO);
   });
 
-  test('挑过的那个被裁掉了：回到缺省（最近一个手动的）', () => {
+  test('挑過的那個被裁掉了：回到預設（最近一個手動的）', () => {
     h.ui.post({ type: 'checkpoints', entries: [cps[1]] });
     assert.equal(h.ui.last('checkpointDiff').id, MANUAL);
   });
 
-  test('显示着时后端推 state（存盘之后）：停一下再拉一次', async () => {
+  test('顯示著時後端推 state（存檔之後）：停一下再拉一次', async () => {
     h.ui.sent.length = 0;
     h.ui.post({ type: 'state', state: viewState() });
     h.ui.post({ type: 'state', state: viewState() });
-    assert.equal(h.ui.last('listCheckpoints'), undefined, '先攒着');
+    assert.equal(h.ui.last('listCheckpoints'), undefined, '先攢著');
     await new Promise((r) => setTimeout(r, 900));
     assert.equal(h.ui.sent.filter((m) => m.type === 'listCheckpoints').length, 1);
   });
 
-  test('标题点了收起，再点展开', () => {
+  test('標題點了收起，再點展開', () => {
     h.ui.post({ type: 'checkpointDiff', id: MANUAL, diff: diff(MANUAL) });
     h.ui.clickEl(h.book().querySelector('.vs-section-head'));
     assert.equal(h.bookRows().length, 0);
@@ -692,9 +692,9 @@ describe('全书改动', { skip: JSDOM_SKIP }, () => {
     assert.equal(h.bookRows().length, 4);
   });
 
-  test('没有存档点：说一句，给一颗「现在存一个存档点」', () => {
+  test('沒有存檔點：說一句，給一顆「現在存一個存檔點」', () => {
     h.ui.post({ type: 'checkpoints', entries: [] });
-    assert.match(h.book().textContent, /还没有存档点/);
+    assert.match(h.book().textContent, /還沒有存檔點/);
     h.ui.clickEl(h.book().querySelector('.vs-book-save'));
     assert.deepEqual({ ...h.ui.last('createCheckpoint') }, { type: 'createCheckpoint', note: '' });
   });

@@ -1,11 +1,11 @@
 /**
- * 独立版的资源管理器（侧栏「文件」页）。插件形态里没有这块 DOM，本文件直接
- * 退出——那边由 VS Code 自己的资源管理器承担，不必也不该再画一棵。
+ * 獨立版的資源管理器（側欄「檔案」頁）。外掛形態裡沒有這塊 DOM，本檔案直接
+ * 退出——那邊由 VS Code 自己的資源管理器承擔，不必也不該再畫一棵。
  *
- * 与「工程」页的区别：那边是按语义整理过的视图（章节按序号倒序、定稿状态、
- * 角色别名），只看得见三个可管理区里的文件；这里是磁盘上真实的目录结构，
- * 一个都不藏——**包括 `.novelwarden/` 这类点开头的目录**，细纲、会话、
- * project.json 都在里面，工程页给不了入口。
+ * 與「工程」頁的區別：那邊是按語義整理過的檢視（章節按序號倒序、定稿狀態、
+ * 角色別名），只看得見三個可管理區裡的檔案；這裡是磁碟上真實的目錄結構，
+ * 一個都不藏——**包括 `.novelwarden/` 這類點開頭的目錄**，細綱、會話、
+ * project.json 都在裡面，工程頁給不了入口。
  */
 import { byId, maybeById } from '../dom';
 import { announceFileMoved, onContextMenu, toast } from '../globals';
@@ -25,7 +25,7 @@ import {
 } from './state';
 
 const body = maybeById('filesBody');
-// 插件形态没有这块 DOM，直接退出。
+// 外掛形態沒有這塊 DOM，直接退出。
 if (body) {
   start(body);
 }
@@ -34,7 +34,7 @@ function start(body: HTMLElement): void {
   const vscode = acquireApi();
   bind({ post: (msg) => vscode.postMessage(msg), render });
 
-  /** 整棵树重画。滚动位置留住——刷新/高亮变化不该把用户拽回顶部。 */
+  /** 整棵樹重畫。滾動位置留住——重新整理/高亮變化不該把使用者拽回頂部。 */
   function render(): void {
     const scroll = body.scrollTop;
     body.innerHTML = '';
@@ -42,7 +42,7 @@ function start(body: HTMLElement): void {
       body.appendChild(row);
     }
     body.scrollTop = scroll;
-    // 刚定位的那一行画出来了：滚到它（它所在的目录可能要等下一次 dirListings 才有）。
+    // 剛定位的那一行畫出來了：滾到它（它所在的目錄可能要等下一次 dirListings 才有）。
     if (state.pendingScroll) {
       const row = [...body.querySelectorAll<HTMLElement>('.fx-row')].find((r) => r.dataset.path === state.pendingScroll);
       if (row) {
@@ -53,8 +53,8 @@ function start(body: HTMLElement): void {
   }
 
   /**
-   * 编辑器那边要在「文件」页定位到某个文件或目录（面包屑的目录段、标签右键「在文件页中定位」）：
-   * 展开到它（目录连它自己一起展开）、标出那一行、画出来就滚过去。切页签是 view 的事。
+   * 編輯器那邊要在「檔案」頁定位到某個檔案或目錄（麵包屑的目錄段、標籤右鍵「在檔案頁中定位」）：
+   * 展開到它（目錄連它自己一起展開）、標出那一行、畫出來就滾過去。切頁籤是 view 的事。
    */
   function reveal(path: string, dir: boolean): void {
     if (path) {
@@ -75,7 +75,7 @@ function start(body: HTMLElement): void {
     render();
   }
 
-  // ---------------------------------------------------------------- 工具栏
+  // ---------------------------------------------------------------- 工具欄
 
   byId('filesRefresh').addEventListener('click', refresh);
 
@@ -89,30 +89,30 @@ function start(body: HTMLElement): void {
 
   byId('filesReveal').addEventListener('click', () => {
     if (!state.activeFile) {
-      toast('编辑器里还没有打开文件。');
+      toast('編輯器裡還沒有開啟檔案。');
       return;
     }
     expandTo(state.activeFile);
     persistOpen();
     requestDirs();
     render();
-    // 展开的目录可能还没载入，行要等下一次 dirListings 才画得出来；
-    // 已经载入的则立刻滚过去。
+    // 展開的目錄可能還沒載入，行要等下一次 dirListings 才畫得出來；
+    // 已經載入的則立刻滾過去。
     body.querySelector('.fx-row.active')?.scrollIntoView({ block: 'nearest' });
   });
 
-  // ---------------------------------------- 空白区菜单与剪贴板快捷键
+  // ---------------------------------------- 空白區選單與剪貼簿快捷鍵
 
-  // 树里的空白处（没命中任何行）：给一条粘贴到工程根。
+  // 樹裡的空白處（沒命中任何行）：給一條貼上到工程根。
   onContextMenu(body, () => [
-    { label: '粘贴到工程根目录', disabled: !state.clipboard, run: () => pasteInto('') },
+    { label: '貼上到工程根目錄', disabled: !state.clipboard, run: () => pasteInto('') },
     { sep: true },
-    { label: '刷新', run: refresh },
+    { label: '重新整理', run: refresh },
   ]);
 
-  // 快捷键只认「文件」页激活、树里有选中行、**这一下按在树上**（焦点在某一行上）。从前只看前两样：
-  // 在文件页点开一个文件之后焦点进了编辑区，那一行仍是「选中」的，于是编辑区里的 Ctrl+C / X / V
-  // 被这里拦下来，复制的成了那个文件、粘贴的成了文件粘贴（键登记在 editor/shortcuts.ts 的「文件页」那一组）。
+  // 快捷鍵只認「檔案」頁啟用、樹裡有選中行、**這一下按在樹上**（焦點在某一行上）。從前只看前兩樣：
+  // 在檔案頁點開一個檔案之後焦點進了編輯區，那一行仍是「選中」的，於是編輯區裡的 Ctrl+C / X / V
+  // 被這裡攔下來，複製的成了那個檔案、貼上的成了檔案貼上（鍵登記在 editor/shortcuts.ts 的「檔案頁」那一組）。
   document.addEventListener('keydown', (e) => {
     const entry = state.selectedEntry;
     if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || !entry) {
@@ -137,7 +137,7 @@ function start(body: HTMLElement): void {
     }
   });
 
-  // ---------------------------------------------------------------- 收消息
+  // ---------------------------------------------------------------- 收訊息
 
   onMessage((msg) => {
     switch (msg.type) {
@@ -150,11 +150,11 @@ function start(body: HTMLElement): void {
         break;
 
       case 'filesOpDone':
-        // 剪切态清除（仅 move 成功时）；复制态保留——可以在别处再粘一次。
+        // 剪下態清除（僅 move 成功時）；複製態保留——可以在別處再粘一次。
         if (msg.op === 'move' && state.clipboard?.op === 'cut') {
           state.clipboard = null;
         }
-        // 改名/搬家的结果广播给编辑器，让它把标签挪到新路径。
+        // 改名/搬家的結果廣播給編輯器，讓它把標籤挪到新路徑。
         for (const r of msg.results) {
           if (r.ok && r.to && (msg.op === 'rename' || msg.op === 'move')) {
             announceFileMoved(r.from, r.to);
@@ -165,23 +165,23 @@ function start(body: HTMLElement): void {
         render();
         break;
 
-      // 「打开文件」不只来自这棵树——工程页点章节、模型采纳写入后都会开。
-      // 跟着高亮，作者才看得出现在编辑的是哪一个。
+      // 「開啟檔案」不只來自這棵樹——工程頁點章節、模型採納寫入後都會開。
+      // 跟著高亮，作者才看得出現在編輯的是哪一個。
       case 'editorOpen':
         setActive(msg.file.path);
         break;
     }
   });
 
-  // editor.js 在切标签页/关标签页时广播当前激活的文件，高亮跟着它走。
+  // editor.js 在切標籤頁/關標籤頁時廣播當前啟用的檔案，高亮跟著它走。
   window.addEventListener('nf-editor-active', (e) => setActive(e.detail.path));
-  // 编辑器的面包屑目录段、标签右键「在文件页中定位」。
+  // 編輯器的麵包屑目錄段、標籤右鍵「在檔案頁中定位」。
   window.addEventListener('nf-reveal-in-files', (e) => reveal(e.detail.path, e.detail.dir));
 
-  // ---------------------------------------------------------------- 启动
+  // ---------------------------------------------------------------- 啟動
 
   restoreOpen();
-  // 首帧就要一份：切到「文件」页时树已经在了，不必等一次往返才看见东西。
+  // 首幀就要一份：切到「檔案」頁時樹已經在了，不必等一次往返才看見東西。
   requestDirs();
   render();
 }

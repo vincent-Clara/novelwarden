@@ -1,17 +1,17 @@
 /**
- * 章节与细纲两份列表缓存的并发语义。
+ * 章節與細綱兩份列表快取的併發語義。
  *
- * 两者都会读**每一份文件**（章节要算字数与 contentHash，细纲要解析七个小节），
- * 所以它们是全书刷新里最贵的两步，缓存不是锦上添花。但缓存只在扫完之后才填得上，
- * 于是有两条容易长回来的坑：
+ * 兩者都會讀**每一份檔案**（章節要算字數與 contentHash，細綱要解析七個小節），
+ * 所以它們是全書重新整理裡最貴的兩步，快取不是錦上添花。但快取只在掃完之後才填得上，
+ * 於是有兩條容易長回來的坑：
  *
- * 1. **并发击穿**——两个调用方同时进来都看到空缓存，各扫一遍全书。
- *    `buildProjectTree` 的 `Promise.all` 正是这个形状。
- * 2. **过期回填**——扫到一半作者改了文件（`invalidate()`），扫描却在结束时
- *    把变更之前的结果写进缓存，之后所有人都读到旧数据，直到下一次 invalidate。
+ * 1. **併發擊穿**——兩個呼叫方同時進來都看到空快取，各掃一遍全書。
+ *    `buildProjectTree` 的 `Promise.all` 正是這個形狀。
+ * 2. **過期回填**——掃到一半作者改了檔案（`invalidate()`），掃描卻在結束時
+ *    把變更之前的結果寫進快取，之後所有人都讀到舊資料，直到下一次 invalidate。
  *
- * 两条都不会抛错、不会变红：第一条只是慢，第二条只是界面上的字数与「过期」
- * 标记停在上一版。只能靠断言守。
+ * 兩條都不會拋錯、不會變紅：第一條只是慢，第二條只是介面上的字數與「過期」
+ * 標記停在上一版。只能靠斷言守。
  */
 const { describe, test, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
@@ -22,22 +22,22 @@ const { makeFakeHost } = require('../../helpers/fakeHost');
 const { cleanup } = require('../../helpers/teardown');
 
 /**
- * 细纲的写入搬进了 `core/workspace/`：写入要记上游指纹、删除要进 `.trash/`，
- * 那些是网关的活。`NovelProject` 这一层只留领域查询。
+ * 細綱的寫入搬進了 `core/workspace/`：寫入要記上游指紋、刪除要進 `.trash/`，
+ * 那些是閘道器的活。`NovelProject` 這一層只留領域查詢。
  */
 let wsMod;
 const wsOf = (p) => new wsMod.Workspace(p);
 
-/** 造多少份细纲。与章节数分开，断言里就看得出读的是哪一批。 */
+/** 造多少份細綱。與章節數分開，斷言裡就看得出讀的是哪一批。 */
 const PLOTS = 7;
 
 let bundle;
 let t;
 let project;
 
-/** 本轮读了多少个章节正文文件。 */
+/** 本輪讀了多少個章節正文檔案。 */
 let chapterReads;
-/** 本轮读了多少个细纲文件。 */
+/** 本輪讀了多少個細綱檔案。 */
 let plotReads;
 let restore;
 
@@ -64,7 +64,7 @@ before(async () => {
 
   wsMod = bundle.ws;
   bundle.host.initHost(makeFakeHost({ settings: () => ({}) }).host);
-  t = await makeTempProject(bundle.project, { prefix: 'chapter-cache', title: '缓存' });
+  t = await makeTempProject(bundle.project, { prefix: 'chapter-cache', title: '快取' });
   project = t.project;
 
   for (let i = 1; i <= 12; i++) {
@@ -73,7 +73,7 @@ before(async () => {
   }
   for (let i = 1; i <= PLOTS; i++) {
     const n = String(i).padStart(3, '0');
-    t.write(`.novelwarden/summaries/${n}-第${i}章.md`, `---\nno: ${i}\n---\n\n## 关键事件\n事件。\n`);
+    t.write(`.novelwarden/summaries/${n}-第${i}章.md`, `---\nno: ${i}\n---\n\n## 關鍵事件\n事件。\n`);
   }
 });
 
@@ -88,22 +88,22 @@ beforeEach(() => {
   plotReads = 0;
 });
 
-describe('章节列表缓存', () => {
-  test('串行的第二次调用不读盘', async () => {
+describe('章節列表快取', () => {
+  test('序列的第二次呼叫不讀盤', async () => {
     await project.listChapters();
     const afterFirst = chapterReads;
     await project.listChapters();
-    assert.equal(chapterReads, afterFirst, '第二次应当直接命中缓存');
+    assert.equal(chapterReads, afterFirst, '第二次應當直接命中快取');
   });
 
-  test('并发的两次调用只扫一遍全书', async () => {
+  test('併發的兩次呼叫只掃一遍全書', async () => {
     const [a, b] = await Promise.all([project.listChapters(), project.listChapters()]);
-    assert.equal(chapterReads, 12, `并发时读了 ${chapterReads} 个正文文件，应当只读 12 个`);
-    // 搭同一班车，拿到的自然是同一份结果。
+    assert.equal(chapterReads, 12, `併發時讀了 ${chapterReads} 個正文檔案，應當只讀 12 個`);
+    // 搭同一班車，拿到的自然是同一份結果。
     assert.equal(a, b);
   });
 
-  test('并发调用拿到的内容与串行一致', async () => {
+  test('併發呼叫拿到的內容與序列一致', async () => {
     const [concurrent] = await Promise.all([project.listChapters(), project.listChapters()]);
     project.invalidate();
     const serial = await project.listChapters();
@@ -113,35 +113,35 @@ describe('章节列表缓存', () => {
     );
   });
 
-  test('invalidate 之后重新读盘', async () => {
+  test('invalidate 之後重新讀盤', async () => {
     await project.listChapters();
     project.invalidate();
     chapterReads = 0;
     await project.listChapters();
-    assert.equal(chapterReads, 12, '失效之后应当重新扫一遍');
+    assert.equal(chapterReads, 12, '失效之後應當重新掃一遍');
   });
 
-  test('扫描途中 invalidate：新的调用方不搭旧车', async () => {
+  test('掃描途中 invalidate：新的呼叫方不搭舊車', async () => {
     const inFlight = project.listChapters();
     project.invalidate();
-    // 变更之后进来的人必须自己再扫一遍，否则拿到的是变更之前的全书。
-    // 两轮各读 12 个文件：在途那一轮的读盘也落在计数清零之后，所以是 24 而不是 12
-    // ——关键在于它确实是**两轮**，而不是第二个调用方搭了第一轮的车。
+    // 變更之後進來的人必須自己再掃一遍，否則拿到的是變更之前的全書。
+    // 兩輪各讀 12 個檔案：在途那一輪的讀盤也落在計數清零之後，所以是 24 而不是 12
+    // ——關鍵在於它確實是**兩輪**，而不是第二個呼叫方搭了第一輪的車。
     chapterReads = 0;
     const [before, after] = await Promise.all([inFlight, project.listChapters()]);
-    assert.equal(chapterReads, 24, `读了 ${chapterReads} 个文件，两轮独立扫描应当是 24 个`);
-    assert.notEqual(before, after, 'invalidate 之后的调用不该复用在途那一轮的结果');
+    assert.equal(chapterReads, 24, `讀了 ${chapterReads} 個檔案，兩輪獨立掃描應當是 24 個`);
+    assert.notEqual(before, after, 'invalidate 之後的呼叫不該複用在途那一輪的結果');
   });
 
-  test('扫描途中 invalidate：旧结果不回填缓存', async () => {
+  test('掃描途中 invalidate：舊結果不回填快取', async () => {
     const inFlight = project.listChapters();
     project.invalidate();
     await inFlight;
-    // 新增一章。若刚才那轮把旧列表写进了缓存，这里就会读到 12 章。
-    t.write('chapters/013-新章.md', '# 第13章\n\n新写的。');
+    // 新增一章。若剛才那輪把舊列表寫進了快取，這裡就會讀到 12 章。
+    t.write('chapters/013-新章.md', '# 第13章\n\n新寫的。');
     try {
       const chapters = await project.listChapters();
-      assert.equal(chapters.length, 13, '缓存里应当没有那份过期结果');
+      assert.equal(chapters.length, 13, '快取裡應當沒有那份過期結果');
     } finally {
       t.remove('chapters/013-新章.md');
       project.invalidate();
@@ -150,80 +150,80 @@ describe('章节列表缓存', () => {
 });
 
 /**
- * 细纲列表缓存。与章节那一份同构，但它是**更热的那条路**：
- * 流水线索引与出场索引在同一次 `buildProjectTree` 里都要 `listPlots()`，
- * 不共享的话每次刷新都把 `summaries/` 里的细纲整个读两遍。
+ * 細綱列表快取。與章節那一份同構，但它是**更熱的那條路**：
+ * 流水線索引與出場索引在同一次 `buildProjectTree` 裡都要 `listPlots()`，
+ * 不共享的話每次重新整理都把 `summaries/` 裡的細綱整個讀兩遍。
  *
- * 另外多一条章节没有的约束：`writePlot` / `deletePlot` 自己会写盘，
- * **它们必须让缓存失效**——否则新建的章不出现在工程页上，改过标题的章
- * 还挂着旧名字，而这两件事都不会报错。
+ * 另外多一條章節沒有的約束：`writePlot` / `deletePlot` 自己會寫盤，
+ * **它們必須讓快取失效**——否則新建的章不出現在工程頁上，改過標題的章
+ * 還掛著舊名字，而這兩件事都不會報錯。
  */
-describe('细纲列表缓存', () => {
-  test('串行的第二次调用不读盘', async () => {
+describe('細綱列表快取', () => {
+  test('序列的第二次呼叫不讀盤', async () => {
     await project.listPlots();
     const afterFirst = plotReads;
     await project.listPlots();
-    assert.equal(plotReads, afterFirst, '第二次应当直接命中缓存');
+    assert.equal(plotReads, afterFirst, '第二次應當直接命中快取');
   });
 
-  test('并发的两次调用只扫一遍', async () => {
+  test('併發的兩次呼叫只掃一遍', async () => {
     const [a, b] = await Promise.all([project.listPlots(), project.listPlots()]);
-    assert.equal(plotReads, PLOTS, `并发时读了 ${plotReads} 个细纲文件，应当只读 ${PLOTS} 个`);
+    assert.equal(plotReads, PLOTS, `併發時讀了 ${plotReads} 個細綱檔案，應當只讀 ${PLOTS} 個`);
     assert.equal(a, b);
   });
 
-  test('invalidate 之后重新读盘', async () => {
+  test('invalidate 之後重新讀盤', async () => {
     await project.listPlots();
     project.invalidate();
     plotReads = 0;
     await project.listPlots();
-    assert.equal(plotReads, PLOTS, '失效之后应当重新扫一遍');
+    assert.equal(plotReads, PLOTS, '失效之後應當重新掃一遍');
   });
 
-  test('扫描途中 invalidate：旧结果不回填缓存', async () => {
+  test('掃描途中 invalidate：舊結果不回填快取', async () => {
     const inFlight = project.listPlots();
     project.invalidate();
     await inFlight;
-    t.write('.novelwarden/summaries/013-新章.md', '---\nno: 13\n---\n\n## 关键事件\n新排的。\n');
+    t.write('.novelwarden/summaries/013-新章.md', '---\nno: 13\n---\n\n## 關鍵事件\n新排的。\n');
     try {
       const plots = await project.listPlots();
-      assert.equal(plots.length, PLOTS + 1, '缓存里应当没有那份过期结果');
+      assert.equal(plots.length, PLOTS + 1, '快取裡應當沒有那份過期結果');
     } finally {
       t.remove('.novelwarden/summaries/013-新章.md');
       project.invalidate();
     }
   });
 
-  // 写盘的那两条路自己失效缓存，调用方不必记得调 invalidate()。
-  test('writePlot 之后读得到新的一章', async () => {
+  // 寫盤的那兩條路自己失效快取，呼叫方不必記得調 invalidate()。
+  test('writePlot 之後讀得到新的一章', async () => {
     await project.listPlots();
     try {
-      await wsOf(project).writePlot({ no: 99, title: '新写的', sections: { 关键事件: '事件' } });
+      await wsOf(project).writePlot({ no: 99, title: '新寫的', sections: { 关键事件: '事件' } });
       const plots = await project.listPlots();
       assert.ok(plots.some((p) => p.no === 99), plots.map((p) => p.no).join('|'));
     } finally {
-      t.remove('.novelwarden/summaries/099-新写的.md');
+      t.remove('.novelwarden/summaries/099-新寫的.md');
       project.invalidate();
     }
   });
 
-  test('改标题之后读到的是新文件名', async () => {
+  test('改標題之後讀到的是新檔名', async () => {
     try {
       await wsOf(project).writePlot({ no: 99, title: '初名', sections: { 关键事件: '事件' } });
       await project.listPlots();
-      await wsOf(project).writePlot({ no: 99, title: '改过的名字', sections: { 关键事件: '事件' } });
+      await wsOf(project).writePlot({ no: 99, title: '改過的名字', sections: { 关键事件: '事件' } });
       const found = (await project.listPlots()).find((p) => p.no === 99);
-      assert.equal(found?.relPath, '.novelwarden/summaries/099-改过的名字.md', found?.relPath);
+      assert.equal(found?.relPath, '.novelwarden/summaries/099-改過的名字.md', found?.relPath);
     } finally {
-      t.remove('.novelwarden/summaries/099-改过的名字.md');
+      t.remove('.novelwarden/summaries/099-改過的名字.md');
       project.invalidate();
     }
   });
 
-  test('deletePlot 之后读不到了', async () => {
-    await wsOf(project).writePlot({ no: 99, title: '待删', sections: { 关键事件: '事件' } });
+  test('deletePlot 之後讀不到了', async () => {
+    await wsOf(project).writePlot({ no: 99, title: '待刪', sections: { 关键事件: '事件' } });
     await project.listPlots();
-    await wsOf(project).deletePlot('.novelwarden/summaries/099-待删.md');
+    await wsOf(project).deletePlot('.novelwarden/summaries/099-待刪.md');
     const plots = await project.listPlots();
     assert.ok(!plots.some((p) => p.no === 99), plots.map((p) => p.no).join('|'));
   });

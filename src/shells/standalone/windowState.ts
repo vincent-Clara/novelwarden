@@ -46,7 +46,7 @@ function asRecents(raw: unknown): WindowRecent[] {
   return out.slice(0, MAX_RECENTS);
 }
 
-/** 读窗口记忆。缺文件或坏 JSON 都当成空，不抛。 */
+/** 讀視窗記憶。缺檔案或壞 JSON 都當成空，不拋。 */
 export function readWindowState(baseDir?: string): WindowState {
   try {
     const raw = JSON.parse(fs.readFileSync(fileOf(baseDir), 'utf8')) as Record<string, unknown>;
@@ -71,7 +71,7 @@ export function writeWindowState(state: WindowState, baseDir?: string): void {
   fs.writeFileSync(fileOf(baseDir), text, 'utf8');
 }
 
-/** 成功打开工程：记下 lastOpen，recents upsert，上限 20。 */
+/** 成功開啟工程：記下 lastOpen，recents upsert，上限 20。 */
 export function rememberOpen(root: string, baseDir?: string): WindowState {
   const resolved = path.resolve(root);
   const name = path.basename(resolved) || resolved;
@@ -85,7 +85,7 @@ export function rememberOpen(root: string, baseDir?: string): WindowState {
   return state;
 }
 
-/** 关闭文件夹：lastOpen 清空，recents 不动。 */
+/** 關閉資料夾：lastOpen 清空，recents 不動。 */
 export function rememberClosed(baseDir?: string): WindowState {
   const state = readWindowState(baseDir);
   state.lastOpen = null;
